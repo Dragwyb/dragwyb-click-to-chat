@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 
 $fb_id = get_option('scw_facebook_page_id', '');
 $wa_num = get_option('scw_whatsapp_number', '');
-$live_chat = get_option('scw_enable_live_chat', '0');
+
 ?>
 
 <h2 class="scw-section-title">Settings & Usage</h2>
@@ -72,24 +72,7 @@ $live_chat = get_option('scw_enable_live_chat', '0');
             </div>
         </div>
 
-        <!-- Live Chat -->
-        <div style="padding: 15px 0;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="20" fill="#8e44ad"/>
-                    <path d="M28 14C28 12.9 27.1 12 26 12H14C12.9 12 12 12.9 12 14V22C12 23.1 12.9 24 14 24H24L28 28V14Z" fill="white"/>
-                </svg>
-                <div style="flex: 1;">
-                    <strong>Live Chat Window:</strong>
-                    <span style="color: #6b7280; margin-left: 10px;">
-                        <?php echo $live_chat === '1' ? 'Enabled' : '<em>Disabled</em>'; ?>
-                    </span>
-                </div>
-                <span style="color: <?php echo $live_chat === '1' ? '#10b981' : '#9ca3af'; ?>; font-weight: 600;">
-                    <?php echo $live_chat === '1' ? '✓ Active' : '○ Inactive'; ?>
-                </span>
-            </div>
-        </div>
+
 
     </div>
 </div>

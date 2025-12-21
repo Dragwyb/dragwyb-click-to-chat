@@ -96,7 +96,8 @@ class SCW_Frontend {
             // Build channel array
             $channel_item = array(
                 'color' => $channel_config['color'],
-                'icon' => '<svg viewBox="0 0 24 24">' . $channel_config['icon'] . '</svg>'
+                'icon' => '<svg viewBox="0 0 24 24">' . $channel_config['icon'] . '</svg>',
+                'title' => $channel_config['name'] // Channel name for tooltip (Privacy safe)
             );
             
             // Determine type and link
@@ -194,7 +195,7 @@ class SCW_Frontend {
             <?php 
             $allowed_svg = array(
                 'path' => array( 'd' => array() ),
-                'svg' => array( 'viewBox' => array(), 'style' => array(), 'fill' => array(), 'width' => array(), 'height' => array() ),
+                'svg' => array( 'viewbox' => array(), 'style' => array(), 'fill' => array(), 'width' => array(), 'height' => array() ),
                 'img' => array( 'src' => array(), 'alt' => array(), 'style' => array() )
             );
             echo wp_kses($icon_html, $allowed_svg); 
@@ -204,11 +205,11 @@ class SCW_Frontend {
         <div class="scw-menu" id="scw-menu">
             <?php foreach ( $channels as $c ) : ?>
                 <?php if ( $c['type'] === 'internal' ) : ?>
-                    <button class="scw-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>;" onclick="scwOpenChat()">
+                    <button class="scw-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>;" onclick="scwOpenChat()" title="<?php echo esc_attr($c['title']); ?>">
                         <?php echo wp_kses($c['icon'], $allowed_svg); ?>
                     </button>
                 <?php else : ?>
-                    <a href="<?php echo esc_url($c['link']); ?>" target="_blank" class="scw-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>;">
+                    <a href="<?php echo esc_url($c['link']); ?>" target="_blank" class="scw-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>;" title="<?php echo esc_attr($c['title']); ?>">
                         <?php echo wp_kses($c['icon'], $allowed_svg); ?>
                     </a>
                 <?php endif; ?>

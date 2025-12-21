@@ -51,8 +51,8 @@
             // Update navigation buttons
             this.updateNavigationButtons();
 
-            // Save current step to user meta
-            this.saveCurrentStep();
+            // Save current step to user meta - Removed
+            // this.saveCurrentStep();
         },
 
         nextStep: function (e) {

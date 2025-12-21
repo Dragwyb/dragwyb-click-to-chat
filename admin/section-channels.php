@@ -39,7 +39,7 @@ foreach ($phase1_channels as $slug) {
                 <?php 
                 $allowed_svg = array(
                     'path' => array( 'd' => array() ),
-                    'svg' => array( 'viewBox' => array(), 'fill' => array(), 'width' => array(), 'height' => array() )
+                    'svg' => array( 'viewbox' => array(), 'fill' => array(), 'width' => array(), 'height' => array() )
                 );
                 echo wp_kses($channel['icon'], $allowed_svg); 
                 ?>

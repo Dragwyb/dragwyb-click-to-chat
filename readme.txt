@@ -1,8 +1,8 @@
 === Social Chat Widget ===
 Contributors: Vishabjeet Singh
-Tags: social chat, floating chat widget, whatsapp, facebook messenger, contact button, telegram, click to chat
+Tags: social chat, chat widget, whatsapp, messenger, contact button
 Requires at least: 5.0
-Tested up to: 6.7
+Tested up to: 6.9
 Stable tag: 1.0.0
 Requires PHP: 7.2
 License: GPLv2 or later
