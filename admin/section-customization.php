@@ -235,7 +235,7 @@ $icon_scale = get_option('scw_icon_scale', '1');
             </button>
             <input type="hidden" id="scw_custom_icon_url" name="scw_custom_icon_url" value="<?php echo esc_attr($custom_icon_url); ?>">
             <span id="icon-filename" style="font-size: 13px; color: #6b7280;">
-                <?php echo $custom_icon_url ? basename($custom_icon_url) : 'No icon selected'; ?>
+                <?php echo $custom_icon_url ? esc_html(basename($custom_icon_url)) : 'No icon selected'; ?>
             </span>
             <?php if ($custom_icon_url): ?>
                 <button type="button" id="remove-icon-button" class="button button-secondary" style="color: #dc2626;">Remove</button>

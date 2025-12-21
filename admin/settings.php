@@ -46,25 +46,44 @@ function scw_save_settings() {
     check_ajax_referer('scw_nonce', 'nonce');
     if(!current_user_can('manage_options')) return;
     
-    // Save channel settings
-    update_option('scw_facebook_page_id', sanitize_text_field($_POST['fb']));
-    update_option('scw_whatsapp_number', sanitize_text_field($_POST['wa']));
-    update_option('scw_enable_live_chat', sanitize_text_field($_POST['lc']));
+    // Phase 1: Social channels only (Live Chat is separate)
+    $phase1_channels = array('whatsapp', 'facebook', 'phone', 'email', 'instagram', 'telegram', 'sms', 'twitter', 'linkedin');
     
-    // Save channel enabled states
-    if(isset($_POST['fb_enabled'])) {
-        update_option('scw_facebook_enabled', $_POST['fb_enabled'] === '1' ? '1' : '0');
-    }
-    if(isset($_POST['wa_enabled'])) {
-        update_option('scw_whatsapp_enabled', $_POST['wa_enabled'] === '1' ? '1' : '0');
+    // Save all channel settings dynamically
+    foreach ($phase1_channels as $slug) {
+        // Save enabled state
+        $enabled_key = $slug . '_enabled';
+        if(isset($_POST[$enabled_key])) {
+            update_option('scw_' . $slug . '_enabled', $_POST[$enabled_key] === '1' ? '1' : '0');
+        }
+        
+        // Save channel value
+        $value_key = $slug . '_value';
+        if(isset($_POST[$value_key])) {
+            if ($slug === 'email') {
+                update_option('scw_' . $slug . '_value', sanitize_email(wp_unslash($_POST[$value_key])));
+            } elseif (in_array($slug, array('linkedin', 'maps', 'waze', 'contact', 'poptin', 'slack', 'discord'))) {
+                update_option('scw_' . $slug . '_value', esc_url_raw(wp_unslash($_POST[$value_key])));
+            } else {
+                update_option('scw_' . $slug . '_value', sanitize_text_field(wp_unslash($_POST[$value_key])));
+            }
+        }
+        
+        // Save device visibility - handle unchecked checkboxes
+        $desktop_key = $slug . '_desktop';
+        $mobile_key = $slug . '_mobile';
+        
+        // Checkbox unchecked = not in POST, so explicitly save '0'
+        update_option('scw_' . $slug . '_desktop', isset($_POST[$desktop_key]) && $_POST[$desktop_key] === '1' ? '1' : '0');
+        update_option('scw_' . $slug . '_mobile', isset($_POST[$mobile_key]) && $_POST[$mobile_key] === '1' ? '1' : '0');
     }
     
     // Save widget customization settings (if provided)
     if(isset($_POST['widget_position'])) {
-        update_option('scw_widget_position', sanitize_text_field($_POST['widget_position']));
+        update_option('scw_widget_position', sanitize_text_field(wp_unslash($_POST['widget_position'])));
     }
     if(isset($_POST['widget_color'])) {
-        update_option('scw_widget_color', sanitize_hex_color($_POST['widget_color']));
+        update_option('scw_widget_color', sanitize_hex_color(wp_unslash($_POST['widget_color'])));
     }
     if(isset($_POST['widget_size'])) {
         $size = intval($_POST['widget_size']);
@@ -87,15 +106,15 @@ function scw_save_settings() {
         }
     }
     if(isset($_POST['custom_side'])) {
-        update_option('scw_custom_side', sanitize_text_field($_POST['custom_side']));
+        update_option('scw_custom_side', sanitize_text_field(wp_unslash($_POST['custom_side'])));
     }
     
     // Save icon settings (if provided)
     if(isset($_POST['icon_type'])) {
-        update_option('scw_icon_type', sanitize_text_field($_POST['icon_type']));
+        update_option('scw_icon_type', sanitize_text_field(wp_unslash($_POST['icon_type'])));
     }
     if(isset($_POST['custom_icon_url'])) {
-        update_option('scw_custom_icon_url', esc_url_raw($_POST['custom_icon_url']));
+        update_option('scw_custom_icon_url', esc_url_raw(wp_unslash($_POST['custom_icon_url'])));
     }
     if(isset($_POST['icon_rotation'])) {
         $rotation = intval($_POST['icon_rotation']);

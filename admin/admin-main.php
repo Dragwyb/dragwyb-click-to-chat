@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) exit;
 $fb_id = get_option('scw_facebook_page_id', '');
 $wa_num = get_option('scw_whatsapp_number', '');
 $live_chat = get_option('scw_enable_live_chat', '0');
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification not needed for navigational GET parameter
 $current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
 ?>
 

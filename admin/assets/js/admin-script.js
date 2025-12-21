@@ -27,8 +27,7 @@
             // Save button
             $('#scw-save-btn').on('click', this.saveSettings.bind(this));
 
-            // Channel card selection
-            $('.scw-channel-card').on('click', this.toggleChannel.bind(this));
+            // Note: Channel toggle is now handled in section-channels.php
         },
 
         handleTabClick: function (e) {
@@ -160,31 +159,51 @@
             // Collect form data
             const formData = {
                 action: 'scw_save_settings',
-                nonce: scw_admin.nonce,
-                fb: $('#scw_facebook_page_id').val(),
-                wa: $('#scw_whatsapp_number').val(),
-                lc: $('#scw_enable_live_chat').is(':checked') ? '1' : '0',
-                // Channel enabled states
-                fb_enabled: $('#scw_facebook_enabled').val(),
-                wa_enabled: $('#scw_whatsapp_enabled').val(),
-                // Widget customization settings
-                widget_position: $('input[name="scw_widget_position"]:checked').val(),
-                widget_color: $('#scw_widget_color').val(),
-                widget_size: $('#scw_widget_size').val(),
-                // Custom position settings
-                custom_bottom: $('#scw_custom_bottom').val(),
-                custom_horizontal: $('#scw_custom_horizontal').val(),
-                custom_side: $('#scw_custom_side').val(),
-                // Icon settings
-                icon_type: $('input[name="scw_icon_type"]:checked').val(),
-                custom_icon_url: $('#scw_custom_icon_url').val(),
-                icon_rotation: $('#scw_icon_rotation').val(),
-                icon_scale: $('#scw_icon_scale').val(),
-                // Triggers and targeting settings
-                show_on_desktop: $('#scw_show_on_desktop').is(':checked') ? '1' : '0',
-                show_on_mobile: $('#scw_show_on_mobile').is(':checked') ? '1' : '0',
-                time_delay: $('#scw_time_delay').val()
+                nonce: scw_admin.nonce
             };
+
+            // Phase 1: Social channels only
+            const phase1Channels = ['whatsapp', 'facebook', 'phone', 'email', 'instagram', 'telegram', 'sms', 'twitter', 'linkedin'];
+
+            phase1Channels.forEach(function (slug) {
+                // Collect enabled state
+                const enabled = $('#scw_' + slug + '_enabled').val();
+                if (enabled !== undefined) {
+                    formData[slug + '_enabled'] = enabled;
+                }
+
+                // Collect value
+                const $valueInput = $('#scw_' + slug + '_value');
+                if ($valueInput.length) {
+                    if ($valueInput.attr('type') === 'checkbox') {
+                        formData[slug + '_value'] = $valueInput.is(':checked') ? '1' : '0';
+                    } else {
+                        formData[slug + '_value'] = $valueInput.val();
+                    }
+                }
+
+                // Collect device visibility checkboxes
+                formData[slug + '_desktop'] = $('#scw_' + slug + '_desktop').is(':checked') ? '1' : '0';
+                formData[slug + '_mobile'] = $('#scw_' + slug + '_mobile').is(':checked') ? '1' : '0';
+            });
+
+            // Add widget customization settings
+            formData.widget_position = $('input[name="scw_widget_position"]:checked').val();
+            formData.widget_color = $('#scw_widget_color').val();
+            formData.widget_size = $('#scw_widget_size').val();
+            // Custom position settings
+            formData.custom_bottom = $('#scw_custom_bottom').val();
+            formData.custom_horizontal = $('#scw_custom_horizontal').val();
+            formData.custom_side = $('#scw_custom_side').val();
+            // Icon settings
+            formData.icon_type = $('input[name="scw_icon_type"]:checked').val();
+            formData.custom_icon_url = $('#scw_custom_icon_url').val();
+            formData.icon_rotation = $('#scw_icon_rotation').val();
+            formData.icon_scale = $('#scw_icon_scale').val();
+            // Triggers and targeting settings
+            formData.show_on_desktop = $('#scw_show_on_desktop').is(':checked') ? '1' : '0';
+            formData.show_on_mobile = $('#scw_show_on_mobile').is(':checked') ? '1' : '0';
+            formData.time_delay = $('#scw_time_delay').val();
 
             // AJAX save
             $.ajax({
@@ -226,15 +245,6 @@
             const urlParams = new URLSearchParams(window.location.search);
             const step = parseInt(urlParams.get('step')) || 0;
             this.goToStep(step);
-        },
-
-        saveCurrentStep: function () {
-            // Save to user meta via AJAX (optional - for persistence)
-            $.post(ajaxurl, {
-                action: 'scw_save_current_step',
-                nonce: scw_admin.nonce,
-                step: currentStep
-            });
         }
     };
 
@@ -244,3 +254,4 @@
     });
 
 })(jQuery);
+
