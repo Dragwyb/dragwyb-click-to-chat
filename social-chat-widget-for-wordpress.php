@@ -10,6 +10,8 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 define( 'SCW_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
+define( 'SCW_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'SCW_VERSION', '1.0.0' );
 define( 'SCW_TABLE_NAME', 'scw_chat_messages' );
 
 class SCW_Social_Chat_Widget {
@@ -18,7 +20,7 @@ class SCW_Social_Chat_Widget {
 
     public function init() {
         if ( is_admin() ) {
-            require_once SCW_PLUGIN_DIR . 'includes/settings.php';
+            require_once SCW_PLUGIN_DIR . 'admin/settings.php';
             require_once SCW_PLUGIN_DIR . 'includes/admin-messages.php';
         }
         require_once SCW_PLUGIN_DIR . 'includes/frontend.php';
