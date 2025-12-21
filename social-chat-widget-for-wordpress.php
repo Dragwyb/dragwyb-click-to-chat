@@ -3,7 +3,7 @@
  * Plugin Name: Social Chat Widget for WordPress
  * Description: Connect with visitors via Facebook, WhatsApp, Telegram.
  * Author: Vishabjeet Singh
- * Version: 1.1.0
+ * Version: 1.0.0
  * Text Domain: social-chat-widget
  */
 
