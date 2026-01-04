@@ -4,7 +4,7 @@
  * Description: Connect with visitors via Facebook, WhatsApp, Telegram.
  * Author: Dragwyb
  * Version: 1.0.0
- * Text Domain: social-chat-widget-for-wordpress
+ * Text Domain: social-chat-widget
  * License: GPLv2 or later
  */
 

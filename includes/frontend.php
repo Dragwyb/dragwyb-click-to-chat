@@ -210,21 +210,8 @@ class SCW_Frontend {
                 break;
             case 'custom':
                 if (!empty($custom_icon_url)) {
-                    $file_ext = strtolower(pathinfo($custom_icon_url, PATHINFO_EXTENSION));
-                    if ($file_ext === 'svg') {
-                        // For SVG, embed it directly
-                        $svg_content = @file_get_contents($custom_icon_url);
-                        if ($svg_content) {
-                            // Add transform to SVG
-                            $icon_html = str_replace('<svg', '<svg style="' . $icon_transform . '"', $svg_content);
-                        } else {
-                            // Fallback if can't read file
-                            $icon_html = '<img src="' . esc_url($custom_icon_url) . '" alt="Chat" style="width: 100%; height: 100%; object-fit: contain; ' . $icon_transform . '">';
-                        }
-                    } else {
                         // For PNG/JPG
                         $icon_html = '<img src="' . esc_url($custom_icon_url) . '" alt="Chat" style="width: 100%; height: 100%; object-fit: contain; ' . $icon_transform . '">';
-                    }
                 } else {
                     // Fallback to default chat icon
                     $icon_html = '<svg viewBox="0 0 24 24" style="' . $icon_transform . '"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
