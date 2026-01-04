@@ -28,10 +28,10 @@ class SCW_Social_Chat_Widget {
     public static function get_instance() {
         if ( null === self::$instance ) {
             self::$instance = new SCW_Social_Chat_Widget();
+            self::$instance->init();
         }
         return self::$instance;
     }
 }
 
 add_action( 'plugins_loaded', array( 'SCW_Social_Chat_Widget', 'get_instance' ) );
-SCW_Social_Chat_Widget::get_instance()->init();

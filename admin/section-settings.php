@@ -6,8 +6,9 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-$fb_id = get_option('scw_facebook_page_id', '');
-$wa_num = get_option('scw_whatsapp_number', '');
+// $fb_id and $wa_num are set in admin-main.php
+if (!isset($fb_id)) $fb_id = '';
+if (!isset($wa_num)) $wa_num = '';
 
 ?>
 

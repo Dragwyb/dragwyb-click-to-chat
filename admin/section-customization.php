@@ -6,12 +6,14 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Get current widget settings
-$widget_position = get_option('scw_widget_position', 'right');
-$widget_color = get_option('scw_widget_color', '#8e44ad');
-$widget_size = get_option('scw_widget_size', '60');
-$custom_bottom = get_option('scw_custom_bottom', '20');
-$custom_horizontal = get_option('scw_custom_horizontal', '20');
-$custom_side = get_option('scw_custom_side', 'right'); // 'left' or 'right'
+$settings = get_option('scw_settings', array());
+
+$widget_position = isset($settings['widget_position']) ? $settings['widget_position'] : 'right';
+$widget_color = isset($settings['widget_color']) ? $settings['widget_color'] : '#8e44ad';
+$widget_size = isset($settings['widget_size']) ? $settings['widget_size'] : '60';
+$custom_bottom = isset($settings['custom_bottom']) ? $settings['custom_bottom'] : '20';
+$custom_horizontal = isset($settings['custom_horizontal']) ? $settings['custom_horizontal'] : '20';
+$custom_side = isset($settings['custom_side']) ? $settings['custom_side'] : 'right'; // 'left' or 'right'
 ?>
 
 <h2 class="scw-section-title">Customize Your Widget</h2>
@@ -68,10 +70,25 @@ $custom_side = get_option('scw_custom_side', 'right'); // 'left' or 'right'
     <div id="custom-position-settings" style="margin-top: 20px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; <?php echo $widget_position !== 'custom' ? 'display: none;' : ''; ?>">
         <h4 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #374151;">Custom Position Settings</h4>
         
+        <?php 
+        $custom_vertical_align = isset($settings['custom_vertical_align']) ? $settings['custom_vertical_align'] : 'bottom'; 
+        $custom_bottom_unit = isset($settings['custom_bottom_unit']) ? $settings['custom_bottom_unit'] : 'px';
+        $custom_horizontal_unit = isset($settings['custom_horizontal_unit']) ? $settings['custom_horizontal_unit'] : 'px';
+        ?>
+        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Vertical Axis -->
             <div>
+                 <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: #6b7280;">
+                    Vertical Alignment
+                </label>
+                <select id="scw_custom_vertical_align" name="scw_custom_vertical_align" style="width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 15px;">
+                    <option value="bottom" <?php selected($custom_vertical_align, 'bottom'); ?>>Bottom</option>
+                    <option value="top" <?php selected($custom_vertical_align, 'top'); ?>>Top</option>
+                </select>
+                
                 <label for="scw_custom_bottom" style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: #6b7280;">
-                    Distance from Bottom
+                    Vertical Distance
                 </label>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="number" 
@@ -79,25 +96,29 @@ $custom_side = get_option('scw_custom_side', 'right'); // 'left' or 'right'
                            name="scw_custom_bottom" 
                            value="<?php echo esc_attr($custom_bottom); ?>"
                            min="0"
-                           max="500"
-                           style="width: 100px;">
-                    <span style="color: #9ca3af;">px</span>
+                           step="0.1"
+                           style="width: 80px;">
+                    <select id="scw_custom_bottom_unit" name="scw_custom_bottom_unit" style="padding: 0 5px; height: 30px;">
+                        <option value="px" <?php selected($custom_bottom_unit, 'px'); ?>>px</option>
+                        <option value="rem" <?php selected($custom_bottom_unit, 'rem'); ?>>rem</option>
+                        <option value="em" <?php selected($custom_bottom_unit, 'em'); ?>>em</option>
+                        <option value="%" <?php selected($custom_bottom_unit, '%'); ?>>%</option>
+                    </select>
                 </div>
             </div>
             
+            <!-- Horizontal Axis -->
             <div>
                 <label style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: #6b7280;">
-                    Align to Side
+                    Horizontal Alignment
                 </label>
-                <select id="scw_custom_side" name="scw_custom_side" style="width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
-                    <option value="left" <?php selected($custom_side, 'left'); ?>>Left</option>
+                <select id="scw_custom_side" name="scw_custom_side" style="width: 150px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 15px;">
                     <option value="right" <?php selected($custom_side, 'right'); ?>>Right</option>
+                    <option value="left" <?php selected($custom_side, 'left'); ?>>Left</option>
                 </select>
-            </div>
-            
-            <div>
+                
                 <label for="scw_custom_horizontal" style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 500; color: #6b7280;">
-                    Distance from Side
+                    Horizontal Distance
                 </label>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <input type="number" 
@@ -105,9 +126,14 @@ $custom_side = get_option('scw_custom_side', 'right'); // 'left' or 'right'
                            name="scw_custom_horizontal" 
                            value="<?php echo esc_attr($custom_horizontal); ?>"
                            min="0"
-                           max="500"
-                           style="width: 100px;">
-                    <span style="color: #9ca3af;">px</span>
+                           step="0.1"
+                           style="width: 80px;">
+                    <select id="scw_custom_horizontal_unit" name="scw_custom_horizontal_unit" style="padding: 0 5px; height: 30px;">
+                        <option value="px" <?php selected($custom_horizontal_unit, 'px'); ?>>px</option>
+                        <option value="rem" <?php selected($custom_horizontal_unit, 'rem'); ?>>rem</option>
+                        <option value="em" <?php selected($custom_horizontal_unit, 'em'); ?>>em</option>
+                        <option value="%" <?php selected($custom_horizontal_unit, '%'); ?>>%</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -136,32 +162,36 @@ $custom_side = get_option('scw_custom_side', 'right'); // 'left' or 'right'
 </div>
 
 <!-- Widget Size -->
+<?php $widget_size_unit = isset($settings['widget_size_unit']) ? $settings['widget_size_unit'] : 'px'; ?>
 <div class="scw-form-group">
     <label for="scw_widget_size">Widget Size</label>
     <p style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">
-        Adjust the size of the chat button (40px - 80px)
+        Adjust the size of the chat button
     </p>
     <div style="display: flex; align-items: center; gap: 15px;">
-        <input type="range" 
+        <input type="number" 
                id="scw_widget_size" 
                name="scw_widget_size" 
-               min="40" 
-               max="80" 
+               min="10" 
+               step="0.1"
                value="<?php echo esc_attr($widget_size); ?>"
-               class="scw-size-slider"
-               style="flex: 1; max-width: 300px;">
-        <span class="scw-size-value" style="min-width: 50px; font-weight: 600; color: #374151;">
-            <?php echo esc_html($widget_size); ?>px
-        </span>
+               style="width: 80px;">
+        
+        <select id="scw_widget_size_unit" name="scw_widget_size_unit" style="padding: 0 5px; height: 30px;">
+            <option value="px" <?php selected($widget_size_unit, 'px'); ?>>px</option>
+            <option value="rem" <?php selected($widget_size_unit, 'rem'); ?>>rem</option>
+            <option value="em" <?php selected($widget_size_unit, 'em'); ?>>em</option>
+            <option value="%" <?php selected($widget_size_unit, '%'); ?>>%</option>
+        </select>
     </div>
 </div>
 
 <?php
 // Get icon settings
-$icon_type = get_option('scw_icon_type', 'chat');
-$custom_icon_url = get_option('scw_custom_icon_url', '');
-$icon_rotation = get_option('scw_icon_rotation', '0');
-$icon_scale = get_option('scw_icon_scale', '1');
+$icon_type = isset($settings['icon_type']) ? $settings['icon_type'] : 'chat';
+$custom_icon_url = isset($settings['custom_icon_url']) ? $settings['custom_icon_url'] : '';
+$icon_rotation = isset($settings['icon_rotation']) ? $settings['icon_rotation'] : '0';
+$icon_scale = isset($settings['icon_scale']) ? $settings['icon_scale'] : '1';
 ?>
 
 <!-- Widget Icon -->

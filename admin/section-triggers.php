@@ -6,9 +6,15 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Get current trigger settings
-$show_on_desktop = get_option('scw_show_on_desktop', '1');
-$show_on_mobile = get_option('scw_show_on_mobile', '1');
-$time_delay = get_option('scw_time_delay', '0');
+// Get current trigger settings
+// $settings is available from admin-main.php
+if (!isset($settings)) {
+    $settings = get_option('scw_settings', array());
+}
+
+$show_on_desktop = isset($settings['show_on_desktop']) ? $settings['show_on_desktop'] : '1';
+$show_on_mobile = isset($settings['show_on_mobile']) ? $settings['show_on_mobile'] : '1';
+$time_delay = isset($settings['time_delay']) ? $settings['time_delay'] : '0';
 ?>
 
 <h2 class="scw-section-title">Triggers and Targeting</h2>

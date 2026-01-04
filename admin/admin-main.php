@@ -7,8 +7,12 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // Get current settings
-$fb_id = get_option('scw_facebook_page_id', '');
-$wa_num = get_option('scw_whatsapp_number', '');
+// Get current settings
+$settings = get_option('scw_settings', array());
+
+// Helper vars for header/summary
+$fb_id = isset($settings['facebook_value']) ? $settings['facebook_value'] : '';
+$wa_num = isset($settings['whatsapp_value']) ? $settings['whatsapp_value'] : '';
 
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification not needed for navigational GET parameter
 $current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
