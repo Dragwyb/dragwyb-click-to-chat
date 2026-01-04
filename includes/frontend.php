@@ -158,18 +158,7 @@ class SCW_Frontend {
             if (!empty($custom_icon_url)) {
                 // If custom icon is used, remove background color and make icon fill the button
                 $bg_color = 'transparent';
-                
-                $file_ext = strtolower(pathinfo($custom_icon_url, PATHINFO_EXTENSION));
-                if ($file_ext === 'svg') {
-                     $svg_content = @file_get_contents($custom_icon_url);
-                     if ($svg_content) {
-                         $icon_html = '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">' . $svg_content . '</div>';
-                     } else {
-                         $icon_html = '<img src="' . esc_url($custom_icon_url) . '" alt="' . esc_attr($channel_config['name']) . '" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
-                     }
-                } else {
-                     $icon_html = '<img src="' . esc_url($custom_icon_url) . '" alt="' . esc_attr($channel_config['name']) . '" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
-                }
+                $icon_html = '<img src="' . esc_url($custom_icon_url) . '" alt="' . esc_attr($channel_config['name']) . '" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">';
             } else {
                 // Default handling
                 $icon_html = '<svg viewBox="0 0 24 24" style="width: 24px; height: 24px; fill: white;">' . $channel_config['icon'] . '</svg>';
