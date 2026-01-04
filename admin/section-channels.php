@@ -26,10 +26,10 @@ foreach ($phase1_channels as $slug) {
 }
 ?>
 
-<h2 class="scw-section-title">Choose Your Channels</h2>
+<h2 class="scw-section-title"><?php esc_html_e( 'Choose Your Channels', 'social-chat-widget' ); ?></h2>
 
 <p style="color: #6b7280; margin-bottom: 30px;">
-    Select which communication channels you want to display on your website.
+    <?php esc_html_e( 'Select which communication channels you want to display on your website.', 'social-chat-widget' ); ?>
 </p>
 
 <!-- Channel Selection Grid -->
@@ -63,7 +63,7 @@ foreach ($phase1_channels as $slug) {
 
 <!-- Channel Configuration Section -->
 <div style="margin-top: 40px;">
-    <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 20px;">Channel Configuration</h3>
+    <h3 style="font-size: 16px; font-weight: 600; color: #374151; margin-bottom: 20px;"><?php esc_html_e( 'Channel Configuration', 'social-chat-widget' ); ?></h3>
     
     <?php foreach ($phase1_channels as $slug): 
         $channel = $all_channels[$slug];
@@ -90,7 +90,7 @@ foreach ($phase1_channels as $slug) {
                 <span style="margin-left: 10px;"><?php echo esc_html($channel['label']); ?></span>
             </label>
             <p style="color: #9ca3af; font-size: 13px; margin-top: 8px;">
-                Enable a popup chat window where visitors can send you messages directly.
+                <?php esc_html_e( 'Enable a popup chat window where visitors can send you messages directly.', 'social-chat-widget' ); ?>
             </p>
         <?php else: ?>
             <!-- Input field for other channels -->
@@ -111,32 +111,32 @@ foreach ($phase1_channels as $slug) {
         <!-- Custom Icon Upload -->
         <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500; color: #6b7280;">
-                Custom Icon (Optional)
+                <?php esc_html_e( 'Custom Icon (Optional)', 'social-chat-widget' ); ?>
             </label>
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button type="button" class="button button-secondary scw-upload-channel-icon" data-target="<?php echo esc_attr($slug); ?>">
-                    Choose Icon
+                    <?php esc_html_e( 'Choose Icon', 'social-chat-widget' ); ?>
                 </button>
                 <input type="hidden" id="scw_<?php echo esc_attr($slug); ?>_custom_icon" name="scw_<?php echo esc_attr($slug); ?>_custom_icon" value="<?php echo esc_attr($custom_icon); ?>">
                 
                 <span class="scw-icon-filename-<?php echo esc_attr($slug); ?>" style="font-size: 13px; color: #6b7280;">
-                    <?php echo $custom_icon ? esc_html(basename($custom_icon)) : 'Default Icon'; ?>
+                    <?php echo $custom_icon ? esc_html(basename($custom_icon)) : esc_html__( 'Default Icon', 'social-chat-widget' ); ?>
                 </span>
                 
                 <?php if ($custom_icon): ?>
-                    <button type="button" class="button button-secondary scw-remove-channel-icon" data-target="<?php echo esc_attr($slug); ?>" style="color: #dc2626;">Remove</button>
+                    <button type="button" class="button button-secondary scw-remove-channel-icon" data-target="<?php echo esc_attr($slug); ?>" style="color: #dc2626;"><?php esc_html_e( 'Remove', 'social-chat-widget' ); ?></button>
                 <?php else: ?>
-                    <button type="button" class="button button-secondary scw-remove-channel-icon" data-target="<?php echo esc_attr($slug); ?>" style="color: #dc2626; display: none;">Remove</button>
+                    <button type="button" class="button button-secondary scw-remove-channel-icon" data-target="<?php echo esc_attr($slug); ?>" style="color: #dc2626; display: none;"><?php esc_html_e( 'Remove', 'social-chat-widget' ); ?></button>
                 <?php endif; ?>
             </div>
             <p style="margin: 5px 0 0 0; font-size: 12px; color: #9ca3af;">
-                Upload an SVG or Image to replace the default logo.
+                <?php esc_html_e( 'Upload an SVG or Image to replace the default logo.', 'social-chat-widget' ); ?>
             </p>
         </div>
         
         <!-- Device Visibility Settings -->
         <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e5e7eb;">
-            <p style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px;">Device Visibility</p>
+            <p style="font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 10px;"><?php esc_html_e( 'Device Visibility', 'social-chat-widget' ); ?></p>
             <div style="display: flex; gap: 20px;">
                 <label class="scw-toggle">
                     <div class="scw-switch">
@@ -152,7 +152,7 @@ foreach ($phase1_channels as $slug) {
                         >
                         <span class="scw-slider"></span>
                     </div>
-                    <span style="margin-left: 10px; font-size: 14px;">Show on Desktop</span>
+                    <span style="margin-left: 10px; font-size: 14px;"><?php esc_html_e( 'Show on Desktop', 'social-chat-widget' ); ?></span>
                 </label>
                 <label class="scw-toggle">
                     <div class="scw-switch">
@@ -168,7 +168,7 @@ foreach ($phase1_channels as $slug) {
                         >
                         <span class="scw-slider"></span>
                     </div>
-                    <span style="margin-left: 10px; font-size: 14px;">Show on Mobile</span>
+                    <span style="margin-left: 10px; font-size: 14px;"><?php esc_html_e( 'Show on Mobile', 'social-chat-widget' ); ?></span>
                 </label>
             </div>
         </div>
@@ -302,10 +302,7 @@ jQuery(document).ready(function($) {
         // Prevent bubbling to card click
         e.stopPropagation();
         
-        // The label/input click propagation will handle the checkbox state change automatically.
-        // We just need to capture the change event or let it bubble?
-        // Actually, we wrapped it in a div, not a label, so we might need to handle click if touching the checkbox directly works.
-        // Let's rely on the change event of the input inside.
+       
     });
     
     // Handle the checkbox change specifically
@@ -329,11 +326,7 @@ jQuery(document).ready(function($) {
         const $config = $('[data-channel-input="' + channel + '"]');
         if (isChecked) {
             $config.slideDown(300, function() {
-                 // Do not focus automatically on toggle, only on card click? 
-                 // Or focus if enabling? User said "i click on the switch then it gets unselectd othr wise on the click of chanel it go to te fild"
-                 // Implies: Switch = ON/OFF. Card Body = Focus Field.
-                 // So we don't strictly need to focus here, but it's fine if we do or don't.
-                 // Let's NOT focal to keep distinction clear.
+        
             });
         } else {
             $config.slideUp(300);
@@ -367,31 +360,14 @@ jQuery(document).ready(function($) {
     
     // Function to update preview
     function updateChannelPreview() {
-        // Trigger the global update in admin-script.js via a simulated event or just call it if available?
-        // admin-script.js listens to 'change input'.
-        // We triggered 'change' on the checkbox, so admin-script.js MIGHT pick it up if it listens to .scw-card-checkbox?
-        // admin-script.js listens to: 'input[name^="scw_"], select[name^="scw_"]'
-        // Our checkbox doesn't have a name starting with scw_ maybe? 
-        // Wait, line 73: <input type="checkbox" ...> We didn't give it a name. 
-        // WE should give it a name so admin-script.js sees it? 
-        // Or just forcefully update.
-        
-        // Let's trigger a custom event or check if admin-script.js picks it up.
-        // admin-script.js logic:
-        // $('input[name^="scw_"], ...').on('change', ...)
-        // We added .scw-card-checkbox with no name.
-        // But we DO update the hidden input: $('#scw_' + channel + '_enabled').val(...)
-        // We should trigger change on THAT hidden input.
+
         
         const channel = $('.scw-channel-card.active').first().data('channel');
         if(channel) {
              const $hidden = $('#scw_' + channel + '_enabled');
              $hidden.trigger('change'); // This will notify listeners
         }
-        
-        // Also manually call the global SCW_Admin if exposed, or just rely on the hidden input trigger which bubbles.
-        // Actually, hidden inputs don't bubble change events automatically when changed via JS. We must trigger it.
-        // In the checkbox change handler above, we do: .val(...). We should add .trigger('change').
+ 
     }
 });
 </script>

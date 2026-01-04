@@ -55,11 +55,6 @@ function scw_save_settings() {
     check_ajax_referer('scw_nonce', 'nonce');
     if(!current_user_can('manage_options')) return;
     
-    // Initialize settings array with defaults or existing data if we want to merge (but here we probably overwrite from form)
-    // Actually, safest is to get existing and merge, or just build fresh from POST if POST contains everything.
-    // Since POST only contains what's on the page, and we are on a single page app (sort of), we should probably merge.
-    // However, for clean state, building fresh is often better if we know we cover all fields. 
-    // Let's assume we cover all fields in the form.
     
     $settings = array();
     
@@ -164,6 +159,16 @@ function scw_save_settings() {
         if($delay >= 0 && $delay <= 60) {
             $settings['time_delay'] = $delay;
         }
+    }
+    
+    // Display Rules
+    if(isset($_POST['scw_display_mode'])) {
+        $settings['display_mode'] = sanitize_text_field(wp_unslash($_POST['scw_display_mode']));
+    }
+    if(isset($_POST['scw_display_post_types']) && is_array($_POST['scw_display_post_types'])) {
+        $settings['display_post_types'] = array_map('sanitize_text_field', wp_unslash($_POST['scw_display_post_types']));
+    } else {
+        $settings['display_post_types'] = array();
     }
     
     // Save all to single option

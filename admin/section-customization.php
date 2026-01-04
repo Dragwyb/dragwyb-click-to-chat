@@ -98,7 +98,7 @@ $custom_side = isset($settings['custom_side']) ? $settings['custom_side'] : 'rig
                            min="0"
                            step="0.1"
                            style="width: 80px;">
-                    <select id="scw_custom_bottom_unit" name="scw_custom_bottom_unit" style="padding: 0 5px; height: 30px;">
+                    <select id="scw_custom_bottom_unit" name="scw_custom_bottom_unit" style="padding: 0 5px; height: 30px; width: 45px">
                         <option value="px" <?php selected($custom_bottom_unit, 'px'); ?>>px</option>
                         <option value="rem" <?php selected($custom_bottom_unit, 'rem'); ?>>rem</option>
                         <option value="em" <?php selected($custom_bottom_unit, 'em'); ?>>em</option>
@@ -128,7 +128,7 @@ $custom_side = isset($settings['custom_side']) ? $settings['custom_side'] : 'rig
                            min="0"
                            step="0.1"
                            style="width: 80px;">
-                    <select id="scw_custom_horizontal_unit" name="scw_custom_horizontal_unit" style="padding: 0 5px; height: 30px;">
+                    <select id="scw_custom_horizontal_unit" name="scw_custom_horizontal_unit" style="padding: 0 5px; height: 30px; width: 45px">
                         <option value="px" <?php selected($custom_horizontal_unit, 'px'); ?>>px</option>
                         <option value="rem" <?php selected($custom_horizontal_unit, 'rem'); ?>>rem</option>
                         <option value="em" <?php selected($custom_horizontal_unit, 'em'); ?>>em</option>
@@ -177,7 +177,7 @@ $custom_side = isset($settings['custom_side']) ? $settings['custom_side'] : 'rig
                value="<?php echo esc_attr($widget_size); ?>"
                style="width: 80px;">
         
-        <select id="scw_widget_size_unit" name="scw_widget_size_unit" style="padding: 0 5px; height: 30px;">
+        <select id="scw_widget_size_unit" name="scw_widget_size_unit" style="padding: 0 5px; height: 30px; width: 45px">
             <option value="px" <?php selected($widget_size_unit, 'px'); ?>>px</option>
             <option value="rem" <?php selected($widget_size_unit, 'rem'); ?>>rem</option>
             <option value="em" <?php selected($widget_size_unit, 'em'); ?>>em</option>

@@ -7,9 +7,7 @@
 if ( ! defined( 'ABSPATH' ) ) exit;
 
 // $fb_id and $wa_num are set in admin-main.php
-if (!isset($fb_id)) $fb_id = '';
-if (!isset($wa_num)) $wa_num = '';
-
+// Channels are retrieved dynamically now
 ?>
 
 <h2 class="scw-section-title">Settings & Usage</h2>
@@ -22,8 +20,11 @@ if (!isset($wa_num)) $wa_num = '';
     <p style="color: #5b21b6;">
         To show the chat icons, simply copy and paste this shortcode on any Page or Post:
     </p>
-    <p style="margin-top: 10px;">
-        <code style="font-size: 16px; padding: 8px 16px; display: inline-block;">[social_chat]</code>
+    <p style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
+        <code style="font-size: 16px; padding: 8px 16px; background: #e9d5ff; border-radius: 4px; border: 1px solid #d8b4fe; color: #6b21a8; font-family: monospace;">[social_chat]</code>
+        <button type="button" class="scw-copy-btn" data-clipboard-text="[social_chat]" style="background: white; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;">
+            <span class="scw-copy-text">Copy</span>
+        </button>
     </p>
 </div>
 
@@ -35,45 +36,57 @@ if (!isset($wa_num)) $wa_num = '';
     
     <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px;">
         
-        <!-- Facebook -->
-        <div style="padding: 15px 0; border-bottom: 1px solid #e5e7eb;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="20" fill="#1877F2"/>
-                    <path d="M27.5 20.094C27.5 15.617 23.883 12 19.406 12C14.929 12 11.312 15.617 11.312 20.094C11.312 24.094 14.119 27.43 17.875 28.094V22.594H16V20.094H17.875V18.094C17.875 16.219 19.281 14.812 21.156 14.812H23.156V17.312H21.281C20.746 17.312 20.281 17.777 20.281 18.312V20.094H23.156V22.594H20.281V28.219C24.426 27.801 27.5 24.336 27.5 20.094Z" fill="white"/>
-                </svg>
-                <div style="flex: 1;">
-                    <strong>Facebook Page ID:</strong>
-                    <span style="color: #6b7280; margin-left: 10px;">
-                        <?php echo !empty($fb_id) ? esc_html($fb_id) : '<em>Not configured</em>'; ?>
+        <?php
+        // Get all channels
+        $all_channels = scw_get_channels();
+        $settings = get_option('scw_settings', array());
+        
+        $has_configured_channel = false;
+
+        foreach ($all_channels as $slug => $channel) : 
+            // Check if enabled or has value
+            $is_enabled = isset($settings[$slug . '_enabled']) && $settings[$slug . '_enabled'] === '1';
+            $value = isset($settings[$slug . '_value']) ? $settings[$slug . '_value'] : '';
+            
+            // Show if enabled OR has value (so user sees what's configured even if disabled)
+            if ( $is_enabled || !empty($value) ) :
+                $has_configured_channel = true;
+                $active_color = $is_enabled ? '#10b981' : '#9ca3af';
+                $status_text = $is_enabled ? '✓ Active' : '○ Inactive';
+        ?>
+            <div style="padding: 15px 0; border-bottom: 1px solid #e5e7eb;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <!-- Icon -->
+                    <div style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="<?php echo esc_attr($channel['color']); ?>">
+                            <?php echo wp_kses($channel['icon'], array('path' => array('d' => array()))); ?>
+                        </svg>
+                    </div>
+
+                    <!-- Label & Value -->
+                    <div style="flex: 1;">
+                        <strong><?php echo esc_html($channel['label']); ?>:</strong>
+                        <span style="color: #6b7280; margin-left: 10px; word-break: break-all;">
+                            <?php echo !empty($value) ? esc_html($value) : '<em>Not configured</em>'; ?>
+                        </span>
+                    </div>
+
+                    <!-- Status -->
+                    <span style="color: <?php echo esc_attr($active_color); ?>; font-weight: 600; white-space: nowrap;">
+                        <?php echo esc_html($status_text); ?>
                     </span>
                 </div>
-                <span style="color: <?php echo !empty($fb_id) ? '#10b981' : '#9ca3af'; ?>; font-weight: 600;">
-                    <?php echo !empty($fb_id) ? '✓ Active' : '○ Inactive'; ?>
-                </span>
             </div>
-        </div>
+        <?php 
+            endif; 
+        endforeach; 
 
-        <!-- WhatsApp -->
-        <div style="padding: 15px 0; border-bottom: 1px solid #e5e7eb;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <svg width="24" height="24" viewBox="0 0 40 40" fill="none">
-                    <circle cx="20" cy="20" r="20" fill="#25D366"/>
-                    <path d="M20 11C15.03 11 11 15.03 11 20C11 21.61 11.46 23.11 12.24 24.39L11.5 28.5L15.74 27.78C16.98 28.47 18.43 28.88 20 28.88C24.97 28.88 29 24.85 29 19.88C29 17.46 28.05 15.18 26.36 13.49C24.67 11.8 22.39 10.88 20 10.88V11Z" fill="white"/>
-                </svg>
-                <div style="flex: 1;">
-                    <strong>WhatsApp Number:</strong>
-                    <span style="color: #6b7280; margin-left: 10px;">
-                        <?php echo !empty($wa_num) ? esc_html($wa_num) : '<em>Not configured</em>'; ?>
-                    </span>
-                </div>
-                <span style="color: <?php echo !empty($wa_num) ? '#10b981' : '#9ca3af'; ?>; font-weight: 600;">
-                    <?php echo !empty($wa_num) ? '✓ Active' : '○ Inactive'; ?>
-                </span>
+        if (!$has_configured_channel) :
+        ?>
+            <div style="padding: 20px; text-align: center; color: #9ca3af;">
+                No channels configured yet. Go to "Select Channels" to get started!
             </div>
-        </div>
-
-
+        <?php endif; ?>
 
     </div>
 </div>

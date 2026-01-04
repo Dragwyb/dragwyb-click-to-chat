@@ -44,6 +44,15 @@
             $('#scw_custom_bottom, #scw_custom_horizontal').on('input', this.updatePreview.bind(this));
             $('input[name="scw_widget_position"], input[name="scw_icon_type"], select[name="scw_custom_side"], select[name="scw_custom_vertical_align"]').on('change', this.updatePreview.bind(this));
             $('#scw_widget_size_unit, #scw_custom_bottom_unit, #scw_custom_horizontal_unit').on('change', this.updatePreview.bind(this));
+
+            // Display Rules Toggle
+            $('input[name="scw_display_mode"]').on('change', function () {
+                if ($(this).val() === 'post_types') {
+                    $('#scw-post-types-list').slideDown(200);
+                } else {
+                    $('#scw-post-types-list').slideUp(200);
+                }
+            });
         },
 
         handleTabClick: function (e) {
@@ -253,7 +262,7 @@
 
                 menuHtml += `
                     <div class="scw-sub-btn-preview" title="${channel.name}" 
-                        style="width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); ${channel.style}">
+                        style="width: ${widgetSizeStr}; height: ${widgetSizeStr}; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); ${channel.style}">
                         <div style="${innerSize} display: flex; align-items: center; justify-content: center;">
                              ${channel.icon} 
                         </div>
@@ -384,7 +393,18 @@
             // Triggers and targeting settings
             formData.show_on_desktop = $('#scw_show_on_desktop').is(':checked') ? '1' : '0';
             formData.show_on_mobile = $('#scw_show_on_mobile').is(':checked') ? '1' : '0';
+            formData.show_on_mobile = $('#scw_show_on_mobile').is(':checked') ? '1' : '0';
             formData.time_delay = $('#scw_time_delay').val();
+
+            // Display Rules
+            formData.scw_display_mode = $('input[name="scw_display_mode"]:checked').val();
+
+            // Collect post types as an array
+            const postTypes = [];
+            $('input[name="scw_display_post_types[]"]:checked').each(function () {
+                postTypes.push($(this).val());
+            });
+            formData['scw_display_post_types[]'] = postTypes;
 
             // AJAX save
             $.ajax({
@@ -482,6 +502,41 @@
             // Trigger preview update
             SCW_Admin.updatePreview();
         });
+
+        // Copy Shortcode Logic
+        $(document).on('click', '.scw-copy-btn', function (e) {
+            e.preventDefault();
+            const $btn = $(this);
+            const $textSpan = $btn.find('.scw-copy-text');
+            const textToCopy = $btn.data('clipboard-text');
+
+            if (navigator.clipboard && window.isSecureContext) {
+                // Use Clipboard API
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showCopied();
+                });
+            } else {
+                // Fallback (create temporary input)
+                const $temp = $('<input>');
+                $('body').append($temp);
+                $temp.val(textToCopy).select();
+                document.execCommand('copy');
+                $temp.remove();
+                showCopied();
+            }
+
+            function showCopied() {
+                const originalText = $textSpan.text();
+                $textSpan.text('Copied!');
+                $btn.css('background-color', '#d1fae5').css('border-color', '#34d399').css('color', '#065f46');
+
+                setTimeout(() => {
+                    $textSpan.text(originalText);
+                    $btn.attr('style', 'background: white; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;');
+                }, 2000);
+            }
+        });
+
     });
 
 })(jQuery);

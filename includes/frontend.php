@@ -16,7 +16,7 @@ class SCW_Frontend {
      */
     public function render_widget_shortcode() {
         ob_start(); // Start recording output
-        $this->render_widget_html(); // Generate HTML/CSS/JS
+        $this->render_widget_html( true ); // Generate HTML/CSS/JS
         return ob_get_clean(); // Return output to the page
     }
 
@@ -26,9 +26,34 @@ class SCW_Frontend {
     /**
      * The Main Render Function
      */
-    public function render_widget_html() {
+    /**
+     * The Main Render Function
+     * 
+     * @param boolean $from_shortcode Whether called via shortcode
+     */
+    public function render_widget_html( $from_shortcode = false ) {
         // Get all settings container
         $settings = get_option( 'scw_settings', array() );
+
+        // Display Rules Check (only if auto-injected, not manually via shortcode)
+        if ( ! $from_shortcode ) {
+            $display_mode = isset($settings['display_mode']) ? $settings['display_mode'] : 'all';
+
+            // Specific Post Types Mode
+            if ( $display_mode === 'post_types' ) {
+                $allowed_types = isset($settings['display_post_types']) ? $settings['display_post_types'] : array();
+                
+                // Safety check: if no types selected, don't show
+                if ( empty( $allowed_types ) ) {
+                    return;
+                }
+                
+                // If current page is not one of the allowed singular post types, return.
+                if ( ! is_singular( $allowed_types ) ) {
+                    return;
+                }
+            }
+        }
 
         // Helper to get value
         // $val = isset($settings['key']) ? $settings['key'] : 'default';
@@ -231,7 +256,7 @@ class SCW_Frontend {
             /* Sub Menu Items */
             .scw-menu { position: fixed; <?php echo esc_attr($menu_position_style); ?> display: flex; flex-direction: column; gap: 10px; z-index: 999998; opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.3s; }
             .scw-menu.scw-open { opacity: 1; pointer-events: auto; transform: translateY(0); }
-            .scw-sub-btn { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; border: none; }
+            .scw-sub-btn { width: <?php echo esc_attr($widget_size_str); ?>; height: <?php echo esc_attr($widget_size_str); ?>; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; border: none; }
             .scw-sub-btn svg { width: 24px; fill: white; }
 
             /* Initially hide the widget */
