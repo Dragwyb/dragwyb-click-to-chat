@@ -1,6 +1,6 @@
 === Dragwyb Click to Chat ===
 Contributors: dragwyb
-Tags: click to chat, social chat, chat widget, whatsapp, messenger, contact button
+Tags: click to chat, social chat, chat widget, whatsapp, facebook
 Requires at least: 5.0
 Tested up to: 6.9
 Stable tag: 1.0.1
