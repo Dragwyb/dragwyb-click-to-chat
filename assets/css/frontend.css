@@ -1,0 +1,69 @@
+/* Social Chat Widget - Frontend Styles */
+
+/* The Floating Button */
+.dctc-widget-btn {
+    position: fixed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 999999;
+    transition: transform 0.3s;
+}
+
+.dctc-widget-btn:hover {
+    transform: scale(1.1);
+}
+
+.dctc-widget-btn svg {
+    width: 100%;
+    height: 100%;
+}
+
+.dctc-widget-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+/* Sub Menu Items */
+.dctc-menu {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 999998;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+    transition: all 0.3s;
+}
+
+.dctc-menu.dctc-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.dctc-sub-btn {
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-decoration: none;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    border: none;
+}
+
+.dctc-sub-btn svg {
+    width: 24px;
+    fill: white;
+}
+
+/* Initially hide the widget */
+.dctc-widget-hidden {
+    opacity: 0;
+    pointer-events: none;
+}

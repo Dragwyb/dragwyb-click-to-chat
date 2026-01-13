@@ -8,7 +8,7 @@
     let currentStep = 0;
     const totalSteps = 4;
 
-    const SCW_Admin = {
+    const DCTC_Admin = {
 
         init: function () {
             this.bindEvents();
@@ -18,40 +18,194 @@
 
         bindEvents: function () {
             // Tab navigation
-            $('.scw-tab').on('click', this.handleTabClick.bind(this));
+            $('.dctc-tab').on('click', this.handleTabClick.bind(this));
 
             // Next/Back buttons
-            $('#scw-next-btn').on('click', this.nextStep.bind(this));
-            $('#scw-back-btn').on('click', this.prevStep.bind(this));
+            $('#dctc-next-btn').on('click', this.nextStep.bind(this));
+            $('#dctc-back-btn').on('click', this.prevStep.bind(this));
 
             // Save button
-            $('#scw-save-btn').on('click', this.saveSettings.bind(this));
+            $('#dctc-save-btn').on('click', this.saveSettings.bind(this));
 
             // Listen for changes on all inputs that affect the preview
             // Note: section-channels.php has its own click handler for cards, 
             $(document).on('change input',
-                'input[name^="scw_"], select[name^="scw_"]',
+                'input[name^="dctc_"], select[name^="dctc_"]',
                 this.updatePreview.bind(this)
             );
 
             // Also listen to clicks on channel cards for immediate preview update
-            $('.scw-channel-card').on('click', () => {
+            $('.dctc-channel-card').on('click', () => {
                 setTimeout(() => this.updatePreview(), 50); // slight delay to allow active class toggle
             });
 
             // Watch specific widget customization inputs directly for smoother real-time updates
-            $('#scw_widget_color, #scw_widget_size, #scw_icon_rotation, #scw_icon_scale').on('input', this.updatePreview.bind(this));
-            $('#scw_custom_bottom, #scw_custom_horizontal').on('input', this.updatePreview.bind(this));
-            $('input[name="scw_widget_position"], input[name="scw_icon_type"], select[name="scw_custom_side"], select[name="scw_custom_vertical_align"]').on('change', this.updatePreview.bind(this));
-            $('#scw_widget_size_unit, #scw_custom_bottom_unit, #scw_custom_horizontal_unit').on('change', this.updatePreview.bind(this));
+            $('#dctc_widget_color, #dctc_widget_size, #dctc_icon_rotation, #dctc_icon_scale').on('input', this.updatePreview.bind(this));
+            $('#dctc_custom_bottom, #dctc_custom_horizontal').on('input', this.updatePreview.bind(this));
+            $('input[name="dctc_widget_position"], input[name="dctc_icon_type"], select[name="dctc_custom_side"], select[name="dctc_custom_vertical_align"]').on('change', this.updatePreview.bind(this));
+            $('#dctc_widget_size_unit, #dctc_custom_bottom_unit, #dctc_custom_horizontal_unit').on('change', this.updatePreview.bind(this));
 
             // Display Rules Toggle
-            $('input[name="scw_display_mode"]').on('change', function () {
+            $('input[name="dctc_display_mode"]').on('change', function () {
                 if ($(this).val() === 'post_types') {
-                    $('#scw-post-types-list').slideDown(200);
+                    $('#dctc-post-types-list').slideDown(200);
                 } else {
-                    $('#scw-post-types-list').slideUp(200);
+                    $('#dctc-post-types-list').slideUp(200);
                 }
+            });
+
+            // Initialize WordPress Color Picker
+            $('.dctc-color-picker').wpColorPicker({
+                change: function (event, ui) {
+                    $('.dctc-color-preview').css('background-color', ui.color.toString());
+                    DCTC_Admin.updatePreview();
+                }
+            });
+
+            // --- Channel Interactions ---
+
+            // 1. Switch Click Handler (Toggle Logic)
+            $('.dctc-card-switch').on('click', function (e) {
+                // Prevent bubbling to card click
+                e.stopPropagation();
+            });
+
+            // Handle the checkbox change specifically
+            $('.dctc-card-checkbox').on('change', function (e) {
+                const $checkbox = $(this);
+                const $card = $checkbox.closest('.dctc-channel-card');
+                const channel = $card.data('channel');
+                const isChecked = $checkbox.is(':checked');
+
+                // Update Card UI
+                if (isChecked) {
+                    $card.addClass('active');
+                } else {
+                    $card.removeClass('active');
+                }
+
+                // Update hidden enabled input
+                $('#dctc_' + channel + '_enabled').val(isChecked ? '1' : '0');
+
+                // Show/hide config section
+                const $config = $('[data-channel-input="' + channel + '"]');
+                if (isChecked) {
+                    $config.slideDown(300);
+                } else {
+                    $config.slideUp(300);
+                }
+
+                // Update preview
+                DCTC_Admin.updatePreview();
+            });
+
+            // 2. Card Body Click Handler (Focus/Enable Logic)
+            $('.dctc-channel-card').on('click', function (e) {
+                const $card = $(this);
+                const channel = $card.data('channel');
+                const $checkbox = $card.find('.dctc-card-checkbox');
+                const isChecked = $checkbox.is(':checked');
+
+                if (!isChecked) {
+                    // If inactive, activate it first (User intent: "I want to configure this")
+                    $checkbox.prop('checked', true).trigger('change');
+                }
+
+                // Focus the input field
+                const $config = $('[data-channel-input="' + channel + '"]');
+                if ($config.length) {
+                    // Scroll to config if needed
+                    $('html, body').animate({
+                        scrollTop: $config.offset().top - 100
+                    }, 300);
+
+                    $config.find('input:not([type="hidden"]):first').focus();
+                }
+            });
+
+            // --- Customization Interactions ---
+
+            // Update size value display
+            $('#dctc_widget_size').on('input', function () {
+                $('.dctc-size-value').text($(this).val() + 'px');
+            });
+
+            // Update icon rotation display
+            $('#dctc_icon_rotation').on('input', function () {
+                $('.dctc-rotation-value').text($(this).val() + '°');
+            });
+
+            // Update icon scale display
+            $('#dctc_icon_scale').on('input', function () {
+                $('.dctc-scale-value').text($(this).val() + 'x');
+            });
+
+            // Position selector
+            $('.dctc-position-option input').on('change', function () {
+                $('.dctc-position-option').removeClass('active');
+                $(this).closest('.dctc-position-option').addClass('active');
+
+                // Show/hide custom position settings
+                if ($(this).val() === 'custom') {
+                    $('#custom-position-settings').slideDown(300);
+                } else {
+                    $('#custom-position-settings').slideUp(300);
+                }
+            });
+
+            // Icon selector
+            $('.dctc-icon-option input').on('change', function () {
+                $('.dctc-icon-option').removeClass('active');
+                $(this).closest('.dctc-icon-option').addClass('active');
+
+                // Show/hide custom icon upload
+                if ($(this).val() === 'custom') {
+                    $('#custom-icon-upload').slideDown(300);
+                } else {
+                    $('#custom-icon-upload').slideUp(300);
+                }
+            });
+
+            // Handle Icon Upload for Main Widget Icon
+            var iconUploader;
+            $('#upload-icon-button').on('click', function (e) {
+                e.preventDefault();
+
+                if (iconUploader) {
+                    iconUploader.open();
+                    return;
+                }
+
+                iconUploader = wp.media({
+                    title: 'Choose Icon',
+                    button: {
+                        text: 'Use this icon'
+                    },
+                    multiple: false
+                });
+
+                iconUploader.on('select', function () {
+                    var attachment = iconUploader.state().get('selection').first().toJSON();
+                    $('#dctc_custom_icon_url').val(attachment.url);
+                    $('#icon-filename').text(attachment.filename || 'Icon selected');
+
+                    // Show remove button if not already visible
+                    if ($('#remove-icon-button').length === 0) {
+                        $('#icon-filename').after('<button type="button" id="remove-icon-button" class="button button-secondary" style="color: #dc2626;">Remove</button>');
+                    }
+
+                    DCTC_Admin.updatePreview();
+                });
+
+                iconUploader.open();
+            });
+
+            // Remove icon button
+            $(document).on('click', '#remove-icon-button', function () {
+                $('#dctc_custom_icon_url').val('');
+                $('#icon-filename').text('No icon selected');
+                $(this).remove();
+                DCTC_Admin.updatePreview();
             });
         },
 
@@ -68,10 +222,10 @@
             currentStep = step;
 
             // Update tabs
-            $('.scw-tab').removeClass('active').eq(step).addClass('active');
+            $('.dctc-tab').removeClass('active').eq(step).addClass('active');
 
             // Update sections
-            $('.scw-section').removeClass('active').eq(step).addClass('active');
+            $('.dctc-section').removeClass('active').eq(step).addClass('active');
 
             // Update navigation buttons
             this.updateNavigationButtons();
@@ -81,7 +235,7 @@
             e.preventDefault();
             if (currentStep < totalSteps - 1) {
                 // Mark current tab as completed
-                $('.scw-tab').eq(currentStep).addClass('completed');
+                $('.dctc-tab').eq(currentStep).addClass('completed');
                 this.goToStep(currentStep + 1);
             }
         },
@@ -94,8 +248,8 @@
         },
 
         updateNavigationButtons: function () {
-            const $backBtn = $('#scw-back-btn');
-            const $nextBtn = $('#scw-next-btn');
+            const $backBtn = $('#dctc-back-btn');
+            const $nextBtn = $('#dctc-next-btn');
 
             // Back button
             if (currentStep === 0) {
@@ -116,15 +270,15 @@
         // We only need to react to changes.
 
         updatePreview: function () {
-            const $previewContainer = $('.scw-preview-device');
+            const $previewContainer = $('.dctc-preview-device');
 
             // 1. Gather Settings
-            const widgetColor = $('#scw_widget_color').val() || '#8e44ad';
-            const widgetSize = $('#scw_widget_size').val() || 60;
-            const widgetSizeUnit = $('#scw_widget_size_unit').val() || 'px';
+            const widgetColor = $('#dctc_widget_color').val() || '#8e44ad';
+            const widgetSize = $('#dctc_widget_size').val() || 60;
+            const widgetSizeUnit = $('#dctc_widget_size_unit').val() || 'px';
             const widgetSizeStr = widgetSize + widgetSizeUnit;
 
-            const widgetPosition = $('input[name="scw_widget_position"]:checked').val() || 'right';
+            const widgetPosition = $('input[name="dctc_widget_position"]:checked').val() || 'right';
 
             // Custom position details
             let positionStyle = '';
@@ -137,16 +291,16 @@
             let horizDistStr = '20px';
 
             if (widgetPosition === 'custom') {
-                const vertDist = $('#scw_custom_bottom').val() || 20;
-                const vertUnit = $('#scw_custom_bottom_unit').val() || 'px';
+                const vertDist = $('#dctc_custom_bottom').val() || 20;
+                const vertUnit = $('#dctc_custom_bottom_unit').val() || 'px';
                 vertDistStr = vertDist + vertUnit;
 
-                const horizDist = $('#scw_custom_horizontal').val() || 20;
-                const horizUnit = $('#scw_custom_horizontal_unit').val() || 'px';
+                const horizDist = $('#dctc_custom_horizontal').val() || 20;
+                const horizUnit = $('#dctc_custom_horizontal_unit').val() || 'px';
                 horizDistStr = horizDist + horizUnit;
 
-                side = $('#scw_custom_side').val() || 'right';
-                vertAlign = $('#scw_custom_vertical_align').val() || 'bottom';
+                side = $('#dctc_custom_side').val() || 'right';
+                vertAlign = $('#dctc_custom_vertical_align').val() || 'bottom';
 
                 // Handle top/auto bottom/auto logic
                 // For preview CSS, we just set the specific property
@@ -160,23 +314,23 @@
             }
 
             // Icon Settings
-            const iconType = $('input[name="scw_icon_type"]:checked').val() || 'chat';
-            const iconRotation = $('#scw_icon_rotation').val() || 0;
-            const iconScale = $('#scw_icon_scale').val() || 1;
+            const iconType = $('input[name="dctc_icon_type"]:checked').val() || 'chat';
+            const iconRotation = $('#dctc_icon_rotation').val() || 0;
+            const iconScale = $('#dctc_icon_scale').val() || 1;
             const iconTransform = `transform: rotate(${iconRotation}deg) scale(${iconScale});`;
 
             // Active Channels
             let activeChannels = [];
-            $('.scw-channel-card.active').each(function () {
+            $('.dctc-channel-card.active').each(function () {
                 const $card = $(this);
                 const channelSlug = $card.data('channel');
-                const channelName = $card.find('.scw-channel-name').text();
+                const channelName = $card.find('.dctc-channel-name').text();
 
                 // Get custom icon if exists
-                const customIconUrl = $('#scw_' + channelSlug + '_custom_icon').val();
+                const customIconUrl = $('#dctc_' + channelSlug + '_custom_icon').val();
 
                 let iconHtml = '';
-                let colorData = $card.find('.scw-channel-icon').attr('style'); // Default style e.g. "background: #...;"
+                let colorData = $card.find('.dctc-channel-icon').attr('style'); // Default style e.g. "background: #...;"
 
                 if (customIconUrl) {
                     // If custom icon, make background transparent and icon full width
@@ -184,7 +338,7 @@
                     iconHtml = `<img src="${customIconUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
                 } else {
                     // Get the SVG content directly from the card
-                    let rawSvg = $card.find('.scw-channel-icon svg').prop('outerHTML');
+                    let rawSvg = $card.find('.dctc-channel-icon svg').prop('outerHTML');
                     // Ensure default SVG is centered and sized correctly inside the preview bubble
                     // The preview bubble is 50x50. Default SVG is 32x32.
                     // We replace width/height to be safe.
@@ -203,7 +357,7 @@
             // Main Button Icon content
             let mainIconHtml = '';
             if (iconType === 'custom') {
-                const customUrl = $('#scw_custom_icon_url').val();
+                const customUrl = $('#dctc_custom_icon_url').val();
                 if (customUrl) {
                     mainIconHtml = `<img src="${customUrl}" style="width: 100%; height: 100%; object-fit: contain; ${iconTransform}" />`;
                 } else {
@@ -253,7 +407,7 @@
             `;
 
             // Build Menu HTML
-            let menuHtml = `<div class="scw-menu-preview" style="${menuStyle}">`;
+            let menuHtml = `<div class="dctc-menu-preview" style="${menuStyle}">`;
 
             activeChannels.forEach(channel => {
                 // Check if it's a custom icon (transparent bg)
@@ -261,7 +415,7 @@
                 const innerSize = isCustom ? 'width: 100%; height: 100%;' : 'width: 24px; height: 24px;';
 
                 menuHtml += `
-                    <div class="scw-sub-btn-preview" title="${channel.name}" 
+                    <div class="dctc-sub-btn-preview" title="${channel.name}" 
                         style="width: ${widgetSizeStr}; height: ${widgetSizeStr}; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); ${channel.style}">
                         <div style="${innerSize} display: flex; align-items: center; justify-content: center;">
                              ${channel.icon} 
@@ -272,7 +426,7 @@
             menuHtml += `</div>`;
 
             const btnHtml = `
-                <div class="scw-widget-btn-preview" style="${btnCss}">
+                <div class="dctc-widget-btn-preview" style="${btnCss}">
                     <div style="width: 100%; height: 100%; display: flex;">
                         ${mainIconHtml} 
                     </div>
@@ -281,13 +435,13 @@
 
             // Combine
             const previewContent = `
-                <div class="scw-live-preview-box" style="width: 100%; height: 100%; position: relative;">
+                <div class="dctc-live-preview-box" style="width: 100%; height: 100%; position: relative;">
                     ${menuHtml}
                     ${btnHtml}
                 </div>
                 <style>
                     /* Container styles */
-                    .scw-preview-device {
+                    .dctc-preview-device {
                         position: relative;
                         overflow: hidden;
                         background-color: #fff; 
@@ -295,16 +449,16 @@
                         height: 400px; /* fixed height for absolute positioning context */
                     }
                     /* Ensure SVG fills use the parent color */
-                    .scw-widget-btn-preview svg { fill: currentColor; width: 100%; height: 100%; }
-                    .scw-sub-btn-preview svg { fill: white; width: 24px; height: 24px; }
+                    .dctc-widget-btn-preview svg { fill: currentColor; width: 100%; height: 100%; }
+                    .dctc-sub-btn-preview svg { fill: white; width: 24px; height: 24px; }
                 </style>
             `;
 
             $previewContainer.html(previewContent);
 
             // Add click toggle behavior for realism
-            $previewContainer.find('.scw-widget-btn-preview').on('click', function () {
-                const $menu = $previewContainer.find('.scw-menu-preview');
+            $previewContainer.find('.dctc-widget-btn-preview').on('click', function () {
+                const $menu = $previewContainer.find('.dctc-menu-preview');
                 if ($menu.css('opacity') === '0' || $menu.is(':hidden')) {
                     $menu.css({ opacity: 1, visibility: 'visible' }).show();
                 } else {
@@ -340,8 +494,8 @@
 
             // Collect form data
             const formData = {
-                action: 'scw_save_settings',
-                nonce: scw_admin.nonce
+                action: 'dctc_save_settings',
+                nonce: dctc_admin.nonce
             };
 
             // Phase 1: Social channels only
@@ -349,13 +503,13 @@
 
             phase1Channels.forEach(function (slug) {
                 // Collect enabled state
-                const enabled = $('#scw_' + slug + '_enabled').val();
+                const enabled = $('#dctc_' + slug + '_enabled').val();
                 if (enabled !== undefined) {
                     formData[slug + '_enabled'] = enabled;
                 }
 
                 // Collect value
-                const $valueInput = $('#scw_' + slug + '_value');
+                const $valueInput = $('#dctc_' + slug + '_value');
                 if ($valueInput.length) {
                     if ($valueInput.attr('type') === 'checkbox') {
                         formData[slug + '_value'] = $valueInput.is(':checked') ? '1' : '0';
@@ -365,46 +519,46 @@
                 }
 
                 // Collect device visibility checkboxes
-                formData[slug + '_desktop'] = $('#scw_' + slug + '_desktop').is(':checked') ? '1' : '0';
-                formData[slug + '_mobile'] = $('#scw_' + slug + '_mobile').is(':checked') ? '1' : '0';
+                formData[slug + '_desktop'] = $('#dctc_' + slug + '_desktop').is(':checked') ? '1' : '0';
+                formData[slug + '_mobile'] = $('#dctc_' + slug + '_mobile').is(':checked') ? '1' : '0';
 
                 // Collect custom icon
-                formData[slug + '_custom_icon'] = $('#scw_' + slug + '_custom_icon').val();
+                formData[slug + '_custom_icon'] = $('#dctc_' + slug + '_custom_icon').val();
             });
 
             // Add widget customization settings
-            formData.widget_position = $('input[name="scw_widget_position"]:checked').val();
-            formData.widget_color = $('#scw_widget_color').val();
-            formData.widget_size = $('#scw_widget_size').val();
-            formData.widget_size_unit = $('#scw_widget_size_unit').val();
+            formData.widget_position = $('input[name="dctc_widget_position"]:checked').val();
+            formData.widget_color = $('#dctc_widget_color').val();
+            formData.widget_size = $('#dctc_widget_size').val();
+            formData.widget_size_unit = $('#dctc_widget_size_unit').val();
 
             // Custom position settings
-            formData.custom_bottom = $('#scw_custom_bottom').val();
-            formData.custom_bottom_unit = $('#scw_custom_bottom_unit').val();
-            formData.custom_horizontal = $('#scw_custom_horizontal').val();
-            formData.custom_horizontal_unit = $('#scw_custom_horizontal_unit').val();
-            formData.custom_side = $('#scw_custom_side').val();
-            formData.custom_vertical_align = $('#scw_custom_vertical_align').val();
+            formData.custom_bottom = $('#dctc_custom_bottom').val();
+            formData.custom_bottom_unit = $('#dctc_custom_bottom_unit').val();
+            formData.custom_horizontal = $('#dctc_custom_horizontal').val();
+            formData.custom_horizontal_unit = $('#dctc_custom_horizontal_unit').val();
+            formData.custom_side = $('#dctc_custom_side').val();
+            formData.custom_vertical_align = $('#dctc_custom_vertical_align').val();
             // Icon settings
-            formData.icon_type = $('input[name="scw_icon_type"]:checked').val();
-            formData.custom_icon_url = $('#scw_custom_icon_url').val();
-            formData.icon_rotation = $('#scw_icon_rotation').val();
-            formData.icon_scale = $('#scw_icon_scale').val();
+            formData.icon_type = $('input[name="dctc_icon_type"]:checked').val();
+            formData.custom_icon_url = $('#dctc_custom_icon_url').val();
+            formData.icon_rotation = $('#dctc_icon_rotation').val();
+            formData.icon_scale = $('#dctc_icon_scale').val();
             // Triggers and targeting settings
-            formData.show_on_desktop = $('#scw_show_on_desktop').is(':checked') ? '1' : '0';
-            formData.show_on_mobile = $('#scw_show_on_mobile').is(':checked') ? '1' : '0';
-            formData.show_on_mobile = $('#scw_show_on_mobile').is(':checked') ? '1' : '0';
-            formData.time_delay = $('#scw_time_delay').val();
+            formData.show_on_desktop = $('#dctc_show_on_desktop').is(':checked') ? '1' : '0';
+            formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
+            formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
+            formData.time_delay = $('#dctc_time_delay').val();
 
             // Display Rules
-            formData.scw_display_mode = $('input[name="scw_display_mode"]:checked').val();
+            formData.dctc_display_mode = $('input[name="dctc_display_mode"]:checked').val();
 
             // Collect post types as an array
             const postTypes = [];
-            $('input[name="scw_display_post_types[]"]:checked').each(function () {
+            $('input[name="dctc_display_post_types[]"]:checked').each(function () {
                 postTypes.push($(this).val());
             });
-            formData['scw_display_post_types[]'] = postTypes;
+            formData['dctc_display_post_types[]'] = postTypes;
 
             // AJAX save
             $.ajax({
@@ -414,10 +568,10 @@
                 success: function (response) {
                     if (response.success) {
                         // Show success message
-                        SCW_Admin.showSuccessMessage('Settings saved successfully!');
+                        DCTC_Admin.showSuccessMessage('Settings saved successfully!');
 
                         // Mark current tab as completed
-                        $('.scw-tab').eq(currentStep).addClass('completed');
+                        $('.dctc-tab').eq(currentStep).addClass('completed');
                     } else {
                         alert('Error saving settings. Please try again.');
                     }
@@ -433,7 +587,7 @@
         },
 
         showSuccessMessage: function (message) {
-            const $msg = $('.scw-success-message');
+            const $msg = $('.dctc-success-message');
             $msg.text(message).addClass('show');
 
             setTimeout(function () {
@@ -451,14 +605,14 @@
 
     // Initialize on document ready
     $(document).ready(function () {
-        SCW_Admin.init();
+        DCTC_Admin.init();
 
         // --- Channel Icon Uploader Logic ---
         // We attach this to document to ensure it works for dynamically generated elements if any, 
         // though these inputs are static.
 
         // Open Media Uploader
-        $(document).on('click', '.scw-upload-channel-icon', function (e) {
+        $(document).on('click', '.dctc-upload-channel-icon', function (e) {
             e.preventDefault();
 
             var $btn = $(this);
@@ -477,37 +631,37 @@
                 var attachment = frame.state().get('selection').first().toJSON();
 
                 // Update Inputs and UI
-                $('#scw_' + target + '_custom_icon').val(attachment.url);
-                $('.scw-icon-filename-' + target).text(attachment.filename || 'Icon selected');
+                $('#dctc_' + target + '_custom_icon').val(attachment.url);
+                $('.dctc-icon-filename-' + target).text(attachment.filename || 'Icon selected');
 
                 // Show remove button
-                $('.scw-remove-channel-icon[data-target="' + target + '"]').show();
+                $('.dctc-remove-channel-icon[data-target="' + target + '"]').show();
 
                 // Trigger preview update
-                SCW_Admin.updatePreview();
+                DCTC_Admin.updatePreview();
             });
 
             frame.open();
         });
 
         // Remove Icon
-        $(document).on('click', '.scw-remove-channel-icon', function (e) {
+        $(document).on('click', '.dctc-remove-channel-icon', function (e) {
             e.preventDefault();
             var target = $(this).data('target');
 
-            $('#scw_' + target + '_custom_icon').val('');
-            $('.scw-icon-filename-' + target).text('Default Icon');
+            $('#dctc_' + target + '_custom_icon').val('');
+            $('.dctc-icon-filename-' + target).text('Default Icon');
             $(this).hide();
 
             // Trigger preview update
-            SCW_Admin.updatePreview();
+            DCTC_Admin.updatePreview();
         });
 
         // Copy Shortcode Logic
-        $(document).on('click', '.scw-copy-btn', function (e) {
+        $(document).on('click', '.dctc-copy-btn', function (e) {
             e.preventDefault();
             const $btn = $(this);
-            const $textSpan = $btn.find('.scw-copy-text');
+            const $textSpan = $btn.find('.dctc-copy-text');
             const textToCopy = $btn.data('clipboard-text');
 
             if (navigator.clipboard && window.isSecureContext) {
