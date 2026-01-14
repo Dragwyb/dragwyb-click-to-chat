@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Social Chat Widget - Main Admin Template
+ * Dragwyb Click To Chat - Main Admin Template
  * Inspired by Chaty plugin
  */
 

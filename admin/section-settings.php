@@ -22,8 +22,8 @@ if (! defined('ABSPATH')) exit;
         To show the chat icons, simply copy and paste this shortcode on any Page or Post:
     </p>
     <p style="margin-top: 15px; display: flex; align-items: center; gap: 10px;">
-        <code style="font-size: 16px; padding: 8px 16px; background: #e9d5ff; border-radius: 4px; border: 1px solid #d8b4fe; color: #6b21a8; font-family: monospace;">[social_chat]</code>
-        <button type="button" class="dctc-copy-btn" data-clipboard-text="[social_chat]" style="background: white; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;">
+        <code style="font-size: 16px; padding: 8px 16px; background: #e9d5ff; border-radius: 4px; border: 1px solid #d8b4fe; color: #6b21a8; font-family: monospace;">[dctc-widget]</code>
+        <button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc-widget]" style="background: white; border: 1px solid #e5e7eb; color: #374151; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.2s;">
             <span class="dctc-copy-text">Copy</span>
         </button>
     </p>

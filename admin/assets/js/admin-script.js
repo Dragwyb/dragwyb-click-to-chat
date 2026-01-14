@@ -1,5 +1,5 @@
 /**
- * Social Chat Widget - Admin JavaScript
+ * Dragwyb Click To Chat - Admin JavaScript
  */
 
 (function ($) {

@@ -11,8 +11,8 @@ class DCTC_Frontend
 
         add_action('wp_enqueue_scripts', array($this, 'register_styles_scripts'));
 
-        // 1. Register Shortcode [social_chat]
-        add_shortcode('social_chat', array($this, 'render_widget_shortcode'));
+        // 1. Register Shortcode [dctc-widget]
+        add_shortcode('dctc-widget', array($this, 'render_widget_shortcode'));
     }
 
     /**
@@ -25,7 +25,7 @@ class DCTC_Frontend
     }
 
     /**
-     * Wrapper for Shortcode [social_chat]
+     * Wrapper for Shortcode [dctc-widget]
      */
     public function render_widget_shortcode()
     {

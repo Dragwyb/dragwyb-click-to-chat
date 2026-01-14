@@ -3,7 +3,7 @@
 /**
  * Fired when the plugin is deleted.
  *
- * @package Social Chat Widget
+ * @package Dragwyb Click To Chat
  */
 
 // If uninstall not called from WordPress, then exit.

@@ -1,5 +1,5 @@
 /**
- * Social Chat Widget - Frontend JS
+ * Dragwyb Click To Chat - Frontend JS
  */
 
 "use strict";
