@@ -60,5 +60,3 @@ No. The plugin does not store cookies, track users, or collect analytics data. I
 
 = 1.0.0 =
 * Initial release.
-* Added support for multiple communication platforms.
-* Included customization and device visibility settings.
