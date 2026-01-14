@@ -14,7 +14,7 @@ if (! defined('ABSPATH')) exit;
 define('DCTC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DCTC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('DCTC_VERSION', '1.0.1');
-class DCTC_Social_Chat_Widget
+class DCTC_Click_To_Chat
 {
 
     private static $instance = null;
@@ -31,11 +31,11 @@ class DCTC_Social_Chat_Widget
     public static function get_instance()
     {
         if (null === self::$instance) {
-            self::$instance = new DCTC_Social_Chat_Widget();
+            self::$instance = new DCTC_Click_To_Chat();
             self::$instance->init();
         }
         return self::$instance;
     }
 }
 
-add_action('plugins_loaded', array('DCTC_Social_Chat_Widget', 'get_instance'));
+add_action('plugins_loaded', array('DCTC_Click_To_Chat', 'get_instance'));
