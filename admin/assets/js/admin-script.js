@@ -393,7 +393,7 @@
             // "right: 25px" for preset (widget is right: 20px, so +5px)
             // "right: calc(horizontal_dist + 5px)" for custom
             // We just stick to that
-            const menuHorizDist = `calc(${horizDistStr} + 5px)`;
+            const menuHorizDist = `calc(${horizDistStr} + 0px)`;
 
             menuStyle = `
                 position: absolute; 
