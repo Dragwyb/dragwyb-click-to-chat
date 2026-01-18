@@ -4,7 +4,7 @@
  * Plugin Name: Dragwyb Click to Chat
  * Description: Connect with visitors via Facebook, WhatsApp, Telegram.
  * Author: Dragwyb
- * Version: 1.0.1
+ * Version: 1.0.2
  * Text Domain: dragwyb-click-to-chat
  * License: GPLv2 or later
  */
@@ -13,7 +13,7 @@ if (! defined('ABSPATH')) exit;
 
 define('DCTC_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('DCTC_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('DCTC_VERSION', '1.0.1');
+define('DCTC_VERSION', '1.0.2');
 class DCTC_Click_To_Chat
 {
 

@@ -3,7 +3,7 @@ Contributors: dragwyb
 Tags: click to chat, social chat, chat widget, whatsapp, facebook
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -37,9 +37,10 @@ This plugin does not collect, store, or track user data. It only outputs links t
 3. Open the **Click to Chat** menu in the admin dashboard to configure available channels and widget settings.
 
 == Screenshots ==
-1. Channel configuration screen.
-2. Widget customization options.
-3. Frontend floating chat widget display.
+1. Enable Social Channels.
+2. Social Channel Configuration.
+3. Social Widget Customization.
+4. Display Rules & Visibility.
 
 == Frequently Asked Questions ==
 
@@ -50,6 +51,10 @@ Currently, the plugin supports a predefined list of communication platforms. Sup
 No. The plugin does not store cookies, track users, or collect analytics data. It only generates links to external services.
 
 == Changelog ==
+
+= 1.0.2 =
+* Official public release.
+* Added plugin assets (banner, icon, screenshots).
 
 = 1.0.1 =
 * Renamed plugin to "Dragwyb Click to Chat".
