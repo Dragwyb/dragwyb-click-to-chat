@@ -8,7 +8,7 @@ Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-A lightweight, multi-platform click to chat WordPress plugin. Add a floating social chat widget and versatile redirect buttons for instant customer communication.
+A lightweight multi-channel click to chat plugin. Add a floating social chat widget and versatile redirect buttons for instant communication.
 
 == Description ==
 
@@ -16,9 +16,7 @@ A lightweight, multi-platform click to chat WordPress plugin. Add a floating soc
 
 The plugin features a stylish, expandable **floating button** that acts as a central communication hub. Whether you need a **social messenger redirect**, a **floating contact button**, or a direct link to your professional profiles, this plugin handles various channels simultaneously with zero impact on site performance.
 
-= Why Use a Click to Chat Plugin? =
-
-
+### Why Use a Click to Chat Plugin?
 * Add a floating WhatsApp chat button to WordPress
 * Allow visitors to contact you instantly from any page
 * Offer multiple communication options in a single chat widget
