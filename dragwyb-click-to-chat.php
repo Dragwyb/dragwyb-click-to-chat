@@ -11,31 +11,86 @@
 
 if (! defined('ABSPATH')) exit;
 
-define('DCTC_PLUGIN_DIR', plugin_dir_path(__FILE__));
-define('DCTC_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('DCTC_VERSION', '1.0.3');
-class DCTC_Click_To_Chat
-{
+use DRAGWYB_CTC\Admin\Review\DCTC_Review_Form;
 
-    private static $instance = null;
+!defined('DCTC_FILE') && define('DCTC_FILE', __FILE__);
+!defined('DCTC_PLUGIN_DIR') && define('DCTC_PLUGIN_DIR', plugin_dir_path(__FILE__));
+!defined('DCTC_PLUGIN_URL') && define('DCTC_PLUGIN_URL', plugin_dir_url(__FILE__));
+!defined('DCTC_VERSION') && define('DCTC_VERSION', '1.0.3');
 
-    public function init()
+if (!class_exists('DCTC_Click_To_Chat')) {
+
+    class DCTC_Click_To_Chat
     {
-        if (is_admin()) {
-            require_once DCTC_PLUGIN_DIR . 'admin/settings.php';
+
+        private static $instance = null;
+
+        public static function get_instance()
+        {
+            if (null === self::$instance) {
+                self::$instance = new self();
+            }
+            return self::$instance;
         }
-        require_once DCTC_PLUGIN_DIR . 'includes/channel-registry.php';
-        require_once DCTC_PLUGIN_DIR . 'includes/frontend.php';
+
+        public function __construct()
+        {
+            $this->required_files();
+            add_action('plugins_loaded', array($this, 'init'));
+            register_activation_hook(DCTC_FILE, array($this, 'plugin_activated'));
+        }
+
+
+        public function init()
+        {
+            if (is_admin()) {
+                require_once DCTC_PLUGIN_DIR . 'admin/settings.php';
+            }
+            require_once DCTC_PLUGIN_DIR . 'includes/channel-registry.php';
+            require_once DCTC_PLUGIN_DIR . 'includes/frontend.php';
+        }
+
+        /**
+         * Includes necessary files for the plugin based on the current context.
+         */
+        public function required_files()
+        {
+            // Include the class for registering plugin functionality
+            if (is_admin()) {
+                if (file_exists(DCTC_PLUGIN_DIR . 'admin/feedback/class-dctc-feedback-form.php')) {
+                    require_once DCTC_PLUGIN_DIR . 'admin/feedback/class-dctc-feedback-form.php';
+                }
+
+                if (file_exists(DCTC_PLUGIN_DIR . 'admin/review/class-dctc-review-form.php')) {
+                    require_once DCTC_PLUGIN_DIR . 'admin/review/class-dctc-review-form.php';
+                }
+                // Include the class for handling feedback form data in the admin area
+                if (class_exists('DCTC_Feedback_Form')) {
+                    DCTC_Feedback_Form::get_instance();
+                }
+
+                $already_rated = get_option('dragwyb_ctc_already_reviewd', false);
+
+                if (!$already_rated && class_exists(DCTC_Review_Form::class)) {
+                    DCTC_Review_Form::get_instance();
+                }
+            }
+        }
+
+        /**
+         * Placeholder for activation logic.
+         * This method is called when the plugin is activated.
+         * It updates options for installation date and plugin version.
+         */
+        public function plugin_activated()
+        {
+            // Installation data
+            update_option('dragwyb_ctc_installation_date', gmdate('Y-m-d H:i:s'));
+            // Plugin version
+            update_option('dragwyb_ctc_version', DCTC_VERSION);
+        }
     }
 
-    public static function get_instance()
-    {
-        if (null === self::$instance) {
-            self::$instance = new DCTC_Click_To_Chat();
-            self::$instance->init();
-        }
-        return self::$instance;
-    }
+    // Initialize the plugin.
+    $dragwyb_click_to_chat = DCTC_Click_To_Chat::get_instance();
 }
-
-add_action('plugins_loaded', array('DCTC_Click_To_Chat', 'get_instance'));
