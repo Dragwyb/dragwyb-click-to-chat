@@ -11,6 +11,9 @@ class DCTC_Frontend
 
         add_action('wp_enqueue_scripts', array($this, 'register_styles_scripts'));
 
+        // Add type="module" for emoji picker script
+        add_filter('script_loader_tag', array($this, 'add_module_type_attribute'), 10, 3);
+
         // 1. Register Shortcode [dctc-widget]
         add_shortcode('dctc-widget', array($this, 'render_widget_shortcode'));
     }
@@ -22,6 +25,7 @@ class DCTC_Frontend
     {
         wp_register_style('dctc-frontend-style', DCTC_PLUGIN_URL . 'assets/css/frontend.css', array(), DCTC_VERSION);
         wp_register_script('dctc-frontend-script', DCTC_PLUGIN_URL . 'assets/js/frontend.js', array(), DCTC_VERSION, true);
+        wp_register_script('dctc-emoji-picker', DCTC_PLUGIN_URL . 'assets/js/emoji-picker-element.js', array(), DCTC_VERSION, true);
     }
 
     /**
@@ -35,11 +39,15 @@ class DCTC_Frontend
     }
 
     /**
-     * The Main Render Function
+     * Add type="module" to script tag
      */
-    /**
-     * The Main Render Function
-     */
+    public function add_module_type_attribute($tag, $handle, $src)
+    {
+        if ('dctc-emoji-picker' === $handle) {
+            $tag = str_replace('<script ', '<script type="module" ', $tag);
+        }
+        return $tag;
+    }
     /**
      * The Main Render Function
      * 
@@ -125,10 +133,15 @@ class DCTC_Frontend
             if ($custom_vertical_align === 'top') $menu_vert_style .= ' bottom: auto;';
             else $menu_vert_style .= ' top: auto;';
 
-            // Menu side position: horizontal_dist + 5px
+            // Menu sidebar side position: horizontal_dist + 5px
             $menu_side_pos = "calc({$horizontal_str} + 5px)";
             $menu_position_style = ($custom_side === 'left' ? 'left: ' : 'right: ') . $menu_side_pos . ';';
             $menu_position_style .= ' ' . $menu_vert_style;
+
+            // Chat Widget Position matches the button's horizontal/vertical alignment but shifted up/down
+            $chat_widget_position_style = ($custom_side === 'left' ? 'left: ' : 'right: ') . $horizontal_str . ';';
+            $chat_widget_position_style .= ' ' . $menu_vert_style; // Use same vertical space as menu
+
         } else {
             // Preset position (left or right)
             $position_style = $widget_position === 'left' ? 'left: 20px; bottom: 20px;' : 'right: 20px; bottom: 20px;';
@@ -136,6 +149,9 @@ class DCTC_Frontend
             // Preset menu position
             $menu_bottom_dist = "calc(20px + {$widget_size_str} + 10px)";
             $menu_position_style = $widget_position === 'left' ? "left: 25px; bottom: {$menu_bottom_dist};" : "right: 25px; bottom: {$menu_bottom_dist};";
+
+            // Chat Widget Position
+            $chat_widget_position_style = $widget_position === 'left' ? "left: 20px; bottom: {$menu_bottom_dist};" : "right: 20px; bottom: {$menu_bottom_dist};";
         }
 
         // Collect enabled channels dynamically
@@ -183,12 +199,27 @@ class DCTC_Frontend
                 $extra_style = 'box-shadow: none;';
             }
 
+            // Chat Widget Settings for this channel
+            // Only allow 'whatsapp', 'instagram', 'telegram' to have chat widget enabled
+            $allowed_widget_channels = array('whatsapp', 'instagram', 'telegram');
+            $chat_widget_enabled = '0';
+
+            if (in_array($slug, $allowed_widget_channels)) {
+                $chat_widget_enabled = isset($settings[$slug . '_chat_widget_enabled']) ? $settings[$slug . '_chat_widget_enabled'] : '0';
+            }
+
+            $default_message = isset($settings[$slug . '_default_message']) ? $settings[$slug . '_default_message'] : __('Hi! How can I help you?', 'dragwyb-click-to-chat');
+
             // Build channel array
             $channel_item = array(
+                'slug' => $slug, // Added slug for identifying channel
                 'color' => $bg_color,
                 'icon' => $icon_html,
                 'title' => $channel_config['name'], // Channel name for tooltip
-                'extra_style' => $extra_style
+                'extra_style' => $extra_style,
+                'chat_widget_enabled' => $chat_widget_enabled,
+                'default_message' => $default_message,
+                'url_pattern' => $channel_config['url_pattern']
             );
 
             // Determine type and link
@@ -201,9 +232,12 @@ class DCTC_Frontend
                 if (strpos($url_pattern, '%s') !== false) {
                     // Replace %s with value
                     $channel_item['link'] = sprintf($url_pattern, rawurlencode($value));
+                    // Store raw value for widget use
+                    $channel_item['raw_value'] = $value;
                 } else {
                     // Use value directly (for URL-type channels)
                     $channel_item['link'] = esc_url($value);
+                    $channel_item['raw_value'] = $value;
                 }
             }
 
@@ -252,6 +286,7 @@ class DCTC_Frontend
         // Enqueue Assets
         wp_enqueue_style('dctc-frontend-style');
         wp_enqueue_script('dctc-frontend-script');
+        wp_enqueue_script('dctc-emoji-picker');
 
         // Dynamic CSS
         $custom_css = "
@@ -303,17 +338,137 @@ class DCTC_Frontend
 
         <div class="dctc-menu" id="dctc-menu">
             <?php foreach ($channels as $c) : ?>
-                <?php if ($c['type'] === 'internal') : ?>
-                    <button class="dctc-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>; <?php echo esc_attr($c['extra_style']); ?>" onclick="dctcOpenChat()" title="<?php echo esc_attr($c['title']); ?>">
+                <?php
+                $onclick = '';
+                $href = 'javascript:void(0);';
+                $target = '';
+
+                if ($c['chat_widget_enabled'] === '1') {
+                    $onclick = 'dctcOpenWidget(\'' . esc_js($c['slug']) . '\')';
+                } elseif ($c['type'] === 'internal') {
+                    $onclick = 'dctcOpenChat()';
+                } else {
+                    $href = esc_url($c['link']);
+                    $target = '_blank';
+                }
+                ?>
+
+                <?php if ($onclick): ?>
+                    <button class="dctc-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>; <?php echo esc_attr($c['extra_style']); ?>" onclick="<?php echo esc_attr($onclick); ?>" title="<?php echo esc_attr($c['title']); ?>">
                         <?php echo wp_kses($c['icon'], $allowed_svg); ?>
                     </button>
-                <?php else : ?>
-                    <a href="<?php echo esc_url($c['link']); ?>" target="_blank" class="dctc-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>; <?php echo esc_attr($c['extra_style']); ?>" title="<?php echo esc_attr($c['title']); ?>">
+                <?php else: ?>
+                    <a href="<?php echo esc_url($href); ?>" <?php echo $target ? 'target="' . esc_attr($target) . '"' : ''; ?> class="dctc-sub-btn" style="background: <?php echo esc_attr($c['color']); ?>; <?php echo esc_attr($c['extra_style']); ?>" title="<?php echo esc_attr($c['title']); ?>">
                         <?php echo wp_kses($c['icon'], $allowed_svg); ?>
                     </a>
                 <?php endif; ?>
+
             <?php endforeach; ?>
         </div>
+
+        <!-- Chat Widget Popups -->
+        <?php foreach ($channels as $c) : ?>
+            <?php if ($c['chat_widget_enabled'] === '1') : ?>
+                <?php
+                $widget_class = 'dctc-chat-widget dctc-theme-' . esc_attr($c['slug']);
+                $header_bg = $c['slug'] === 'whatsapp' ? '#095e54' : esc_attr($c['color']);
+                $body_style = '';
+
+                // Channel specific adjustments
+                if ($c['slug'] === 'whatsapp') {
+                    $body_style = 'background-image: url(https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png);';
+                }
+                ?>
+                <div class="<?php echo esc_attr($widget_class); ?>" id="dctc-chat-widget-<?php echo esc_attr($c['slug']); ?>" style="display: none; <?php echo esc_attr($chat_widget_position_style); ?>">
+
+                    <!-- Email Specific Header -->
+                    <?php if ($c['slug'] === 'email') : ?>
+                        <div class="dctc-chat-header dctc-email-header" style="background: <?php echo esc_attr($header_bg); ?>;">
+                            <span class="dctc-email-title"><?php esc_html_e('New Message', 'dragwyb-click-to-chat'); ?></span>
+                            <button class="dctc-chat-close" onclick="dctcCloseWidget('<?php echo esc_js($c['slug']); ?>')">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                                    <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                                </svg>
+                            </button>
+                        </div>
+                    <?php else: ?>
+                        <div class="dctc-chat-header" style="background: <?php echo esc_attr($header_bg); ?>;">
+                            <div class="dctc-chat-agent">
+                                <div class="dctc-chat-avatar">
+                                    <?php echo wp_kses($c['icon'], $allowed_svg); ?>
+                                </div>
+                                <div class="dctc-chat-info">
+                                    <span class="dctc-chat-name"><?php echo esc_html($c['title']); ?></span>
+                                    <!-- <span class="dctc-chat-status"><?php echo $c['slug'] === 'whatsapp' ? 'Typically replies within an hour' : esc_html__('Online', 'dragwyb-click-to-chat'); ?></span> -->
+                                </div>
+                            </div>
+                            <button class="dctc-chat-close" onclick="dctcCloseWidget('<?php echo esc_js($c['slug']); ?>')">
+                                <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
+                                    <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+                                </svg>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="dctc-chat-body" style="<?php echo esc_attr($body_style); ?>">
+                        <?php if ($c['slug'] === 'email') : ?>
+                            <!-- Email Body Layout -->
+                            <div class="dctc-email-fields">
+                                <div class="dctc-email-row">
+                                    <label><?php esc_html_e('To:', 'dragwyb-click-to-chat'); ?></label>
+                                    <span><?php echo esc_html($c['title']); ?></span>
+                                </div>
+                                <div class="dctc-email-row">
+                                    <label><?php esc_html_e('Subject:', 'dragwyb-click-to-chat'); ?></label>
+                                    <input type="text" id="dctc-subject-<?php echo esc_attr($c['slug']); ?>" placeholder="<?php esc_attr_e('Subject', 'dragwyb-click-to-chat'); ?>" class="dctc-email-subject">
+                                </div>
+                            </div>
+                            <div class="dctc-email-content">
+                                <textarea id="dctc-input-<?php echo esc_attr($c['slug']); ?>" class="dctc-email-textarea" placeholder="<?php echo esc_attr($c['default_message']); ?>"></textarea>
+                            </div>
+                        <?php else: ?>
+                            <!-- Standard Chat Bubble Layout -->
+                            <div class="dctc-chat-message-bubble default">
+                                <div class="dctc-msg-text"><?php echo esc_html($c['default_message']); ?></div>
+                                <div class="dctc-msg-time"><?php echo esc_html(gmdate('H:i')); ?></div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="dctc-chat-footer">
+                        <!-- Emoji Picker Container (Shared) -->
+                        <div class="dctc-emoji-picker" id="dctc-emoji-picker-<?php echo esc_attr($c['slug']); ?>" style="display: none;" data-emoji-source="<?php echo esc_url(DCTC_PLUGIN_URL . 'assets/js/emoji-data.json'); ?>"></div>
+
+                        <?php if ($c['slug'] === 'email') : ?>
+                            <!-- Email Footer -->
+                            <div class="dctc-email-footer-actions">
+                                <button class="dctc-email-send-btn" onclick="dctcSendMessage('<?php echo esc_js($c['slug']); ?>', '<?php echo esc_js($c['url_pattern']); ?>', '<?php echo esc_js($c['raw_value']); ?>')">
+                                    <?php esc_html_e('Send', 'dragwyb-click-to-chat'); ?>
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left:5px">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        <?php else: ?>
+                            <!-- Standard Chat Footer -->
+                            <div class="dctc-input-wrapper">
+                                <button type="button" class="dctc-emoji-trigger" onclick="dctcToggleEmoji('<?php echo esc_js($c['slug']); ?>')">
+                                    <svg class="dctc-smiley" viewBox="0 0 24 24" width="24" height="24" fill="#8696a0">
+                                        <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8 14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8 7 8.67 7 9.5 7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z" />
+                                    </svg>
+                                </button>
+                                <input type="text" class="dctc-chat-input" id="dctc-input-<?php echo esc_attr($c['slug']); ?>" placeholder="<?php esc_attr_e('Write your message...', 'dragwyb-click-to-chat'); ?>" onkeypress="dctcCheckEnter(event, '<?php echo esc_js($c['slug']); ?>', '<?php echo esc_js($c['url_pattern']); ?>', '<?php echo esc_js($c['raw_value']); ?>')">
+                            </div>
+                            <button class="dctc-chat-send" onclick="dctcSendMessage('<?php echo esc_js($c['slug']); ?>', '<?php echo esc_js($c['url_pattern']); ?>', '<?php echo esc_js($c['raw_value']); ?>')">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="white" style="margin-left: -2px; margin-top: 2px; transform: rotate(0deg);">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                                </svg>
+                            </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
 
 
 <?php

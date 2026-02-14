@@ -95,6 +95,17 @@ function dctc_save_settings()
         if (isset($_POST[$icon_key])) {
             $settings[$slug . '_custom_icon'] = esc_url_raw(wp_unslash($_POST[$icon_key]));
         }
+
+        // Chat Widget Settings
+        $chat_widget_key = $slug . '_chat_widget_enabled';
+        if (isset($_POST[$chat_widget_key])) {
+            $settings[$slug . '_chat_widget_enabled'] = $_POST[$chat_widget_key] === '1' ? '1' : '0';
+        }
+
+        $default_message_key = $slug . '_default_message';
+        if (isset($_POST[$default_message_key])) {
+            $settings[$slug . '_default_message'] = sanitize_textarea_field(wp_unslash($_POST[$default_message_key]));
+        }
     }
 
     // Widget Customization

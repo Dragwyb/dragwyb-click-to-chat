@@ -67,3 +67,426 @@
     opacity: 0;
     pointer-events: none;
 }
+
+/* Chat Widget Popup */
+.dctc-chat-widget {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 330px;
+    /* Slightly wider */
+    max-width: 90%;
+    background: #e5ddd5;
+    /* WhatsApp default bg color base */
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    /* overridden by inline style / JS */
+    flex-direction: column;
+    z-index: 999999;
+    animation: dctcFadeInUp 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@keyframes dctcFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dctc-chat-header {
+    padding: 20px 15px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.dctc-chat-agent {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dctc-chat-avatar {
+    width: 40px;
+    /* Bigger avatar */
+    height: 40px;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dctc-chat-avatar svg {
+    width: 100%;
+    height: 100%;
+    fill: white;
+}
+
+.dctc-chat-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.dctc-chat-name {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.dctc-chat-status {
+    font-size: 13px;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.dctc-chat-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.dctc-chat-close:hover {
+    opacity: 1;
+    transform: rotate(90deg);
+}
+
+.dctc-chat-body {
+    padding: 20px;
+    background-color: #e5ddd5;
+    background-repeat: repeat;
+    background-size: 400px;
+    height: 350px;
+    /* Taller */
+    max-height: 60vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dctc-chat-message-bubble {
+    background: #fff;
+    padding: 10px 12px;
+    border-radius: 0 10px 10px 10px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    color: #111b21;
+    font-size: 14px;
+    line-height: 1.5;
+    display: inline-block;
+    max-width: 85%;
+    position: relative;
+    align-self: flex-start;
+}
+
+/* Little triangle for bubble */
+.dctc-chat-message-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -8px;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+    border-top-color: #fff;
+    border-right-color: #fff;
+    /* overlap to make shape */
+    border-right: 8px solid #fff;
+    border-bottom: 0;
+    border-left: 0;
+}
+
+.dctc-msg-text {
+    margin-bottom: 2px;
+}
+
+.dctc-msg-time {
+    font-size: 11px;
+    color: #8696a0;
+    text-align: right;
+    margin-top: 2px;
+    line-height: 1;
+}
+
+.dctc-chat-footer {
+    padding: 10px 12px;
+    background: #f0f2f5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    /* For absolute emoji picker */
+}
+
+.dctc-emoji-picker {
+    position: absolute;
+    bottom: 60px;
+    /* Adjusted to sit above footer */
+    left: 0;
+    width: 100%;
+    /* background: #f0f2f5; remove default bg as picker has its own */
+    display: none;
+    /* Hidden by default */
+    z-index: 100 !important;
+    /* High z-index to overlay chat body */
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+}
+
+emoji-picker {
+    width: 100%;
+    height: 300px;
+    /* Fixed height for the picker */
+    --background: #fff;
+    --border-color: #ddd;
+}
+
+.dctc-emoji-item {
+    font-size: 20px;
+    cursor: pointer;
+    transition: transform 0.1s;
+    user-select: none;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+.dctc-emoji-item:hover {
+    transform: scale(1.2);
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dctc-input-wrapper {
+    flex: 1;
+    background: #fff;
+    border-radius: 24px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #fff;
+}
+
+.dctc-input-wrapper:focus-within {
+    /* optional focus style */
+}
+
+.dctc-emoji-trigger {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dctc-smiley {
+    width: 24px;
+    height: 24px;
+    fill: #8696a0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: fill 0.2s;
+}
+
+.dctc-emoji-trigger:hover .dctc-smiley {
+    fill: #54656f;
+}
+
+.dctc-chat-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 15px;
+    outline: none;
+    padding: 0;
+    color: #3b4a54;
+    width: 100%;
+}
+
+.dctc-chat-send {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    /* The send button in WA web is often specific, but user image shows a blue circle with white plane? 
+       Actually user image has a grey plane circle? No wait, standard WA is a teal/green circle on mobile.
+       Let's use a nice teal circle to match header if whatsapp. */
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+
+/* We need to style the send button based on channel... but CSS is static. 
+   We'll make it generic or use JS/inline for specific colors if needed. 
+   For now, a specific style for the send button container. */
+.dctc-chat-send {
+    background-color: #008fcc;
+    /* Default Blue */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* If whatsapp, we might want it green, but blue distinguishes it as action */
+/* --- Email Theme Styles --- */
+.dctc-theme-email .dctc-chat-header {
+    height: 48px;
+    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+.dctc-email-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.dctc-theme-email .dctc-chat-body {
+    padding: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 300px;
+}
+
+.dctc-email-fields {
+    padding: 10px 15px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #eee;
+}
+
+.dctc-email-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.dctc-email-row:last-child {
+    margin-bottom: 0;
+}
+
+.dctc-email-row label {
+    width: 60px;
+    color: #666;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.dctc-email-row span {
+    font-size: 14px;
+    color: #333;
+}
+
+.dctc-email-subject {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    color: #333;
+    padding: 4px 0;
+    outline: none;
+    border-bottom: 1px dashed #ccc;
+}
+
+.dctc-email-subject:focus {
+    border-bottom: 1px solid #1a73e8;
+}
+
+.dctc-email-content {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.dctc-email-textarea {
+    flex: 1;
+    width: 100%;
+    border: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 14px;
+    color: #333;
+    outline: none;
+    min-height: 150px;
+    background: transparent;
+}
+
+.dctc-theme-email .dctc-chat-footer {
+    padding: 10px 15px;
+    background: #fff;
+    /* White footer for email */
+    border-top: 1px solid #eee;
+    height: auto;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.dctc-email-send-btn {
+    background: #1a73e8;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.dctc-email-send-btn:hover {
+    background: #1557b0;
+}
+
+/* --- SMS Theme Styles --- */
+.dctc-theme-sms .dctc-chat-message-bubble {
+    background-color: #e9e9eb;
+    /* iMessage gray */
+    color: #000;
+    border-radius: 18px;
+    padding: 10px 14px;
+    box-shadow: none;
+}
+
+.dctc-theme-sms .dctc-msg-time {
+    color: #8e8e93;
+}
+
+
+@keyframes dctcFadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
