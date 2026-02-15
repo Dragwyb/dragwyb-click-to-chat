@@ -78,7 +78,7 @@ function dctc_save_settings()
             if ($slug === 'email') {
                 $settings[$slug . '_value'] = sanitize_email(wp_unslash($_POST[$value_key]));
             } elseif (in_array($slug, array('linkedin', 'maps', 'waze', 'contact', 'poptin', 'slack', 'discord'))) {
-                $settings[$slug . '_value'] = esc_url_raw(wp_unslash($_POST[$value_key]));
+                $settings[$slug . '_value'] = esc_url(sanitize_text_field(wp_unslash($_POST[$value_key])));
             } else {
                 $settings[$slug . '_value'] = sanitize_text_field(wp_unslash($_POST[$value_key]));
             }
@@ -138,8 +138,8 @@ function dctc_save_settings()
     if (isset($_POST['custom_side'])) {
         $settings['custom_side'] = sanitize_text_field(wp_unslash($_POST['custom_side']));
     }
-    if (isset($_POST['custom_vertical_align'])) {
-        $settings['custom_vertical_align'] = sanitize_text_field(wp_unslash($_POST['custom_vertical_align']));
+    if (isset($_POST['dctc_greeting_message'])) {
+        $settings['greeting_message'] = sanitize_text_field(wp_unslash($_POST['dctc_greeting_message']));
     }
 
     // Icon Settings

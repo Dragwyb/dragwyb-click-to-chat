@@ -6,8 +6,13 @@
 
 window.dctcToggleMenu = function () {
     var menu = document.getElementById('dctc-menu');
+    var greeting = document.getElementById('dctc-greeting-message');
     if (menu) {
         menu.classList.toggle('dctc-open');
+        if (greeting) {
+            // If message is present, hide it permanently on first interaction
+            greeting.classList.add('dctc-hidden');
+        }
     }
 }
 
@@ -183,3 +188,11 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 });
+
+// Animate Greeting Message after 2 seconds
+setTimeout(function () {
+    var greeting = document.getElementById('dctc-greeting-message');
+    if (greeting && !greeting.classList.contains('dctc-hidden')) {
+        greeting.classList.add('dctc-visible');
+    }
+}, 2000);

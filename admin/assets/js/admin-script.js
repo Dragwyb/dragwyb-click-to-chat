@@ -545,6 +545,7 @@
             formData.widget_color = $('#dctc_widget_color').val();
             formData.widget_size = $('#dctc_widget_size').val();
             formData.widget_size_unit = $('#dctc_widget_size_unit').val();
+            formData.dctc_greeting_message = $('#dctc_greeting_message').val();
 
             // Custom position settings
             formData.custom_bottom = $('#dctc_custom_bottom').val();
