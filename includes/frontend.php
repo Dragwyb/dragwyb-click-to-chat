@@ -103,6 +103,13 @@ class DCTC_Frontend
             return; // Don't show on desktop
         }
 
+        // Don't show in Elementor Editor
+        if (
+            (class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance->preview->is_preview_mode()) ||
+            isset($_GET['elementor-preview'])
+        ) {
+            return;
+        }
         // Determine position styles
         if ($widget_position === 'custom') {
             // Custom position
