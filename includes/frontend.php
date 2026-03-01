@@ -104,10 +104,8 @@ class DCTC_Frontend
         }
 
         // Don't show in Elementor Editor
-        if (
-            (class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance->preview->is_preview_mode()) ||
-            isset($_GET['elementor-preview'])
-        ) {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce is not required for preview mode
+        if ((class_exists('\Elementor\Plugin') && \Elementor\Plugin::$instance->preview->is_preview_mode()) || isset($_GET['elementor-preview'])) {
             return;
         }
         // Determine position styles

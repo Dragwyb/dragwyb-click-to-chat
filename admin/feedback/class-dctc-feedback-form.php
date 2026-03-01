@@ -114,14 +114,14 @@ if (! class_exists('DCTC_Feedback_Form')) {
 
 			echo '<div class="dctc-deactivate-feedback-form-wrapper dctc-form-hide" data-slug="' . esc_attr($this->plugin_slug) . '">';
 			echo '<div class="dctc-deactivate-feedback-form">';
-			echo '<h2>' . __('Request Plugin Feedback', 'dragwyb-click-to-chat') . '</h2>';
+			echo '<h2>' . esc_html__('Request Plugin Feedback', 'dragwyb-click-to-chat') . '</h2>';
 			echo '<span class="dashicons dashicons-no dctc-deactivate-close"></span>';
 			echo '<form method="post">';
 			echo '<input type="hidden" name="action" value="dctc_send_feedback" />';
 			echo '<hr>';
 			echo '<div class="form-body">';
-			echo '<h4>' . __('Your feedback is invaluable to us. If you have a moment, kindly let us know why you are deactivating this plugin.', 'dragwyb-click-to-chat') . '</h4>';
-			echo '<div id="empty-field-msg"><p>' . __('!Please select a reason for your feedback before submitting the form.', 'dragwyb-click-to-chat') . '</p></div>';
+			echo '<h4>' . esc_html__('Your feedback is invaluable to us. If you have a moment, kindly let us know why you are deactivating this plugin.', 'dragwyb-click-to-chat') . '</h4>';
+			echo '<div id="empty-field-msg"><p>' . esc_html__('!Please select a reason for your feedback before submitting the form.', 'dragwyb-click-to-chat') . '</p></div>';
 			wp_nonce_field('dctc_send_feedback_nonce', 'dctc_send_feedback_nonce');
 			foreach ($deactivation_options as $key => $option) {
 				echo '<div class="form-group">';
@@ -136,6 +136,7 @@ if (! class_exists('DCTC_Feedback_Form')) {
 			echo '<input type="checkbox" id="confirm" name="confirm">';
 			echo '<label for="confirm">' . wp_kses_post(
 				sprintf(
+					// translators: %1$s - Admin Email, %2$s - Site URL, %3$s - Plugin Version, %4$s - WP/PHP Versions
 					__('By submitting, you agree to share your %1$s, %2$s, %3$s, and %4$s to help improve the plugin. Your data will remain private.', 'dragwyb-click-to-chat'),
 					'<strong>' . esc_html__('Admin Email', 'dragwyb-click-to-chat') . '</strong>',
 					'<strong>' . esc_html__('Site URL', 'dragwyb-click-to-chat') . '</strong>',
@@ -148,8 +149,8 @@ if (! class_exists('DCTC_Feedback_Form')) {
 			echo '</div>';
 			echo '<hr>';
 			echo '<div class="dctc-button-wrapper">';
-			echo '<button type="submit" class="button button-feedback">' . __('Submit Feedback', 'dragwyb-click-to-chat') . '</button>';
-			echo '<button type="submit" class="button button-primary">' . __('Skip Feedback', 'dragwyb-click-to-chat') . '</button>';
+			echo '<button type="submit" class="button button-feedback">' . esc_html__('Submit Feedback', 'dragwyb-click-to-chat') . '</button>';
+			echo '<button type="submit" class="button button-primary">' . esc_html__('Skip Feedback', 'dragwyb-click-to-chat') . '</button>';
 			echo '</div>';
 			echo '</form>';
 			echo '</div>';
@@ -190,7 +191,7 @@ if (! class_exists('DCTC_Feedback_Form')) {
 					'plugin_version'  => esc_attr($this->plugin_version),
 					'email'           => get_option('admin_email'),
 					'website_url'     => home_url(),
-					'deactive_reason' => sanitize_text_field($_POST['reason']),
+					'deactive_reason' => isset($_POST['reason']) ? sanitize_text_field(wp_unslash($_POST['reason'])) : 'N/A',
 					'plugin_slug'     => esc_attr($this->plugin_slug),
 					'wp_version' =>   esc_attr($wordpress_version),
 					'php_version' => esc_attr($php_version)
@@ -199,7 +200,7 @@ if (! class_exists('DCTC_Feedback_Form')) {
 				$route_url = esc_url($this->route);
 
 
-				$this->feedback_data['message'] = isset($_POST['message']) && ! empty($_POST['message']) ? sanitize_textarea_field($_POST['message']) : 'N/A';
+				$this->feedback_data['message'] = isset($_POST['message']) && ! empty($_POST['message']) ? sanitize_textarea_field(wp_unslash($_POST['message'])) : 'N/A';
 
 				$response = wp_remote_get(
 					$route_url,
