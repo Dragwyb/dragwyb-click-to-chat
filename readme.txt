@@ -48,6 +48,7 @@ Click to Chat is a **privacy-first social chat widget**. It is fully GDPR-ready 
 == Key Features ==
 
 * **Expandable Multi-Channel Widget:** A clean, modern **floating chat widget** that holds multiple icons.
+* **Channel Chat Widget:** Includes an interactive channel chat widget complete with a customizable greeting message.
 * **Custom Social Redirects:** Easily configure where each button directs your visitors.
 * **Smart Positioning:** Choose bottom-left or bottom-right placement with custom pixel offsets.
 * **Device Visibility Control:** Display your **social chat button** on mobile, desktop, or both.
