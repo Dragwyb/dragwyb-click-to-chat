@@ -3,7 +3,7 @@ Contributors: dragwyb
 Tags: click to chat, floating chat, social chat, all-in-one chat, multi-channel chat
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -48,6 +48,7 @@ Click to Chat is a **privacy-first social chat widget**. It is fully GDPR-ready 
 == Key Features ==
 
 * **Expandable Multi-Channel Widget:** A clean, modern **floating chat widget** that holds multiple icons.
+* **Channel Chat Widget:** Includes an interactive channel chat widget complete with a customizable greeting message.
 * **Custom Social Redirects:** Easily configure where each button directs your visitors.
 * **Smart Positioning:** Choose bottom-left or bottom-right placement with custom pixel offsets.
 * **Device Visibility Control:** Display your **social chat button** on mobile, desktop, or both.
@@ -87,6 +88,10 @@ Yes. It is ideal for businesses, online stores, agencies, freelancers, and servi
 No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
 
 == Changelog ==
+
+= 1.0.5 =
+* Fixed PCP plugin reported errors.
+* Added channel chat widget and greeting message support.
 
 = 1.0.4 =
 * Added feedback & review notice.

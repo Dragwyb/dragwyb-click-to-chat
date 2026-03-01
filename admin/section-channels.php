@@ -23,6 +23,8 @@ foreach ($dctc_phase_one_channels as $dctc_slug) {
         'custom_icon' => isset($dctc_settings[$dctc_slug . '_custom_icon']) ? $dctc_settings[$dctc_slug . '_custom_icon'] : '',
         'desktop' => isset($dctc_settings[$dctc_slug . '_desktop']) ? $dctc_settings[$dctc_slug . '_desktop'] : '1',
         'mobile' => isset($dctc_settings[$dctc_slug . '_mobile']) ? $dctc_settings[$dctc_slug . '_mobile'] : '1',
+        'chat_widget_enabled' => isset($dctc_settings[$dctc_slug . '_chat_widget_enabled']) ? $dctc_settings[$dctc_slug . '_chat_widget_enabled'] : '0',
+        'default_message' => isset($dctc_settings[$dctc_slug . '_default_message']) ? $dctc_settings[$dctc_slug . '_default_message'] : '',
     );
 }
 ?>
@@ -107,6 +109,40 @@ foreach ($dctc_phase_one_channels as $dctc_slug) {
                     value="<?php echo esc_attr($dctc_value); ?>"
                     placeholder="<?php echo esc_attr($dctc_channel['placeholder']); ?>"
                     style="width: 100%; max-width: 400px; margin-bottom: 15px;">
+            <?php endif; ?>
+
+            <?php if (in_array($dctc_slug, array('whatsapp', 'instagram', 'telegram'))): ?>
+                <!-- Chat Widget Settings -->
+                <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+                    <label class="dctc-toggle" style="margin-bottom: 10px;">
+                        <div class="dctc-switch">
+                            <input type="checkbox"
+                                class="dctc-chat-widget-toggle"
+                                id="dctc_<?php echo esc_attr($dctc_slug); ?>_chat_widget_enabled"
+                                name="dctc_<?php echo esc_attr($dctc_slug); ?>_chat_widget_enabled"
+                                value="1"
+                                data-target="dctc_<?php echo esc_attr($dctc_slug); ?>_default_message_wrapper"
+                                <?php checked($dctc_channel_data[$dctc_slug]['chat_widget_enabled'], '1'); ?>>
+                            <span class="dctc-slider"></span>
+                        </div>
+                        <span style="margin-left: 10px; font-weight: 500; color: #374151;"><?php esc_html_e('Enable Channel Chat Widget', 'dragwyb-click-to-chat'); ?></span>
+                    </label>
+                    <p style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0; padding-left: 50px;">
+                        <?php esc_html_e('Open a popup chat window with a default message instead of redirecting immediately.', 'dragwyb-click-to-chat'); ?>
+                    </p>
+
+                    <div id="dctc_<?php echo esc_attr($dctc_slug); ?>_default_message_wrapper" style="<?php echo $dctc_channel_data[$dctc_slug]['chat_widget_enabled'] === '1' ? '' : 'display:none;'; ?> margin-left: 50px;">
+                        <label for="dctc_<?php echo esc_attr($dctc_slug); ?>_default_message" style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500; color: #6b7280;">
+                            <?php esc_html_e('Default Greeting Message', 'dragwyb-click-to-chat'); ?>
+                        </label>
+                        <input type="text"
+                            id="dctc_<?php echo esc_attr($dctc_slug); ?>_default_message"
+                            name="dctc_<?php echo esc_attr($dctc_slug); ?>_default_message"
+                            value="<?php echo esc_attr($dctc_channel_data[$dctc_slug]['default_message']); ?>"
+                            placeholder="<?php esc_attr_e('Hi! How can I help you?', 'dragwyb-click-to-chat'); ?>"
+                            style="width: 100%;">
+                    </div>
+                </div>
             <?php endif; ?>
 
             <!-- Custom Icon Upload -->

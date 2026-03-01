@@ -25,6 +25,21 @@ $dctc_custom_side = isset($dctc_settings['custom_side']) ? $dctc_settings['custo
 
 <!-- Widget Position -->
 <div class="dctc-form-group">
+    <label for="dctc_greeting_message">Greeting Message</label>
+    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">
+        Add a call-to-action message that appears next to the widget button
+    </p>
+    <?php $dctc_greeting_message = isset($dctc_settings['greeting_message']) ? $dctc_settings['greeting_message'] : ''; ?>
+    <input type="text"
+        id="dctc_greeting_message"
+        name="dctc_greeting_message"
+        value="<?php echo esc_attr($dctc_greeting_message); ?>"
+        placeholder="e.g. Need Help? Chat with us!"
+        style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+</div>
+
+<!-- Widget Position -->
+<div class="dctc-form-group">
     <label>Widget Position</label>
     <p style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">
         Choose where the chat widget appears on your website

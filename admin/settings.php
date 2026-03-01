@@ -78,7 +78,7 @@ function dctc_save_settings()
             if ($slug === 'email') {
                 $settings[$slug . '_value'] = sanitize_email(wp_unslash($_POST[$value_key]));
             } elseif (in_array($slug, array('linkedin', 'maps', 'waze', 'contact', 'poptin', 'slack', 'discord'))) {
-                $settings[$slug . '_value'] = esc_url_raw(wp_unslash($_POST[$value_key]));
+                $settings[$slug . '_value'] = esc_url(sanitize_text_field(wp_unslash($_POST[$value_key])));
             } else {
                 $settings[$slug . '_value'] = sanitize_text_field(wp_unslash($_POST[$value_key]));
             }
@@ -94,6 +94,17 @@ function dctc_save_settings()
         $icon_key = $slug . '_custom_icon';
         if (isset($_POST[$icon_key])) {
             $settings[$slug . '_custom_icon'] = esc_url_raw(wp_unslash($_POST[$icon_key]));
+        }
+
+        // Chat Widget Settings
+        $chat_widget_key = $slug . '_chat_widget_enabled';
+        if (isset($_POST[$chat_widget_key])) {
+            $settings[$slug . '_chat_widget_enabled'] = $_POST[$chat_widget_key] === '1' ? '1' : '0';
+        }
+
+        $default_message_key = $slug . '_default_message';
+        if (isset($_POST[$default_message_key])) {
+            $settings[$slug . '_default_message'] = sanitize_textarea_field(wp_unslash($_POST[$default_message_key]));
         }
     }
 
@@ -127,8 +138,8 @@ function dctc_save_settings()
     if (isset($_POST['custom_side'])) {
         $settings['custom_side'] = sanitize_text_field(wp_unslash($_POST['custom_side']));
     }
-    if (isset($_POST['custom_vertical_align'])) {
-        $settings['custom_vertical_align'] = sanitize_text_field(wp_unslash($_POST['custom_vertical_align']));
+    if (isset($_POST['dctc_greeting_message'])) {
+        $settings['greeting_message'] = sanitize_text_field(wp_unslash($_POST['dctc_greeting_message']));
     }
 
     // Icon Settings

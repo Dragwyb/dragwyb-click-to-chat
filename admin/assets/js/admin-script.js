@@ -123,6 +123,16 @@
                 }
             });
 
+            // 3. Chat Widget Toggle
+            $(document).on('change', '.dctc-chat-widget-toggle', function () {
+                const targetId = $(this).data('target');
+                if ($(this).is(':checked')) {
+                    $('#' + targetId).slideDown(200);
+                } else {
+                    $('#' + targetId).slideUp(200);
+                }
+            });
+
             // --- Customization Interactions ---
 
             // Update size value display
@@ -524,6 +534,10 @@
 
                 // Collect custom icon
                 formData[slug + '_custom_icon'] = $('#dctc_' + slug + '_custom_icon').val();
+
+                // Collect Chat Widget Settings
+                formData[slug + '_chat_widget_enabled'] = $('#dctc_' + slug + '_chat_widget_enabled').is(':checked') ? '1' : '0';
+                formData[slug + '_default_message'] = $('#dctc_' + slug + '_default_message').val();
             });
 
             // Add widget customization settings
@@ -531,6 +545,7 @@
             formData.widget_color = $('#dctc_widget_color').val();
             formData.widget_size = $('#dctc_widget_size').val();
             formData.widget_size_unit = $('#dctc_widget_size_unit').val();
+            formData.dctc_greeting_message = $('#dctc_greeting_message').val();
 
             // Custom position settings
             formData.custom_bottom = $('#dctc_custom_bottom').val();

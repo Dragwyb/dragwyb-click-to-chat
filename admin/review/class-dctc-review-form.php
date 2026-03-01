@@ -72,14 +72,14 @@ if (! class_exists('DCTC_Review_Form')) {
 			<h2 style="margin: 0px">%s</h2>
 			<p>%s</p>
 			<div class="dragwyb-ctc-review-notice-buttons">
-				<a href="' . esc_url('https://wordpress.org/support/plugin/dragwyb-click-to-chat/reviews/?filter=5#new-post') . '" class="dragwyb-ctc-review-notice-button button" target="_blank" >%s</a>
+				<a href="' . esc_url('https://wordpress.org/support/plugin/dragwyb-click-to-chat/reviews/') . '" class="dragwyb-ctc-review-notice-button button" target="_blank" >%s</a>
 				<button type="button" class="dragwyb-ctc-review-notice-button button">%s</button>
 			</div>
 		</div>',
-				__('Thank you for using Click to Chat.', 'dragwyb-click-to-chat'),
-				__('Enjoying the Click to Chat? Your feedback is invaluable in shaping the plugin\'s future.<br>Please consider leaving a review on the WordPress Plugin Directory to help others and support our growth.', 'dragwyb-click-to-chat'),
-				__('Leave a Review', 'dragwyb-click-to-chat'),
-				__('Already Review.', 'dragwyb-click-to-chat')
+				esc_html__('Thank you for using Click to Chat.', 'dragwyb-click-to-chat'),
+				esc_html__('Enjoying the Click to Chat? Your feedback is invaluable in shaping the plugin\'s future.<br>Please consider leaving a review on the WordPress Plugin Directory to help others and support our growth.', 'dragwyb-click-to-chat'),
+				esc_html__('Leave a Review', 'dragwyb-click-to-chat'),
+				esc_html__('Already Review.', 'dragwyb-click-to-chat')
 			);
 		}
 
