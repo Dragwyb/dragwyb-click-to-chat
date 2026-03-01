@@ -91,6 +91,7 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 
 = 1.0.5 =
 * Fixed PCP plugin reported errors.
+* Added channel chat widget and greeting message support.
 
 = 1.0.4 =
 * Added feedback & review notice.
