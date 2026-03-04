@@ -16,6 +16,14 @@ A lightweight multi-channel click to chat plugin. Add a floating social chat wid
 
 The plugin features a stylish, expandable **floating button** that acts as a central communication hub. Whether you need a **social messenger redirect**, a **floating contact button**, or a direct link to your professional profiles, this plugin handles various channels simultaneously with zero impact on site performance.
 
+== Live Demo ==
+
+Explore live examples of **Click to Chat** in action:
+
+🔗 [Click to Chat Demo Page](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
+
+👉 **Check out our other plugin:** [Flipbox Addon for Elementor](https://wordpress.org/plugins/flipbox-addon-for-elementor/) – Create stunning animated 3D flip boxes for your WordPress site.
+
 ### Why Use a Click to Chat Plugin?
 * Add a floating WhatsApp chat button to WordPress
 * Allow visitors to contact you instantly from any page
@@ -35,6 +43,8 @@ Why limit your site to just one app? Our **floating button** supports a wide ran
 
 ### 🛡️ Privacy & Performance First
 Click to Chat is a **privacy-first social chat widget**. It is fully GDPR-ready because it does **not** track users, set cookies, or load heavy third-party scripts. It is a lightweight solution optimized for **Core Web Vitals**, ensuring your **floating contact button** never slows down your page speed.
+
+👉 [View Live Demo](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
 
 == Supported Communication Channels ==
 
@@ -117,3 +127,17 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 
 = 1.0.2 =
 Initial stable release. No breaking changes.
+
+== Recommended Plugins ==
+
+If you find Click to Chat useful, check out our other top-rated plugin:
+
+* 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/flipbox-addon-for-elementor/)** – The easiest way to design modern, animated flip boxes and 3D cards directly inside Elementor.
+
+== Acknowledgements ==
+
+Thanks to the WordPress community for continued inspiration and support.
+
+== License ==
+
+This plugin is licensed under the GPLv2 or later license. See the LICENSE file for more details.
