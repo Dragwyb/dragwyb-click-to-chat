@@ -311,6 +311,7 @@ class DCTC_Frontend
             .dctc-sub-btn { 
                 width: " . esc_attr($widget_size_str) . "; 
                 height: " . esc_attr($widget_size_str) . "; 
+                padding: 0;
             }
             .dctc-greeting-message {
                 position: fixed;
