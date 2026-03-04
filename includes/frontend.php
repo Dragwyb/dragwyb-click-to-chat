@@ -298,6 +298,14 @@ class DCTC_Frontend
         wp_enqueue_script('dctc-emoji-picker');
 
         // Dynamic CSS
+        // Dynamic CSS
+        $is_left = false;
+        if ($widget_position === 'custom') {
+            $is_left = (isset($custom_side) && $custom_side === 'left');
+        } else {
+            $is_left = ($widget_position === 'left');
+        }
+
         $custom_css = "
             .dctc-widget-btn { 
                 " . esc_attr($position_style) . " 
@@ -311,7 +319,6 @@ class DCTC_Frontend
             .dctc-sub-btn { 
                 width: " . esc_attr($widget_size_str) . "; 
                 height: " . esc_attr($widget_size_str) . "; 
-                padding: 0;
             }
             .dctc-greeting-message {
                 position: fixed;
@@ -319,10 +326,9 @@ class DCTC_Frontend
                 background: " . esc_attr($widget_color) . ";
                 color: #fff;
                 padding: 10px 15px;
-                border-radius: 50px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border-radius: 8px; /* Slightly rounded corners for message body */
+                filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
                 font-size: 14px;
-                
                 font-weight: bold;
                 line-height: 1.4;
                 z-index: 999998; /* Below widget button */
@@ -331,6 +337,17 @@ class DCTC_Frontend
                 visibility: hidden;
                 transform: translateY(10px);
                 transition: opacity 0.5s ease, transform 0.5s ease, visibility 0.5s ease;
+            }
+            .dctc-greeting-message::after {
+                content: '';
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                /* Sharp triangle arrow pointing to the button */
+                " . ($is_left ?
+            "left: -8px; border-width: 6px 8px 6px 0; border-style: solid; border-color: transparent " . esc_attr($widget_color) . " transparent transparent;" :
+            "right: -8px; border-width: 6px 0 6px 8px; border-style: solid; border-color: transparent transparent transparent " . esc_attr($widget_color) . ";"
+        ) . "
             }
             .dctc-greeting-message.dctc-visible {
                 opacity: 1;

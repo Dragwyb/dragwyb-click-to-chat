@@ -3,7 +3,7 @@ Contributors: dragwyb
 Tags: click to chat, floating chat, social chat, all-in-one chat, multi-channel chat
 Requires at least: 5.0
 Tested up to: 6.9
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 Requires PHP: 7.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -88,6 +88,9 @@ Yes. It is ideal for businesses, online stores, agencies, freelancers, and servi
 No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
 
 == Changelog ==
+
+= 1.0.6 =
+* Fixed WhatsApp chat redirect issue.
 
 = 1.0.5 =
 * Fixed PCP plugin reported errors.
