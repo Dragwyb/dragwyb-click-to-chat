@@ -22,7 +22,7 @@ Explore live examples of **Click to Chat** in action:
 
 🔗 [Click to Chat Demo Page](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
 
-👉 **Check out our other plugin:** [Flipbox Addon for Elementor](https://wordpress.org/plugins/flipbox-addon-for-elementor/) – Create stunning animated 3D flip boxes for your WordPress site.
+👉 **Check out our other plugin:** [Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/) – Create stunning animated 3D flip boxes for your WordPress site.
 
 ### Why Use a Click to Chat Plugin?
 * Add a floating WhatsApp chat button to WordPress
@@ -132,7 +132,7 @@ Initial stable release. No breaking changes.
 
 If you find Click to Chat useful, check out our other top-rated plugin:
 
-* 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/flipbox-addon-for-elementor/)** – The easiest way to design modern, animated flip boxes and 3D cards directly inside Elementor.
+* 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – The easiest way to design modern, animated flip boxes and 3D cards directly inside Elementor.
 
 == Acknowledgements ==
 
