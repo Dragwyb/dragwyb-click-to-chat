@@ -68,8 +68,11 @@ window.dctcSendMessage = function (slug, urlPattern, rawValue) {
             // Pattern: https://wa.me/%s -> https://wa.me/123456
             // We want: https://wa.me/123456?text=EncodedMsg
 
-            // Let's reconstruct based on standard patterns known
-            finalUrl = 'https://wa.me/' + rawValue + '?text=' + encodedMsg;
+            // Clean phone number (remove +, spaces, dashes, etc.)
+            var cleanPhone = rawValue.replace(/\D/g, '');
+
+            // Convert to api.whatsapp.com/send/?phone=... which works seamlessly across devices
+            finalUrl = 'https://web.whatsapp.com/send/?phone=' + cleanPhone + '&text=' + encodedMsg;
         } else if (slug === 'sms') {
             // sms:number?body=message
             finalUrl = 'sms:' + rawValue + '?body=' + encodedMsg;
@@ -94,11 +97,6 @@ window.dctcSendMessage = function (slug, urlPattern, rawValue) {
             // For now, let's just stick to WhatsApp which is the primary use case requested.
             finalUrl = urlPattern.replace('%s', encodeURIComponent(rawValue));
         }
-
-        // Override for supported channels where we KNOW how to inject text
-        if (slug === 'whatsapp') finalUrl = 'https://wa.me/' + rawValue + '?text=' + encodedMsg;
-        if (slug === 'sms') finalUrl = 'sms:' + rawValue + '?body=' + encodedMsg;
-        if (slug === 'email') finalUrl = 'mailto:' + rawValue + '?body=' + encodedMsg;
 
     } else {
         finalUrl = urlPattern;
