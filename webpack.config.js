@@ -16,5 +16,7 @@ module.exports = {
 	output: {
 		...defaultConfig.output,
 		path: path.resolve( __dirname, 'build/ai' ),
+		// Chunks (section CSS/JS) resolve relative to this folder.
+		publicPath: 'auto',
 	},
 };

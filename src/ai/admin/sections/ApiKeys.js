@@ -27,8 +27,8 @@ export default function ApiKeys( { settings, onSave, showNotice } ) {
 	const [ saved, setSaved ] = useState( buildForm );
 	const dirty = JSON.stringify( form ) !== JSON.stringify( saved );
 
-	const hasKey = ( id ) => !! settings.api_keys?.[ id ];
-	const maskedKey = ( id ) => settings.api_keys?.[ id ] || '';
+	const hasKey = ( id ) => !! settings?.api_keys?.[ id ];
+	const maskedKey = ( id ) => settings?.api_keys?.[ id ] || '';
 
 	const onSubmit = async ( e ) => {
 		e.preventDefault();

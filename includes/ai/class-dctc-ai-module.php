@@ -179,16 +179,28 @@ if (!class_exists('DCTC_AI_Module')):
 
 			wp_enqueue_media();
 
-			$admin_css = file_exists(DCTC_PLUGIN_DIR . 'build/ai/admin/style-dctc-ai-dashboard.css')
-				? 'build/ai/admin/style-dctc-ai-dashboard.css'
-				: 'build/ai/admin/dctc-ai-dashboard.css';
-			if (file_exists(DCTC_PLUGIN_DIR . $admin_css)) {
-				wp_enqueue_style('dctc-ai-dashboard-style', DCTC_PLUGIN_URL . $admin_css, [], DCTC_VERSION);
+			// Core admin CSS (shell). Section/wizard CSS loads on demand via JS chunks.
+			$admin_css_candidates = [
+				'build/ai/admin/dctc-ai-dashboard.css',
+				'build/ai/admin/style-dctc-ai-dashboard.css',
+			];
+			foreach ($admin_css_candidates as $admin_css) {
+				if (file_exists(DCTC_PLUGIN_DIR . $admin_css)) {
+					wp_enqueue_style('dctc-ai-dashboard-style', DCTC_PLUGIN_URL . $admin_css, [], DCTC_VERSION);
+					break;
+				}
 			}
 
 			$asset_file = file_exists(DCTC_PLUGIN_DIR . 'build/ai/admin/dctc-ai-dashboard.asset.php') ? require DCTC_PLUGIN_DIR . 'build/ai/admin/dctc-ai-dashboard.asset.php' : ['dependencies' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch'], 'version' => DCTC_VERSION];
 
 			wp_enqueue_script('dctc-ai-dashboard-script', DCTC_PLUGIN_URL . 'build/ai/admin/dctc-ai-dashboard.js', $asset_file['dependencies'], $asset_file['version'], true);
+
+			// Ensure dynamic CSS/JS chunks resolve under build/ai/.
+			wp_add_inline_script(
+				'dctc-ai-dashboard-script',
+				'var dctcAiPublicPath=' . wp_json_encode(DCTC_PLUGIN_URL . 'build/ai/') . ';',
+				'before'
+			);
 
 			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 

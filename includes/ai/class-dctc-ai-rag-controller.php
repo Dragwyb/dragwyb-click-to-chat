@@ -447,19 +447,56 @@ class DCTC_AI_RAG_Controller
 				);
 			}
 
-			$result_message = $website_queued
-				? sprintf(
-					'Indexing started in the background for %d item(s).',
-					$queue_result['total'] ?? 0
-				)
-				: 'Indexing request received.';
+			$queued_count = (int) ($queue_result['total'] ?? 0);
+			$reason = $queue_result['reason'] ?? '';
+
+			if (!$website_queued) {
+				$result_message = esc_html__(
+					'Indexing request received.',
+					'dragwyb-click-to-chat'
+				);
+				$result_status = 'completed';
+			} elseif ($queued_count > 0) {
+				$result_message = sprintf(
+					/* translators: %d: number of posts queued for indexing */
+					esc_html__(
+						'Indexing started in the background for %d item(s).',
+						'dragwyb-click-to-chat'
+					),
+					$queued_count
+				);
+				$result_status = 'queued';
+				if (function_exists('spawn_cron')) {
+					spawn_cron();
+				}
+			} elseif ('no_published_posts' === $reason || 'invalid_post_types' === $reason) {
+				$result_message = esc_html__(
+					'No published posts found for the selected content types. Publish some posts/pages (or pick types that have content), then try again.',
+					'dragwyb-click-to-chat'
+				);
+				$result_status = 'completed';
+			} elseif ('already_up_to_date' === $reason) {
+				$result_message = esc_html__(
+					'Website content is already up to date — nothing new to index. Edit a post or add content, then index again.',
+					'dragwyb-click-to-chat'
+				);
+				$result_status = 'completed';
+			} else {
+				$result_message = esc_html__(
+					'No items were queued for indexing.',
+					'dragwyb-click-to-chat'
+				);
+				$result_status = 'completed';
+			}
 
 			return new \WP_REST_Response(
 				[
 					'success' => true,
 					'provider' => $vector_provider,
-					'status' => $website_queued ? 'queued' : 'completed',
-					'queued' => $queue_result['total'] ?? 0,
+					'status' => $result_status,
+					'queued' => $queued_count,
+					'candidates' => (int) ($queue_result['candidates'] ?? 0),
+					'reason' => $reason,
 					'message' => $result_message,
 				],
 				200

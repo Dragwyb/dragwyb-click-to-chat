@@ -1,0 +1,283 @@
+
+.dctc-ai-bot-settings form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+  margin: 0;
+}
+.dctc-ai-bot-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.dctc-ai-bot-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  padding: 1.75rem 2rem;
+}
+.dctc-ai-bot-section__title {
+  border-bottom: 1px solid #f1f5f9;
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.875rem;
+}
+.dctc-ai-bot-grid {
+  align-items: start;
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: 1fr 1fr;
+  width: 100%;
+}
+.dctc-ai-bot-col--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.dctc-ai-bot-field {
+  margin-bottom: 1.25rem;
+}
+.dctc-ai-bot-col--stack .dctc-ai-bot-field,
+.dctc-ai-bot-field:last-child {
+  margin-bottom: 0;
+}
+.dctc-ai-bot-field > label {
+  color: #374151;
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+.dctc-ai-bot-hint {
+  color: #6b7280;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  margin: 0.5rem 0 0;
+}
+.dctc-ai-bot-hint--center {
+  text-align: center;
+}
+.dctc-ai-bot-input,
+.dctc-ai-bot-select {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-sizing: border-box;
+  color: #111827;
+  display: block;
+  font-family: inherit;
+  font-size: 0.875rem;
+  max-width: 100% !important;
+  padding: 0.625rem 0.875rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+  width: 100% !important;
+}
+.dctc-ai-bot-textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.dctc-ai-bot-input:focus,
+.dctc-ai-bot-select:focus {
+  border-color: var(--dctc-ai-primary);
+  box-shadow: 0 0 0 3px var(--dctc-ai-primary-glow);
+  outline: none;
+}
+.dctc-ai-bot-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2716%27 height=%2716%27 fill=%27none%27 stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27m6 9 6 6 6-6%27/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  padding-right: 2.25rem;
+}
+.dctc-ai-bot-select--inline {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+.dctc-ai-bot-color-field {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.5rem 0.875rem;
+}
+.dctc-ai-bot-color-field .dctc-ai-bot-color-picker {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  height: 2rem;
+  padding: 0;
+  width: 2rem;
+}
+.dctc-ai-bot-color-field
+  .dctc-ai-bot-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+.dctc-ai-bot-color-field .dctc-ai-bot-color-picker::-webkit-color-swatch {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+.dctc-ai-bot-color-value {
+  color: #374151;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+.dctc-ai-bot-avatar-card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  max-width: 320px;
+}
+.dctc-ai-bot-avatar-preview {
+  align-items: center;
+  background: hsla(
+    var(--dctc-ai-primary-h),
+    var(--dctc-ai-primary-s),
+    var(--dctc-ai-primary-l),
+    0.12
+  );
+  border-radius: 50%;
+  display: flex;
+  height: 88px;
+  justify-content: center;
+  margin-bottom: 1rem;
+  overflow: hidden;
+  width: 88px;
+}
+.dctc-ai-bot-avatar-preview img {
+  height: 100%;
+  -o-object-fit: cover;
+  object-fit: cover;
+  width: 100%;
+}
+.dctc-ai-bot-avatar-preview span {
+  color: var(--dctc-ai-primary);
+  font-size: 2rem;
+  font-weight: 700;
+}
+.dctc-ai-bot-upload-btn {
+  font-size: 0.8125rem;
+  padding: 0.5rem 1rem;
+}
+.dctc-ai-bot-upload-btn .dashicons {
+  font-size: 1rem;
+  height: 1rem;
+  width: 1rem;
+}
+.dctc-ai-bot-remove-avatar {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-top: 0.5rem;
+  padding: 0;
+  text-decoration: underline;
+}
+.dctc-ai-bot-remove-avatar:hover {
+  color: #374151;
+}
+.dctc-ai-bot-setting-card {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+}
+.dctc-ai-bot-setting-card--warning {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+.dctc-ai-bot-setting-card__main {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.dctc-ai-bot-provider-check {
+  color: #22c55e;
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  height: 1.25rem;
+  width: 1.25rem;
+}
+.dctc-ai-bot-setting-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.dctc-ai-bot-setting-card__text strong {
+  color: #111827;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.dctc-ai-bot-setting-card__text span {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+.dctc-ai-bot-link {
+  background: none;
+  border: none;
+  color: var(--dctc-ai-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0;
+  text-decoration: none;
+}
+.dctc-ai-bot-link:hover {
+  text-decoration: underline;
+}
+.dctc-ai-bot-features {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.dctc-ai-bot-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+@media (max-width: 1024px) {
+  .dctc-ai-bot-grid {
+    gap: 1.5rem;
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .dctc-ai-bot-section {
+    padding: 1.25rem;
+  }
+  .dctc-ai-bot-footer .dctc-ai-btn-primary {
+    width: 100%;
+  }
+  .dctc-ai-bot-setting-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .dctc-ai-bot-setting-card .dctc-ai-toggle {
+    align-self: flex-end;
+  }
+}

@@ -12,6 +12,7 @@ import Instructions from './sections/Instructions';
 import KnowledgeBase from './sections/KnowledgeBase';
 import ChatSessions from './sections/ChatSessions';
 import ChatPreview from './sections/ChatPreview';
+import { loadSectionStyles, loadWizardStyles } from './utils/loadStyles';
 
 const TABS = [
 	{
@@ -102,7 +103,9 @@ const NAV_GROUPS = [
 ];
 
 export default function App( { settings: initialSettings } ) {
-	const [ settings, setSettings ] = useState( initialSettings );
+	const [ settings, setSettings ] = useState(
+		() => initialSettings || window.dctc_ai_data?.settings || {}
+	);
 	const [ notice, setNotice ] = useState( null );
 	const [ showWizard, setShowWizard ] = useState(
 		!! window.dctc_ai_data?.show_setup_wizard
@@ -159,6 +162,17 @@ export default function App( { settings: initialSettings } ) {
 		window.addEventListener( 'hashchange', onHash );
 		return () => window.removeEventListener( 'hashchange', onHash );
 	}, [ visibleTabs ] );
+
+	// Load only the CSS needed for the active tab (and wizard when open).
+	useEffect( () => {
+		loadSectionStyles( activeTab );
+	}, [ activeTab ] );
+
+	useEffect( () => {
+		if ( showWizard ) {
+			loadWizardStyles();
+		}
+	}, [ showWizard ] );
 
 	useEffect( () => {
 		if ( ! showWizard ) {

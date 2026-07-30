@@ -1113,11 +1113,15 @@ class DCTC_AI_Indexer
 		global $wpdb;
 
 		if (empty($post_types)) {
-			return ['total' => 0];
+			return [
+				'total' => 0,
+				'candidates' => 0,
+				'reason' => 'no_post_types',
+			];
 		}
 
 		$registered_types = get_post_types();
-		$valid_post_types = array_intersect($post_types, $registered_types);
+		$valid_post_types = array_values(array_intersect($post_types, $registered_types));
 		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
 
 		/*
@@ -1182,6 +1186,7 @@ class DCTC_AI_Indexer
 		}
 
 		$post_ids = array_values(array_unique(array_map('intval', $post_ids)));
+		$candidates = count($post_ids);
 
 		/*
 		 * Only queue posts that are actually new or whose content changed
@@ -1206,7 +1211,20 @@ class DCTC_AI_Indexer
 			$this->update_metadata('embed_failed', 0);
 		}
 
-		return ['total' => count($queue_ids)];
+		$reason = 'queued';
+		if (empty($valid_post_types)) {
+			$reason = 'invalid_post_types';
+		} elseif (0 === $candidates) {
+			$reason = 'no_published_posts';
+		} elseif (empty($queue_ids)) {
+			$reason = 'already_up_to_date';
+		}
+
+		return [
+			'total' => count($queue_ids),
+			'candidates' => $candidates,
+			'reason' => $reason,
+		];
 	}
 
 	/**
