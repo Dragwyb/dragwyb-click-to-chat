@@ -9,6 +9,8 @@ add_action('admin_enqueue_scripts', 'dctc_admin_scripts');
 function dctc_add_settings_page()
 {
     add_menu_page('Social Chat', 'Social Chat', 'manage_options', 'dragwyb-click-to-chat', 'dctc_settings_page_html', 'dashicons-format-chat', 90);
+    // Ensure first submenu matches top-level (WP duplicates parent otherwise).
+    add_submenu_page('dragwyb-click-to-chat', 'Social Chat', 'Social Chat', 'manage_options', 'dragwyb-click-to-chat', 'dctc_settings_page_html');
 }
 
 function dctc_admin_scripts($hook)
