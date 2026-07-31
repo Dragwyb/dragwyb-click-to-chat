@@ -855,7 +855,7 @@ export default function SetupWizard( {
 						<>
 							<button
 								type="button"
-								className="dctc-ai-bot-link dctc-ai-wizard-skip"
+								className="dctc-ai-wizard-skip"
 								onClick={ () => {
 									if ( step === ( isPinecone ? 5 : 4 ) ) {
 										skipOrClose( 'skipped' );

@@ -204,10 +204,6 @@
   padding: 20px 0;
 }
 
-.dctc-ai-kb-panel--hidden {
-  display: none;
-}
-
 .dctc-ai-kb-warning {
   background: #fff3cd;
   border-radius: 4px;

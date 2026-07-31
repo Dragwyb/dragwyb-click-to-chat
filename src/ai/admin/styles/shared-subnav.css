@@ -43,3 +43,8 @@
   color: var(--dctc-ai-primary);
   font-weight: 600;
 }
+
+/* Used by Chatbot + Knowledge Base panels to hide inactive subtabs. */
+.dctc-ai-kb-panel--hidden {
+  display: none;
+}
