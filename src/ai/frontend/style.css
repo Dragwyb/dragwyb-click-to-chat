@@ -28,6 +28,12 @@
 .dctc-ai-chat-floating.bottom-left {
   left: 24px;
 }
+.dctc-ai-chat-floating.custom {
+  bottom: auto;
+  left: auto;
+  right: auto;
+  top: auto;
+}
 .dctc-ai-chat-launcher {
   align-items: center;
   background: linear-gradient(
@@ -41,11 +47,11 @@
   color: #fff;
   cursor: pointer;
   display: flex;
-  height: 64px;
+  height: var(--dctc-ai-launcher-size, 64px);
   justify-content: center;
   position: relative;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  width: 64px;
+  width: var(--dctc-ai-launcher-size, 64px);
 }
 .dctc-ai-chat-launcher:before {
   animation: dctcAiPulse 2.5s infinite;
@@ -139,6 +145,39 @@
 .bottom-left .dctc-ai-chat-window {
   left: 0;
   transform-origin: bottom left;
+}
+.custom-right .dctc-ai-chat-window {
+  left: auto;
+  right: 0;
+}
+.custom-left .dctc-ai-chat-window {
+  left: 0;
+  right: auto;
+}
+.custom-bottom .dctc-ai-chat-window {
+  bottom: calc(var(--dctc-ai-launcher-size, 64px) + 20px);
+  top: auto;
+}
+.custom-top .dctc-ai-chat-window {
+  bottom: auto;
+  top: calc(var(--dctc-ai-launcher-size, 64px) + 20px);
+}
+.custom-left.custom-bottom .dctc-ai-chat-window {
+  transform-origin: bottom left;
+}
+.custom-right.custom-bottom .dctc-ai-chat-window {
+  transform-origin: bottom right;
+}
+.custom-left.custom-top .dctc-ai-chat-window {
+  transform-origin: top left;
+}
+.custom-right.custom-top .dctc-ai-chat-window {
+  transform-origin: top right;
+}
+.custom-left .dctc-ai-launcher-text {
+  left: 80px;
+  right: auto;
+  transform: translateX(-10px) translateY(2px);
 }
 @keyframes dctcAiWindowPop {
   0% {
@@ -720,8 +759,8 @@
     right: auto !important;
   }
   .dctc-ai-chat-launcher {
-    height: 56px;
-    width: 56px;
+    height: var(--dctc-ai-launcher-size, 56px);
+    width: var(--dctc-ai-launcher-size, 56px);
   }
   .dctc-ai-chat-launcher .dashicons {
     font-size: 26px;

@@ -35,6 +35,14 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 		show_on_mobile: display.show_on_mobile !== false,
 		exclude_pages: display.exclude_pages || '',
 		position: display.position || 'bottom-right',
+		widget_size: display.widget_size ?? 64,
+		widget_size_unit: display.widget_size_unit || 'px',
+		custom_vertical_align: display.custom_vertical_align || 'bottom',
+		custom_vertical: display.custom_vertical ?? 24,
+		custom_vertical_unit: display.custom_vertical_unit || 'px',
+		custom_side: display.custom_side || 'right',
+		custom_horizontal: display.custom_horizontal ?? 24,
+		custom_horizontal_unit: display.custom_horizontal_unit || 'px',
 		launcher_text: display.launcher_text || '',
 		trigger_type: display.trigger_type || 'click',
 		trigger_delay: display.trigger_delay ?? 5,
@@ -157,33 +165,50 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 					onChange={ ( v ) => setField( 'entire_site', v ) }
 				/>
 
-				<div className="dctc-ai-display-grid">
-					<div className="dctc-ai-bot-field">
-						<label htmlFor="launcher_text">
-							{ __( 'Chat Button Text', 'dragwyb-click-to-chat' ) }
-						</label>
-						<input
-							type="text"
-							id="launcher_text"
-							className="dctc-ai-bot-input"
-							value={ form.launcher_text }
-							onChange={ ( e ) => setField( 'launcher_text', e.target.value ) }
-							placeholder={ __( 'How can we help?', 'dragwyb-click-to-chat' ) }
-						/>
-					</div>
-
-					<div className="dctc-ai-bot-field">
-						<label htmlFor="exclude_search_input">
+				<section className="dctc-ai-display-panel">
+					<header className="dctc-ai-display-panel__header">
+						<h3 className="dctc-ai-display-panel__title">
+							{ __( 'Visibility & Trigger', 'dragwyb-click-to-chat' ) }
+						</h3>
+						<p className="dctc-ai-display-panel__desc">
 							{ __(
-								'Exclude Content (Pages, Posts, Custom Types)',
+								'Control the button label, pages to skip, and when the chat opens.',
 								'dragwyb-click-to-chat'
 							) }
-						</label>
-						<div
-							ref={ comboRef }
-							className="dctc-ai-combobox-wrapper"
-							style={ { position: 'relative', width: '100%' } }
-						>
+						</p>
+					</header>
+					<div className="dctc-ai-display-panel__body">
+						<div className="dctc-ai-display-grid">
+							<div className="dctc-ai-bot-field">
+								<label htmlFor="launcher_text">
+									{ __( 'Chat Button Text', 'dragwyb-click-to-chat' ) }
+								</label>
+								<input
+									type="text"
+									id="launcher_text"
+									className="dctc-ai-bot-input"
+									value={ form.launcher_text }
+									onChange={ ( e ) =>
+										setField( 'launcher_text', e.target.value )
+									}
+									placeholder={ __(
+										'How can we help?',
+										'dragwyb-click-to-chat'
+									) }
+								/>
+							</div>
+
+							<div className="dctc-ai-bot-field">
+								<label htmlFor="exclude_search_input">
+									{ __(
+										'Exclude Content (Pages, Posts, Custom Types)',
+										'dragwyb-click-to-chat'
+									) }
+								</label>
+								<div
+									ref={ comboRef }
+									className="dctc-ai-combobox-wrapper"
+								>
 							<div
 								className="dctc-ai-combobox-input-wrap"
 								style={ { position: 'relative' } }
@@ -468,7 +493,7 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 						</div>
 					</div>
 
-					<div className="dctc-ai-bot-field">
+					<div className="dctc-ai-bot-field dctc-ai-display-trigger-field">
 						<label htmlFor="trigger_type">
 							{ __( 'Auto-Open Trigger', 'dragwyb-click-to-chat' ) }
 						</label>
@@ -487,42 +512,342 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 						</select>
 					</div>
 
-					<div className="dctc-ai-bot-field">
-						<label htmlFor="position">
+					{ form.trigger_type === 'delay' && (
+						<div className="dctc-ai-bot-field dctc-ai-display-delay-field">
+							<label htmlFor="trigger_delay">
+								{ __( 'Delay (seconds)', 'dragwyb-click-to-chat' ) }
+							</label>
+							<input
+								type="number"
+								id="trigger_delay"
+								className="dctc-ai-bot-input"
+								min="1"
+								max="60"
+								value={ form.trigger_delay }
+								onChange={ ( e ) =>
+									setField( 'trigger_delay', e.target.value )
+								}
+							/>
+						</div>
+					) }
+						</div>
+					</div>
+				</section>
+
+				<section className="dctc-ai-display-panel">
+					<header className="dctc-ai-display-panel__header">
+						<h3 className="dctc-ai-display-panel__title">
+							{ __( 'Widget Appearance', 'dragwyb-click-to-chat' ) }
+						</h3>
+						<p className="dctc-ai-display-panel__desc">
+							{ __(
+								'Choose where the AI chat button sits and how large it appears.',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+					</header>
+					<div className="dctc-ai-display-panel__body">
+					<div className="dctc-ai-bot-field dctc-ai-display-position-field">
+						<label>
 							{ __( 'Widget Position on Screen', 'dragwyb-click-to-chat' ) }
 						</label>
-						<select
-							id="position"
-							className="dctc-ai-bot-select"
-							value={ form.position }
-							onChange={ ( e ) => setField( 'position', e.target.value ) }
-						>
-							<option value="bottom-right">
-								{ __( 'Bottom Right', 'dragwyb-click-to-chat' ) }
-							</option>
-							<option value="bottom-left">
-								{ __( 'Bottom Left', 'dragwyb-click-to-chat' ) }
-							</option>
-						</select>
-					</div>
-				</div>
+						<p className="dctc-ai-bot-hint">
+							{ __(
+								'Choose where the AI chat widget appears on your website',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+						<div className="dctc-ai-position-selector" role="radiogroup">
+							{ [
+								{
+									value: 'bottom-left',
+									label: __( 'Bottom Left', 'dragwyb-click-to-chat' ),
+									kind: 'corner',
+									cx: 10,
+								},
+								{
+									value: 'bottom-right',
+									label: __( 'Bottom Right', 'dragwyb-click-to-chat' ),
+									kind: 'corner',
+									cx: 50,
+								},
+								{
+									value: 'custom',
+									label: __( 'Custom', 'dragwyb-click-to-chat' ),
+									kind: 'custom',
+								},
+							].map( ( opt ) => (
+								<label
+									key={ opt.value }
+									className={
+										'dctc-ai-position-option' +
+										( form.position === opt.value ? ' is-active' : '' )
+									}
+								>
+									<input
+										type="radio"
+										name="dctc_ai_widget_position"
+										value={ opt.value }
+										checked={ form.position === opt.value }
+										onChange={ () => setField( 'position', opt.value ) }
+									/>
+									<span className="dctc-ai-position-card">
+										<svg
+											width="60"
+											height="40"
+											viewBox="0 0 60 40"
+											fill="none"
+											aria-hidden="true"
+										>
+											<rect
+												width="60"
+												height="40"
+												rx="4"
+												fill="#F3F4F6"
+											/>
+											{ opt.kind === 'corner' ? (
+												<circle
+													cx={ opt.cx }
+													cy="30"
+													r="5"
+													fill="currentColor"
+												/>
+											) : (
+												<>
+													<path
+														d="M25 15 L35 15 L30 10 Z"
+														fill="currentColor"
+													/>
+													<path
+														d="M25 25 L35 25 L30 30 Z"
+														fill="currentColor"
+													/>
+													<path
+														d="M15 20 L20 25 L20 15 Z"
+														fill="currentColor"
+													/>
+													<path
+														d="M40 20 L35 25 L35 15 Z"
+														fill="currentColor"
+													/>
+												</>
+											) }
+										</svg>
+										<span>{ opt.label }</span>
+									</span>
+								</label>
+							) ) }
+						</div>
 
-				{ form.trigger_type === 'delay' && (
-					<div className="dctc-ai-bot-field dctc-ai-display-delay-field">
-						<label htmlFor="trigger_delay">
-							{ __( 'Delay (seconds)', 'dragwyb-click-to-chat' ) }
-						</label>
-						<input
-							type="number"
-							id="trigger_delay"
-							className="dctc-ai-bot-input"
-							min="1"
-							max="60"
-							value={ form.trigger_delay }
-							onChange={ ( e ) => setField( 'trigger_delay', e.target.value ) }
-						/>
+						{ form.position === 'custom' && (
+							<div className="dctc-ai-custom-position">
+								<h4 className="dctc-ai-custom-position__title">
+									{ __(
+										'Custom Position Settings',
+										'dragwyb-click-to-chat'
+									) }
+								</h4>
+								<div className="dctc-ai-custom-position__grid">
+									<div className="dctc-ai-custom-position__col">
+										<label htmlFor="custom_vertical_align">
+											{ __(
+												'Vertical Alignment',
+												'dragwyb-click-to-chat'
+											) }
+										</label>
+										<select
+											id="custom_vertical_align"
+											className="dctc-ai-bot-select"
+											value={ form.custom_vertical_align }
+											onChange={ ( e ) =>
+												setField(
+													'custom_vertical_align',
+													e.target.value
+												)
+											}
+										>
+											<option value="bottom">
+												{ __( 'Bottom', 'dragwyb-click-to-chat' ) }
+											</option>
+											<option value="top">
+												{ __( 'Top', 'dragwyb-click-to-chat' ) }
+											</option>
+										</select>
+										<label
+											htmlFor="custom_vertical"
+											className="dctc-ai-custom-position__sublabel"
+										>
+											{ __(
+												'Vertical Distance',
+												'dragwyb-click-to-chat'
+											) }
+										</label>
+										<div className="dctc-ai-widget-size-row">
+											<input
+												type="number"
+												id="custom_vertical"
+												className="dctc-ai-bot-input dctc-ai-widget-size-input"
+												min="0"
+												step="1"
+												value={ form.custom_vertical }
+												onChange={ ( e ) =>
+													setField(
+														'custom_vertical',
+														e.target.value === ''
+															? ''
+															: Number( e.target.value )
+													)
+												}
+											/>
+											<select
+												className="dctc-ai-bot-select dctc-ai-widget-size-unit"
+												value={ form.custom_vertical_unit }
+												onChange={ ( e ) =>
+													setField(
+														'custom_vertical_unit',
+														e.target.value
+													)
+												}
+												aria-label={ __(
+													'Vertical distance unit',
+													'dragwyb-click-to-chat'
+												) }
+											>
+												<option value="px">px</option>
+												<option value="rem">rem</option>
+												<option value="em">em</option>
+												<option value="%">%</option>
+											</select>
+										</div>
+									</div>
+									<div className="dctc-ai-custom-position__col">
+										<label htmlFor="custom_side">
+											{ __(
+												'Horizontal Alignment',
+												'dragwyb-click-to-chat'
+											) }
+										</label>
+										<select
+											id="custom_side"
+											className="dctc-ai-bot-select"
+											value={ form.custom_side }
+											onChange={ ( e ) =>
+												setField( 'custom_side', e.target.value )
+											}
+										>
+											<option value="right">
+												{ __( 'Right', 'dragwyb-click-to-chat' ) }
+											</option>
+											<option value="left">
+												{ __( 'Left', 'dragwyb-click-to-chat' ) }
+											</option>
+										</select>
+										<label
+											htmlFor="custom_horizontal"
+											className="dctc-ai-custom-position__sublabel"
+										>
+											{ __(
+												'Horizontal Distance',
+												'dragwyb-click-to-chat'
+											) }
+										</label>
+										<div className="dctc-ai-widget-size-row">
+											<input
+												type="number"
+												id="custom_horizontal"
+												className="dctc-ai-bot-input dctc-ai-widget-size-input"
+												min="0"
+												step="1"
+												value={ form.custom_horizontal }
+												onChange={ ( e ) =>
+													setField(
+														'custom_horizontal',
+														e.target.value === ''
+															? ''
+															: Number( e.target.value )
+													)
+												}
+											/>
+											<select
+												className="dctc-ai-bot-select dctc-ai-widget-size-unit"
+												value={ form.custom_horizontal_unit }
+												onChange={ ( e ) =>
+													setField(
+														'custom_horizontal_unit',
+														e.target.value
+													)
+												}
+												aria-label={ __(
+													'Horizontal distance unit',
+													'dragwyb-click-to-chat'
+												) }
+											>
+												<option value="px">px</option>
+												<option value="rem">rem</option>
+												<option value="em">em</option>
+												<option value="%">%</option>
+											</select>
+										</div>
+									</div>
+								</div>
+								<p className="dctc-ai-bot-hint">
+									{ __(
+										'Tip: Use custom positioning to place the widget exactly where you want it on your page.',
+										'dragwyb-click-to-chat'
+									) }
+								</p>
+							</div>
+						) }
 					</div>
-				) }
+
+					<div className="dctc-ai-bot-field dctc-ai-display-size-field">
+						<label htmlFor="widget_size">
+							{ __( 'Widget Size', 'dragwyb-click-to-chat' ) }
+						</label>
+						<p className="dctc-ai-bot-hint">
+							{ __(
+								'Adjust the size of the AI chat button',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+						<div className="dctc-ai-widget-size-row">
+							<input
+								type="number"
+								id="widget_size"
+								className="dctc-ai-bot-input dctc-ai-widget-size-input"
+								min="24"
+								max="120"
+								step="1"
+								value={ form.widget_size }
+								onChange={ ( e ) =>
+									setField(
+										'widget_size',
+										e.target.value === ''
+											? ''
+											: Number( e.target.value )
+									)
+								}
+							/>
+							<select
+								id="widget_size_unit"
+								className="dctc-ai-bot-select dctc-ai-widget-size-unit"
+								value={ form.widget_size_unit }
+								onChange={ ( e ) =>
+									setField( 'widget_size_unit', e.target.value )
+								}
+								aria-label={ __(
+									'Widget size unit',
+									'dragwyb-click-to-chat'
+								) }
+							>
+								<option value="px">px</option>
+								<option value="rem">rem</option>
+								<option value="em">em</option>
+							</select>
+						</div>
+					</div>
+					</div>
+				</section>
 
 				<SettingCard
 					id="show_on_mobile"

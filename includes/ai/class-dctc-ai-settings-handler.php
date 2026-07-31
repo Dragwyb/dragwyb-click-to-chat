@@ -376,6 +376,14 @@ class DCTC_AI_Settings_Handler
 				'entire_site' => false,
 				'exclude_pages' => '',
 				'position' => 'bottom-right',
+				'widget_size' => 64,
+				'widget_size_unit' => 'px',
+				'custom_vertical_align' => 'bottom',
+				'custom_vertical' => 24,
+				'custom_vertical_unit' => 'px',
+				'custom_side' => 'right',
+				'custom_horizontal' => 24,
+				'custom_horizontal_unit' => 'px',
 				'show_on_mobile' => true,
 				'trigger_type' => 'click',
 				'trigger_delay' => 5,
@@ -566,10 +574,51 @@ class DCTC_AI_Settings_Handler
 	{
 		$params = $request->get_json_params();
 
+		$allowed_positions = [ 'bottom-right', 'bottom-left', 'custom' ];
+		$position = isset($params['position']) ? sanitize_text_field($params['position']) : 'bottom-right';
+		if (!in_array($position, $allowed_positions, true)) {
+			$position = 'bottom-right';
+		}
+
+		$allowed_units = [ 'px', 'rem', 'em', '%' ];
+		$sanitize_unit = static function ($value, $fallback = 'px') use ($allowed_units) {
+			$value = sanitize_text_field((string) $value);
+			return in_array($value, $allowed_units, true) ? $value : $fallback;
+		};
+
+		$widget_size_unit = $sanitize_unit($params['widget_size_unit'] ?? 'px');
+		$widget_size = isset($params['widget_size']) ? floatval($params['widget_size']) : 64;
+		if ($widget_size < 24) {
+			$widget_size = 24;
+		} elseif ($widget_size > 120) {
+			$widget_size = 120;
+		}
+
+		$custom_vertical_align = isset($params['custom_vertical_align']) ? sanitize_text_field($params['custom_vertical_align']) : 'bottom';
+		if (!in_array($custom_vertical_align, [ 'top', 'bottom' ], true)) {
+			$custom_vertical_align = 'bottom';
+		}
+
+		$custom_side = isset($params['custom_side']) ? sanitize_text_field($params['custom_side']) : 'right';
+		if (!in_array($custom_side, [ 'left', 'right' ], true)) {
+			$custom_side = 'right';
+		}
+
+		$custom_vertical = isset($params['custom_vertical']) ? max(0, floatval($params['custom_vertical'])) : 24;
+		$custom_horizontal = isset($params['custom_horizontal']) ? max(0, floatval($params['custom_horizontal'])) : 24;
+
 		$display_settings = [
 			'entire_site' => isset($params['entire_site']) ? (bool) $params['entire_site'] : false,
 			'exclude_pages' => isset($params['exclude_pages']) ? sanitize_text_field($params['exclude_pages']) : '',
-			'position' => isset($params['position']) ? sanitize_text_field($params['position']) : 'bottom-right',
+			'position' => $position,
+			'widget_size' => $widget_size,
+			'widget_size_unit' => $widget_size_unit,
+			'custom_vertical_align' => $custom_vertical_align,
+			'custom_vertical' => $custom_vertical,
+			'custom_vertical_unit' => $sanitize_unit($params['custom_vertical_unit'] ?? 'px'),
+			'custom_side' => $custom_side,
+			'custom_horizontal' => $custom_horizontal,
+			'custom_horizontal_unit' => $sanitize_unit($params['custom_horizontal_unit'] ?? 'px'),
 			'show_on_mobile' => isset($params['show_on_mobile']) ? (bool) $params['show_on_mobile'] : true,
 			'trigger_type' => isset($params['trigger_type']) ? sanitize_text_field($params['trigger_type']) : 'click',
 			'trigger_delay' => isset($params['trigger_delay']) ? intval($params['trigger_delay']) : 5,

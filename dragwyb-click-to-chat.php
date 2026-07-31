@@ -98,7 +98,7 @@ if (!class_exists('DCTC_Click_To_Chat')) {
             // Plugin version
             update_option('dragwyb_ctc_version', DCTC_VERSION);
 
-            // AI module tables + wizard flag (no redirect).
+            // AI module tables + wizard flag; redirects to AI Assistant on next admin load.
             if (file_exists(DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-module.php')) {
                 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-module.php';
                 DCTC_AI_Module::activate();

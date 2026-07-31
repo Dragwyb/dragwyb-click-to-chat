@@ -366,6 +366,34 @@ export default function ChatWidget( { settings, inline } ) {
 	const bubbleClass = `dctc-ai-bubble-${ chatbot.bubble_style || 'rounded' }`;
 	const showEmailGate = needsEmail && ! email && messages.length > 0;
 	const showWindow = isOpen || inline;
+	const launcherSize = `${ display.widget_size || 64 }${
+		display.widget_size_unit || 'px'
+	}`;
+	const isCustomPosition = ! inline && display.position === 'custom';
+	const customSide = display.custom_side === 'left' ? 'left' : 'right';
+	const customVert =
+		display.custom_vertical_align === 'top' ? 'top' : 'bottom';
+	const floatingClass = inline
+		? 'dctc-ai-chat-inline'
+		: isCustomPosition
+		? `dctc-ai-chat-floating custom custom-${ customSide } custom-${ customVert }`
+		: `dctc-ai-chat-floating ${ display.position || 'bottom-right' }`;
+	const wrapperStyle = {
+		'--dctc-ai-primary': primaryColor,
+		'--dctc-ai-launcher-size': launcherSize,
+	};
+	if ( isCustomPosition ) {
+		const vertDist = `${ display.custom_vertical ?? 24 }${
+			display.custom_vertical_unit || 'px'
+		}`;
+		const horizDist = `${ display.custom_horizontal ?? 24 }${
+			display.custom_horizontal_unit || 'px'
+		}`;
+		wrapperStyle.top = customVert === 'top' ? vertDist : 'auto';
+		wrapperStyle.bottom = customVert === 'bottom' ? vertDist : 'auto';
+		wrapperStyle.left = customSide === 'left' ? horizDist : 'auto';
+		wrapperStyle.right = customSide === 'right' ? horizDist : 'auto';
+	}
 
 	const markdownComponents = {
 		a: ( { node, ...props } ) =>
@@ -387,12 +415,8 @@ export default function ChatWidget( { settings, inline } ) {
 		'div',
 		{
 			ref: wrapperRef,
-			className:
-				'dctc-ai-chat-wrapper ' +
-				( inline
-					? 'dctc-ai-chat-inline'
-					: `dctc-ai-chat-floating ${ display.position }` ),
-			style: { '--dctc-ai-primary': primaryColor },
+			className: 'dctc-ai-chat-wrapper ' + floatingClass,
+			style: wrapperStyle,
 		},
 		showWindow &&
 			createElement(

@@ -12,7 +12,6 @@ import Instructions from './sections/Instructions';
 import KnowledgeBase from './sections/KnowledgeBase';
 import ChatSessions from './sections/ChatSessions';
 import ChatPreview from './sections/ChatPreview';
-import { loadSectionStyles, loadWizardStyles } from './utils/loadStyles';
 
 const TABS = [
 	{
@@ -162,17 +161,6 @@ export default function App( { settings: initialSettings } ) {
 		window.addEventListener( 'hashchange', onHash );
 		return () => window.removeEventListener( 'hashchange', onHash );
 	}, [ visibleTabs ] );
-
-	// Load only the CSS needed for the active tab (and wizard when open).
-	useEffect( () => {
-		loadSectionStyles( activeTab );
-	}, [ activeTab ] );
-
-	useEffect( () => {
-		if ( showWizard ) {
-			loadWizardStyles();
-		}
-	}, [ showWizard ] );
 
 	useEffect( () => {
 		if ( ! showWizard ) {

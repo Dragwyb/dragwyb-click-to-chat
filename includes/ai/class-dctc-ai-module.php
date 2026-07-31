@@ -66,6 +66,7 @@ if (!class_exists('DCTC_AI_Module')):
 			add_action('init', [$this, 'dctc_ai_init_rag_engine']);
 			add_action('admin_init', [$this, 'dctc_ai_maybe_complete_wizard']);
 			add_action('admin_init', [$this, 'dctc_ai_maybe_upgrade_schema']);
+			add_action('admin_init', [$this, 'dctc_ai_maybe_activation_redirect']);
 			add_action('admin_menu', [$this, 'dctc_ai_add_admin_menu'], 20);
 			add_action('admin_enqueue_scripts', [$this, 'dctc_ai_enqueue_admin_assets']);
 			add_action('wp_ajax_dctc_ai_dismiss_setup_notice', [$this, 'dctc_ai_ajax_dismiss_setup_notice']);
@@ -87,7 +88,7 @@ if (!class_exists('DCTC_AI_Module')):
 
 		/**
 		 * Create AI tables and seed wizard status on plugin activation.
-		 * Does NOT redirect — existing Social Chat users must not be interrupted.
+		 * Sets a one-shot redirect flag so the next admin load opens AI Assistant.
 		 *
 		 * @return void
 		 */
@@ -102,6 +103,33 @@ if (!class_exists('DCTC_AI_Module')):
 
 			update_option('dctc_ai_installed', '1');
 			update_option('dctc_ai_db_version', DCTC_VERSION);
+
+			set_transient('dctc_ai_activation_redirect', 1, 60);
+		}
+
+		/**
+		 * After activation, send the activating admin to the AI Assistant screen.
+		 *
+		 * @return void
+		 */
+		public function dctc_ai_maybe_activation_redirect()
+		{
+			if (!get_transient('dctc_ai_activation_redirect')) {
+				return;
+			}
+
+			delete_transient('dctc_ai_activation_redirect');
+
+			if (
+				!current_user_can('manage_options') ||
+				wp_doing_ajax() ||
+				(isset($_GET['activate-multi']) && sanitize_text_field(wp_unslash($_GET['activate-multi']))) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			) {
+				return;
+			}
+
+			wp_safe_redirect(admin_url('admin.php?page=dragwyb-click-to-chat-ai'));
+			exit;
 		}
 
 		/**
@@ -179,7 +207,7 @@ if (!class_exists('DCTC_AI_Module')):
 
 			wp_enqueue_media();
 
-			// Core admin CSS (shell). Section/wizard CSS loads on demand via JS chunks.
+			// Admin dashboard CSS (full stylesheet).
 			$admin_css_candidates = [
 				'build/ai/admin/dctc-ai-dashboard.css',
 				'build/ai/admin/style-dctc-ai-dashboard.css',
@@ -194,13 +222,6 @@ if (!class_exists('DCTC_AI_Module')):
 			$asset_file = file_exists(DCTC_PLUGIN_DIR . 'build/ai/admin/dctc-ai-dashboard.asset.php') ? require DCTC_PLUGIN_DIR . 'build/ai/admin/dctc-ai-dashboard.asset.php' : ['dependencies' => ['wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch'], 'version' => DCTC_VERSION];
 
 			wp_enqueue_script('dctc-ai-dashboard-script', DCTC_PLUGIN_URL . 'build/ai/admin/dctc-ai-dashboard.js', $asset_file['dependencies'], $asset_file['version'], true);
-
-			// Ensure dynamic CSS/JS chunks resolve under build/ai/.
-			wp_add_inline_script(
-				'dctc-ai-dashboard-script',
-				'var dctcAiPublicPath=' . wp_json_encode(DCTC_PLUGIN_URL . 'build/ai/') . ';',
-				'before'
-			);
 
 			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 
