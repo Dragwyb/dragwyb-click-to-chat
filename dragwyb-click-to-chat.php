@@ -50,7 +50,7 @@ if (!class_exists('DCTC_Click_To_Chat')) {
             require_once DCTC_PLUGIN_DIR . 'includes/channel-registry.php';
             require_once DCTC_PLUGIN_DIR . 'includes/frontend.php';
 
-            // Isolated AI Assistant module (opt-in; does not affect Social Chat).
+            // Isolated AI Assistant module (opt-in; does not affect Channels widget).
             if (file_exists(DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-module.php')) {
                 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-module.php';
                 DCTC_AI_Module::get_instance();

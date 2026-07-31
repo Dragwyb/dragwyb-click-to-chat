@@ -66,6 +66,10 @@ export default function ChatWidget( { settings, inline } ) {
 		: [];
 
 	const [ isOpen, setIsOpen ] = useState( false );
+	const [ launcherVisible, setLauncherVisible ] = useState( () => {
+		const delay = parseInt( display.time_delay, 10 ) || 0;
+		return delay <= 0;
+	} );
 	const [ input, setInput ] = useState( '' );
 	const [ isLoading, setIsLoading ] = useState( false );
 	const [ sessionId, setSessionId ] = useState(
@@ -135,6 +139,24 @@ export default function ChatWidget( { settings, inline } ) {
 		display.trigger_delay,
 		inline,
 	] );
+
+	// Delay launcher appearance after page load (like Channels widget time delay).
+	useEffect( () => {
+		if ( inline ) {
+			setLauncherVisible( true );
+			return;
+		}
+		const delay = parseInt( display.time_delay, 10 ) || 0;
+		if ( delay <= 0 ) {
+			setLauncherVisible( true );
+			return;
+		}
+		setLauncherVisible( false );
+		const timer = setTimeout( () => {
+			setLauncherVisible( true );
+		}, delay * 1000 );
+		return () => clearTimeout( timer );
+	}, [ display.time_delay, inline ] );
 
 	useEffect( () => {
 		if ( messagesEndRef.current ) {
@@ -740,9 +762,12 @@ export default function ChatWidget( { settings, inline } ) {
 				'div',
 				{
 					id: 'dctc-ai-launcher',
-					className: 'dctc-ai-chat-launcher',
+					className:
+						'dctc-ai-chat-launcher' +
+						( launcherVisible ? '' : ' dctc-ai-chat-launcher--hidden' ),
 					onClick: toggleOpen,
 					style: { background: primaryColor },
+					'aria-hidden': launcherVisible ? undefined : 'true',
 				},
 				createElement(
 					'span',

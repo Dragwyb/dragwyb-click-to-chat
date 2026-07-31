@@ -1372,6 +1372,19 @@ input:checked + .dctc-ai-toggle-slider:before {
   grid-column: 1 / -1;
   max-width: 220px;
 }
+.dctc-ai-display-time-delay-field {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+.dctc-ai-time-delay-row {
+  align-items: center;
+  max-width: 220px;
+}
+.dctc-ai-time-delay-unit {
+  color: #6b7280;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
 .dctc-ai-display-mobile-icon {
   align-items: center;
   background: hsla(
@@ -3195,7 +3208,7 @@ input:checked + .dctc-ai-toggle-slider:before {
 
 /* ==== wizard.css ==== */
 /**
- * Setup wizard â€” self-contained styles (Botisst-matched layout).
+ * Setup wizard — self-contained styles.
  * Does not depend on chatbot.css / knowledge.css / api-keys.css.
  */
 
@@ -3288,7 +3301,7 @@ input:checked + .dctc-ai-toggle-slider:before {
   margin: 0 0 0.5rem;
 }
 
-/* Form fields (labels above inputs, like Botisst) */
+/* Form fields (labels above inputs). */
 .dctc-ai-wizard-modal .dctc-ai-bot-field {
   margin: 0;
 }
@@ -3386,7 +3399,7 @@ input:checked + .dctc-ai-toggle-slider:before {
   width: 14px;
 }
 
-/* Skip = blue text link (Botisst), not a bordered button */
+/* Skip = blue text link, not a bordered button */
 .dctc-ai-wizard-skip {
   -webkit-appearance: none;
   -moz-appearance: none;

@@ -46,6 +46,7 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 		launcher_text: display.launcher_text || '',
 		trigger_type: display.trigger_type || 'click',
 		trigger_delay: display.trigger_delay ?? 5,
+		time_delay: display.time_delay ?? 0,
 	} );
 
 	const [ form, setForm ] = useState( buildForm );
@@ -530,6 +531,46 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 							/>
 						</div>
 					) }
+
+					<div className="dctc-ai-bot-field dctc-ai-display-time-delay-field">
+						<label htmlFor="time_delay">
+							{ __( 'Time Delay', 'dragwyb-click-to-chat' ) }
+						</label>
+						<p className="dctc-ai-bot-hint">
+							{ __(
+								'Delay widget appearance after page load (in seconds)',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+						<div className="dctc-ai-widget-size-row dctc-ai-time-delay-row">
+							<input
+								type="number"
+								id="time_delay"
+								className="dctc-ai-bot-input dctc-ai-widget-size-input"
+								min="0"
+								max="60"
+								step="1"
+								value={ form.time_delay }
+								onChange={ ( e ) =>
+									setField(
+										'time_delay',
+										e.target.value === ''
+											? ''
+											: Number( e.target.value )
+									)
+								}
+							/>
+							<span className="dctc-ai-time-delay-unit">
+								{ __( 'seconds', 'dragwyb-click-to-chat' ) }
+							</span>
+						</div>
+						<p className="dctc-ai-bot-hint">
+							{ __(
+								'Set to 0 for immediate display. Recommended: 2–5 seconds for better user experience.',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+					</div>
 						</div>
 					</div>
 				</section>

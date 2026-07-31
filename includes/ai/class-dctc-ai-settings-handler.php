@@ -387,6 +387,7 @@ class DCTC_AI_Settings_Handler
 				'show_on_mobile' => true,
 				'trigger_type' => 'click',
 				'trigger_delay' => 5,
+				'time_delay' => 0,
 				'launcher_text' => 'Chat with us',
 			],
 			'rag' => [
@@ -622,6 +623,7 @@ class DCTC_AI_Settings_Handler
 			'show_on_mobile' => isset($params['show_on_mobile']) ? (bool) $params['show_on_mobile'] : true,
 			'trigger_type' => isset($params['trigger_type']) ? sanitize_text_field($params['trigger_type']) : 'click',
 			'trigger_delay' => isset($params['trigger_delay']) ? intval($params['trigger_delay']) : 5,
+			'time_delay' => isset($params['time_delay']) ? max(0, min(60, intval($params['time_delay']))) : 0,
 			'launcher_text' => isset($params['launcher_text']) ? sanitize_text_field($params['launcher_text']) : 'Chat with us',
 		];
 

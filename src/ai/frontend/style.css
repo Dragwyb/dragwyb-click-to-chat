@@ -79,6 +79,11 @@
 .dctc-ai-chat-launcher:hover .dashicons {
   transform: scale(1.08) rotate(5deg);
 }
+.dctc-ai-chat-launcher--hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+}
 .dctc-ai-launcher-text {
   background: #fff;
   border: 1px solid var(--dctc-ai-border);

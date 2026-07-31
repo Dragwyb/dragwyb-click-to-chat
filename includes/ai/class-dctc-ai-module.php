@@ -2,8 +2,8 @@
 /**
  * DCTC AI Module bootstrap
  *
- * Isolated AI chatbot module (ported from Botisst). Does not touch Social Chat
- * settings or the floating FAB. Opt-in via display.entire_site (default false).
+ * Isolated AI chatbot module. Does not touch the Channels
+ * (multi-channel floating widget) settings or FAB. Opt-in via display.entire_site (default false).
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -465,7 +465,7 @@ if (!class_exists('DCTC_AI_Module')):
 		}
 
 		/**
-		 * Register AI Assistant as a submenu under Social Chat.
+		 * Register AI Assistant as a submenu under Click to Chat.
 		 *
 		 * @return void
 		 */
@@ -514,7 +514,7 @@ if (!class_exists('DCTC_AI_Module')):
 			$is_wp_ai_client_70 = function_exists('wp_ai_client_prompt');
 
 			if (!$is_wp_ai_client_70) {
-				// Skip if another plugin (e.g. Botisst) already loaded the AI Client SDK.
+				// Skip if another plugin already loaded the AI Client SDK.
 				if (!class_exists('\WordPress\AI_Client\AI_Client', false) && !class_exists('\WordPress\AiClient\AiClient', false)) {
 					$sdk_autoload = DCTC_PLUGIN_DIR . 'vendor/wordpress/wp-ai-client/autoload.php';
 
@@ -529,7 +529,7 @@ if (!class_exists('DCTC_AI_Module')):
 			}
 
 			// Skip provider autoload if OpenAI/Google providers already exist (avoids
-			// ComposerAutoloaderInit collisions when Botisst is also active).
+			// ComposerAutoloaderInit collisions when another AI plugin is also active).
 			if (
 				!class_exists('\WordPress\OpenAiAiProvider\Provider\OpenAiProvider', false) ||
 				!class_exists('\WordPress\GoogleAiProvider\Provider\GoogleProvider', false)
