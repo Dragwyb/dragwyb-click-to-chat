@@ -5,6 +5,8 @@
  * Description: Multi-channel social chat widget plus optional AI Assistant (OpenAI / Gemini).
  * Author: Dragwyb
  * Version: 1.1.0
+ * Requires at least: 5.0
+ * Requires PHP: 7.4
  * Text Domain: dragwyb-click-to-chat
  * License: GPLv2 or later
  */

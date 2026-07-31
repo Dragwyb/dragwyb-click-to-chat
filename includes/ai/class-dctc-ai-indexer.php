@@ -110,7 +110,7 @@ class DCTC_AI_Indexer
 		$sources = !empty($settings['post_types']) ? $settings['post_types'] : ['post', 'page'];
 
 		if (empty($sources)) {
-			return ['success' => false, 'message' => 'No indexing sources configured'];
+			return ['success' => false, 'message' => __('No indexing sources configured', 'dragwyb-click-to-chat')];
 		}
 
 		return $this->index_documents_by_type($sources);
@@ -129,7 +129,7 @@ class DCTC_AI_Indexer
 		if (empty($post_types)) {
 			return [
 				'success' => false,
-				'message' => 'No post types specified',
+				'message' => __('No post types specified', 'dragwyb-click-to-chat'),
 			];
 		}
 
@@ -869,7 +869,7 @@ class DCTC_AI_Indexer
 				'processed' => 0,
 				'failed' => 0,
 				'remaining' => 0,
-				'message' => 'No pending chunks found',
+				'message' => __('No pending chunks found', 'dragwyb-click-to-chat'),
 			];
 		}
 
@@ -895,7 +895,7 @@ class DCTC_AI_Indexer
 			return [
 				'processed' => 0,
 				'failed' => count($pending_chunks),
-				'message' => 'Failed to initialize vector database',
+				'message' => __('Failed to initialize vector database', 'dragwyb-click-to-chat'),
 			];
 		}
 

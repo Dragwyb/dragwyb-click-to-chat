@@ -652,44 +652,23 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 					</article>
 
 					{ vectorDb === 'pinecone' && (
-						<article className="dctc-ai-kb-card">
-							<header
-								className="dctc-ai-kb-card__header"
-								style={ {
-									display: 'flex',
-									justifyContent: 'space-between',
-									alignItems: 'center',
-									flexWrap: 'wrap',
-									gap: '1rem',
-								} }
-							>
-								<div
-									style={ {
-										display: 'flex',
-										gap: '0.75rem',
-										alignItems: 'center',
-										minWidth: 0,
-										flex: 1,
-									} }
-								>
+						<article className="dctc-ai-kb-card dctc-ai-kb-pinecone-card">
+							<header className="dctc-ai-kb-card__header dctc-ai-kb-pinecone-header">
+								<div className="dctc-ai-kb-pinecone-header__main">
 									<span
 										className="dctc-ai-kb-card__icon"
 										aria-hidden="true"
-										style={ { flexShrink: 0 } }
 									>
 										<span className="dashicons dashicons-cloud" />
 									</span>
-									<div className="dctc-ai-kb-card__heading" style={ { minWidth: 0 } }>
-										<h3
-											className="dctc-ai-kb-card__title"
-											style={ { display: 'flex', alignItems: 'center' } }
-										>
+									<div className="dctc-ai-kb-card__heading">
+										<h3 className="dctc-ai-kb-card__title dctc-ai-kb-pinecone-title">
 											{ __(
 												'Pinecone Configuration',
 												'dragwyb-click-to-chat'
 											) }
 											{ embedInfo.dimensions && (
-												<div className="dctc-ai-info-tooltip-wrapper">
+												<span className="dctc-ai-info-tooltip-wrapper">
 													<button
 														type="button"
 														className="dctc-ai-info-btn"
@@ -700,8 +679,12 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 													>
 														i
 													</button>
-													<div className="dctc-ai-info-tooltip">
+													<span
+														className="dctc-ai-info-tooltip"
+														role="tooltip"
+													>
 														{ sprintf(
+															/* translators: 1: provider name, 2: dimensions */
 															__(
 																'Because you selected %1$s, your Pinecone index must be created with exactly %2$d dimensions.',
 																'dragwyb-click-to-chat'
@@ -709,20 +692,20 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 															embedInfo.provider,
 															embedInfo.dimensions
 														) }
-													</div>
-												</div>
+													</span>
+												</span>
 											) }
 										</h3>
-										<p className="dctc-ai-kb-card__desc" style={ { margin: 0 } }>
+										<p className="dctc-ai-kb-card__desc">
 											{ __(
 												'Connect your Pinecone cloud vector database.',
 												'dragwyb-click-to-chat'
 											) }{ ' ' }
 											<a
+												className="dctc-ai-kb-pinecone-console-link"
 												href="https://app.pinecone.io/"
 												target="_blank"
 												rel="noopener noreferrer"
-												style={ { fontWeight: '500' } }
 											>
 												{ __(
 													'Open Pinecone Console',
@@ -736,13 +719,8 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 								{ hasPineconeSaved && (
 									<button
 										type="button"
-										className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm"
+										className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm dctc-ai-kb-pinecone-reset-btn"
 										onClick={ () => setConfirmReset( true ) }
-										style={ {
-											fontSize: '0.8125rem',
-											padding: '0.5rem 0.875rem',
-											flexShrink: 0,
-										} }
 									>
 										{ __( 'Reset Settings', 'dragwyb-click-to-chat' ) }
 									</button>
@@ -803,26 +781,6 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 										) }
 									</p>
 								</div>
-								{ hasPineconeSaved && (
-									<div className="dctc-ai-kb-pinecone-reset">
-										<button
-											type="button"
-											className="dctc-ai-btn dctc-ai-btn-secondary"
-											onClick={ () => setConfirmReset( true ) }
-										>
-											{ __(
-												'Reset Pinecone Settings',
-												'dragwyb-click-to-chat'
-											) }
-										</button>
-										<p className="dctc-ai-hint">
-											{ __(
-												'Click this to clear your Pinecone API Key, Host, and Index Name.',
-												'dragwyb-click-to-chat'
-											) }
-										</p>
-									</div>
-								) }
 							</div>
 						</article>
 					) }

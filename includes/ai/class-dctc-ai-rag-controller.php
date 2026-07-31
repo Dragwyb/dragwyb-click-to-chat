@@ -63,16 +63,28 @@ class DCTC_AI_RAG_Controller
 	private function is_safe_external_host($host)
 	{
 		$parsed = wp_parse_url($host);
-		$hostname = isset($parsed['host']) ? $parsed['host'] : '';
+		$hostname = isset($parsed['host']) ? strtolower($parsed['host']) : '';
 
 		if (empty($hostname)) {
+			// Allow bare hostnames without a scheme (e.g. index-xxx.svc....pinecone.io).
+			$hostname = strtolower(preg_replace('#^https?://#i', '', $host));
+			$hostname = explode('/', $hostname)[0];
+			$hostname = explode(':', $hostname)[0];
+		}
+
+		if (empty($hostname)) {
+			return false;
+		}
+
+		// Positive allowlist: only public *.pinecone.io hosts.
+		$is_pinecone = ('pinecone.io' === $hostname || substr($hostname, -strlen('.pinecone.io')) === '.pinecone.io');
+		if (!$is_pinecone) {
 			return false;
 		}
 
 		$ip = filter_var($hostname, FILTER_VALIDATE_IP) ? $hostname : gethostbyname($hostname);
 
 		if (!filter_var($ip, FILTER_VALIDATE_IP)) {
-			// Could not resolve the hostname at all.
 			return false;
 		}
 
@@ -81,6 +93,83 @@ class DCTC_AI_RAG_Controller
 			FILTER_VALIDATE_IP,
 			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
 		);
+	}
+
+	/**
+	 * Mask secrets in vector_db before returning settings over REST.
+	 *
+	 * @param array $vector_db Vector DB config.
+	 * @return array
+	 */
+	private function sanitize_vector_db_for_response($vector_db)
+	{
+		if (!is_array($vector_db)) {
+			return [];
+		}
+
+		if (!empty($vector_db['api_key']) && is_string($vector_db['api_key'])) {
+			$key = $vector_db['api_key'];
+			if (strlen($key) < 8) {
+				$vector_db['api_key'] = '********';
+			} else {
+				$vector_db['api_key'] = substr($key, 0, 4) . '...' . substr($key, -4);
+			}
+		}
+
+		return $vector_db;
+	}
+
+	/**
+	 * Sanitize vector_db input from the admin.
+	 *
+	 * @param array $vector_db Raw vector DB config.
+	 * @param array $existing  Previously saved vector DB config.
+	 * @return array
+	 */
+	private function sanitize_vector_db_input($vector_db, $existing = [])
+	{
+		$sanitized = [
+			'provider' => isset($vector_db['provider'])
+				? sanitize_key($vector_db['provider'])
+				: (isset($existing['provider']) ? sanitize_key($existing['provider']) : 'sqlite'),
+		];
+
+		if (!empty($vector_db['api_key'])) {
+			$api_key = sanitize_text_field($vector_db['api_key']);
+			// Keep existing key when the client sends a masked placeholder.
+			if (false !== strpos($api_key, '...') || '********' === $api_key) {
+				$sanitized['api_key'] = isset($existing['api_key']) ? $existing['api_key'] : '';
+			} else {
+				$sanitized['api_key'] = $api_key;
+			}
+		} elseif (isset($existing['api_key'])) {
+			$sanitized['api_key'] = $existing['api_key'];
+		}
+
+		if (isset($vector_db['host'])) {
+			$host = trim((string) $vector_db['host']);
+			if (preg_match('#^https?://#i', $host)) {
+				$sanitized['host'] = esc_url_raw($host);
+			} else {
+				$sanitized['host'] = sanitize_text_field($host);
+			}
+		} elseif (isset($existing['host'])) {
+			$sanitized['host'] = $existing['host'];
+		}
+
+		if (isset($vector_db['index_name'])) {
+			$sanitized['index_name'] = sanitize_text_field($vector_db['index_name']);
+		} elseif (isset($existing['index_name'])) {
+			$sanitized['index_name'] = $existing['index_name'];
+		}
+
+		if (isset($vector_db['environment'])) {
+			$sanitized['environment'] = sanitize_text_field($vector_db['environment']);
+		} elseif (isset($existing['environment'])) {
+			$sanitized['environment'] = $existing['environment'];
+		}
+
+		return $sanitized;
 	}
 
 	/**
@@ -96,10 +185,25 @@ class DCTC_AI_RAG_Controller
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$existing_rag = isset($settings['rag']) ? $settings['rag'] : [];
 		$existing_embeddings = isset($existing_rag['embeddings']) ? $existing_rag['embeddings'] : [];
+		$existing_vector_db = isset($existing_rag['vector_db']) && is_array($existing_rag['vector_db'])
+			? $existing_rag['vector_db']
+			: ['provider' => 'sqlite'];
 
-		$post_types = isset($params['post_types'])
+		$raw_post_types = isset($params['post_types'])
 			? (array) $params['post_types']
 			: (isset($existing_rag['post_types']) ? $existing_rag['post_types'] : ['post', 'page']);
+
+		$post_types = [];
+		foreach ($raw_post_types as $post_type) {
+			$key = sanitize_key($post_type);
+			if ('' !== $key && post_type_exists($key)) {
+				$post_types[] = $key;
+			}
+		}
+		$post_types = array_values(array_unique($post_types));
+		if (empty($post_types)) {
+			$post_types = ['post', 'page'];
+		}
 
 		$chunk_size = isset($params['chunk_size'])
 			? (int) $params['chunk_size']
@@ -114,8 +218,8 @@ class DCTC_AI_RAG_Controller
 			: (isset($existing_rag['auto_index']) ? (bool) $existing_rag['auto_index'] : true);
 
 		$vector_db = isset($params['vector_db'])
-			? (array) $params['vector_db']
-			: (isset($existing_rag['vector_db']) ? $existing_rag['vector_db'] : ['provider' => 'sqlite']);
+			? $this->sanitize_vector_db_input((array) $params['vector_db'], $existing_vector_db)
+			: $this->sanitize_vector_db_input($existing_vector_db, $existing_vector_db);
 
 		$require_indexed_data = isset($params['require_indexed_data'])
 			? (bool) $params['require_indexed_data']
@@ -171,7 +275,7 @@ class DCTC_AI_RAG_Controller
 				return new \WP_REST_Response(
 					[
 						'success' => false,
-						'message' => esc_html__('Pinecone host must be a public address, not a private, loopback, or internal network host.', 'dragwyb-click-to-chat'),
+						'message' => esc_html__('Pinecone host must be a public *.pinecone.io address.', 'dragwyb-click-to-chat'),
 					],
 					400
 				);
@@ -223,6 +327,11 @@ class DCTC_AI_RAG_Controller
 
 		DCTC_AI_Settings_Handler::dctc_ai_persist_settings($settings);
 
+		$rag_response = $settings['rag'];
+		$rag_response['vector_db'] = $this->sanitize_vector_db_for_response(
+			isset($rag_response['vector_db']) ? $rag_response['vector_db'] : []
+		);
+
 		return new \WP_REST_Response(
 			[
 				'success' => true,
@@ -230,7 +339,7 @@ class DCTC_AI_RAG_Controller
 					'RAG settings saved successfully!',
 					'dragwyb-click-to-chat'
 				),
-				'rag' => $settings['rag'],
+				'rag' => $rag_response,
 			],
 			200
 		);

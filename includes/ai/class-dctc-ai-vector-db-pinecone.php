@@ -89,13 +89,13 @@ class DCTC_AI_Vector_DB_Pinecone extends DCTC_AI_Vector_DB_Base
 	protected function validate_config()
 	{
 		if (empty($this->api_key)) {
-			return new WP_Error('pinecone_missing_key', 'Pinecone API key is required');
+			return new WP_Error('pinecone_missing_key', __('Pinecone API key is required', 'dragwyb-click-to-chat'));
 		}
 		if (empty($this->base_url)) {
-			return new WP_Error('pinecone_missing_host', 'Pinecone host URL is required');
+			return new WP_Error('pinecone_missing_host', __('Pinecone host URL is required', 'dragwyb-click-to-chat'));
 		}
 		if (empty($this->index_name)) {
-			return new WP_Error('pinecone_missing_index', 'Pinecone index name is required');
+			return new WP_Error('pinecone_missing_index', __('Pinecone index name is required', 'dragwyb-click-to-chat'));
 		}
 		return true;
 	}

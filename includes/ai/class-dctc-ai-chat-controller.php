@@ -317,8 +317,8 @@ class DCTC_AI_Chat_Controller
 	{
 		$new_session_id = 'sess_' . wp_generate_password(9, false);
 
-		setcookie('dctc_ai_session_id', $new_session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), false);
-		setcookie('dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), false);
+		setcookie('dctc_ai_session_id', $new_session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true);
+		setcookie('dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true);
 
 		return new \WP_REST_Response(
 			[
@@ -360,8 +360,9 @@ class DCTC_AI_Chat_Controller
 	{
 		$ip = $this->get_client_ip();
 
+		// Fail closed: without a usable IP we cannot throttle fairly.
 		if (empty($ip)) {
-			return false;
+			return true;
 		}
 
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();

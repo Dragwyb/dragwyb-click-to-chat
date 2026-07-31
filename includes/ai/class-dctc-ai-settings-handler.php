@@ -427,6 +427,54 @@ class DCTC_AI_Settings_Handler
 	}
 
 	/**
+	 * Settings safe to expose on the public frontend (no secrets / prompts / RAG).
+	 *
+	 * @return array{
+	 *   chatbot: array<string, mixed>,
+	 *   display: array<string, mixed>
+	 * }
+	 */
+	public static function dctc_ai_get_public_frontend_settings()
+	{
+		$settings = self::dctc_ai_get_all_settings();
+		$chatbot = isset($settings['chatbot']) && is_array($settings['chatbot']) ? $settings['chatbot'] : [];
+		$display = isset($settings['display']) && is_array($settings['display']) ? $settings['display'] : [];
+
+		$public_chatbot_keys = [
+			'bot_name',
+			'primary_color',
+			'greeting_msg',
+			'bot_avatar',
+			'bubble_style',
+			'api_error_msg',
+			'support_url',
+			'pre_question_1',
+			'pre_question_2',
+			'pre_question_3',
+			'pre_question_4',
+			'pre_questions_bg_color',
+			'pre_questions_text_color',
+			'pre_questions_border_color',
+			'pre_questions_border_radius',
+			'save_chat',
+			'ask_email',
+			'enable_pre_questions',
+		];
+
+		$public_chatbot = [];
+		foreach ($public_chatbot_keys as $key) {
+			if (array_key_exists($key, $chatbot)) {
+				$public_chatbot[$key] = $chatbot[$key];
+			}
+		}
+
+		return [
+			'chatbot' => $public_chatbot,
+			'display' => $display,
+		];
+	}
+
+	/**
 	 * Persist Settings
 	 *
 	 * Single write path for the plugin's settings option, used in place of

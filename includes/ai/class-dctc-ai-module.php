@@ -207,10 +207,10 @@ if (!class_exists('DCTC_AI_Module')):
 
 			wp_enqueue_media();
 
-			// Admin dashboard CSS (full stylesheet).
+			// Prefer webpack-emitted style-* CSS; fall back to legacy filename.
 			$admin_css_candidates = [
-				'build/ai/admin/dctc-ai-dashboard.css',
 				'build/ai/admin/style-dctc-ai-dashboard.css',
+				'build/ai/admin/dctc-ai-dashboard.css',
 			];
 			foreach ($admin_css_candidates as $admin_css) {
 				if (file_exists(DCTC_PLUGIN_DIR . $admin_css)) {
@@ -237,6 +237,16 @@ if (!class_exists('DCTC_AI_Module')):
 					}
 				}
 				$models_list[$id] = DCTC_AI_Settings_Handler::dctc_ai_get_models($id);
+			}
+
+			// Never expose the full Pinecone API key in page HTML / JS.
+			if (!empty($settings['rag']['vector_db']['api_key']) && is_string($settings['rag']['vector_db']['api_key'])) {
+				$pinecone_key = $settings['rag']['vector_db']['api_key'];
+				if (strlen($pinecone_key) < 8) {
+					$settings['rag']['vector_db']['api_key'] = '********';
+				} else {
+					$settings['rag']['vector_db']['api_key'] = substr($pinecone_key, 0, 4) . '...' . substr($pinecone_key, -4);
+				}
 			}
 
 			wp_localize_script(
@@ -306,6 +316,7 @@ if (!class_exists('DCTC_AI_Module')):
 				return true;
 			}
 
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only Elementor preview flag; no state change.
 			if (isset($_GET['elementor-preview'])) {
 				return true;
 			}
@@ -324,7 +335,7 @@ if (!class_exists('DCTC_AI_Module')):
 				return;
 			}
 
-			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_public_frontend_settings();
 
 			$frontend_css = file_exists(DCTC_PLUGIN_DIR . 'build/ai/frontend/style-dctc-ai-frontend.css')
 				? 'build/ai/frontend/style-dctc-ai-frontend.css'
@@ -373,8 +384,8 @@ if (!class_exists('DCTC_AI_Module')):
 			if (empty($session_id)) {
 				$session_id = 'sess_' . wp_generate_password(9, false);
 
-				setcookie('dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), false);
-				setcookie('dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), false);
+				setcookie('dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true);
+				setcookie('dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true);
 
 				$_COOKIE['dctc_ai_session_id'] = $session_id;
 			}

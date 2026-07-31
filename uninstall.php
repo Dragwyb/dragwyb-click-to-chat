@@ -27,7 +27,7 @@ $wpdb->query("DELETE FROM {$wpdb->options} WHERE option_name LIKE 'dctc_ai_%'");
 $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE meta_key LIKE 'dctc_ai_%'");
 
 // Drop AI custom tables.
-$tables = array(
+$dctc_tables = array(
     $wpdb->prefix . 'dctc_ai_sessions',
     $wpdb->prefix . 'dctc_ai_rag_documents',
     $wpdb->prefix . 'dctc_ai_rag_chunks',
@@ -35,7 +35,7 @@ $tables = array(
     $wpdb->prefix . 'dctc_ai_embeddings',
 );
 
-foreach ($tables as $table) {
+foreach ($dctc_tables as $dctc_table) {
     // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-    $wpdb->query("DROP TABLE IF EXISTS `{$table}`");
+    $wpdb->query("DROP TABLE IF EXISTS `{$dctc_table}`");
 }

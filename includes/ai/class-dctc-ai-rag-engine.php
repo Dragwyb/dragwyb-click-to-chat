@@ -81,7 +81,7 @@ class DCTC_AI_RAG_Engine {
 	 */
 	public function process_pending_embeddings( $batch_size = 50 ) {
 		if ( ! $this->is_enabled() ) {
-			return [ 'success' => false, 'message' => 'RAG system is not enabled' ];
+			return [ 'success' => false, 'message' => __( 'RAG system is not enabled', 'dragwyb-click-to-chat' ) ];
 		}
 
 		return $this->indexer->generate_pending_embeddings( $batch_size );

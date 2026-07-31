@@ -47,7 +47,7 @@ class DCTC_AI_Vector_DB_SQLite extends DCTC_AI_Vector_DB_Base {
 		);
 
 		if ( false === $result ) {
-			return new WP_Error( 'sqlite_store_failed', 'Failed to save embedding in database.' );
+			return new WP_Error( 'sqlite_store_failed', __( 'Failed to save embedding in database.', 'dragwyb-click-to-chat' ) );
 		}
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database write to custom table.
@@ -94,7 +94,7 @@ class DCTC_AI_Vector_DB_SQLite extends DCTC_AI_Vector_DB_Base {
 			);
 
 			if ( false === $result ) {
-				return new WP_Error( 'sqlite_bulk_store_failed', 'Failed to bulk save embeddings in database.' );
+				return new WP_Error( 'sqlite_bulk_store_failed', __( 'Failed to bulk save embeddings in database.', 'dragwyb-click-to-chat' ) );
 			}
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database write to custom table.
@@ -306,7 +306,7 @@ class DCTC_AI_Vector_DB_SQLite extends DCTC_AI_Vector_DB_Base {
 		$wpdb->query( "SELECT 1 FROM {$table_name} LIMIT 1" );
 
 		if ( ! empty( $wpdb->last_error ) ) {
-			return new WP_Error( 'sqlite_table_missing', 'Local vector table does not exist. Please reactivate the plugin.' );
+			return new WP_Error( 'sqlite_table_missing', __( 'Local vector table does not exist. Please reactivate the plugin.', 'dragwyb-click-to-chat' ) );
 		}
 
 		return true;
