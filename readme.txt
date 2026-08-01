@@ -81,6 +81,14 @@ Click to Chat is a **privacy-first social chat widget**. It is optimized for **C
 3. Open **Click to Chat** from the WordPress admin menu.
 4. Enable your AI Chatbot, configure your preferred social chat channels, and customize the widget.
 
+== Contribute ==
+
+Dragwyb Click to Chat is an open-source project, and we welcome contributions from the community! Whether you want to fix a bug, improve the AI Chatbot integration, or add new social channels, your help is appreciated.
+
+* **GitHub Repository:** [https://github.com/dragwyb/dragwyb-click-to-chat](https://github.com/dragwyb/dragwyb-click-to-chat)
+* **Report Bugs:** Please report any issues or bugs on the [GitHub Issues page](https://github.com/dragwyb/dragwyb-click-to-chat/issues).
+* **Pull Requests:** Feel free to fork the repository and submit pull requests for review.
+
 == Screenshots ==
 
 1. AI chatbot preview.
