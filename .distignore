@@ -7,5 +7,5 @@ composer.json
 .distignore
 .github
 .wordpress-org
+webpack.config.js
 src/
-
