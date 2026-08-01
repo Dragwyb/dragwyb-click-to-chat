@@ -50,6 +50,8 @@ Why limit your site to just one app? Our **floating button** supports a wide ran
 ### 🛡️ Privacy & Performance First
 Click to Chat is a **privacy-first social chat widget**. It is optimized for **Core Web Vitals**, ensuring your **floating contact button** and AI features never slow down your page speed.
 
+👉 [View Live Demo](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
+
 == Supported Communication Channels ==
 
 * **AI Chatbot (Native)** – Intelligent, automated on-site responses.
@@ -81,11 +83,14 @@ Click to Chat is a **privacy-first social chat widget**. It is optimized for **C
 
 == Screenshots ==
 
-1. Configure the new AI Chatbot and automated greetings.
-2. Enable various social chat and communication channels.
-3. Configure individual chat widget channel settings.
-4. Customize the floating chat widget design and position.
-5. Control device visibility and display timing options.
+1. AI chatbot preview.
+2. AI chatbot knowledge base configurations.
+3. AI chatbot Display options settings.
+4. AI chatbot sessions preview.
+5. Enable various social chat and communication channels.
+6. Configure individual chat widget channel settings.
+7. Customize the floating chat widget design and position.
+8. Control device visibility and display timing options.
 
 == Frequently Asked Questions ==
 
