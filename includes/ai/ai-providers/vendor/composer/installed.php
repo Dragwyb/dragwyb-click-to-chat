@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => '__root__',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'dcbcc13712b3f13127744be84a6cf0d4af90cc53',
+        'type' => 'library',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => false,
+    ),
+    'versions' => array(
+        '__root__' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'dcbcc13712b3f13127744be84a6cf0d4af90cc53',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'wordpress/ai-provider-for-google' => array(
+            'pretty_version' => '1.1.0',
+            'version' => '1.1.0.0',
+            'reference' => '5478fcacafcf38089ae2d68830c0bc4dbb1e25e8',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../wordpress/ai-provider-for-google',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'wordpress/ai-provider-for-openai' => array(
+            'pretty_version' => '1.0.3',
+            'version' => '1.0.3.0',
+            'reference' => 'a400c158707e3d0b6fcd0f1502f6aa1085b01b9b',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../wordpress/ai-provider-for-openai',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);

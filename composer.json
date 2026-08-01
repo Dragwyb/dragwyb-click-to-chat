@@ -1,0 +1,10 @@
+{
+    "require": {
+        "wordpress/wp-ai-client": "^0.4.0"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
