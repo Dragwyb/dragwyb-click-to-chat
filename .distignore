@@ -1,0 +1,11 @@
+package-lock.json
+package.json
+composer.json
+.gitattributes
+.gitignore
+.distignore
+.distignore
+.github
+.wordpress-org
+src/
+
