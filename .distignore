@@ -9,3 +9,4 @@ composer.json
 .wordpress-org
 webpack.config.js
 src/ai/admin/
+src/ai/frontend/

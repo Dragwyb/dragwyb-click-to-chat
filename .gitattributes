@@ -9,3 +9,4 @@ webpack.config.js   export-ignore
 .github export-ignore
 .wordpress-org  export-ignore
 src/ai/admin/    export-ignore
+src/ai/frontend/    export-ignore
