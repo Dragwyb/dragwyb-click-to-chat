@@ -24,6 +24,8 @@ Explore live examples of **AI Chatbot & Multi-Channel Social Chat** in action:
 
 👉 **Check out our other plugin:** [Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/) – Create stunning animated 3D flip boxes for your WordPress site.
 
+👉 **Check out our other plugin:** [Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/) – The easiest & most powerful drag and drop form builder plugin for WordPress.
+
 ### Why Use a AI Chatbot & Multi-Channel Social Chat Plugin?
 * Deploy an AI chatbot to offer instant, 24/7 automated customer support
 * Add a floating WhatsApp or Messenger chat button to WordPress
@@ -153,6 +155,7 @@ Initial stable release. No breaking changes.
 If you find Click to Chat useful, check out our other top-rated plugin:
 
 * 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – The easiest way to design modern, animated flip boxes and 3D cards directly inside Elementor.
+* 🧩 **[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – The easiest & most powerful drag and drop form builder plugin for WordPress.
 
 == Acknowledgements ==
 
