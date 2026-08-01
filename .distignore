@@ -8,4 +8,4 @@ composer.json
 .github
 .wordpress-org
 webpack.config.js
-src/
+src/ai/admin/

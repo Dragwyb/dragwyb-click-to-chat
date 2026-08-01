@@ -8,4 +8,4 @@ webpack.config.js   export-ignore
 .distignore export-ignore
 .github export-ignore
 .wordpress-org  export-ignore
-src/    export-ignore
+src/ai/admin/    export-ignore
