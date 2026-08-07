@@ -47,6 +47,7 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 		public function init() {
 			if ( is_admin() ) {
 				require_once DCTC_PLUGIN_DIR . 'admin/settings.php';
+				require_once DCTC_PLUGIN_DIR . 'admin/import-export.php';
 			}
 			require_once DCTC_PLUGIN_DIR . 'includes/channel-registry.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/frontend.php';
