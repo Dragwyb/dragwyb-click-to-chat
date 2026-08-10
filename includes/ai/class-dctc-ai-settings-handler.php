@@ -389,6 +389,7 @@ class DCTC_AI_Settings_Handler
 				'trigger_delay' => 5,
 				'time_delay' => 0,
 				'launcher_text' => 'Chat with us',
+				'assistant_icon' => '',
 			],
 			'rag' => [
 				'enabled' => true,
@@ -673,6 +674,7 @@ class DCTC_AI_Settings_Handler
 			'trigger_delay' => isset($params['trigger_delay']) ? intval($params['trigger_delay']) : 5,
 			'time_delay' => isset($params['time_delay']) ? max(0, min(60, intval($params['time_delay']))) : 0,
 			'launcher_text' => isset($params['launcher_text']) ? sanitize_text_field($params['launcher_text']) : 'Chat with us',
+			'assistant_icon' => isset($params['assistant_icon']) ? esc_url_raw($params['assistant_icon']) : '',
 		];
 
 		$settings = self::dctc_ai_get_all_settings();

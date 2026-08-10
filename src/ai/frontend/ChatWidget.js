@@ -386,6 +386,7 @@ export default function ChatWidget( { settings, inline } ) {
 	const primaryColor = chatbot.primary_color || '#2563eb';
 	const botAvatar = chatbot.bot_avatar || '';
 	const bubbleClass = `dctc-ai-bubble-${ chatbot.bubble_style || 'rounded' }`;
+	const assistantIcon = display.assistant_icon || '';
 	const showEmailGate = needsEmail && ! email && messages.length > 0;
 	const showWindow = isOpen || inline;
 	const launcherSize = `${ display.widget_size || 64 }${
@@ -764,9 +765,10 @@ export default function ChatWidget( { settings, inline } ) {
 					id: 'dctc-ai-launcher',
 					className:
 						'dctc-ai-chat-launcher' +
+						( assistantIcon ? ' dctc-ai-chat-launcher--custom-icon' : '' ) +
 						( launcherVisible ? '' : ' dctc-ai-chat-launcher--hidden' ),
 					onClick: toggleOpen,
-					style: { background: primaryColor },
+					style: assistantIcon ? undefined : { background: primaryColor },
 					'aria-hidden': launcherVisible ? undefined : 'true',
 				},
 				createElement(
@@ -774,9 +776,15 @@ export default function ChatWidget( { settings, inline } ) {
 					{ className: 'dctc-ai-launcher-text' },
 					display.launcher_text
 				),
-				createElement( 'span', {
-					className: 'dashicons dashicons-format-chat',
-				} )
+				assistantIcon
+					? createElement( 'img', {
+							className: 'dctc-ai-chat-launcher__icon',
+							src: assistantIcon,
+							alt: '',
+					  } )
+					: createElement( 'span', {
+							className: 'dashicons dashicons-format-chat',
+					  } )
 			)
 	);
 }
