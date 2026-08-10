@@ -3,7 +3,7 @@ Contributors: dragwyb
 Tags: ai chatbot, live chat, chat widget, multi-channel chat, automated support
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -134,6 +134,10 @@ Yes. It is ideal for businesses, online stores, agencies, freelancers, and servi
 No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
 
 == Changelog ==
+
+= 1.1.2 =
+* Added Settings import/export for Channels and AI Assistant.
+* Added custom icon upload for the AI Assistant floating button.
 
 = 1.1.1 =
 * Updated plugin name to follow WordPress guidelines.
