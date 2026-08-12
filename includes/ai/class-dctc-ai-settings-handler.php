@@ -171,6 +171,26 @@ class DCTC_AI_Settings_Handler
 
 		register_rest_route(
 			'dctc-ai/v1',
+			'/error-logs',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this, 'dctc_ai_get_error_logs'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/error-logs',
+			[
+				'methods' => \WP_REST_Server::DELETABLE,
+				'callback' => [$this, 'dctc_ai_clear_error_logs'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
 			'/clear-session',
 			[
 				'methods' => \WP_REST_Server::CREATABLE,
@@ -327,6 +347,46 @@ class DCTC_AI_Settings_Handler
 	public function dctc_ai_permission_upload()
 	{
 		return current_user_can('manage_options');
+	}
+
+	/**
+	 * Return recent plugin error logs for the AI dashboard.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_get_error_logs($request)
+	{
+		$limit = absint($request->get_param('limit'));
+		if ($limit <= 0) {
+			$limit = 50;
+		}
+		$limit = min($limit, 200);
+
+		$logs = class_exists('DCTC_Error_Logger') ? DCTC_Error_Logger::get_logs($limit) : [];
+
+		return new \WP_REST_Response(
+			[
+				'success' => true,
+				'logs' => $logs,
+				'total' => count($logs),
+			],
+			200
+		);
+	}
+
+	/**
+	 * Clear plugin error logs from the AI dashboard.
+	 *
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_clear_error_logs()
+	{
+		if (class_exists('DCTC_Error_Logger')) {
+			DCTC_Error_Logger::clear_logs();
+		}
+
+		return new \WP_REST_Response(['success' => true], 200);
 	}
 
 	/**

@@ -140,10 +140,11 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 * Added custom icon upload for the AI Assistant floating button.
 
 = 1.1.1 =
-* Updated plugin name to follow WordPress guidelines.
-* Removed marketing words from the description.
 * Added the required "External services" section for APIs.
 * Added the missing composer.json file.
+* Added Error log table for ai assistant.
+* Updated plugin name to follow WordPress guidelines.
+* Removed marketing words from the description.
 
 = 1.1.0 =
 * Major Feature: Added an integrated AI Chatbot widget for native, automated on-site support.

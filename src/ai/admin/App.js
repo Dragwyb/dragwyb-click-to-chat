@@ -12,6 +12,7 @@ import Instructions from './sections/Instructions';
 import KnowledgeBase from './sections/KnowledgeBase';
 import ChatSessions from './sections/ChatSessions';
 import ChatPreview from './sections/ChatPreview';
+import ErrorLogs from './sections/ErrorLogs';
 
 const TABS = [
 	{
@@ -84,6 +85,16 @@ const TABS = [
 		),
 		component: ChatPreview,
 	},
+	{
+		id: 'error-logs',
+		label: __( 'Error Logs', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-warning',
+		desc: __(
+			'Review recent plugin errors, warnings, and AI API failures.',
+			'dragwyb-click-to-chat'
+		),
+		component: ErrorLogs,
+	},
 ];
 
 const NAV_GROUPS = [
@@ -97,7 +108,7 @@ const NAV_GROUPS = [
 	},
 	{
 		label: __( 'Monitor', 'dragwyb-click-to-chat' ),
-		items: [ 'chat-sessions', 'chat-preview' ],
+		items: [ 'chat-sessions', 'chat-preview', 'error-logs' ],
 	},
 ];
 

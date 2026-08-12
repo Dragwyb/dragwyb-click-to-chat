@@ -38,6 +38,9 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 		}
 
 		public function __construct() {
+			require_once DCTC_PLUGIN_DIR . 'includes/class-dctc-error-logger.php';
+			DCTC_Error_Logger::init();
+
 			$this->required_files();
 			add_action( 'plugins_loaded', array( $this, 'init' ) );
 			register_activation_hook( DCTC_FILE, array( $this, 'plugin_activated' ) );
