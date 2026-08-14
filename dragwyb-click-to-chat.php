@@ -3,7 +3,9 @@
 /**
  * Plugin Name: Dragwyb Click to Chat - AI Chatbot & Social Messaging
  * Description: AI Chatbot plus multi-channel social chat widget with floating button.
+ * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
  * Author: Dragwyb
+ * Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
  * Version: 1.1.2
  * Requires at least: 5.0
  * Requires PHP: 7.4

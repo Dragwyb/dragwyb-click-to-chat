@@ -1,6 +1,9 @@
 === Dragwyb Click to Chat - AI Chatbot & Social Messaging ===
 Contributors: dragwyb
 Tags: ai chatbot, live chat, chat widget, multi-channel chat, automated support
+Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
+Author: Dragwyb
+Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
 Requires at least: 5.0
 Tested up to: 7.0
 Stable tag: 1.1.2
