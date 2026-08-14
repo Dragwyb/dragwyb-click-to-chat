@@ -427,7 +427,7 @@ class DCTC_AI_Chat_Controller
 		// Fallback to default models
 		$defaults = [
 			'openai' => 'gpt-4o-mini',
-			'google' => 'gemini-2.5-flash',
+			'google' => 'gemini-3.7-flash',
 		];
 
 		return isset($defaults[$provider]) ? $defaults[$provider] : '';

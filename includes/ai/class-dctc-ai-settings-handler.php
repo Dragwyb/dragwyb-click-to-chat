@@ -399,7 +399,7 @@ class DCTC_AI_Settings_Handler
 		$defaults = [
 			'models' => [
 				'openai' => 'gpt-4o-mini',
-				'google' => 'gemini-2.5-flash',
+				'google' => 'gemini-3.7-flash',
 			],
 			'chatbot' => [
 				'bot_name' => 'Dragwyb AI',
