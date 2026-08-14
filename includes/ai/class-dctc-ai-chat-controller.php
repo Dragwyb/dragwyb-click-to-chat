@@ -195,12 +195,37 @@ class DCTC_AI_Chat_Controller
 			);
 
 			if (empty($ai_message)) {
+				if (class_exists('DCTC_Error_Logger')) {
+					DCTC_Error_Logger::log_ai_error(
+						$provider,
+						$model_id,
+						$prompt,
+						__('AI connection returned an empty response.', 'dragwyb-click-to-chat'),
+						[
+							'type' => 'Empty Response',
+							'context' => 'Chat API Response',
+						]
+					);
+				}
 				return $this->error_response(
 					esc_html__('AI connection returned an empty response.', 'dragwyb-click-to-chat'),
 					500
 				);
 			}
 		} catch (\Throwable $e) {
+			if (class_exists('DCTC_Error_Logger')) {
+				DCTC_Error_Logger::log_ai_error(
+					$provider,
+					$model_id,
+					$prompt,
+					$e->getMessage(),
+					[
+						'type' => 'Model Error',
+						'code' => (string) $e->getCode(),
+						'context' => 'Chat Completion API',
+					]
+				);
+			}
 			self::log_debug('Dragwyb AI AI Chat API/Processing Error: ' . $e->getMessage());
 			$error_message = current_user_can('manage_options') ? $e->getMessage() : esc_html__('An error occurred while processing your request.', 'dragwyb-click-to-chat');
 			return $this->error_response($error_message, 500);

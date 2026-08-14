@@ -127,6 +127,11 @@ class DCTC_AI_DB {
 			$wpdb->query( "ALTER TABLE `$chunks_table` ADD KEY `vector_id` (`vector_id`)" );
 		}
 
+		// Ensure Error Logs table is created
+		if ( class_exists( 'DCTC_Error_Logger' ) ) {
+			DCTC_Error_Logger::create_table();
+		}
+
 		// Ensure RAG settings are initialized
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-settings-handler.php';
 		$current_settings = get_option( 'dctc_ai_chat_assistant_settings', [] );

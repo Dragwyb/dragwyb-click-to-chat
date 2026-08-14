@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin-local error logger.
+ * Plugin-local error logger with dedicated DB table and automatic cron cleanup.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -11,12 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 	/**
-	 * Stores recent plugin errors for display in the admin settings tab.
+	 * Stores recent plugin and AI errors in a dedicated database table with cron retention.
 	 */
 	class DCTC_Error_Logger {
 
-		const OPTION_NAME = 'dctc_error_logs';
-		const MAX_LOGS    = 200;
+		const TABLE_NAME        = 'dctc_error_logs';
+		const RETENTION_OPTION  = 'dctc_error_log_retention_days';
+		const CRON_HOOK         = 'dctc_cleanup_error_logs_cron';
+		const MAX_LOGS_LIMIT    = 500;
 
 		/**
 		 * Prevent recursive writes while logging.
@@ -33,17 +35,70 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 		private static $previous_error_handler = null;
 
 		/**
-		 * Attach handlers.
+		 * Attach handlers and cron hooks.
 		 *
 		 * @return void
 		 */
 		public static function init() {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Custom error handler used exclusively to log plugin runtime errors.
 			self::$previous_error_handler = set_error_handler( array( __CLASS__, 'handle_php_error' ) );
 			register_shutdown_function( array( __CLASS__, 'handle_shutdown' ) );
+
+			// Cron cleanup hook.
+			add_action( self::CRON_HOOK, array( __CLASS__, 'run_cron_cleanup' ) );
+
+			// Ensure cron scheduling matches current retention setting.
+			self::sync_cron_schedule();
 
 			if ( is_admin() ) {
 				add_action( 'wp_ajax_dctc_clear_error_logs', array( __CLASS__, 'ajax_clear_logs' ) );
 			}
+		}
+
+		/**
+		 * Get full table name with WordPress prefix.
+		 *
+		 * @return string
+		 */
+		public static function get_table_name() {
+			global $wpdb;
+			return esc_sql( $wpdb->prefix . self::TABLE_NAME );
+		}
+
+		/**
+		 * Create or update the error logs database table using dbDelta.
+		 *
+		 * @return void
+		 */
+		public static function create_table() {
+			global $wpdb;
+
+			$table_name      = self::get_table_name();
+			$charset_collate = $wpdb->get_charset_collate();
+
+			$sql = "CREATE TABLE `{$table_name}` (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				error_type varchar(100) DEFAULT 'PHP Error' NOT NULL,
+				provider varchar(100) DEFAULT '' NOT NULL,
+				model varchar(100) DEFAULT '' NOT NULL,
+				user_message longtext DEFAULT NULL,
+				model_error longtext NOT NULL,
+				file varchar(255) DEFAULT '' NOT NULL,
+				line int(11) DEFAULT 0 NOT NULL,
+				code varchar(100) DEFAULT '' NOT NULL,
+				context text DEFAULT NULL,
+				created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+				PRIMARY KEY  (id),
+				KEY created_at (created_at),
+				KEY provider (provider),
+				KEY error_type (error_type)
+			) $charset_collate;";
+
+			require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+			dbDelta( $sql );
+
+			// Clean up any legacy option data if it exists.
+			delete_option( 'dctc_error_logs' );
 		}
 
 		/**
@@ -109,61 +164,313 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 		}
 
 		/**
-		 * Add an entry to the stored log.
+		 * Check if error logging is enabled in Chatbot Advance settings.
+		 *
+		 * @return bool True if enabled, false otherwise.
+		 */
+		public static function is_enabled() {
+			$settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( isset( $settings['chatbot']['enable_error_log'] ) ) {
+				return (bool) $settings['chatbot']['enable_error_log'];
+			}
+			return false;
+		}
+
+		/**
+		 * Add an entry to the database table.
 		 *
 		 * @param string $type    Error type.
-		 * @param string $message Error message.
-		 * @param array  $context Optional context.
-		 * @return void
+		 * @param string $message Error message or model error.
+		 * @param array  $context Optional context with provider, model, user_msg, file, line, code, etc.
+		 * @return bool True on success, false on failure.
 		 */
 		public static function log( $type, $message, $context = array() ) {
-			if ( self::$is_logging ) {
-				return;
+			if ( self::$is_logging || ! self::is_enabled() ) {
+				return false;
 			}
 
 			self::$is_logging = true;
 
-			$logs = self::get_logs();
+			global $wpdb;
+			$table_name = self::get_table_name();
 
-			$entry = array(
-				'id'         => uniqid( 'dctc_', true ),
-				'type'       => sanitize_text_field( (string) $type ),
-				'message'    => wp_strip_all_tags( (string) $message ),
-				'file'       => isset( $context['file'] ) ? self::relative_plugin_path( (string) $context['file'] ) : '',
-				'line'       => isset( $context['line'] ) ? absint( $context['line'] ) : 0,
-				'code'       => isset( $context['code'] ) ? sanitize_text_field( (string) $context['code'] ) : '',
-				'context'    => isset( $context['context'] ) ? sanitize_text_field( (string) $context['context'] ) : '',
-				'created_at' => current_time( 'mysql' ),
+			// Extract AI/Model specific information.
+			$provider     = isset( $context['provider'] ) ? sanitize_text_field( (string) $context['provider'] ) : '';
+			$model        = isset( $context['model'] ) ? sanitize_text_field( (string) $context['model'] ) : '';
+			$user_message = '';
+			if ( isset( $context['user_message'] ) ) {
+				$user_message = sanitize_textarea_field( (string) $context['user_message'] );
+			} elseif ( isset( $context['user_msg'] ) ) {
+				$user_message = sanitize_textarea_field( (string) $context['user_msg'] );
+			} elseif ( isset( $context['prompt'] ) ) {
+				$user_message = sanitize_textarea_field( (string) $context['prompt'] );
+			}
+
+			$model_error = isset( $context['model_error'] ) && ! empty( $context['model_error'] )
+				? wp_strip_all_tags( (string) $context['model_error'] )
+				: wp_strip_all_tags( (string) $message );
+
+			$file = isset( $context['file'] ) ? self::relative_plugin_path( (string) $context['file'] ) : '';
+			$line = isset( $context['line'] ) ? absint( $context['line'] ) : 0;
+			$code = isset( $context['code'] ) ? sanitize_text_field( (string) $context['code'] ) : '';
+			$ctx  = isset( $context['context'] ) ? sanitize_text_field( (string) $context['context'] ) : '';
+
+			$data = array(
+				'error_type'   => sanitize_text_field( (string) $type ),
+				'provider'     => $provider,
+				'model'        => $model,
+				'user_message' => ! empty( $user_message ) ? $user_message : null,
+				'model_error'  => $model_error,
+				'file'         => $file,
+				'line'         => $line,
+				'code'         => $code,
+				'context'      => ! empty( $ctx ) ? $ctx : null,
+				'created_at'   => current_time( 'mysql' ),
 			);
 
-			array_unshift( $logs, $entry );
-			$logs = array_slice( $logs, 0, self::MAX_LOGS );
+			$format = array(
+				'%s', // error_type
+				'%s', // provider
+				'%s', // model
+				'%s', // user_message
+				'%s', // model_error
+				'%s', // file
+				'%d', // line
+				'%s', // code
+				'%s', // context
+				'%s', // created_at
+			);
 
-			update_option( self::OPTION_NAME, $logs, false );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$result = $wpdb->insert( $table_name, $data, $format );
+
+			// If table doesn't exist yet (e.g. fresh upgrade before activation), create it and retry once.
+			if ( false === $result && ! empty( $wpdb->last_error ) && false !== strpos( $wpdb->last_error, "doesn't exist" ) ) {
+				self::create_table();
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				$result = $wpdb->insert( $table_name, $data, $format );
+			}
 
 			self::$is_logging = false;
+
+			return false !== $result;
 		}
 
 		/**
-		 * Return recent log entries.
+		 * Convenience method specifically for logging AI model interactions and errors.
 		 *
-		 * @param int $limit Maximum rows.
+		 * @param string $provider    AI Provider (openai, google, etc.).
+		 * @param string $model       Model identifier (gpt-4o-mini, gemini-3.7-flash, etc.).
+		 * @param string $user_msg    User prompt / message sent to the assistant.
+		 * @param string $model_error Error returned by the provider / model.
+		 * @param array  $context     Optional additional context.
+		 * @return bool
+		 */
+		public static function log_ai_error( $provider, $model, $user_msg, $model_error, $context = array() ) {
+			$type = isset( $context['type'] ) ? $context['type'] : 'Model Error';
+
+			$full_context = array_merge(
+				$context,
+				array(
+					'provider'     => $provider,
+					'model'        => $model,
+					'user_message' => $user_msg,
+					'model_error'  => $model_error,
+				)
+			);
+
+			return self::log( $type, $model_error, $full_context );
+		}
+
+		/**
+		 * Return recent log entries from the database.
+		 *
+		 * @param int $limit  Maximum rows (default 50).
+		 * @param int $offset Offset for pagination.
 		 * @return array
 		 */
-		public static function get_logs( $limit = self::MAX_LOGS ) {
-			$logs = get_option( self::OPTION_NAME, array() );
-			$logs = is_array( $logs ) ? $logs : array();
+		public static function get_logs( $limit = 50, $offset = 0 ) {
+			global $wpdb;
 
-			return array_slice( $logs, 0, max( 0, absint( $limit ) ) );
+			$table_name = esc_sql( self::get_table_name() );
+			$limit      = max( 1, min( absint( $limit ), self::MAX_LOGS_LIMIT ) );
+			$offset     = max( 0, absint( $offset ) );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$query = $wpdb->prepare(
+				"SELECT id, error_type, provider, model, user_message, model_error, file, line, code, context, created_at FROM {$table_name} ORDER BY id DESC LIMIT %d OFFSET %d",
+				$limit,
+				$offset
+			);
+			$rows = $wpdb->get_results( $query, ARRAY_A );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			if ( ! is_array( $rows ) ) {
+				return array();
+			}
+
+			// Format rows for frontend compatibility.
+			return array_map(
+				static function ( $row ) {
+					return array(
+						'id'           => absint( $row['id'] ),
+						'type'         => $row['error_type'],
+						'error_type'   => $row['error_type'],
+						'provider'     => $row['provider'],
+						'model'        => $row['model'],
+						'user_message' => $row['user_message'] ? $row['user_message'] : '',
+						'model_error'  => $row['model_error'],
+						'message'      => $row['model_error'], // Backward compatibility alias.
+						'file'         => $row['file'],
+						'line'         => absint( $row['line'] ),
+						'code'         => $row['code'],
+						'context'      => $row['context'] ? $row['context'] : '',
+						'created_at'   => $row['created_at'],
+					);
+				},
+				$rows
+			);
 		}
 
 		/**
-		 * Clear all logs.
+		 * Get total count of log entries in the database.
+		 *
+		 * @return int
+		 */
+		public static function get_total_count() {
+			global $wpdb;
+			$table_name = esc_sql( self::get_table_name() );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			return absint( $count );
+		}
+
+		/**
+		 * Clear all logs from the database table.
+		 *
+		 * @return bool
+		 */
+		public static function clear_logs() {
+			global $wpdb;
+			$table_name = esc_sql( self::get_table_name() );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$result = $wpdb->query( "TRUNCATE TABLE {$table_name}" );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			return false !== $result;
+		}
+
+		/**
+		 * Delete a single log entry by ID.
+		 *
+		 * @param int $id Log ID.
+		 * @return bool
+		 */
+		public static function delete_log( $id ) {
+			global $wpdb;
+			$table_name = esc_sql( self::get_table_name() );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$result = $wpdb->delete(
+				$table_name,
+				array( 'id' => absint( $id ) ),
+				array( '%d' )
+			);
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			return false !== $result;
+		}
+
+		/**
+		 * Get retention setting in days.
+		 * Default is 0 (never delete automatically).
+		 *
+		 * @return int Number of days (0 = disabled/never).
+		 */
+		public static function get_retention_days() {
+			$settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( isset( $settings['chatbot']['error_log_retention_days'] ) ) {
+				return max( 0, absint( $settings['chatbot']['error_log_retention_days'] ) );
+			}
+			return absint( get_option( self::RETENTION_OPTION, 0 ) );
+		}
+
+		/**
+		 * Update retention setting and synchronize WordPress cron schedule.
+		 *
+		 * @param int $days Number of days (0 = disabled/never).
+		 * @return bool
+		 */
+		public static function set_retention_days( $days ) {
+			$days = max( 0, absint( $days ) );
+			$updated = update_option( self::RETENTION_OPTION, $days );
+
+			// Keep chatbot settings in sync.
+			$settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( ! empty( $settings ) && is_array( $settings ) && isset( $settings['chatbot'] ) ) {
+				$settings['chatbot']['error_log_retention_days'] = $days;
+				update_option( 'dctc_ai_chat_assistant_settings', $settings, false );
+			}
+
+			self::sync_cron_schedule();
+
+			return $updated;
+		}
+
+		/**
+		 * Synchronize WordPress cron job based on retention setting.
+		 * If retention > 0, ensure daily cron is scheduled.
+		 * If retention == 0, unschedule the cron.
 		 *
 		 * @return void
 		 */
-		public static function clear_logs() {
-			delete_option( self::OPTION_NAME );
+		public static function sync_cron_schedule() {
+			$retention_days = self::get_retention_days();
+
+			if ( $retention_days > 0 ) {
+				if ( ! wp_next_scheduled( self::CRON_HOOK ) ) {
+					wp_schedule_event( time(), 'daily', self::CRON_HOOK );
+				}
+			} else {
+				$timestamp = wp_next_scheduled( self::CRON_HOOK );
+				if ( $timestamp ) {
+					wp_unschedule_event( $timestamp, self::CRON_HOOK );
+				}
+				wp_clear_scheduled_hook( self::CRON_HOOK );
+			}
+		}
+
+		/**
+		 * Cron callback to delete logs older than the configured retention period.
+		 *
+		 * @return int Number of deleted rows.
+		 */
+		public static function run_cron_cleanup() {
+			$retention_days = self::get_retention_days();
+
+			if ( $retention_days <= 0 ) {
+				return 0;
+			}
+
+			global $wpdb;
+			$table_name = esc_sql( self::get_table_name() );
+
+			// Calculate cutoff date in MySQL format based on current site time.
+			$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
+
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$query = $wpdb->prepare(
+				"DELETE FROM {$table_name} WHERE created_at < %s",
+				$cutoff
+			);
+			$deleted = $wpdb->query( $query );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			return is_numeric( $deleted ) ? absint( $deleted ) : 0;
 		}
 
 		/**
@@ -262,6 +569,24 @@ if ( ! function_exists( 'dctc_log_error' ) ) {
 	function dctc_log_error( $type, $message, $context = array() ) {
 		if ( class_exists( 'DCTC_Error_Logger' ) ) {
 			DCTC_Error_Logger::log( $type, $message, $context );
+		}
+	}
+}
+
+if ( ! function_exists( 'dctc_log_ai_error' ) ) {
+	/**
+	 * Convenience wrapper for AI model errors.
+	 *
+	 * @param string $provider    AI Provider.
+	 * @param string $model       Model ID.
+	 * @param string $user_msg    User prompt / message.
+	 * @param string $model_error Model error message.
+	 * @param array  $context     Optional context.
+	 * @return void
+	 */
+	function dctc_log_ai_error( $provider, $model, $user_msg, $model_error, $context = array() ) {
+		if ( class_exists( 'DCTC_Error_Logger' ) ) {
+			DCTC_Error_Logger::log_ai_error( $provider, $model, $user_msg, $model_error, $context );
 		}
 	}
 }
