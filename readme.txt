@@ -141,6 +141,8 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 = 1.1.2 =
 * Added Settings import/export for Channels and AI Assistant.
 * Added custom icon upload for the AI Assistant floating button.
+* Added Error logs options and tab for save and display error logs on admin side.
+* Tweak improve review notice styling.
 
 = 1.1.1 =
 * Added the required "External services" section for APIs.
