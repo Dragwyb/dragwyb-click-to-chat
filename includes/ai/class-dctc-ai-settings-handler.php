@@ -171,6 +171,36 @@ class DCTC_AI_Settings_Handler
 
 		register_rest_route(
 			'dctc-ai/v1',
+			'/error-logs',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this, 'dctc_ai_get_error_logs'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/error-logs',
+			[
+				'methods' => \WP_REST_Server::DELETABLE,
+				'callback' => [$this, 'dctc_ai_clear_error_logs'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/error-logs/retention',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this, 'dctc_ai_update_error_logs_retention'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
 			'/clear-session',
 			[
 				'methods' => \WP_REST_Server::CREATABLE,
@@ -330,6 +360,90 @@ class DCTC_AI_Settings_Handler
 	}
 
 	/**
+	 * Return recent plugin error logs for the AI dashboard.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_get_error_logs($request)
+	{
+		$limit = absint($request->get_param('limit'));
+		if ($limit <= 0) {
+			$limit = 50;
+		}
+		$limit = min($limit, 500);
+		$offset = absint($request->get_param('offset'));
+
+		$logs = class_exists('DCTC_Error_Logger') ? DCTC_Error_Logger::get_logs($limit, $offset) : [];
+		$total = class_exists('DCTC_Error_Logger') ? DCTC_Error_Logger::get_total_count() : count($logs);
+		$retention_days = class_exists('DCTC_Error_Logger') ? DCTC_Error_Logger::get_retention_days() : 0;
+		$enabled = class_exists('DCTC_Error_Logger') ? DCTC_Error_Logger::is_enabled() : false;
+
+		return new \WP_REST_Response(
+			[
+				'success' => true,
+				'logs' => $logs,
+				'total' => $total,
+				'retention_days' => $retention_days,
+				'enabled' => $enabled,
+			],
+			200
+		);
+	}
+
+	/**
+	 * Clear plugin error logs or delete a single entry from the AI dashboard.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_clear_error_logs($request)
+	{
+		$id = $request->get_param('id');
+		if (!empty($id)) {
+			if (class_exists('DCTC_Error_Logger')) {
+				DCTC_Error_Logger::delete_log(absint($id));
+			}
+			return new \WP_REST_Response(['success' => true, 'message' => __('Log entry deleted.', 'dragwyb-click-to-chat')], 200);
+		}
+
+		if (class_exists('DCTC_Error_Logger')) {
+			DCTC_Error_Logger::clear_logs();
+		}
+
+		return new \WP_REST_Response(['success' => true, 'message' => __('All error logs cleared.', 'dragwyb-click-to-chat')], 200);
+	}
+
+	/**
+	 * Update error log automatic retention period (cron setting).
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_update_error_logs_retention($request)
+	{
+		$days = $request->get_param('retention_days');
+		if (is_null($days)) {
+			$days = $request->get_param('days');
+		}
+
+		$days = absint($days);
+
+		if (class_exists('DCTC_Error_Logger')) {
+			DCTC_Error_Logger::set_retention_days($days);
+		}
+
+		return new \WP_REST_Response(
+			[
+				'success' => true,
+				'retention_days' => $days,
+				'message' => __('Log retention setting updated successfully.', 'dragwyb-click-to-chat'),
+			],
+			200
+		);
+	}
+
+	/**
 	 * Get Unified Settings
 	 *
 	 * @return array The complete multidimensional array of plugin settings.
@@ -339,7 +453,7 @@ class DCTC_AI_Settings_Handler
 		$defaults = [
 			'models' => [
 				'openai' => 'gpt-4o-mini',
-				'google' => 'gemini-2.5-flash',
+				'google' => 'gemini-3.7-flash',
 			],
 			'chatbot' => [
 				'bot_name' => 'Dragwyb AI',
@@ -371,6 +485,8 @@ class DCTC_AI_Settings_Handler
 				'knowledge_urls' => [],
 				'training_files' => [],
 				'rate_limit_per_minute' => 20,
+				'enable_error_log' => false,
+				'error_log_retention_days' => 0,
 			],
 			'display' => [
 				'entire_site' => false,
@@ -389,6 +505,7 @@ class DCTC_AI_Settings_Handler
 				'trigger_delay' => 5,
 				'time_delay' => 0,
 				'launcher_text' => 'Chat with us',
+				'assistant_icon' => '',
 			],
 			'rag' => [
 				'enabled' => true,
@@ -477,6 +594,23 @@ class DCTC_AI_Settings_Handler
 	/**
 	 * Persist Settings
 	 *
+	 * Single write path for the plugin's settings option, used in place of
+	 * calling update_option() directly. Two things worth knowing about this
+	 * option:
+	 *
+	 * - It's stored with autoload disabled. It's a fairly large array (all
+	 *   provider/RAG/chatbot/MCP config) that's only actually needed on this
+	 *   plugin's own admin screen and REST requests — update_option()'s
+	 *   default of autoloading it would otherwise pull the whole blob into
+	 *   the alloptions cache on every single request, including the public
+	 *   frontend. (WordPress 6.6+ honors the autoload param here even when
+	 *   the option already exists; on older versions this is a no-op and
+	 *   the option keeps whatever autoload it was first created with.)
+	 * - AI provider API keys (DCTC_AI_Key_Store::get_provider_key()) are stored
+	 *   in this option in plaintext, the same way most WordPress plugins
+	 *   store third-party credentials. They're read on every chat request to
+	 *   authenticate outbound API calls, so keeping them in plaintext here
+	 *   (rather than encrypted, as done for the MCP server API key via
 	 * Single write path for the plugin's settings option, used in place of
 	 * calling update_option() directly. Two things worth knowing about this
 	 * option:
@@ -599,10 +733,16 @@ class DCTC_AI_Settings_Handler
 			'knowledge_urls' => isset($params['knowledge_urls']) ? $urls : (isset($existing_chatbot['knowledge_urls']) ? $existing_chatbot['knowledge_urls'] : []),
 			'training_files' => isset($params['training_files']) ? $files : (isset($existing_chatbot['training_files']) ? $existing_chatbot['training_files'] : []),
 			'rate_limit_per_minute' => isset($params['rate_limit_per_minute']) ? max(1, min(300, intval($params['rate_limit_per_minute']))) : (isset($existing_chatbot['rate_limit_per_minute']) ? intval($existing_chatbot['rate_limit_per_minute']) : 20),
+			'enable_error_log' => isset($params['enable_error_log']) ? (bool) $params['enable_error_log'] : (isset($existing_chatbot['enable_error_log']) ? (bool) $existing_chatbot['enable_error_log'] : false),
+			'error_log_retention_days' => isset($params['error_log_retention_days']) ? max(0, intval($params['error_log_retention_days'])) : (isset($existing_chatbot['error_log_retention_days']) ? intval($existing_chatbot['error_log_retention_days']) : 0),
 		];
 
 		$settings['chatbot'] = $chatbot_settings;
 		self::dctc_ai_persist_settings($settings);
+
+		if (class_exists('DCTC_Error_Logger')) {
+			DCTC_Error_Logger::set_retention_days($chatbot_settings['error_log_retention_days']);
+		}
 
 		return new \WP_REST_Response(
 			[
@@ -673,6 +813,7 @@ class DCTC_AI_Settings_Handler
 			'trigger_delay' => isset($params['trigger_delay']) ? intval($params['trigger_delay']) : 5,
 			'time_delay' => isset($params['time_delay']) ? max(0, min(60, intval($params['time_delay']))) : 0,
 			'launcher_text' => isset($params['launcher_text']) ? sanitize_text_field($params['launcher_text']) : 'Chat with us',
+			'assistant_icon' => isset($params['assistant_icon']) ? esc_url_raw($params['assistant_icon']) : '',
 		];
 
 		$settings = self::dctc_ai_get_all_settings();

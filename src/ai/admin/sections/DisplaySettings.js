@@ -44,6 +44,7 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 		custom_horizontal: display.custom_horizontal ?? 24,
 		custom_horizontal_unit: display.custom_horizontal_unit || 'px',
 		launcher_text: display.launcher_text || '',
+		assistant_icon: display.assistant_icon || '',
 		trigger_type: display.trigger_type || 'click',
 		trigger_delay: display.trigger_delay ?? 5,
 		time_delay: display.time_delay ?? 0,
@@ -127,6 +128,27 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 			item.type.toLowerCase().includes( q )
 		);
 	} );
+
+	const openAssistantIconMedia = () => {
+		if ( ! window.wp?.media ) {
+			showNotice(
+				__( 'WordPress media modal is not available.', 'dragwyb-click-to-chat' ),
+				'error'
+			);
+			return;
+		}
+		const frame = window.wp.media( {
+			title: __( 'Select Assistant Icon', 'dragwyb-click-to-chat' ),
+			button: { text: __( 'Use as Icon', 'dragwyb-click-to-chat' ) },
+			library: { type: 'image' },
+			multiple: false,
+		} );
+		frame.on( 'select', () => {
+			const attachment = frame.state().get( 'selection' ).first().toJSON();
+			setField( 'assistant_icon', attachment.url );
+		} );
+		frame.open();
+	};
 
 	const onSubmit = async ( e ) => {
 		e.preventDefault();
@@ -885,6 +907,68 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 								<option value="rem">rem</option>
 								<option value="em">em</option>
 							</select>
+						</div>
+					</div>
+
+					<div className="dctc-ai-bot-field dctc-ai-assistant-icon-field">
+						<label>
+							{ __( 'Assistant Icon', 'dragwyb-click-to-chat' ) }
+						</label>
+						<p className="dctc-ai-bot-hint">
+							{ __(
+								'Choose an icon for the floating AI chat button. Upload SVG, PNG, JPG, or WebP.',
+								'dragwyb-click-to-chat'
+							) }
+						</p>
+						<div className="dctc-ai-assistant-icon-row">
+							<div
+								className={
+									'dctc-ai-assistant-icon-preview' +
+									( form.assistant_icon
+										? ' dctc-ai-assistant-icon-preview--custom'
+										: '' )
+								}
+								aria-hidden="true"
+							>
+								{ form.assistant_icon ? (
+									<img src={ form.assistant_icon } alt="" />
+								) : (
+									<span className="dashicons dashicons-format-chat" />
+								) }
+							</div>
+							<div className="dctc-ai-assistant-icon-actions">
+								<button
+									type="button"
+									className="dctc-ai-btn dctc-ai-btn-secondary"
+									onClick={ openAssistantIconMedia }
+								>
+									<span
+										className="dashicons dashicons-upload"
+										aria-hidden="true"
+									/>
+									{ form.assistant_icon
+										? __( 'Change Icon', 'dragwyb-click-to-chat' )
+										: __( 'Upload Icon', 'dragwyb-click-to-chat' ) }
+								</button>
+								{ !! form.assistant_icon && (
+									<button
+										type="button"
+										className="dctc-ai-btn dctc-ai-btn-secondary"
+										onClick={ () => setField( 'assistant_icon', '' ) }
+									>
+										{ __( 'Reset to Default', 'dragwyb-click-to-chat' ) }
+									</button>
+								) }
+								{ form.assistant_icon ? (
+									<span className="dctc-ai-assistant-icon-filename">
+										{ form.assistant_icon.split( '/' ).pop() }
+									</span>
+								) : (
+									<span className="dctc-ai-assistant-icon-filename">
+										{ __( 'Default chat icon', 'dragwyb-click-to-chat' ) }
+									</span>
+								) }
+							</div>
 						</div>
 					</div>
 					</div>

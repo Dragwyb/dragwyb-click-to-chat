@@ -1,9 +1,12 @@
 === Dragwyb Click to Chat - AI Chatbot & Social Messaging ===
 Contributors: dragwyb
 Tags: ai chatbot, live chat, chat widget, multi-channel chat, automated support
+Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
+Author: Dragwyb
+Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
 Requires at least: 5.0
 Tested up to: 7.0
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -20,7 +23,7 @@ The plugin features an expandable floating button that acts as a central communi
 
 Explore live examples of the plugin in action:
 
-🔗 [Click to Chat Demo Page](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
+🔗 [Click to Chat & AI Chatbot Demo](https://dragwyb.com/demo/ai-chatbot/?&utm_source=wpplugin&utm_medium=readme&utm_campaign=chatbot_demo)
 
 👉 Check out our other plugin: [Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/) – Create animated 3D flip boxes for your WordPress site.
 
@@ -135,11 +138,18 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 
 == Changelog ==
 
+= 1.1.2 =
+* Added Settings import/export for Channels and AI Assistant.
+* Added custom icon upload for the AI Assistant floating button.
+* Added Error logs options and tab for save and display error logs on admin side.
+* Tweak improve review notice styling.
+
 = 1.1.1 =
-* Updated plugin name to follow WordPress guidelines.
-* Removed marketing words from the description.
 * Added the required "External services" section for APIs.
 * Added the missing composer.json file.
+* Added Error log table for ai assistant.
+* Updated plugin name to follow WordPress guidelines.
+* Removed marketing words from the description.
 
 = 1.1.0 =
 * Major Feature: Added an integrated AI Chatbot widget for native, automated on-site support.

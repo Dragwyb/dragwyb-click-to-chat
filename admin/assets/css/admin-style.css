@@ -622,3 +622,126 @@ input:checked+.dctc-slider:before {
     cursor: pointer;
     border: none;
 }
+
+/* Settings page — classic WP postbox + form-table layout */
+.dctc-settings-page {
+	margin: 20px 20px 40px 0;
+	max-width: 1100px;
+}
+
+.dctc-settings-page > h1 {
+	font-size: 23px;
+	font-weight: 400;
+	margin: 0 0 8px;
+	padding: 9px 0 4px;
+	line-height: 1.3;
+}
+
+.dctc-settings-page__intro {
+	color: #646970;
+	font-size: 14px;
+	line-height: 1.5;
+	margin: 0 0 20px;
+	max-width: 720px;
+}
+
+.dctc-settings-page__columns {
+	display: grid;
+	gap: 20px;
+	grid-template-columns: 1fr 1fr;
+	align-items: start;
+}
+
+@media screen and (max-width: 960px) {
+	.dctc-settings-page__columns {
+		grid-template-columns: 1fr;
+	}
+}
+
+.dctc-settings-box.postbox {
+	margin: 0;
+	min-width: 0;
+}
+
+.dctc-settings-box .postbox-header {
+	border-bottom: 1px solid #dcdcde;
+}
+
+.dctc-settings-box .postbox-header .hndle {
+	font-size: 14px;
+	font-weight: 600;
+	padding: 12px 16px;
+	margin: 0;
+	line-height: 1.4;
+	cursor: default;
+}
+
+.dctc-settings-box .inside {
+	margin: 0;
+	padding: 12px 16px 16px;
+}
+
+.dctc-settings-box__desc {
+	color: #646970;
+	font-size: 13px;
+	line-height: 1.5;
+	margin: 0 0 12px;
+}
+
+.dctc-settings-box .form-table {
+	margin-top: 0;
+}
+
+.dctc-settings-box .form-table th {
+	padding: 15px 10px 15px 0;
+	width: 110px;
+	font-weight: 600;
+	color: #1d2327;
+}
+
+.dctc-settings-box .form-table td {
+	padding: 12px 0;
+}
+
+.dctc-settings-box .form-table label {
+	display: inline;
+	font-weight: 400;
+	color: #1d2327;
+}
+
+.dctc-settings-box .form-table fieldset label {
+	line-height: 1.8;
+}
+
+.dctc-settings-inline-hint {
+	display: inline;
+	margin-left: 2px;
+}
+
+.dctc-settings-notice {
+	margin: 0 0 16px;
+}
+
+.dctc-settings-box .submit {
+	margin: 8px 0 0;
+	padding: 0;
+}
+
+.dctc-settings-box .button-primary {
+	background: #8e44ad;
+	border-color: #7d3c98;
+	color: #fff;
+	text-shadow: none;
+	box-shadow: none;
+}
+
+.dctc-settings-box .button-primary:hover,
+.dctc-settings-box .button-primary:focus {
+	background: #7d3c98;
+	border-color: #6c3483;
+	color: #fff;
+}
+
+.dctc-settings-box .button-primary:focus {
+	box-shadow: 0 0 0 1px #fff, 0 0 0 3px #8e44ad;
+}

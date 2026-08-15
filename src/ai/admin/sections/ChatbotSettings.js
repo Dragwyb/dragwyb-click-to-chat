@@ -67,6 +67,8 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 		ask_email: !! chatbot.ask_email,
 		enable_pre_questions: !! chatbot.enable_pre_questions,
 		rate_limit_per_minute: chatbot.rate_limit_per_minute ?? 20,
+		enable_error_log: !! chatbot.enable_error_log,
+		error_log_retention_days: chatbot.error_log_retention_days ?? 0,
 	} );
 
 	const [ form, setForm ] = useState( buildForm );
@@ -516,6 +518,98 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 							</section>
 						</>
 					) }
+
+					<section className="dctc-ai-bot-section">
+						<h2 className="dctc-ai-bot-section__title">
+							{ __( 'Error Logging', 'dragwyb-click-to-chat' ) }
+						</h2>
+						<div className="dctc-ai-bot-features">
+							<SettingCard
+								id="enable_error_log"
+								title={ __( 'Enable Error Logging', 'dragwyb-click-to-chat' ) }
+								desc={ __(
+									'Capture AI API failures, provider errors, and system exceptions in the database for troubleshooting',
+									'dragwyb-click-to-chat'
+								) }
+								checked={ form.enable_error_log }
+								onChange={ ( v ) => setField( 'enable_error_log', v ) }
+							/>
+						</div>
+
+						{ form.enable_error_log && (
+							<div
+								className="dctc-ai-bot-field"
+								style={ { marginTop: '1.25rem' } }
+							>
+								<label htmlFor="error_log_retention_days">
+									{ __(
+										'Auto-delete Logs (Cron Cleanup)',
+										'dragwyb-click-to-chat'
+									) }
+								</label>
+								<select
+									id="error_log_retention_days"
+									className="dctc-ai-bot-select"
+									value={ form.error_log_retention_days }
+									onChange={ ( e ) =>
+										setField(
+											'error_log_retention_days',
+											parseInt( e.target.value, 10 ) || 0
+										)
+									}
+								>
+									<option value="0">
+										{ __(
+											'Never / Permanent (Default)',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="1">
+										{ __(
+											'Older than 1 day',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="7">
+										{ __(
+											'Older than 7 days',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="14">
+										{ __(
+											'Older than 14 days',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="30">
+										{ __(
+											'Older than 30 days',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="60">
+										{ __(
+											'Older than 60 days',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+									<option value="90">
+										{ __(
+											'Older than 90 days',
+											'dragwyb-click-to-chat'
+										) }
+									</option>
+								</select>
+								<p className="dctc-ai-bot-hint">
+									{ __(
+										'Automatically delete logs older than the chosen retention period via a daily WordPress cron job. Set to "Never" to keep logs until manually cleared.',
+										'dragwyb-click-to-chat'
+									) }
+								</p>
+							</div>
+						) }
+					</section>
 				</div>
 
 				{ /* Style */ }

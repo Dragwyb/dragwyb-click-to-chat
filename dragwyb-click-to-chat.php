@@ -3,8 +3,10 @@
 /**
  * Plugin Name: Dragwyb Click to Chat - AI Chatbot & Social Messaging
  * Description: AI Chatbot plus multi-channel social chat widget with floating button.
+ * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
  * Author: Dragwyb
- * Version: 1.1.1
+ * Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
+ * Version: 1.1.2
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Text Domain: dragwyb-click-to-chat
@@ -20,7 +22,7 @@ use DRAGWYB_CTC\Admin\Review\DCTC_Review_Form;
 ! defined( 'DCTC_FILE' ) && define( 'DCTC_FILE', __FILE__ );
 ! defined( 'DCTC_PLUGIN_DIR' ) && define( 'DCTC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 ! defined( 'DCTC_PLUGIN_URL' ) && define( 'DCTC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.1.1' );
+! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.1.2' );
 ! defined( 'DCTC_BASENAME' ) && define( 'DCTC_BASENAME', plugin_basename( __FILE__ ) );
 
 if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
@@ -38,6 +40,9 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 		}
 
 		public function __construct() {
+			require_once DCTC_PLUGIN_DIR . 'includes/class-dctc-error-logger.php';
+			DCTC_Error_Logger::init();
+
 			$this->required_files();
 			add_action( 'plugins_loaded', array( $this, 'init' ) );
 			register_activation_hook( DCTC_FILE, array( $this, 'plugin_activated' ) );
@@ -47,6 +52,7 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 		public function init() {
 			if ( is_admin() ) {
 				require_once DCTC_PLUGIN_DIR . 'admin/settings.php';
+				require_once DCTC_PLUGIN_DIR . 'admin/import-export.php';
 			}
 			require_once DCTC_PLUGIN_DIR . 'includes/channel-registry.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/frontend.php';

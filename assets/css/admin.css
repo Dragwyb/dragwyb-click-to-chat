@@ -1,3 +1,7 @@
+.dragwyb-ctc-review-notice{
+  max-width: 750px;
+}
+
 .dragwyb-ctc-review-notice .dragwyb-ctc-review-notice-buttons {
   -webkit-transition: all 0.3s ease;
   transition: all 0.3s ease;

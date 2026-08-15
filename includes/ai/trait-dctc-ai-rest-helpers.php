@@ -29,6 +29,10 @@ trait DCTC_AI_REST_Helpers
 	 */
 	private static function log_debug($message)
 	{
+		if (function_exists('dctc_log_error')) {
+			dctc_log_error('Handled Error', $message, ['context' => 'AI REST']);
+		}
+
 		if (defined('WP_DEBUG') && WP_DEBUG) {
 			error_log($message); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
 		}
@@ -43,6 +47,17 @@ trait DCTC_AI_REST_Helpers
 	 */
 	private function error_response($message, $status = 500)
 	{
+		if (function_exists('dctc_log_error')) {
+			dctc_log_error(
+				'REST Error',
+				$message,
+				[
+					'code' => $status,
+					'context' => 'AI REST response',
+				]
+			);
+		}
+
 		return new \WP_REST_Response(
 			[
 				'success' => false,

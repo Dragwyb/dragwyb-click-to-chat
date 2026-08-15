@@ -7,6 +7,7 @@ const FEATURES = [
 	__( 'Header & User Message colors', 'dragwyb-click-to-chat' ),
 	__( 'Assistant Name & Greeting', 'dragwyb-click-to-chat' ),
 	__( 'Bot Avatar updates', 'dragwyb-click-to-chat' ),
+	__( 'Assistant Icon updates', 'dragwyb-click-to-chat' ),
 	__( 'Message bubble styling', 'dragwyb-click-to-chat' ),
 	__( 'Chat Launcher visibility', 'dragwyb-click-to-chat' ),
 ];
@@ -22,6 +23,7 @@ const SAMPLE_BOT = __(
 
 export default function ChatPreview( { settings } ) {
 	const bot = settings?.chatbot || {};
+	const display = settings?.display || {};
 	const primary = bot.primary_color || '#6366f1';
 	const name = bot.bot_name || __( 'AI Assistant', 'dragwyb-click-to-chat' );
 	const greeting =
@@ -32,6 +34,7 @@ export default function ChatPreview( { settings } ) {
 		);
 	const styleClass = `dctc-ai-preview-widget--${ bot.bubble_style || 'rounded' }`;
 	const avatar = bot.bot_avatar || '';
+	const assistantIcon = display.assistant_icon || '';
 	const initial = name.trim().charAt( 0 ).toUpperCase() || 'B';
 
 	const Avatar = ( { className } ) => (
@@ -132,11 +135,22 @@ export default function ChatPreview( { settings } ) {
 				</div>
 
 				<div
-					className="dctc-ai-preview__launcher"
-					style={ { background: primary } }
+					className={
+						'dctc-ai-preview__launcher' +
+						( assistantIcon ? ' dctc-ai-preview__launcher--custom' : '' )
+					}
+					style={ assistantIcon ? undefined : { background: primary } }
 					aria-hidden="true"
 				>
-					<span className="dashicons dashicons-format-chat" />
+					{ assistantIcon ? (
+						<img
+							className="dctc-ai-preview__launcher-icon"
+							src={ assistantIcon }
+							alt=""
+						/>
+					) : (
+						<span className="dashicons dashicons-format-chat" />
+					) }
 				</div>
 			</div>
 
