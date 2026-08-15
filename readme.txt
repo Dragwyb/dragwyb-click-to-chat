@@ -23,7 +23,7 @@ The plugin features an expandable floating button that acts as a central communi
 
 Explore live examples of the plugin in action:
 
-🔗 [Click to Chat Demo Page](https://dragwyb.com/flipbox-demos/flipbox-addon-for-elementor/?utm_source=wpplugin&utm_medium=readme&utm_campaign=click_to_chat_demo)
+🔗 [Click to Chat & AI Chatbot Demo](https://dragwyb.com/demo/ai-chatbot/?&utm_source=wpplugin&utm_medium=readme&utm_campaign=chatbot_demo)
 
 👉 Check out our other plugin: [Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/) – Create animated 3D flip boxes for your WordPress site.
 
