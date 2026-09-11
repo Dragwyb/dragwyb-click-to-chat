@@ -308,11 +308,26 @@ class DCTC_Frontend
         // Dynamic CSS
         // Dynamic CSS
         $is_left = false;
+        $greeting_side = 'right';
+        $greeting_vert = 'bottom';
+        $greeting_horiz_str = '20px';
+        $greeting_vert_str = '20px';
+
         if ($widget_position === 'custom') {
             $is_left = (isset($custom_side) && $custom_side === 'left');
+            $greeting_side = isset($custom_side) ? $custom_side : 'right';
+            $greeting_vert = isset($custom_vertical_align) ? $custom_vertical_align : 'bottom';
+            $greeting_horiz_str = isset($horizontal_str) ? $horizontal_str : '20px';
+            $greeting_vert_str = isset($bottom_str) ? $bottom_str : '20px';
         } else {
             $is_left = ($widget_position === 'left');
+            $greeting_side = $is_left ? 'left' : 'right';
         }
+
+        $greeting_position_css = $greeting_side . ': calc(' . esc_attr($greeting_horiz_str) . ' + ' . esc_attr($widget_size_str) . ' + 15px);';
+        $greeting_position_css .= ($greeting_side === 'left') ? ' right: auto;' : ' left: auto;';
+        $greeting_position_css .= $greeting_vert . ': calc(' . esc_attr($greeting_vert_str) . ' + (' . esc_attr($widget_size_str) . ' - 40px) / 2);';
+        $greeting_position_css .= ($greeting_vert === 'top') ? ' bottom: auto;' : ' top: auto;';
 
         $custom_css = "
             .dctc-widget-btn { 
@@ -330,16 +345,16 @@ class DCTC_Frontend
             }
             .dctc-greeting-message {
                 position: fixed;
-                bottom: 25px; /* Adjust based on widget size/position */
+                " . $greeting_position_css . "
                 background: " . esc_attr($greeting_color) . ";
                 color: #fff;
                 padding: 10px 15px;
-                border-radius: 8px; /* Slightly rounded corners for message body */
+                border-radius: 8px;
                 filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
                 font-size: 14px;
                 font-weight: bold;
                 line-height: 1.4;
-                z-index: 999998; /* Below widget button */
+                z-index: 999998;
                 white-space: nowrap;
                 opacity: 0;
                 visibility: hidden;
@@ -351,7 +366,6 @@ class DCTC_Frontend
                 position: absolute;
                 top: 50%;
                 transform: translateY(-50%);
-                /* Sharp triangle arrow pointing to the button */
                 " . ($is_left ?
             "left: -8px; border-width: 6px 8px 6px 0; border-style: solid; border-color: transparent " . esc_attr($greeting_color) . " transparent transparent;" :
             "right: -8px; border-width: 6px 0 6px 8px; border-style: solid; border-color: transparent transparent transparent " . esc_attr($greeting_color) . ";"
@@ -362,16 +376,10 @@ class DCTC_Frontend
                 visibility: visible;
                 transform: translateY(0);
             }
-            /* Hide when widget is open */
             .dctc-greeting-message.dctc-hidden {
                 opacity: 0;
                 visibility: hidden;
             }
-            /* Positioning logic based on widget side */
-            " . ($widget_position === 'left' ?
-            ".dctc-greeting-message { left: calc(20px + " . esc_attr($widget_size_str) . " + 15px); bottom: calc(20px + (" . esc_attr($widget_size_str) . " - 40px) / 2); }" :
-            ".dctc-greeting-message { right: calc(20px + " . esc_attr($widget_size_str) . " + 15px); bottom: calc(20px + (" . esc_attr($widget_size_str) . " - 40px) / 2); }"
-        ) . "
         ";
         wp_add_inline_style('dctc-frontend-style', $custom_css);
 
