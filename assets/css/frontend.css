@@ -26,6 +26,33 @@
     object-fit: contain;
 }
 
+/* Single enabled channel: the button is that channel */
+.dctc-widget-btn.dctc-single-channel {
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    text-decoration: none;
+    color: #fff;
+}
+
+.dctc-widget-btn.dctc-single-channel svg {
+    width: 24px;
+    height: 24px;
+    fill: #fff;
+}
+
+/* Multiple channels without launcher: channel buttons stay visible */
+.dctc-menu.dctc-menu-direct {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+}
+
+.dctc-menu.dctc-menu-direct.dctc-widget-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 /* Sub Menu Items */
 .dctc-menu {
     position: fixed;

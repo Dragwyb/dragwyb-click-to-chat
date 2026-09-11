@@ -253,6 +253,10 @@ class DCTC_Frontend
         // If NO channels are active, return nothing.
         if (empty($channels)) return;
 
+        $is_single_channel = count($channels) === 1;
+        $show_widget       = isset($settings['show_widget']) ? $settings['show_widget'] : '1';
+        $show_launcher     = ! $is_single_channel && $show_widget === '1';
+
         // Get icon settings
         $icon_type = isset($settings['icon_type']) ? $settings['icon_type'] : 'chat';
         $custom_icon_url = isset($settings['custom_icon_url']) ? $settings['custom_icon_url'] : '';
@@ -261,6 +265,10 @@ class DCTC_Frontend
 
         // Greeting Message
         $greeting_message = isset($settings['greeting_message']) ? $settings['greeting_message'] : '';
+        $greeting_color   = $widget_color;
+        if ($is_single_channel && ! empty($channels[0]['color']) && $channels[0]['color'] !== 'transparent') {
+            $greeting_color = $channels[0]['color'];
+        }
 
         // Generate icon HTML based on type
         $icon_html = '';
@@ -314,7 +322,7 @@ class DCTC_Frontend
             }
             .dctc-widget-btn svg { fill: " . esc_attr($widget_color) . "; }
             .dctc-menu { 
-                " . esc_attr($menu_position_style) . " 
+                " . esc_attr($show_launcher ? $menu_position_style : $position_style) . " 
             }
             .dctc-sub-btn { 
                 width: " . esc_attr($widget_size_str) . "; 
@@ -323,7 +331,7 @@ class DCTC_Frontend
             .dctc-greeting-message {
                 position: fixed;
                 bottom: 25px; /* Adjust based on widget size/position */
-                background: " . esc_attr($widget_color) . ";
+                background: " . esc_attr($greeting_color) . ";
                 color: #fff;
                 padding: 10px 15px;
                 border-radius: 8px; /* Slightly rounded corners for message body */
@@ -345,8 +353,8 @@ class DCTC_Frontend
                 transform: translateY(-50%);
                 /* Sharp triangle arrow pointing to the button */
                 " . ($is_left ?
-            "left: -8px; border-width: 6px 8px 6px 0; border-style: solid; border-color: transparent " . esc_attr($widget_color) . " transparent transparent;" :
-            "right: -8px; border-width: 6px 0 6px 8px; border-style: solid; border-color: transparent transparent transparent " . esc_attr($widget_color) . ";"
+            "left: -8px; border-width: 6px 8px 6px 0; border-style: solid; border-color: transparent " . esc_attr($greeting_color) . " transparent transparent;" :
+            "right: -8px; border-width: 6px 0 6px 8px; border-style: solid; border-color: transparent transparent transparent " . esc_attr($greeting_color) . ";"
         ) . "
             }
             .dctc-greeting-message.dctc-visible {
@@ -367,35 +375,61 @@ class DCTC_Frontend
         ";
         wp_add_inline_style('dctc-frontend-style', $custom_css);
 
+        $allowed_svg = array(
+            'path' => array('d' => array()),
+            'svg' => array('viewbox' => array(), 'style' => array(), 'fill' => array(), 'width' => array(), 'height' => array()),
+            'img' => array('src' => array(), 'alt' => array(), 'style' => array()),
+            'div' => array('style' => array())
+        );
+
         // Dynamic JS (Time Delay)
         if ($time_delay > 0) {
             $delay_ms = $time_delay * 1000;
             $inline_js = "
                 setTimeout(function() {
-                    var widget = document.getElementById('dctc-widget-btn');
-                    if (widget) {
-                        widget.classList.remove('dctc-widget-hidden');
-                        widget.style.opacity = '1';
-                        widget.style.pointerEvents = 'auto';
-                        widget.style.transition = 'opacity 0.3s ease';
-                    }
+                    var hidden = document.querySelectorAll('.dctc-widget-hidden');
+                    hidden.forEach(function(el) {
+                        el.classList.remove('dctc-widget-hidden');
+                        el.style.opacity = '1';
+                        el.style.pointerEvents = 'auto';
+                        el.style.transition = 'opacity 0.3s ease';
+                    });
                 }, " . esc_js($delay_ms) . ");
             ";
             wp_add_inline_script('dctc-frontend-script', $inline_js);
         }
+
+        $hidden_class = $time_delay > 0 ? 'dctc-widget-hidden' : '';
 ?>
 
-        <div class="dctc-widget-btn <?php echo $time_delay > 0 ? 'dctc-widget-hidden' : ''; ?>" id="dctc-widget-btn" onclick="dctcToggleMenu()">
-            <?php
-            $allowed_svg = array(
-                'path' => array('d' => array()),
-                'svg' => array('viewbox' => array(), 'style' => array(), 'fill' => array(), 'width' => array(), 'height' => array()),
-                'img' => array('src' => array(), 'alt' => array(), 'style' => array()),
-                'div' => array('style' => array())
-            );
-            echo wp_kses($icon_html, $allowed_svg);
-            ?>
-        </div>
+        <?php if ($is_single_channel) :
+            $single = $channels[0];
+            $single_style = 'background: ' . esc_attr($single['color']) . '; ' . esc_attr($single['extra_style']);
+            $single_href = 'javascript:void(0);';
+            $single_target = '';
+            $single_onclick = 'dctcHideGreeting()';
+
+            if ($single['type'] === 'internal') {
+                $single_onclick = 'dctcHideGreeting(); dctcOpenChat();';
+            } elseif (! empty($single['link'])) {
+                $single_href = $single['link'];
+                $single_target = (strpos($single_href, 'tel:') === 0 || strpos($single_href, 'sms:') === 0) ? '' : '_blank';
+            }
+        ?>
+            <?php if ($single['type'] === 'internal') : ?>
+                <button type="button" class="dctc-widget-btn dctc-single-channel <?php echo esc_attr($hidden_class); ?>" id="dctc-widget-btn" style="<?php echo esc_attr($single_style); ?>" onclick="<?php echo esc_attr($single_onclick); ?>" title="<?php echo esc_attr($single['title']); ?>">
+                    <?php echo wp_kses($single['icon'], $allowed_svg); ?>
+                </button>
+            <?php else : ?>
+                <a href="<?php echo esc_url($single_href); ?>" <?php echo $single_target ? 'target="' . esc_attr($single_target) . '" rel="noopener noreferrer"' : ''; ?> class="dctc-widget-btn dctc-single-channel <?php echo esc_attr($hidden_class); ?>" id="dctc-widget-btn" style="<?php echo esc_attr($single_style); ?>" onclick="dctcHideGreeting()" title="<?php echo esc_attr($single['title']); ?>">
+                    <?php echo wp_kses($single['icon'], $allowed_svg); ?>
+                </a>
+            <?php endif; ?>
+        <?php elseif ($show_launcher) : ?>
+            <div class="dctc-widget-btn <?php echo esc_attr($hidden_class); ?>" id="dctc-widget-btn" onclick="dctcToggleMenu()">
+                <?php echo wp_kses($icon_html, $allowed_svg); ?>
+            </div>
+        <?php endif; ?>
 
         <?php if (!empty($greeting_message)): ?>
             <div class="dctc-greeting-message" id="dctc-greeting-message">
@@ -403,14 +437,23 @@ class DCTC_Frontend
             </div>
         <?php endif; ?>
 
-        <div class="dctc-menu" id="dctc-menu">
+        <?php if (! $is_single_channel) :
+            $menu_classes = 'dctc-menu';
+            if (! $show_launcher) {
+                $menu_classes .= ' dctc-menu-direct';
+            }
+            if ($time_delay > 0 && ! $show_launcher) {
+                $menu_classes .= ' dctc-widget-hidden';
+            }
+        ?>
+        <div class="<?php echo esc_attr($menu_classes); ?>" id="dctc-menu">
             <?php foreach ($channels as $c) : ?>
                 <?php
                 $onclick = '';
                 $href = 'javascript:void(0);';
                 $target = '';
 
-                if ($c['chat_widget_enabled'] === '1') {
+                if ($show_launcher && $c['chat_widget_enabled'] === '1') {
                     $onclick = 'dctcOpenWidget(\'' . esc_js($c['slug']) . '\')';
                 } elseif ($c['type'] === 'internal') {
                     $onclick = 'dctcOpenChat()';
@@ -435,8 +478,8 @@ class DCTC_Frontend
         </div>
 
         <!-- Chat Widget Popups -->
-        <?php foreach ($channels as $c) : ?>
-            <?php if ($c['chat_widget_enabled'] === '1') : ?>
+            <?php foreach ($channels as $c) : ?>
+            <?php if ($show_launcher && $c['chat_widget_enabled'] === '1') : ?>
                 <?php
                 $widget_class = 'dctc-chat-widget dctc-theme-' . esc_attr($c['slug']);
                 $header_bg = $c['slug'] === 'whatsapp' ? '#095e54' : esc_attr($c['color']);
@@ -496,6 +539,7 @@ class DCTC_Frontend
                 </div>
             <?php endif; ?>
         <?php endforeach; ?>
+        <?php endif; ?>
 
 
 <?php

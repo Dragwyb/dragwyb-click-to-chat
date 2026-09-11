@@ -4,15 +4,18 @@
 
 "use strict";
 
+window.dctcHideGreeting = function () {
+    var greeting = document.getElementById('dctc-greeting-message');
+    if (greeting) {
+        greeting.classList.add('dctc-hidden');
+    }
+};
+
 window.dctcToggleMenu = function () {
     var menu = document.getElementById('dctc-menu');
-    var greeting = document.getElementById('dctc-greeting-message');
     if (menu) {
         menu.classList.toggle('dctc-open');
-        if (greeting) {
-            // If message is present, hide it permanently on first interaction
-            greeting.classList.add('dctc-hidden');
-        }
+        window.dctcHideGreeting();
     }
 }
 

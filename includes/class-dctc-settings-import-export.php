@@ -709,6 +709,9 @@ class DCTC_Settings_Import_Export {
 				$out['icon_scale'] = $scale;
 			}
 		}
+		if ( isset( $raw['show_widget'] ) ) {
+			$out['show_widget'] = ( '1' === (string) $raw['show_widget'] ) ? '1' : '0';
+		}
 		if ( isset( $raw['show_on_desktop'] ) ) {
 			$out['show_on_desktop'] = ( '1' === (string) $raw['show_on_desktop'] ) ? '1' : '0';
 		}

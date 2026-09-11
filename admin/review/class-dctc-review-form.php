@@ -74,7 +74,7 @@ if ( ! class_exists( 'DCTC_Review_Form' ) ) {
 			</div>
 		</div>',
 				esc_html__( 'Thank you for using Click to Chat.', 'dragwyb-click-to-chat' ),
-				sprintf( esc_html__( 'Enjoying the Click to Chat? Your feedback is invaluable in shaping the plugin\'s future.%sPlease consider leaving a review on the WordPress Plugin Directory to help others and support our growth.', 'dragwyb-click-to-chat' ), '<br>' ),
+				sprintf( esc_html__( 'Enjoying the Click to Chat? Your feedback is invaluable in shaping the plugin\'s future.%sPlease consider leaving a review on the WordPress Plugin Directory to help others and support our growth.', 'dragwyb-click-to-chat' ), '<br>' ), // translators: %s is a line break
 				esc_html__( 'Leave a Review', 'dragwyb-click-to-chat' ),
 				esc_html__( 'Already Review.', 'dragwyb-click-to-chat' )
 			);

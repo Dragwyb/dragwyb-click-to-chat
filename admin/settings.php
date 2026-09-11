@@ -126,6 +126,7 @@ function dctc_save_settings()
     }
 
     // Widget Customization
+    $settings['show_widget'] = (isset($_POST['show_widget']) && $_POST['show_widget'] === '1') ? '1' : '0';
     if (isset($_POST['widget_position'])) {
         $settings['widget_position'] = sanitize_text_field(wp_unslash($_POST['widget_position']));
     }
