@@ -38,6 +38,29 @@ $dctc_custom_side = isset($dctc_settings['custom_side']) ? $dctc_settings['custo
         style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
 </div>
 
+<?php $dctc_show_widget = isset($dctc_settings['show_widget']) ? $dctc_settings['show_widget'] : '1'; ?>
+<!-- Show Widget (multiple channels) -->
+<div class="dctc-form-group" id="dctc-show-widget-setting">
+    <label><?php esc_html_e('Show Widget', 'dragwyb-click-to-chat'); ?></label>
+    <p style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">
+        <?php esc_html_e('When two or more channels are enabled, show a main chat button that expands to your channels. Turn this off to show the channel buttons directly. Channel chat widgets still open if they are enabled.', 'dragwyb-click-to-chat'); ?>
+    </p>
+    <label class="dctc-toggle">
+        <div class="dctc-switch">
+            <input type="checkbox"
+                id="dctc_show_widget"
+                name="dctc_show_widget"
+                value="1"
+                <?php checked($dctc_show_widget, '1'); ?>>
+            <span class="dctc-slider"></span>
+        </div>
+        <span style="margin-left: 10px; font-weight: 500; color: #374151;"><?php esc_html_e('Show widget button', 'dragwyb-click-to-chat'); ?></span>
+    </label>
+    <p id="dctc-show-widget-single-hint" style="display: none; color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+        <?php esc_html_e('Only one channel is enabled, so that channel is shown directly. This setting applies when two or more channels are enabled.', 'dragwyb-click-to-chat'); ?>
+    </p>
+</div>
+
 <!-- Widget Position -->
 <div class="dctc-form-group">
     <label>Widget Position</label>
