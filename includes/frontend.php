@@ -417,14 +417,16 @@ class DCTC_Frontend
             $single_target = '';
             $single_onclick = 'dctcHideGreeting()';
 
-            if ($single['type'] === 'internal') {
+            if ($single['chat_widget_enabled'] === '1') {
+                $single_onclick = 'dctcHideGreeting(); dctcOpenWidget(\'' . esc_js($single['slug']) . '\')';
+            } elseif ($single['type'] === 'internal') {
                 $single_onclick = 'dctcHideGreeting(); dctcOpenChat();';
             } elseif (! empty($single['link'])) {
                 $single_href = $single['link'];
                 $single_target = (strpos($single_href, 'tel:') === 0 || strpos($single_href, 'sms:') === 0) ? '' : '_blank';
             }
         ?>
-            <?php if ($single['type'] === 'internal') : ?>
+            <?php if ($single['chat_widget_enabled'] === '1' || $single['type'] === 'internal') : ?>
                 <button type="button" class="dctc-widget-btn dctc-single-channel <?php echo esc_attr($hidden_class); ?>" id="dctc-widget-btn" style="<?php echo esc_attr($single_style); ?>" onclick="<?php echo esc_attr($single_onclick); ?>" title="<?php echo esc_attr($single['title']); ?>">
                     <?php echo wp_kses($single['icon'], $allowed_svg); ?>
                 </button>
@@ -461,8 +463,8 @@ class DCTC_Frontend
                 $href = 'javascript:void(0);';
                 $target = '';
 
-                if ($show_launcher && $c['chat_widget_enabled'] === '1') {
-                    $onclick = 'dctcOpenWidget(\'' . esc_js($c['slug']) . '\')';
+                if ($c['chat_widget_enabled'] === '1') {
+                    $onclick = 'dctcHideGreeting(); dctcOpenWidget(\'' . esc_js($c['slug']) . '\')';
                 } elseif ($c['type'] === 'internal') {
                     $onclick = 'dctcOpenChat()';
                 } else {
@@ -484,10 +486,11 @@ class DCTC_Frontend
 
             <?php endforeach; ?>
         </div>
+        <?php endif; ?>
 
         <!-- Chat Widget Popups -->
-            <?php foreach ($channels as $c) : ?>
-            <?php if ($show_launcher && $c['chat_widget_enabled'] === '1') : ?>
+        <?php foreach ($channels as $c) : ?>
+            <?php if ($c['chat_widget_enabled'] === '1') : ?>
                 <?php
                 $widget_class = 'dctc-chat-widget dctc-theme-' . esc_attr($c['slug']);
                 $header_bg = $c['slug'] === 'whatsapp' ? '#095e54' : esc_attr($c['color']);
@@ -547,7 +550,6 @@ class DCTC_Frontend
                 </div>
             <?php endif; ?>
         <?php endforeach; ?>
-        <?php endif; ?>
 
 
 <?php

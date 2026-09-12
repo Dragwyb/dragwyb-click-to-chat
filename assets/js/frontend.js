@@ -21,6 +21,7 @@ window.dctcToggleMenu = function () {
 
 // Open specific channel widget
 function dctcOpenWidget(slug) {
+    window.dctcHideGreeting();
     var widget = document.getElementById('dctc-chat-widget-' + slug);
     if (widget) {
         // Hide other open widgets first

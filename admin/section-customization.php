@@ -43,7 +43,7 @@ $dctc_custom_side = isset($dctc_settings['custom_side']) ? $dctc_settings['custo
 <div class="dctc-form-group" id="dctc-show-widget-setting">
     <label><?php esc_html_e('Show Widget', 'dragwyb-click-to-chat'); ?></label>
     <p style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">
-        <?php esc_html_e('When two or more channels are enabled, show a main chat button that expands to your channels. Turn this off to show the channel buttons directly, without a launcher or chat popup.', 'dragwyb-click-to-chat'); ?>
+        <?php esc_html_e('When two or more channels are enabled, show a main chat button that expands to your channels. Turn this off to show the channel buttons directly. Channel chat widgets still open if they are enabled.', 'dragwyb-click-to-chat'); ?>
     </p>
     <label class="dctc-toggle">
         <div class="dctc-switch">
