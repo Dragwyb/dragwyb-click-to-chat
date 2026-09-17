@@ -14,6 +14,7 @@
             this.bindEvents();
             this.loadCurrentStep();
             this.updatePreview(); // Show preview based on current settings
+            this.updateShowWidgetHint();
         },
 
         bindEvents: function () {
@@ -36,13 +37,17 @@
 
             // Also listen to clicks on channel cards for immediate preview update
             $('.dctc-channel-card').on('click', () => {
-                setTimeout(() => this.updatePreview(), 50); // slight delay to allow active class toggle
+                setTimeout(() => {
+                    this.updatePreview();
+                    this.updateShowWidgetHint();
+                }, 50);
             });
 
             // Watch specific widget customization inputs directly for smoother real-time updates
             $('#dctc_widget_color, #dctc_widget_size, #dctc_icon_rotation, #dctc_icon_scale').on('input', this.updatePreview.bind(this));
             $('#dctc_custom_bottom, #dctc_custom_horizontal').on('input', this.updatePreview.bind(this));
             $('input[name="dctc_widget_position"], input[name="dctc_icon_type"], select[name="dctc_custom_side"], select[name="dctc_custom_vertical_align"]').on('change', this.updatePreview.bind(this));
+            $('#dctc_show_widget').on('change', this.updatePreview.bind(this));
             $('#dctc_widget_size_unit, #dctc_custom_bottom_unit, #dctc_custom_horizontal_unit').on('change', this.updatePreview.bind(this));
 
             // Display Rules Toggle
@@ -97,6 +102,7 @@
 
                 // Update preview
                 DCTC_Admin.updatePreview();
+                DCTC_Admin.updateShowWidgetHint();
             });
 
             // 2. Card Body Click Handler (Focus/Enable Logic)
@@ -276,6 +282,16 @@
             }
         },
 
+        updateShowWidgetHint: function () {
+            const count = $('.dctc-channel-card.active').length;
+            const $hint = $('#dctc-show-widget-single-hint');
+            if (count <= 1) {
+                $hint.show();
+            } else {
+                $hint.hide();
+            }
+        },
+
         // Removed toggleChannel logic as it is handled in section-channels.php 
         // We only need to react to changes.
 
@@ -364,9 +380,18 @@
             });
 
             // 2. Build Preview HTML
+            const showWidget = $('#dctc_show_widget').is(':checked');
+            const isSingleChannel = activeChannels.length === 1;
+            const showLauncher = !isSingleChannel && showWidget;
+
             // Main Button Icon content
             let mainIconHtml = '';
-            if (iconType === 'custom') {
+            let mainBtnExtraStyle = `color: ${widgetColor};`;
+            if (isSingleChannel) {
+                const single = activeChannels[0];
+                mainIconHtml = single.icon;
+                mainBtnExtraStyle = `${single.style} border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); overflow: hidden; color: #fff;`;
+            } else if (iconType === 'custom') {
                 const customUrl = $('#dctc_custom_icon_url').val();
                 if (customUrl) {
                     mainIconHtml = `<img src="${customUrl}" style="width: 100%; height: 100%; object-fit: contain; ${iconTransform}" />`;
@@ -387,25 +412,15 @@
                 justify-content: center; 
                 z-index: 20;
                 cursor: pointer;
-                color: ${widgetColor}; 
+                ${mainBtnExtraStyle}
             `;
 
-            // Sub-menu items logic
-            let menuStyle = '';
-
-            // Calculate menu position using CSS calc() to handle mixed units
-            // Menu vertical pos = widget_distance + widget_size + 10px
-            const menuVertDist = `calc(${vertDistStr} + ${widgetSizeStr} + 10px)`;
-
-            // Menu horizontal pos = widget_distance + 5px (for slight centering adjustment or alignment)
-            // Or typically it aligns with center of button? 
-            // The frontend logic uses:
-            // "right: 25px" for preset (widget is right: 20px, so +5px)
-            // "right: calc(horizontal_dist + 5px)" for custom
-            // We just stick to that
+            const menuVertDist = showLauncher
+                ? `calc(${vertDistStr} + ${widgetSizeStr} + 10px)`
+                : vertDistStr;
             const menuHorizDist = `calc(${horizDistStr} + 0px)`;
 
-            menuStyle = `
+            const menuStyle = `
                 position: absolute; 
                 ${vertAlign === 'bottom' ? 'bottom' : 'top'}: ${menuVertDist}; 
                 ${side}: ${menuHorizDist};
@@ -416,65 +431,68 @@
                 z-index: 10;
             `;
 
-            // Build Menu HTML
-            let menuHtml = `<div class="dctc-menu-preview" style="${menuStyle}">`;
+            let menuHtml = '';
+            if (!isSingleChannel && activeChannels.length > 0) {
+                menuHtml = `<div class="dctc-menu-preview" style="${menuStyle}">`;
 
-            activeChannels.forEach(channel => {
-                // Check if it's a custom icon (transparent bg)
-                const isCustom = channel.style.includes('transparent');
-                const innerSize = isCustom ? 'width: 100%; height: 100%;' : 'width: 24px; height: 24px;';
+                activeChannels.forEach(channel => {
+                    const isCustom = channel.style.includes('transparent');
+                    const innerSize = isCustom ? 'width: 100%; height: 100%;' : 'width: 24px; height: 24px;';
 
-                menuHtml += `
-                    <div class="dctc-sub-btn-preview" title="${channel.name}" 
-                        style="width: ${widgetSizeStr}; height: ${widgetSizeStr}; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); ${channel.style}">
-                        <div style="${innerSize} display: flex; align-items: center; justify-content: center;">
-                             ${channel.icon} 
+                    menuHtml += `
+                        <div class="dctc-sub-btn-preview" title="${channel.name}" 
+                            style="width: ${widgetSizeStr}; height: ${widgetSizeStr}; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); ${channel.style}">
+                            <div style="${innerSize} display: flex; align-items: center; justify-content: center;">
+                                 ${channel.icon} 
+                            </div>
+                        </div>
+                    `;
+                });
+                menuHtml += `</div>`;
+            }
+
+            let btnHtml = '';
+            if (isSingleChannel || showLauncher) {
+                btnHtml = `
+                    <div class="dctc-widget-btn-preview${isSingleChannel ? ' dctc-single-channel-preview' : ''}" style="${btnCss}">
+                        <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+                            ${mainIconHtml} 
                         </div>
                     </div>
                 `;
-            });
-            menuHtml += `</div>`;
+            }
 
-            const btnHtml = `
-                <div class="dctc-widget-btn-preview" style="${btnCss}">
-                    <div style="width: 100%; height: 100%; display: flex;">
-                        ${mainIconHtml} 
-                    </div>
-                </div>
-            `;
-
-            // Combine
             const previewContent = `
                 <div class="dctc-live-preview-box" style="width: 100%; height: 100%; position: relative;">
                     ${menuHtml}
                     ${btnHtml}
                 </div>
                 <style>
-                    /* Container styles */
                     .dctc-preview-device {
                         position: relative;
                         overflow: hidden;
                         background-color: #fff; 
                         border: 1px solid #e5e7eb;
-                        height: 400px; /* fixed height for absolute positioning context */
+                        height: 400px;
                     }
-                    /* Ensure SVG fills use the parent color */
                     .dctc-widget-btn-preview svg { fill: currentColor; width: 100%; height: 100%; }
+                    .dctc-widget-btn-preview.dctc-single-channel-preview svg { fill: #fff; width: 24px; height: 24px; }
                     .dctc-sub-btn-preview svg { fill: white; width: 24px; height: 24px; }
                 </style>
             `;
 
             $previewContainer.html(previewContent);
 
-            // Add click toggle behavior for realism
-            $previewContainer.find('.dctc-widget-btn-preview').on('click', function () {
-                const $menu = $previewContainer.find('.dctc-menu-preview');
-                if ($menu.css('opacity') === '0' || $menu.is(':hidden')) {
-                    $menu.css({ opacity: 1, visibility: 'visible' }).show();
-                } else {
-                    $menu.css({ opacity: 0, visibility: 'hidden' }).hide();
-                }
-            });
+            if (showLauncher) {
+                $previewContainer.find('.dctc-widget-btn-preview').on('click', function () {
+                    const $menu = $previewContainer.find('.dctc-menu-preview');
+                    if ($menu.css('opacity') === '0' || $menu.is(':hidden')) {
+                        $menu.css({ opacity: 1, visibility: 'visible' }).show();
+                    } else {
+                        $menu.css({ opacity: 0, visibility: 'hidden' }).hide();
+                    }
+                });
+            }
         },
 
         getDefaultIconSvg: function (type, transformStyle) {
@@ -559,6 +577,7 @@
             formData.custom_icon_url = $('#dctc_custom_icon_url').val();
             formData.icon_rotation = $('#dctc_icon_rotation').val();
             formData.icon_scale = $('#dctc_icon_scale').val();
+            formData.show_widget = $('#dctc_show_widget').is(':checked') ? '1' : '0';
             // Triggers and targeting settings
             formData.show_on_desktop = $('#dctc_show_on_desktop').is(':checked') ? '1' : '0';
             formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';

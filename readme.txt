@@ -5,8 +5,8 @@ Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medi
 Author: Dragwyb
 Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
 Requires at least: 5.0
-Tested up to: 7.0
-Stable tag: 1.1.2
+Tested up to: 7.1
+Stable tag: 1.1.3
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -137,6 +137,10 @@ Yes. It is ideal for businesses, online stores, agencies, freelancers, and servi
 No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
 
 == Changelog ==
+
+= 1.1.3 =
+* Show a single enabled channel directly without the launcher.
+* Added a Show Widget option for multiple channels.
 
 = 1.1.2 =
 * Added Settings import/export for Channels and AI Assistant.

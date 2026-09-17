@@ -6,7 +6,7 @@
  * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
  * Author: Dragwyb
  * Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
- * Version: 1.1.2
+ * Version: 1.1.3
  * Requires at least: 5.0
  * Requires PHP: 7.4
  * Text Domain: dragwyb-click-to-chat
@@ -22,7 +22,7 @@ use DRAGWYB_CTC\Admin\Review\DCTC_Review_Form;
 ! defined( 'DCTC_FILE' ) && define( 'DCTC_FILE', __FILE__ );
 ! defined( 'DCTC_PLUGIN_DIR' ) && define( 'DCTC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 ! defined( 'DCTC_PLUGIN_URL' ) && define( 'DCTC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.1.2' );
+! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.1.3' );
 ! defined( 'DCTC_BASENAME' ) && define( 'DCTC_BASENAME', plugin_basename( __FILE__ ) );
 
 if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {

@@ -110,6 +110,8 @@ class DCTC_AI_Embedding_Manager {
 		$settings = $this->get_settings();
 		$model = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : 'text-embedding-3-small';
 
+		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
+		// phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- Fallback for WordPress < 7.0 where wp_ai_client_prompt() is unavailable.
 		$response = wp_remote_post(
 			'https://api.openai.com/v1/embeddings',
 			[
@@ -168,6 +170,8 @@ class DCTC_AI_Embedding_Manager {
 		
 		$model_path = strpos( $model, 'models/' ) === 0 ? $model : 'models/' . $model;
 
+		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
+		// phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- Fallback for WordPress < 7.0 where wp_ai_client_prompt() is unavailable.
 		$response = wp_remote_post(
 			'https://generativelanguage.googleapis.com/v1beta/' . $model_path . ':embedContent?key=' . $api_key,
 			[
