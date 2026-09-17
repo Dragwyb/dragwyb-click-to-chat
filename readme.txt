@@ -139,8 +139,9 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 == Changelog ==
 
 = 1.1.3 =
-* Show a single enabled channel directly without the launcher.
-* Added a Show Widget option for multiple channels.
+* Single social chat widgets can now be displayed directly without the floating button.
+* Added the Show Floating Button option under Widget Customization > Widget Display to display social chat widgets directly without the floating button.
+* Tested Up to WordPress 7.1
 
 = 1.1.2 =
 * Added Settings import/export for Channels and AI Assistant.
