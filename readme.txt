@@ -25,9 +25,13 @@ Explore live examples of the plugin in action:
 
 🔗 [Click to Chat & AI Chatbot Demo](https://dragwyb.com/demo/ai-chatbot/?&utm_source=wpplugin&utm_medium=readme&utm_campaign=chatbot_demo)
 
-👉 Check out our other plugin: [Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/) – Create animated 3D flip boxes for your WordPress site.
+##👉 Check out our other plugin:
 
-👉 Check out our other plugin: [Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/) – A drag and drop form builder plugin for WordPress.
+**[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – Create animated 3D flip boxes for your WordPress site.
+
+**[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – A drag and drop form builder plugin for WordPress.
+
+**[Contact form 7 Addon](https://wordpress.org/plugins/enhanced-addon-for-contact-form-7/)** – Enhances the functionality of Contact Form 7.
 
 ### Why Use an AI Chatbot & Multi-Channel Chat Plugin?
 * Deploy an AI chatbot to offer automated customer support.
@@ -199,6 +203,7 @@ Initial stable release. No breaking changes.
 
 * 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – Design animated flip boxes and 3D cards inside Elementor.
 * 🧩 **[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – A drag and drop form builder plugin for WordPress.
+* 🎨 **[Contact form 7 Addon](https://wordpress.org/plugins/enhanced-addon-for-contact-form-7/)** – Enhances the functionality of Contact Form 7.
 
 == Acknowledgements ==
 
