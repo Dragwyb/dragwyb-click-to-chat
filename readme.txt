@@ -6,7 +6,7 @@ Author: Dragwyb
 Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
 Requires at least: 5.0
 Tested up to: 7.1
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -141,6 +141,10 @@ Yes. It is ideal for businesses, online stores, agencies, freelancers, and servi
 No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
 
 == Changelog ==
+
+= 1.1.4 =
+* Fixed widget position veritcal alignment not working.
+* Improve escaping & sanitization.
 
 = 1.1.3 =
 * Single social chat widgets can now be displayed directly without the floating button.
