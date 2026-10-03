@@ -495,7 +495,7 @@ class DCTC_AI_Tool_Registry
 			? esc_url_raw($settings['chatbot']['workflow_webhook_url'])
 			: (!empty($settings['chatbot']['lead_webhook_url']) ? esc_url_raw($settings['chatbot']['lead_webhook_url']) : '');
 
-		if (empty($webhook_url)) {
+		if (empty($webhook_url) || !wp_http_validate_url($webhook_url)) {
 			return;
 		}
 

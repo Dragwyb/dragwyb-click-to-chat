@@ -452,7 +452,7 @@ class DCTC_AI_Leads_Controller
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$webhook_url = !empty($settings['chatbot']['lead_webhook_url']) ? esc_url_raw($settings['chatbot']['lead_webhook_url']) : '';
 
-		if (empty($webhook_url)) {
+		if (empty($webhook_url) || !wp_http_validate_url($webhook_url)) {
 			return;
 		}
 
@@ -465,10 +465,11 @@ class DCTC_AI_Leads_Controller
 		];
 
 		wp_remote_post($webhook_url, [
-			'headers'  => ['Content-Type' => 'application/json'],
-			'body'     => wp_json_encode($payload),
-			'timeout'  => 10,
-			'blocking' => false, // Non-blocking asynchronous dispatch
+			'headers'   => ['Content-Type' => 'application/json'],
+			'body'      => wp_json_encode($payload),
+			'timeout'   => 10,
+			'blocking'  => false, // Non-blocking asynchronous dispatch
+			'sslverify' => apply_filters('https_local_ssl_verify', false),
 		]);
 	}
 }
