@@ -349,15 +349,6 @@ class DCTC_AI_Settings_Handler
 		return current_user_can('manage_options');
 	}
 
-	/**
-	 * Upload Permission Check
-	 *
-	 * @return bool True if current user is an admin.
-	 */
-	public function dctc_ai_permission_upload()
-	{
-		return current_user_can('manage_options');
-	}
 
 	/**
 	 * Return recent plugin error logs for the AI dashboard.
@@ -478,8 +469,17 @@ class DCTC_AI_Settings_Handler
 				'ask_email' => false,
 				'enable_pre_questions' => false,
 				'enable_uploads' => false,
-				'save_uploads' => false,
+				'allowed_file_types' => 'jpg, jpeg, png, webp, gif, pdf, txt, doc, docx',
+				'excluded_file_types' => 'php, php3, php4, php5, phtml, phar, cgi, pl, py, sh, exe, bat, cmd, js, html, htm, svg',
 				'max_upload_size' => 5,
+				'max_files_per_message' => 3,
+				'store_chat_attachments' => 'temp',
+				'show_bot_avatar_in_chat' => true,
+				'show_user_avatar_in_chat' => true,
+				'bot_icon_preset' => 'bot',
+				'user_avatar' => '',
+				'user_icon_preset' => 'user',
+				'action_buttons' => [],
 				'default_provider' => 'openai',
 				'knowledge_text' => '',
 				'knowledge_urls' => [],
@@ -506,6 +506,7 @@ class DCTC_AI_Settings_Handler
 				'time_delay' => 0,
 				'launcher_text' => 'Chat with us',
 				'assistant_icon' => '',
+				'launcher_icon_preset' => 'chat',
 			],
 			'rag' => [
 				'enabled' => true,
@@ -576,6 +577,18 @@ class DCTC_AI_Settings_Handler
 			'save_chat',
 			'ask_email',
 			'enable_pre_questions',
+			'show_bot_avatar_in_chat',
+			'show_user_avatar_in_chat',
+			'bot_icon_preset',
+			'user_avatar',
+			'user_icon_preset',
+			'enable_uploads',
+			'allowed_file_types',
+			'excluded_file_types',
+			'max_upload_size',
+			'max_files_per_message',
+			'store_chat_attachments',
+			'action_buttons',
 		];
 
 		$public_chatbot = [];
@@ -585,9 +598,14 @@ class DCTC_AI_Settings_Handler
 			}
 		}
 
+		$is_admin = current_user_can('manage_options');
+
 		return [
 			'chatbot' => $public_chatbot,
 			'display' => $display,
+			'has_api_key' => DCTC_AI_Key_Store::has_configured_provider(),
+			'is_admin' => $is_admin,
+			'settings_url' => $is_admin ? admin_url('admin.php?page=dragwyb-click-to-chat-ai') : '',
 		];
 	}
 
@@ -725,9 +743,29 @@ class DCTC_AI_Settings_Handler
 			'save_chat' => isset($params['save_chat']) ? (bool) $params['save_chat'] : (isset($existing_chatbot['save_chat']) ? (bool) $existing_chatbot['save_chat'] : false),
 			'ask_email' => isset($params['ask_email']) ? (bool) $params['ask_email'] : (isset($existing_chatbot['ask_email']) ? (bool) $existing_chatbot['ask_email'] : false),
 			'enable_pre_questions' => isset($params['enable_pre_questions']) ? (bool) $params['enable_pre_questions'] : (isset($existing_chatbot['enable_pre_questions']) ? (bool) $existing_chatbot['enable_pre_questions'] : false),
+			'show_bot_avatar_in_chat' => isset($params['show_bot_avatar_in_chat']) ? (bool) $params['show_bot_avatar_in_chat'] : (isset($existing_chatbot['show_bot_avatar_in_chat']) ? (bool) $existing_chatbot['show_bot_avatar_in_chat'] : true),
+			'show_user_avatar_in_chat' => isset($params['show_user_avatar_in_chat']) ? (bool) $params['show_user_avatar_in_chat'] : (isset($existing_chatbot['show_user_avatar_in_chat']) ? (bool) $existing_chatbot['show_user_avatar_in_chat'] : true),
+			'bot_icon_preset' => isset($params['bot_icon_preset']) ? sanitize_text_field($params['bot_icon_preset']) : (isset($existing_chatbot['bot_icon_preset']) ? $existing_chatbot['bot_icon_preset'] : 'bot'),
+			'user_avatar' => isset($params['user_avatar']) ? esc_url_raw($params['user_avatar']) : (isset($existing_chatbot['user_avatar']) ? $existing_chatbot['user_avatar'] : ''),
+			'user_icon_preset' => isset($params['user_icon_preset']) ? sanitize_text_field($params['user_icon_preset']) : (isset($existing_chatbot['user_icon_preset']) ? $existing_chatbot['user_icon_preset'] : 'user'),
+			'action_buttons' => isset($params['action_buttons']) && is_array($params['action_buttons']) ? array_values(array_filter(array_map(function($btn) {
+				if (!is_array($btn) || empty($btn['label'])) {
+					return null;
+				}
+				return [
+					'id' => isset($btn['id']) ? sanitize_text_field($btn['id']) : uniqid('btn_'),
+					'label' => sanitize_text_field($btn['label']),
+					'url' => isset($btn['url']) ? esc_url_raw($btn['url']) : '',
+					'target' => (isset($btn['target']) && $btn['target'] === '_self') ? '_self' : '_blank',
+					'type' => isset($btn['type']) ? sanitize_text_field($btn['type']) : 'link',
+				];
+			}, $params['action_buttons']))) : (isset($existing_chatbot['action_buttons']) ? $existing_chatbot['action_buttons'] : []),
 			'enable_uploads' => isset($params['enable_uploads']) ? (bool) $params['enable_uploads'] : (isset($existing_chatbot['enable_uploads']) ? (bool) $existing_chatbot['enable_uploads'] : false),
-			'save_uploads' => isset($params['save_uploads']) ? (bool) $params['save_uploads'] : (isset($existing_chatbot['save_uploads']) ? (bool) $existing_chatbot['save_uploads'] : false),
-			'max_upload_size' => isset($params['max_upload_size']) ? intval($params['max_upload_size']) : (isset($existing_chatbot['max_upload_size']) ? intval($existing_chatbot['max_upload_size']) : 5),
+			'allowed_file_types' => isset($params['allowed_file_types']) ? sanitize_text_field($params['allowed_file_types']) : (isset($existing_chatbot['allowed_file_types']) ? $existing_chatbot['allowed_file_types'] : 'jpg, jpeg, png, webp, gif, pdf, txt, doc, docx'),
+			'excluded_file_types' => isset($params['excluded_file_types']) ? sanitize_text_field($params['excluded_file_types']) : (isset($existing_chatbot['excluded_file_types']) ? $existing_chatbot['excluded_file_types'] : 'php, php3, php4, php5, phtml, phar, cgi, pl, py, sh, exe, bat, cmd, js, html, htm, svg'),
+			'max_upload_size' => isset($params['max_upload_size']) ? max(1, min(50, intval($params['max_upload_size']))) : (isset($existing_chatbot['max_upload_size']) ? intval($existing_chatbot['max_upload_size']) : 5),
+			'max_files_per_message' => isset($params['max_files_per_message']) ? max(1, min(10, intval($params['max_files_per_message']))) : (isset($existing_chatbot['max_files_per_message']) ? intval($existing_chatbot['max_files_per_message']) : 3),
+			'store_chat_attachments' => isset($params['store_chat_attachments']) && in_array($params['store_chat_attachments'], ['do_not_store', 'temp', 'save_with_history'], true) ? $params['store_chat_attachments'] : (isset($existing_chatbot['store_chat_attachments']) ? $existing_chatbot['store_chat_attachments'] : 'temp'),
 			'default_provider' => isset($params['default_provider']) ? sanitize_text_field($params['default_provider']) : (isset($existing_chatbot['default_provider']) ? $existing_chatbot['default_provider'] : 'openai'),
 			'knowledge_text' => isset($params['knowledge_text']) ? sanitize_textarea_field($params['knowledge_text']) : (isset($existing_chatbot['knowledge_text']) ? $existing_chatbot['knowledge_text'] : ''),
 			'knowledge_urls' => isset($params['knowledge_urls']) ? $urls : (isset($existing_chatbot['knowledge_urls']) ? $existing_chatbot['knowledge_urls'] : []),
@@ -814,6 +852,7 @@ class DCTC_AI_Settings_Handler
 			'time_delay' => isset($params['time_delay']) ? max(0, min(60, intval($params['time_delay']))) : 0,
 			'launcher_text' => isset($params['launcher_text']) ? sanitize_text_field($params['launcher_text']) : 'Chat with us',
 			'assistant_icon' => isset($params['assistant_icon']) ? esc_url_raw($params['assistant_icon']) : '',
+			'launcher_icon_preset' => isset($params['launcher_icon_preset']) ? sanitize_text_field($params['launcher_icon_preset']) : 'chat',
 		];
 
 		$settings = self::dctc_ai_get_all_settings();
@@ -853,10 +892,37 @@ class DCTC_AI_Settings_Handler
 	}
 
 	/**
-	 * Handle a file upload via the WordPress media library.
+	 * Upload Permission Check
+	 *
+	 * Allows admins or public chat users when enable_uploads is active.
 	 *
 	 * @param \WP_REST_Request $request The REST request object.
-	 * @return \WP_REST_Response Uploaded attachment's ID, URL, and name.
+	 * @return bool True if authorized to upload.
+	 */
+	public function dctc_ai_permission_upload($request)
+	{
+		if (current_user_can('manage_options')) {
+			return true;
+		}
+
+		$settings = self::dctc_ai_get_all_settings();
+		if (empty($settings['chatbot']['enable_uploads'])) {
+			return false;
+		}
+
+		$nonce = $request->get_header('X-WP-Nonce');
+		if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Handle a file upload via the WordPress media library with complete validation.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response Uploaded attachment metadata.
 	 */
 	public function dctc_ai_upload_file($request)
 	{
@@ -866,38 +932,214 @@ class DCTC_AI_Settings_Handler
 			require_once ABSPATH . 'wp-admin/includes/media.php';
 		}
 
-		// media_handle_upload() sanitizes $_FILES internally; no nonce check
-		// here since this endpoint's permission_callback already requires
-		// manage_options.
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing
-		if (empty($_FILES['file'])) {
+		if (empty($_FILES['file']) || !is_array($_FILES['file'])) {
 			return new \WP_REST_Response(
 				[
 					'success' => false,
+					'code' => 'INVALID_FILE',
 					'message' => esc_html__('No file was uploaded.', 'dragwyb-click-to-chat'),
 				],
 				400
 			);
 		}
 
+		$file = $_FILES['file']; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+
+		// Check PHP upload error code
+		if (isset($file['error']) && $file['error'] !== UPLOAD_ERR_OK) {
+			$error_messages = [
+				UPLOAD_ERR_INI_SIZE => __('The uploaded file exceeds the upload_max_filesize directive in php.ini.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_FORM_SIZE => __('The uploaded file exceeds the maximum file size specified.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_PARTIAL => __('The file was only partially uploaded.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_NO_FILE => __('No file was uploaded.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_NO_TMP_DIR => __('Missing a temporary folder.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_CANT_WRITE => __('Failed to write file to disk.', 'dragwyb-click-to-chat'),
+				UPLOAD_ERR_EXTENSION => __('A PHP extension stopped the file upload.', 'dragwyb-click-to-chat'),
+			];
+			$msg = $error_messages[$file['error']] ?? __('File upload error occurred.', 'dragwyb-click-to-chat');
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'UPLOAD_FAILED',
+					'message' => esc_html($msg),
+				],
+				400
+			);
+		}
+
+		$settings = self::dctc_ai_get_all_settings();
+		$bot_settings = isset($settings['chatbot']) && is_array($settings['chatbot']) ? $settings['chatbot'] : [];
+
+		// Max size check (effective limit is lower of plugin setting and server max)
+		$plugin_max_mb = isset($bot_settings['max_upload_size']) ? max(1, intval($bot_settings['max_upload_size'])) : 5;
+		$server_max_bytes = wp_max_upload_size();
+		$plugin_max_bytes = $plugin_max_mb * 1024 * 1024;
+		$effective_max_bytes = min($plugin_max_bytes, $server_max_bytes);
+
+		if (isset($file['size']) && $file['size'] > $effective_max_bytes) {
+			$effective_mb = round($effective_max_bytes / (1024 * 1024), 1);
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'FILE_TOO_LARGE',
+					'message' => sprintf(
+						/* translators: %s: Maximum allowed file size in MB */
+						esc_html__('This file is too large. Maximum allowed size is %s MB.', 'dragwyb-click-to-chat'),
+						$effective_mb
+					),
+				],
+				400
+			);
+		}
+
+		// Filename validation and sanitization
+		$raw_name = isset($file['name']) ? wp_unslash($file['name']) : '';
+		if (empty($raw_name) || strpos($raw_name, "\0") !== false) {
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'INVALID_FILENAME',
+					'message' => esc_html__('Invalid filename provided.', 'dragwyb-click-to-chat'),
+				],
+				400
+			);
+		}
+
+		$clean_name = sanitize_file_name($raw_name);
+		$file_ext = strtolower(pathinfo($clean_name, PATHINFO_EXTENSION));
+
+		if (empty($file_ext)) {
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'FILE_TYPE_NOT_ALLOWED',
+					'message' => esc_html__('Files without an extension are not supported.', 'dragwyb-click-to-chat'),
+				],
+				400
+			);
+		}
+
+		// Hardcoded dangerous extensions that can NEVER be allowed under any circumstances
+		$dangerous_exts = [
+			'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar', 'cgi',
+			'pl', 'py', 'sh', 'bash', 'exe', 'com', 'bat', 'cmd', 'msi', 'scr',
+			'dll', 'so', 'js', 'mjs', 'html', 'htm', 'shtml', 'svg', 'vbs', 'ps1',
+			'jar', 'apk', 'htaccess', 'htpasswd', 'ini', 'config', 'asp', 'aspx',
+		];
+
+		// Excluded types from admin settings merged with dangerous list
+		$configured_excluded_raw = isset($bot_settings['excluded_file_types']) ? (string) $bot_settings['excluded_file_types'] : '';
+		$configured_excluded = array_filter(array_map('trim', explode(',', strtolower($configured_excluded_raw))));
+		$all_excluded = array_unique(array_merge($dangerous_exts, $configured_excluded));
+
+		if (in_array($file_ext, $all_excluded, true)) {
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'FILE_TYPE_EXCLUDED',
+					'message' => esc_html__('Sorry, this file type is not permitted for security reasons.', 'dragwyb-click-to-chat'),
+				],
+				400
+			);
+		}
+
+		// Allowed types from admin settings
+		$configured_allowed_raw = isset($bot_settings['allowed_file_types']) ? (string) $bot_settings['allowed_file_types'] : 'jpg, jpeg, png, webp, gif, pdf, txt, doc, docx';
+		$configured_allowed = array_filter(array_map('trim', explode(',', strtolower($configured_allowed_raw))));
+		$effective_allowed = array_diff($configured_allowed, $all_excluded);
+
+		if (!in_array($file_ext, $effective_allowed, true)) {
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'FILE_TYPE_NOT_ALLOWED',
+					'message' => sprintf(
+						/* translators: %s: Comma-separated list of allowed file types */
+						esc_html__('This file type is not supported. Allowed types: %s', 'dragwyb-click-to-chat'),
+						implode(', ', $effective_allowed)
+					),
+				],
+				400
+			);
+		}
+
+		// Controlled MIME mapping
+		$controlled_mimes = [
+			'jpg'  => ['image/jpeg', 'image/pjpeg'],
+			'jpeg' => ['image/jpeg', 'image/pjpeg'],
+			'png'  => ['image/png'],
+			'webp' => ['image/webp'],
+			'gif'  => ['image/gif'],
+			'pdf'  => ['application/pdf'],
+			'txt'  => ['text/plain'],
+			'doc'  => ['application/msword'],
+			'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+		];
+
+		// WordPress filetype verification
+		$wp_check = wp_check_filetype_and_ext($file['tmp_name'], $clean_name);
+		if (empty($wp_check['ext']) || empty($wp_check['type'])) {
+			return new \WP_REST_Response(
+				[
+					'success' => false,
+					'code' => 'SECURITY_CHECK_FAILED',
+					'message' => esc_html__('File verification failed. Please try a different file.', 'dragwyb-click-to-chat'),
+				],
+				400
+			);
+		}
+
+		// MIME spoofing check: Ensure file contents match extension
+		if (isset($controlled_mimes[$file_ext])) {
+			if (!in_array($wp_check['type'], $controlled_mimes[$file_ext], true)) {
+				return new \WP_REST_Response(
+					[
+						'success' => false,
+						'code' => 'MIME_SPOOFING_DETECTED',
+						'message' => esc_html__('File content does not match its file extension.', 'dragwyb-click-to-chat'),
+					],
+					400
+				);
+			}
+		}
+
+		// Process upload via WordPress Media Library
 		$attachment_id = media_handle_upload('file', 0);
 
 		if (is_wp_error($attachment_id)) {
 			return new \WP_REST_Response(
 				[
 					'success' => false,
+					'code' => 'UPLOAD_FAILED',
 					'message' => $attachment_id->get_error_message(),
 				],
 				500
 			);
 		}
 
+		$url = wp_get_attachment_url($attachment_id);
+		$mime = get_post_mime_type($attachment_id) ?: ($wp_check['type'] ?: 'application/octet-stream');
+		$is_image = str_starts_with($mime, 'image/');
+
+		$attachment_data = [
+			'id' => 'att_' . wp_generate_uuid4(),
+			'attachmentId' => $attachment_id,
+			'type' => $is_image ? 'image' : 'file',
+			'name' => $clean_name,
+			'size' => isset($file['size']) ? intval($file['size']) : 0,
+			'mime' => $mime,
+			'url' => esc_url_raw($url),
+		];
+
 		return new \WP_REST_Response(
 			[
 				'success' => true,
+				'attachment' => $attachment_data,
+				// Legacy fields for backward compatibility
 				'id' => $attachment_id,
-				'url' => wp_get_attachment_url($attachment_id),
-				'name' => get_the_title($attachment_id),
+				'url' => esc_url_raw($url),
+				'name' => $clean_name,
 			],
 			200
 		);

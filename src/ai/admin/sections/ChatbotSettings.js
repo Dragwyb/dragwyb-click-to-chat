@@ -63,6 +63,24 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 		pre_questions_border_radius: chatbot.pre_questions_border_radius || 'rounded',
 		bot_avatar: chatbot.bot_avatar || '',
 		bubble_style: chatbot.bubble_style || 'rounded',
+		show_bot_avatar_in_chat: chatbot.show_bot_avatar_in_chat !== false,
+		show_user_avatar_in_chat: chatbot.show_user_avatar_in_chat !== false,
+		bot_icon_preset: chatbot.bot_icon_preset || 'bot',
+		user_avatar: chatbot.user_avatar || '',
+		user_icon_preset: chatbot.user_icon_preset || 'user',
+		enable_uploads: !! chatbot.enable_uploads,
+		allowed_file_types:
+			chatbot.allowed_file_types ||
+			'jpg, jpeg, png, webp, gif, pdf, txt, doc, docx',
+		excluded_file_types:
+			chatbot.excluded_file_types ||
+			'php, php3, php4, php5, phtml, phar, cgi, pl, py, sh, exe, bat, cmd, js, html, htm, svg',
+		max_upload_size: chatbot.max_upload_size ?? 5,
+		max_files_per_message: chatbot.max_files_per_message ?? 3,
+		store_chat_attachments: chatbot.store_chat_attachments || 'temp',
+		action_buttons: Array.isArray( chatbot.action_buttons )
+			? chatbot.action_buttons
+			: [],
 		save_chat: !! chatbot.save_chat,
 		ask_email: !! chatbot.ask_email,
 		enable_pre_questions: !! chatbot.enable_pre_questions,
@@ -81,6 +99,28 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 
 	const initial = ( form.bot_name || 'B' ).charAt( 0 ).toUpperCase();
 
+	const addActionButton = () => {
+		const newBtn = {
+			id: 'btn_' + Math.random().toString( 36 ).substr( 2, 7 ),
+			label: __( 'Contact Us', 'dragwyb-click-to-chat' ),
+			url: '',
+			target: '_blank',
+			type: 'link',
+		};
+		setField( 'action_buttons', [ ...form.action_buttons, newBtn ] );
+	};
+
+	const updateActionButton = ( index, field, val ) => {
+		const updated = [ ...form.action_buttons ];
+		updated[ index ] = { ...updated[ index ], [ field ]: val };
+		setField( 'action_buttons', updated );
+	};
+
+	const removeActionButton = ( index ) => {
+		const updated = form.action_buttons.filter( ( _, i ) => i !== index );
+		setField( 'action_buttons', updated );
+	};
+
 	const openMedia = () => {
 		if ( ! window.wp?.media ) {
 			showNotice(
@@ -91,12 +131,32 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 		}
 		const frame = window.wp.media( {
 			title: __( 'Select Bot Avatar', 'dragwyb-click-to-chat' ),
-			button: { text: __( 'Use as Avatar', 'dragwyb-click-to-chat' ) },
+			button: { text: __( 'Use as Bot Avatar', 'dragwyb-click-to-chat' ) },
 			multiple: false,
 		} );
 		frame.on( 'select', () => {
 			const attachment = frame.state().get( 'selection' ).first().toJSON();
 			setField( 'bot_avatar', attachment.url );
+		} );
+		frame.open();
+	};
+
+	const openUserMedia = () => {
+		if ( ! window.wp?.media ) {
+			showNotice(
+				__( 'WordPress media modal is not available.', 'dragwyb-click-to-chat' ),
+				'error'
+			);
+			return;
+		}
+		const frame = window.wp.media( {
+			title: __( 'Select User Avatar', 'dragwyb-click-to-chat' ),
+			button: { text: __( 'Use as User Avatar', 'dragwyb-click-to-chat' ) },
+			multiple: false,
+		} );
+		frame.on( 'select', () => {
+			const attachment = frame.state().get( 'selection' ).first().toJSON();
+			setField( 'user_avatar', attachment.url );
 		} );
 		frame.open();
 	};
@@ -330,7 +390,238 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 								checked={ form.enable_pre_questions }
 								onChange={ ( v ) => setField( 'enable_pre_questions', v ) }
 							/>
+							<SettingCard
+								id="enable_uploads"
+								title={ __(
+									'Allow File Uploads in Chat Panel',
+									'dragwyb-click-to-chat'
+								) }
+								desc={ __(
+									'Enable visitors to attach images and documents when chatting with the AI',
+									'dragwyb-click-to-chat'
+								) }
+								checked={ form.enable_uploads }
+								onChange={ ( v ) => setField( 'enable_uploads', v ) }
+							/>
 						</div>
+					</section>
+
+					{ form.enable_uploads && (
+						<section className="dctc-ai-bot-section">
+							<h2 className="dctc-ai-bot-section__title">
+								{ __( 'File Upload & Attachment Settings', 'dragwyb-click-to-chat' ) }
+							</h2>
+							<div className="dctc-ai-bot-grid">
+								<div className="dctc-ai-bot-col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="allowed_file_types">
+											{ __( 'Allowed File Types / Extensions', 'dragwyb-click-to-chat' ) }
+										</label>
+										<input
+											type="text"
+											id="allowed_file_types"
+											className="dctc-ai-bot-input"
+											value={ form.allowed_file_types }
+											onChange={ ( e ) => setField( 'allowed_file_types', e.target.value ) }
+											placeholder="jpg, jpeg, png, webp, gif, pdf, txt, doc, docx"
+										/>
+										<p className="dctc-ai-bot-hint">
+											{ __(
+												'Comma-separated list of allowed file extensions (e.g. jpg, png, pdf, docx).',
+												'dragwyb-click-to-chat'
+											) }
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="excluded_file_types">
+											{ __( 'Excluded File Types (Strict Blacklist)', 'dragwyb-click-to-chat' ) }
+										</label>
+										<input
+											type="text"
+											id="excluded_file_types"
+											className="dctc-ai-bot-input"
+											value={ form.excluded_file_types }
+											onChange={ ( e ) => setField( 'excluded_file_types', e.target.value ) }
+											placeholder="php, js, html, exe, svg"
+										/>
+										<p className="dctc-ai-bot-hint">
+											{ __(
+												'File extensions that will always be rejected. Takes precedence over allowed types.',
+												'dragwyb-click-to-chat'
+											) }
+										</p>
+									</div>
+								</div>
+
+								<div className="dctc-ai-bot-col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="max_upload_size">
+											{ __( 'Max File Size (MB)', 'dragwyb-click-to-chat' ) }
+										</label>
+										<input
+											type="number"
+											id="max_upload_size"
+											className="dctc-ai-bot-input"
+											min="1"
+											max="50"
+											value={ form.max_upload_size }
+											onChange={ ( e ) =>
+												setField(
+													'max_upload_size',
+													parseInt( e.target.value, 10 ) || 5
+												)
+											}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{ __(
+												'Maximum size per file (in MB). Cannot exceed server upload limit.',
+												'dragwyb-click-to-chat'
+											) }
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="max_files_per_message">
+											{ __( 'Max Files Per Message', 'dragwyb-click-to-chat' ) }
+										</label>
+										<input
+											type="number"
+											id="max_files_per_message"
+											className="dctc-ai-bot-input"
+											min="1"
+											max="10"
+											value={ form.max_files_per_message }
+											onChange={ ( e ) =>
+												setField(
+													'max_files_per_message',
+													parseInt( e.target.value, 10 ) || 3
+												)
+											}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{ __(
+												'Maximum number of attachments allowed per message (1 - 10, default: 3).',
+												'dragwyb-click-to-chat'
+											) }
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="store_chat_attachments">
+											{ __( 'Store Chat Attachments', 'dragwyb-click-to-chat' ) }
+										</label>
+										<select
+											id="store_chat_attachments"
+											className="dctc-ai-bot-select"
+											value={ form.store_chat_attachments || 'temp' }
+											onChange={ ( e ) => setField( 'store_chat_attachments', e.target.value ) }
+										>
+											<option value="temp">{ __( 'Store Temporarily (Recommended)', 'dragwyb-click-to-chat' ) }</option>
+											<option value="save_with_history">{ __( 'Store with Chat History in Media Library', 'dragwyb-click-to-chat' ) }</option>
+											<option value="do_not_store">{ __( 'Do Not Store After Processing', 'dragwyb-click-to-chat' ) }</option>
+										</select>
+										<p className="dctc-ai-bot-hint">
+											{ __(
+												'Configure how attachment files are preserved after being processed.',
+												'dragwyb-click-to-chat'
+											) }
+										</p>
+									</div>
+								</div>
+							</div>
+						</section>
+					) }
+
+					<section className="dctc-ai-bot-section">
+						<div style={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } }>
+							<div>
+								<h2 className="dctc-ai-bot-section__title" style={ { marginBottom: '0.25rem' } }>
+									{ __( 'Quick Action Buttons in Chat Panel', 'dragwyb-click-to-chat' ) }
+								</h2>
+								<p className="dctc-ai-bot-hint">
+									{ __(
+										'Add custom action buttons (e.g. Contact Us, View Products, Support) displayed in the chat window.',
+										'dragwyb-click-to-chat'
+									) }
+								</p>
+							</div>
+							<button
+								type="button"
+								className="dctc-ai-btn dctc-ai-btn-secondary"
+								onClick={ addActionButton }
+							>
+								<span className="dashicons dashicons-plus-alt2" style={ { marginRight: '4px' } } />
+								{ __( 'Add Button', 'dragwyb-click-to-chat' ) }
+							</button>
+						</div>
+
+						{ form.action_buttons.length === 0 ? (
+							<p style={ { color: '#64748b', fontStyle: 'italic', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' } }>
+								{ __( 'No quick action buttons added yet. Click "+ Add Button" to add Contact Us, Products, or custom links.', 'dragwyb-click-to-chat' ) }
+							</p>
+						) : (
+							<div style={ { display: 'flex', flexDirection: 'column', gap: '12px' } }>
+								{ form.action_buttons.map( ( btn, index ) => (
+									<div
+										key={ btn.id || index }
+										style={ {
+											display: 'flex',
+											alignItems: 'center',
+											gap: '12px',
+											background: '#f8fafc',
+											padding: '12px',
+											borderRadius: '8px',
+											border: '1px solid #e2e8f0',
+										} }
+									>
+										<div style={ { flex: 1 } }>
+											<input
+												type="text"
+												className="dctc-ai-bot-input"
+												placeholder={ __( 'Button Label (e.g. 📞 Contact Us)', 'dragwyb-click-to-chat' ) }
+												value={ btn.label }
+												onChange={ ( e ) =>
+													updateActionButton( index, 'label', e.target.value )
+												}
+											/>
+										</div>
+										<div style={ { flex: 2 } }>
+											<input
+												type="text"
+												className="dctc-ai-bot-input"
+												placeholder={ __( 'URL (e.g. /contact or https://...)', 'dragwyb-click-to-chat' ) }
+												value={ btn.url }
+												onChange={ ( e ) =>
+													updateActionButton( index, 'url', e.target.value )
+												}
+											/>
+										</div>
+										<div style={ { width: '130px' } }>
+											<select
+												className="dctc-ai-bot-select"
+												value={ btn.target || '_blank' }
+												onChange={ ( e ) =>
+													updateActionButton( index, 'target', e.target.value )
+												}
+											>
+												<option value="_blank">{ __( 'New Tab', 'dragwyb-click-to-chat' ) }</option>
+												<option value="_self">{ __( 'Same Tab', 'dragwyb-click-to-chat' ) }</option>
+											</select>
+										</div>
+										<button
+											type="button"
+											className="dctc-ai-btn"
+											style={ { color: '#ef4444', borderColor: '#fca5a5', padding: '6px 10px' } }
+											onClick={ () => removeActionButton( index ) }
+											title={ __( 'Remove button', 'dragwyb-click-to-chat' ) }
+										>
+											<span className="dashicons dashicons-trash" />
+										</button>
+									</div>
+								) ) }
+							</div>
+						) }
 					</section>
 
 					{ form.enable_pre_questions && (
@@ -617,7 +908,7 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 					<div className="dctc-ai-bot-grid">
 						<section className="dctc-ai-bot-section">
 							<h2 className="dctc-ai-bot-section__title">
-								{ __( 'Bot Avatar', 'dragwyb-click-to-chat' ) }
+								{ __( 'Bot Avatar / Icon', 'dragwyb-click-to-chat' ) }
 							</h2>
 							<div
 								className="dctc-ai-bot-avatar-card"
@@ -626,10 +917,37 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 								<div className="dctc-ai-bot-avatar-preview">
 									{ form.bot_avatar ? (
 										<img src={ form.bot_avatar } alt="" />
-									) : (
+									) : form.bot_icon_preset === 'initial' ? (
 										<span>{ initial }</span>
+									) : form.bot_icon_preset === 'sparkle' ? (
+										<span className="dashicons dashicons-star-filled" style={ { fontSize: '28px' } } />
+									) : form.bot_icon_preset === 'support' ? (
+										<span className="dashicons dashicons-format-audio" style={ { fontSize: '28px' } } />
+									) : form.bot_icon_preset === 'chat' ? (
+										<span className="dashicons dashicons-format-chat" style={ { fontSize: '28px' } } />
+									) : (
+										<span className="dashicons dashicons-superhero-alt" style={ { fontSize: '28px' } } />
 									) }
 								</div>
+
+								<div style={ { width: '100%', marginTop: '10px' } }>
+									<label style={ { display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' } }>
+										{ __( 'Bot Icon Preset', 'dragwyb-click-to-chat' ) }
+									</label>
+									<select
+										className="dctc-ai-bot-select"
+										value={ form.bot_icon_preset || 'bot' }
+										onChange={ ( e ) => setField( 'bot_icon_preset', e.target.value ) }
+										style={ { width: '100%', marginBottom: '10px' } }
+									>
+										<option value="bot">{ __( '🤖 Robot Assistant', 'dragwyb-click-to-chat' ) }</option>
+										<option value="sparkle">{ __( '✨ Sparkle AI', 'dragwyb-click-to-chat' ) }</option>
+										<option value="support">{ __( '🎧 Support Agent', 'dragwyb-click-to-chat' ) }</option>
+										<option value="chat">{ __( '💬 Chat Bubble', 'dragwyb-click-to-chat' ) }</option>
+										<option value="initial">{ __( '🔤 Bot Name Initial', 'dragwyb-click-to-chat' ) }</option>
+									</select>
+								</div>
+
 								<button
 									type="button"
 									className="dctc-ai-btn dctc-ai-btn-primary dctc-ai-bot-upload-btn"
@@ -639,7 +957,9 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 										className="dashicons dashicons-upload"
 										aria-hidden="true"
 									/>
-									{ __( 'Upload New', 'dragwyb-click-to-chat' ) }
+									{ form.bot_avatar
+										? __( 'Change Custom Bot Image', 'dragwyb-click-to-chat' )
+										: __( 'Upload Custom Bot Image', 'dragwyb-click-to-chat' ) }
 								</button>
 								{ !! form.bot_avatar && (
 									<button
@@ -647,12 +967,77 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 										className="dctc-ai-bot-remove-avatar"
 										onClick={ () => setField( 'bot_avatar', '' ) }
 									>
-										{ __( 'Remove', 'dragwyb-click-to-chat' ) }
+										{ __( 'Reset to Preset Icon', 'dragwyb-click-to-chat' ) }
 									</button>
 								) }
 								<p className="dctc-ai-bot-hint dctc-ai-bot-hint--center">
 									{ __(
-										'JPG, PNG or SVG. Max size 2MB.',
+										'Shown next to AI assistant responses in chat.',
+										'dragwyb-click-to-chat'
+									) }
+								</p>
+							</div>
+						</section>
+
+						<section className="dctc-ai-bot-section">
+							<h2 className="dctc-ai-bot-section__title">
+								{ __( 'User Avatar / Icon', 'dragwyb-click-to-chat' ) }
+							</h2>
+							<div
+								className="dctc-ai-bot-avatar-card"
+								style={ { margin: '0 auto' } }
+							>
+								<div className="dctc-ai-bot-avatar-preview" style={ { background: '#f1f5f9', color: '#64748b' } }>
+									{ form.user_avatar ? (
+										<img src={ form.user_avatar } alt="" />
+									) : (
+										<span className="dashicons dashicons-admin-users" style={ { fontSize: '32px' } } />
+									) }
+								</div>
+
+								<div style={ { width: '100%', marginTop: '10px' } }>
+									<label style={ { display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' } }>
+										{ __( 'User Icon Preset', 'dragwyb-click-to-chat' ) }
+									</label>
+									<select
+										className="dctc-ai-bot-select"
+										value={ form.user_icon_preset || 'user' }
+										onChange={ ( e ) => setField( 'user_icon_preset', e.target.value ) }
+										style={ { width: '100%', marginBottom: '10px' } }
+									>
+										<option value="user">{ __( '👤 Default User', 'dragwyb-click-to-chat' ) }</option>
+										<option value="user-circle">{ __( '🔘 User Circle', 'dragwyb-click-to-chat' ) }</option>
+										<option value="business">{ __( '👔 Business Client', 'dragwyb-click-to-chat' ) }</option>
+										<option value="smile">{ __( '😊 Friendly Smile', 'dragwyb-click-to-chat' ) }</option>
+										<option value="star">{ __( '⭐ Star Member', 'dragwyb-click-to-chat' ) }</option>
+									</select>
+								</div>
+
+								<button
+									type="button"
+									className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-bot-upload-btn"
+									onClick={ openUserMedia }
+								>
+									<span
+										className="dashicons dashicons-upload"
+										aria-hidden="true"
+									/>
+									{ form.user_avatar
+										? __( 'Change Custom Avatar', 'dragwyb-click-to-chat' )
+										: __( 'Upload Custom Avatar', 'dragwyb-click-to-chat' ) }
+								</button>
+								{ !! form.user_avatar && (
+									<button
+										type="button"
+										className="dctc-ai-bot-remove-avatar"
+										onClick={ () => setField( 'user_avatar', '' ) }
+									>
+										{ __( 'Reset to Preset Icon', 'dragwyb-click-to-chat' ) }
+									</button>
+								) }
+								<p className="dctc-ai-bot-hint dctc-ai-bot-hint--center">
+									{ __(
+										'Shown next to visitor messages in chat.',
 										'dragwyb-click-to-chat'
 									) }
 								</p>
@@ -721,6 +1106,28 @@ export default function ChatbotSettings( { settings, onSave, showNotice } ) {
 											'dragwyb-click-to-chat'
 										) }
 									</p>
+								</div>
+								<div className="dctc-ai-bot-features" style={ { marginTop: '1rem' } }>
+									<SettingCard
+										id="show_bot_avatar_in_chat"
+										title={ __( 'Show Bot Avatar in Chat Messages', 'dragwyb-click-to-chat' ) }
+										desc={ __(
+											'Display the bot avatar badge next to AI assistant responses',
+											'dragwyb-click-to-chat'
+										) }
+										checked={ form.show_bot_avatar_in_chat }
+										onChange={ ( v ) => setField( 'show_bot_avatar_in_chat', v ) }
+									/>
+									<SettingCard
+										id="show_user_avatar_in_chat"
+										title={ __( 'Show User Avatar in Chat Messages', 'dragwyb-click-to-chat' ) }
+										desc={ __(
+											'Display a user icon badge next to visitor messages',
+											'dragwyb-click-to-chat'
+										) }
+										checked={ form.show_user_avatar_in_chat }
+										onChange={ ( v ) => setField( 'show_user_avatar_in_chat', v ) }
+									/>
 								</div>
 							</div>
 						</section>

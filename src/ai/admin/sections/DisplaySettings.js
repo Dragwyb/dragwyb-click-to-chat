@@ -45,6 +45,7 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 		custom_horizontal_unit: display.custom_horizontal_unit || 'px',
 		launcher_text: display.launcher_text || '',
 		assistant_icon: display.assistant_icon || '',
+		launcher_icon_preset: display.launcher_icon_preset || 'chat',
 		trigger_type: display.trigger_type || 'click',
 		trigger_delay: display.trigger_delay ?? 5,
 		time_delay: display.time_delay ?? 0,
@@ -910,13 +911,35 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 						</div>
 					</div>
 
+					<div className="dctc-ai-bot-field">
+						<label htmlFor="launcher_icon_preset">
+							{ __( 'Launcher Icon Preset', 'dragwyb-click-to-chat' ) }
+						</label>
+						<select
+							id="launcher_icon_preset"
+							className="dctc-ai-bot-select"
+							value={ form.launcher_icon_preset }
+							onChange={ ( e ) => setField( 'launcher_icon_preset', e.target.value ) }
+						>
+							<option value="chat">{ __( '💬 Chat Bubble (Default)', 'dragwyb-click-to-chat' ) }</option>
+							<option value="bot">{ __( '🤖 AI Robot', 'dragwyb-click-to-chat' ) }</option>
+							<option value="sparkle">{ __( '✨ AI Magic Sparkle', 'dragwyb-click-to-chat' ) }</option>
+							<option value="support">{ __( '🎧 Support Agent', 'dragwyb-click-to-chat' ) }</option>
+							<option value="help">{ __( '❓ Help Desk', 'dragwyb-click-to-chat' ) }</option>
+							<option value="whatsapp">{ __( '📱 WhatsApp Chat', 'dragwyb-click-to-chat' ) }</option>
+						</select>
+						<p className="dctc-ai-bot-hint">
+							{ __( 'Select an icon style for the floating button or upload your custom icon below.', 'dragwyb-click-to-chat' ) }
+						</p>
+					</div>
+
 					<div className="dctc-ai-bot-field dctc-ai-assistant-icon-field">
 						<label>
-							{ __( 'Assistant Icon', 'dragwyb-click-to-chat' ) }
+							{ __( 'Custom Assistant Icon (Optional)', 'dragwyb-click-to-chat' ) }
 						</label>
 						<p className="dctc-ai-bot-hint">
 							{ __(
-								'Choose an icon for the floating AI chat button. Upload SVG, PNG, JPG, or WebP.',
+								'Choose a custom image/icon for the floating button. Overrides the preset icon when provided.',
 								'dragwyb-click-to-chat'
 							) }
 						</p>
@@ -965,7 +988,7 @@ export default function DisplaySettings( { settings, onSave, showNotice } ) {
 									</span>
 								) : (
 									<span className="dctc-ai-assistant-icon-filename">
-										{ __( 'Default chat icon', 'dragwyb-click-to-chat' ) }
+										{ __( 'Using preset icon', 'dragwyb-click-to-chat' ) }
 									</span>
 								) }
 							</div>
