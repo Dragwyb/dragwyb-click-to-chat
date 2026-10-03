@@ -10,6 +10,7 @@ import AiEngineSettings from './sections/AiEngineSettings';
 import KnowledgeBase from './sections/KnowledgeBase';
 import LeadsManagement from './sections/LeadsManagement';
 import ChatSessions from './sections/ChatSessions';
+import AdminCopilot from './sections/AdminCopilot';
 import ChatPreview from './sections/ChatPreview';
 import ErrorLogs from './sections/ErrorLogs';
 
@@ -43,6 +44,16 @@ const TABS = [
 			'dragwyb-click-to-chat'
 		),
 		component: KnowledgeBase,
+	},
+	{
+		id: 'ai-copilot',
+		label: __( 'AI Copilot', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-superhero',
+		desc: __(
+			'Ask your AI Copilot anything about visitor questions, unanswered gaps, lead analytics, and content advice.',
+			'dragwyb-click-to-chat'
+		),
+		component: AdminCopilot,
 	},
 	{
 		id: 'leads',
@@ -97,7 +108,7 @@ const NAV_GROUPS = [
 	},
 	{
 		label: __( 'Leads & Insights', 'dragwyb-click-to-chat' ),
-		items: [ 'leads', 'chat-sessions' ],
+		items: [ 'ai-copilot', 'leads', 'chat-sessions' ],
 	},
 	{
 		label: __( 'Monitor', 'dragwyb-click-to-chat' ),

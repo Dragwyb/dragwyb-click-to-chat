@@ -90,13 +90,47 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base
 			rawurlencode($key)
 		);
 
+		$attachments = isset($options['attachments']) && is_array($options['attachments']) ? $options['attachments'] : [];
+		$user_parts = [];
+		if (!empty($prompt)) {
+			$user_parts[] = ['text' => trim($prompt)];
+		}
+		if (!empty($attachments)) {
+			foreach ($attachments as $att) {
+				if (!empty($att['type']) && $att['type'] === 'image' && !empty($att['url'])) {
+					$att_id = !empty($att['attachmentId']) ? intval($att['attachmentId']) : 0;
+					$file_path = $att_id ? get_attached_file($att_id) : '';
+					if ($file_path && file_exists($file_path)) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+						$image_data = base64_encode(file_get_contents($file_path));
+						$mime_type = !empty($att['mime']) ? $att['mime'] : 'image/jpeg';
+						$user_parts[] = [
+							'inline_data' => [
+								'mime_type' => $mime_type,
+								'data'      => $image_data,
+							],
+						];
+					} else {
+						$user_parts[] = [
+							'text' => sprintf('[Attached Image: %s - %s]', sanitize_file_name($att['name']), esc_url_raw($att['url'])),
+						];
+					}
+				} elseif (!empty($att['name'])) {
+					$user_parts[] = [
+						'text' => sprintf('[Attached File: %s (%s) - %s]', sanitize_file_name($att['name']), sanitize_text_field($att['mime'] ?? ''), esc_url_raw($att['url'] ?? '')),
+					];
+				}
+			}
+		}
+		if (empty($user_parts)) {
+			$user_parts[] = ['text' => 'Analyze the provided content.'];
+		}
+
 		$payload = [
 			'contents' => [
 				[
 					'role'  => 'user',
-					'parts' => [
-						['text' => trim($prompt)],
-					],
+					'parts' => $user_parts,
 				],
 			],
 			'generationConfig' => [

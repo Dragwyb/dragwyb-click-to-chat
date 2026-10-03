@@ -422,6 +422,9 @@ export default function ChatWidget( { settings, inline } ) {
 	const [ isEmojiOpen, setIsEmojiOpen ] = useState( false );
 	const [ isAttachMenuOpen, setIsAttachMenuOpen ] = useState( false );
 	const [ uploadError, setUploadError ] = useState( '' );
+	const [ isListening, setIsListening ] = useState( false );
+	const [ speakingIndex, setSpeakingIndex ] = useState( null );
+	const recognitionRef = useRef( null );
 	const [ sessionId, setSessionId ] = useState(
 		() =>
 			window.dctc_ai_frontend_data?.session_id ||
@@ -571,6 +574,110 @@ export default function ChatWidget( { settings, inline } ) {
 			document.removeEventListener( 'touchstart', handleEmojiOutside );
 		};
 	}, [ isEmojiOpen ] );
+
+	// Voice recognition and TTS cleanup on unmount
+	useEffect( () => {
+		return () => {
+			if ( recognitionRef.current ) {
+				try {
+					recognitionRef.current.stop();
+				} catch ( e ) {}
+			}
+			if ( typeof window !== 'undefined' && window.speechSynthesis ) {
+				window.speechSynthesis.cancel();
+			}
+		};
+	}, [] );
+
+	const toggleVoiceRecognition = useCallback( () => {
+		const SpeechRecognition =
+			window.SpeechRecognition || window.webkitSpeechRecognition;
+
+		if ( ! SpeechRecognition ) {
+			setUploadError(
+				__(
+					'Voice input is not supported in this browser.',
+					'dragwyb-click-to-chat'
+				)
+			);
+			setTimeout( () => setUploadError( '' ), 4000 );
+			return;
+		}
+
+		if ( isListening && recognitionRef.current ) {
+			recognitionRef.current.stop();
+			setIsListening( false );
+			return;
+		}
+
+		try {
+			const recognition = new SpeechRecognition();
+			recognition.continuous = false;
+			recognition.interimResults = false;
+			const voiceLang =
+				bot?.voice_language && bot.voice_language !== 'auto'
+					? bot.voice_language
+					: ( navigator.language || 'en-US' );
+			recognition.lang = voiceLang;
+
+			recognition.onstart = () => {
+				setIsListening( true );
+			};
+
+			recognition.onresult = ( event ) => {
+				let transcript = '';
+				for ( let i = event.resultIndex; i < event.results.length; i++ ) {
+					transcript += event.results[ i ][ 0 ].transcript;
+				}
+				if ( transcript ) {
+					setInput( ( prev ) => {
+						const trimmed = prev.trim();
+						return trimmed ? `${ trimmed } ${ transcript }` : transcript;
+					} );
+				}
+			};
+
+			recognition.onerror = () => {
+				setIsListening( false );
+			};
+
+			recognition.onend = () => {
+				setIsListening( false );
+			};
+
+			recognitionRef.current = recognition;
+			recognition.start();
+		} catch ( err ) {
+			setIsListening( false );
+		}
+	}, [ isListening, bot ] );
+
+	const toggleSpeakMessage = useCallback( ( text, msgIdx ) => {
+		if ( typeof window === 'undefined' || ! window.speechSynthesis ) {
+			return;
+		}
+
+		if ( speakingIndex === msgIdx ) {
+			window.speechSynthesis.cancel();
+			setSpeakingIndex( null );
+			return;
+		}
+
+		window.speechSynthesis.cancel();
+		const cleanText = ( text || '' ).replace( /[*_#`[\]()]/g, '' );
+		const utterance = new SpeechSynthesisUtterance( cleanText );
+		if ( bot?.voice_language && bot.voice_language !== 'auto' ) {
+			utterance.lang = bot.voice_language;
+		}
+		utterance.onend = () => {
+			setSpeakingIndex( null );
+		};
+		utterance.onerror = () => {
+			setSpeakingIndex( null );
+		};
+		setSpeakingIndex( msgIdx );
+		window.speechSynthesis.speak( utterance );
+	}, [ speakingIndex, bot ] );
 
 	// Click / tap outside closes floating chat.
 	useEffect( () => {
@@ -1112,6 +1219,7 @@ export default function ChatWidget( { settings, inline } ) {
 					email,
 					attachments: readyAttachments,
 					page_context: activePageContext,
+					visitor_lang: navigator.language || navigator.userLanguage || '',
 				},
 			} );
 
@@ -1798,6 +1906,48 @@ export default function ChatWidget( { settings, inline } ) {
 														)
 													)
 												),
+											createElement(
+												'div',
+												{ className: 'dctc-ai-msg-footer' },
+												( typeof window !== 'undefined' && !! window.speechSynthesis ) &&
+													createElement(
+														'button',
+														{
+															type: 'button',
+															className: `dctc-ai-msg-tts-btn ${
+																speakingIndex === messageIndex
+																	? 'is-speaking'
+																	: ''
+															}`,
+															onClick: () =>
+																toggleSpeakMessage(
+																	message.content,
+																	messageIndex
+																),
+															title:
+																speakingIndex === messageIndex
+																	? __(
+																			'Stop reading',
+																			'dragwyb-click-to-chat'
+																	  )
+																	: __(
+																			'Read aloud',
+																			'dragwyb-click-to-chat'
+																	  ),
+															'aria-label':
+																speakingIndex === messageIndex
+																	? __(
+																			'Stop reading',
+																			'dragwyb-click-to-chat'
+																	  )
+																	: __(
+																			'Read aloud',
+																			'dragwyb-click-to-chat'
+																	  ),
+														},
+														speakingIndex === messageIndex ? '⏹️' : '🔊'
+													)
+											),
 											message.action_buttons &&
 												message.action_buttons.length > 0 &&
 												createElement(
@@ -3241,6 +3391,43 @@ export default function ChatWidget( { settings, inline } ) {
 										rows: 1,
 										disabled: isLoading,
 									} ),
+
+									// Voice Speech-to-Text Button
+									( bot?.enable_voice_input !== false ) &&
+										createElement(
+											'button',
+											{
+												type: 'button',
+												className: `dctc-ai-composer-voice-btn ${
+													isListening ? 'is-listening' : ''
+												}`,
+												onClick: toggleVoiceRecognition,
+												title: isListening
+													? __(
+															'Listening... Click to stop',
+															'dragwyb-click-to-chat'
+													  )
+													: __(
+															'Voice input',
+															'dragwyb-click-to-chat'
+													  ),
+												'aria-label': isListening
+													? __(
+															'Stop voice input',
+															'dragwyb-click-to-chat'
+													  )
+													: __(
+															'Voice input',
+															'dragwyb-click-to-chat'
+													  ),
+											},
+											isListening
+												? createElement( 'span', {
+														className:
+															'dctc-ai-voice-active-indicator',
+												  } )
+												: '🎙️'
+										),
 
 									// Emoji Button on right of input (before Send)
 									createElement(

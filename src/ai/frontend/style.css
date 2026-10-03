@@ -1859,3 +1859,86 @@
     transform: scale(1) translateY(0);
   }
 }
+
+/* -------------------------------------------------------------------------
+   Feature 14: Voice AI (Speech-to-Text & Text-to-Speech)
+   ------------------------------------------------------------------------- */
+.dctc-ai-composer-voice-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  font-size: 18px;
+  height: 34px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 34px;
+}
+.dctc-ai-composer-voice-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  transform: scale(1.08);
+}
+.dctc-ai-composer-voice-btn.is-listening {
+  background: #fee2e2;
+  color: #ef4444;
+}
+.dctc-ai-voice-active-indicator {
+  animation: dctcAiVoicePulse 1.2s infinite ease-in-out;
+  background: #ef4444;
+  border-radius: 50%;
+  display: block;
+  height: 14px;
+  width: 14px;
+}
+@keyframes dctcAiVoicePulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    transform: scale(0.9);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    transform: scale(1.2);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    transform: scale(0.9);
+  }
+}
+
+.dctc-ai-msg-footer {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.dctc-ai-msg-tts-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0.75;
+  padding: 3px 6px;
+  transition: all 0.15s ease;
+}
+.dctc-ai-msg-tts-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #334155;
+  opacity: 1;
+}
+.dctc-ai-msg-tts-btn.is-speaking {
+  color: #2563eb;
+  opacity: 1;
+}

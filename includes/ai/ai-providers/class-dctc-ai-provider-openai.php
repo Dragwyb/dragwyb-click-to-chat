@@ -83,7 +83,30 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base
 		if (!empty($system_message)) {
 			$messages[] = ['role' => 'system', 'content' => $system_message];
 		}
-		$messages[] = ['role' => 'user', 'content' => trim($prompt)];
+
+		$attachments = isset($options['attachments']) && is_array($options['attachments']) ? $options['attachments'] : [];
+		if (!empty($attachments)) {
+			$user_content = [];
+			if (!empty($prompt)) {
+				$user_content[] = ['type' => 'text', 'text' => trim($prompt)];
+			}
+			foreach ($attachments as $att) {
+				if (!empty($att['type']) && $att['type'] === 'image' && !empty($att['url'])) {
+					$user_content[] = [
+						'type'      => 'image_url',
+						'image_url' => ['url' => esc_url_raw($att['url'])],
+					];
+				} elseif (!empty($att['name'])) {
+					$user_content[] = [
+						'type' => 'text',
+						'text' => sprintf('[Attached File: %s (%s) - %s]', sanitize_file_name($att['name']), sanitize_text_field($att['mime'] ?? ''), esc_url_raw($att['url'] ?? '')),
+					];
+				}
+			}
+			$messages[] = ['role' => 'user', 'content' => $user_content];
+		} else {
+			$messages[] = ['role' => 'user', 'content' => trim($prompt)];
+		}
 
 		$payload = [
 			'model'       => $model,

@@ -881,6 +881,26 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					}
 				}
 			}
+
+			// Feature 14: Clean temporary chat attachments older than 24h
+			try {
+				global $wpdb;
+				$cutoff = time() - DAY_IN_SECONDS;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$temp_attachments = $wpdb->get_col( $wpdb->prepare(
+					"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_dctc_ai_temporary' AND meta_value < %d LIMIT 50",
+					$cutoff
+				) );
+				if ( ! empty( $temp_attachments ) ) {
+					foreach ( $temp_attachments as $att_id ) {
+						wp_delete_attachment( (int) $att_id, true );
+					}
+				}
+			} catch ( Exception $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Dragwyb AI Temp Attachment Cleanup Error: ' . $e->getMessage() );
+				}
+			}
 		}
 	}
 

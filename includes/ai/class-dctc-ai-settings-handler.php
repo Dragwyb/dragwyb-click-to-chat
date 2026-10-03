@@ -469,6 +469,59 @@ class DCTC_AI_Settings_Handler
 				'permission_callback' => '__return_true',
 			]
 		);
+
+		// Admin AI Copilot endpoints
+		register_rest_route(
+			'dctc-ai/v1',
+			'/copilot',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => function($request) {
+					$params = $request->get_json_params();
+					$prompt = sanitize_textarea_field($params['prompt'] ?? '');
+					if (empty($prompt)) {
+						return new \WP_REST_Response([
+							'success' => false,
+							'message' => esc_html__('Prompt cannot be empty.', 'dragwyb-click-to-chat'),
+						], 400);
+					}
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-admin-copilot.php';
+					try {
+						$res = DCTC_AI_Admin_Copilot::execute_copilot_chat($prompt);
+						return new \WP_REST_Response([
+							'success'  => true,
+							'message'  => $res['message'],
+							'provider' => $res['provider'],
+							'model'    => $res['model'],
+							'stats'    => $res['stats'],
+						], 200);
+					} catch (\Throwable $e) {
+						return new \WP_REST_Response([
+							'success' => false,
+							'message' => $e->getMessage(),
+						], 500);
+					}
+				},
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/copilot/stats',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => function() {
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-admin-copilot.php';
+					$stats = DCTC_AI_Admin_Copilot::get_analytics_summary();
+					return new \WP_REST_Response([
+						'success' => true,
+						'stats'   => $stats,
+					], 200);
+				},
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
 	}
 
 	/**
@@ -723,6 +776,13 @@ class DCTC_AI_Settings_Handler
 				'ticket_notification_email' => '',
 				'appointment_notification_email' => '',
 				'enable_page_context' => true,
+				'enable_multilingual' => true,
+				'preferred_language' => 'auto',
+				'visitor_language_override' => true,
+				'enable_voice_input' => true,
+				'enable_voice_output' => false,
+				'voice_language' => 'auto',
+				'enable_vision_understanding' => true,
 			],
 			'display' => [
 				'entire_site' => false,
@@ -863,6 +923,13 @@ class DCTC_AI_Settings_Handler
 			'enable_ai_tools',
 			'enabled_tools',
 			'enable_page_context',
+			'enable_multilingual',
+			'preferred_language',
+			'visitor_language_override',
+			'enable_voice_input',
+			'enable_voice_output',
+			'voice_language',
+			'enable_vision_understanding',
 		];
 
 		$public_chatbot = [];
@@ -1132,6 +1199,13 @@ class DCTC_AI_Settings_Handler
 			'ticket_notification_email' => isset($params['ticket_notification_email']) ? sanitize_email($params['ticket_notification_email']) : (isset($existing_chatbot['ticket_notification_email']) ? $existing_chatbot['ticket_notification_email'] : ''),
 			'appointment_notification_email' => isset($params['appointment_notification_email']) ? sanitize_email($params['appointment_notification_email']) : (isset($existing_chatbot['appointment_notification_email']) ? $existing_chatbot['appointment_notification_email'] : ''),
 			'enable_page_context' => isset($params['enable_page_context']) ? (bool) $params['enable_page_context'] : (isset($existing_chatbot['enable_page_context']) ? (bool) $existing_chatbot['enable_page_context'] : true),
+			'enable_multilingual' => isset($params['enable_multilingual']) ? (bool) $params['enable_multilingual'] : (isset($existing_chatbot['enable_multilingual']) ? (bool) $existing_chatbot['enable_multilingual'] : true),
+			'preferred_language' => isset($params['preferred_language']) ? sanitize_text_field($params['preferred_language']) : (isset($existing_chatbot['preferred_language']) ? $existing_chatbot['preferred_language'] : 'auto'),
+			'visitor_language_override' => isset($params['visitor_language_override']) ? (bool) $params['visitor_language_override'] : (isset($existing_chatbot['visitor_language_override']) ? (bool) $existing_chatbot['visitor_language_override'] : true),
+			'enable_voice_input' => isset($params['enable_voice_input']) ? (bool) $params['enable_voice_input'] : (isset($existing_chatbot['enable_voice_input']) ? (bool) $existing_chatbot['enable_voice_input'] : true),
+			'enable_voice_output' => isset($params['enable_voice_output']) ? (bool) $params['enable_voice_output'] : (isset($existing_chatbot['enable_voice_output']) ? (bool) $existing_chatbot['enable_voice_output'] : false),
+			'voice_language' => isset($params['voice_language']) ? sanitize_text_field($params['voice_language']) : (isset($existing_chatbot['voice_language']) ? $existing_chatbot['voice_language'] : 'auto'),
+			'enable_vision_understanding' => isset($params['enable_vision_understanding']) ? (bool) $params['enable_vision_understanding'] : (isset($existing_chatbot['enable_vision_understanding']) ? (bool) $existing_chatbot['enable_vision_understanding'] : true),
 		];
 
 		$settings['chatbot'] = $chatbot_settings;
@@ -1498,6 +1572,13 @@ class DCTC_AI_Settings_Handler
 		$url = wp_get_attachment_url($attachment_id);
 		$mime = get_post_mime_type($attachment_id) ?: ($wp_check['type'] ?: 'application/octet-stream');
 		$is_image = str_starts_with($mime, 'image/');
+
+		// Tag temporary upload for scheduled retention cleanup
+		$settings = self::dctc_ai_get_all_settings();
+		$store_mode = $settings['chatbot']['store_chat_attachments'] ?? 'temp';
+		if ($store_mode === 'temp' || $store_mode === 'do_not_store') {
+			update_post_meta($attachment_id, '_dctc_ai_temporary', time());
+		}
 
 		$attachment_data = [
 			'id' => 'att_' . wp_generate_uuid4(),

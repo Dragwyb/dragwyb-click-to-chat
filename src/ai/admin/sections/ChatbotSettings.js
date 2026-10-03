@@ -259,6 +259,13 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		ticket_notification_email: chatbot.ticket_notification_email || '',
 		appointment_notification_email: chatbot.appointment_notification_email || '',
 		enable_page_context: chatbot.enable_page_context !== false,
+		enable_multilingual: chatbot.enable_multilingual !== false,
+		preferred_language: chatbot.preferred_language || 'auto',
+		visitor_language_override: chatbot.visitor_language_override !== false,
+		enable_voice_input: chatbot.enable_voice_input !== false,
+		enable_voice_output: !!chatbot.enable_voice_output,
+		voice_language: chatbot.voice_language || 'auto',
+		enable_vision_understanding: chatbot.enable_vision_understanding !== false,
 
 		// Advance / Smart Triggers & Targeting
 		enable_smart_triggers: !!display.enable_smart_triggers,
@@ -578,6 +585,13 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			ticket_notification_email: form.ticket_notification_email,
 			appointment_notification_email: form.appointment_notification_email,
 			enable_page_context: form.enable_page_context,
+			enable_multilingual: form.enable_multilingual,
+			preferred_language: form.preferred_language,
+			visitor_language_override: form.visitor_language_override,
+			enable_voice_input: form.enable_voice_input,
+			enable_voice_output: form.enable_voice_output,
+			voice_language: form.voice_language,
+			enable_vision_understanding: form.enable_vision_understanding,
 			enable_error_log: form.enable_error_log,
 			error_log_retention_days: form.error_log_retention_days,
 		};
@@ -2216,6 +2230,111 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							</div>
 						</SwitcherCard>
 
+						{ /* Multilingual AI & Auto-Detection */}
+						<SwitcherCard
+							id="enable_multilingual"
+							title={__('Multilingual AI & Language Auto-Detection', 'dragwyb-click-to-chat')}
+							desc={__('Detect visitor language automatically and respond fluently in over 50+ languages.', 'dragwyb-click-to-chat')}
+							icon="dashicons-translation"
+							badge={__('Global AI', 'dragwyb-click-to-chat')}
+							checked={form.enable_multilingual}
+							onChange={(v) => setField('enable_multilingual', v)}
+							disabledNotice={__('Enable to automatically reply in the visitor’s language or enforce a specific language.', 'dragwyb-click-to-chat')}
+						>
+							<div className="dctc-ai-grid-2col">
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="preferred_language">
+										{__('Primary Bot Language', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="preferred_language"
+										className="dctc-ai-bot-select"
+										value={form.preferred_language}
+										onChange={(e) => setField('preferred_language', e.target.value)}
+									>
+										<option value="auto">{__('🌐 Auto-Detect Visitor Language (Recommended)', 'dragwyb-click-to-chat')}</option>
+										<option value="en">English (US/UK)</option>
+										<option value="es">Español (Spanish)</option>
+										<option value="fr">Français (French)</option>
+										<option value="de">Deutsch (German)</option>
+										<option value="it">Italiano (Italian)</option>
+										<option value="pt">Português (Portuguese)</option>
+										<option value="hi">हिन्दी (Hindi)</option>
+										<option value="ar">العربية (Arabic)</option>
+										<option value="zh">中文 (Chinese)</option>
+										<option value="ja">日本語 (Japanese)</option>
+										<option value="nl">Nederlands (Dutch)</option>
+										<option value="ru">Русский (Russian)</option>
+										<option value="tr">Türkçe (Turkish)</option>
+										<option value="id">Bahasa Indonesia</option>
+									</select>
+									<p className="dctc-ai-bot-hint">
+										{__('When Auto-Detect is chosen, the assistant speaks in whatever language the visitor uses in chat.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<SettingCard
+										id="visitor_language_override"
+										title={__('Auto-Adapt to Visitor Locale', 'dragwyb-click-to-chat')}
+										desc={__('Use browser language detection as secondary fallback for multilingual visitors.', 'dragwyb-click-to-chat')}
+										icon="dashicons-admin-site"
+										checked={form.visitor_language_override}
+										onChange={(v) => setField('visitor_language_override', v)}
+									/>
+								</div>
+							</div>
+						</SwitcherCard>
+
+						{ /* Voice AI & Audio Experience */}
+						<SwitcherCard
+							id="enable_voice_input"
+							title={__('Voice AI & Speech Recognition', 'dragwyb-click-to-chat')}
+							desc={__('Enable microphone button for voice input and audio response read-aloud capabilities.', 'dragwyb-click-to-chat')}
+							icon="dashicons-microphone"
+							badge={__('Voice AI', 'dragwyb-click-to-chat')}
+							checked={form.enable_voice_input}
+							onChange={(v) => setField('enable_voice_input', v)}
+							disabledNotice={__('Enable voice AI to let visitors speak their questions hands-free via Web Speech API.', 'dragwyb-click-to-chat')}
+						>
+							<div className="dctc-ai-features-grid">
+								<SettingCard
+									id="enable_voice_output"
+									title={__('Text-to-Speech Read Aloud (TTS)', 'dragwyb-click-to-chat')}
+									desc={__('Displays speaker icon on assistant replies so visitors can listen to answers.', 'dragwyb-click-to-chat')}
+									icon="dashicons-controls-volumeon"
+									checked={form.enable_voice_output}
+									onChange={(v) => setField('enable_voice_output', v)}
+								/>
+							</div>
+
+							<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>
+								<label htmlFor="voice_language">
+									{__('Speech Recognition & Accent Language', 'dragwyb-click-to-chat')}
+								</label>
+								<select
+									id="voice_language"
+									className="dctc-ai-bot-select"
+									value={form.voice_language}
+									onChange={(e) => setField('voice_language', e.target.value)}
+								>
+									<option value="auto">{__('Auto (Browser Locale Default)', 'dragwyb-click-to-chat')}</option>
+									<option value="en-US">English (US)</option>
+									<option value="en-GB">English (UK)</option>
+									<option value="es-ES">Spanish (Spain)</option>
+									<option value="es-MX">Spanish (Latin America)</option>
+									<option value="fr-FR">French</option>
+									<option value="de-DE">German</option>
+									<option value="it-IT">Italian</option>
+									<option value="pt-BR">Portuguese (Brazil)</option>
+									<option value="hi-IN">Hindi (India)</option>
+									<option value="ar-SA">Arabic (Saudi Arabia)</option>
+									<option value="zh-CN">Chinese (Mandarin)</option>
+									<option value="ja-JP">Japanese</option>
+								</select>
+							</div>
+						</SwitcherCard>
+
 						{ /* 4. Visitor File & Image Uploads (Conditional Switcher Card) */}
 						<SwitcherCard
 							id="enable_uploads"
@@ -2227,6 +2346,17 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							onChange={(v) => setField('enable_uploads', v)}
 							disabledNotice={__('Turn on to let visitors upload images, PDFs, and documents during chat.', 'dragwyb-click-to-chat')}
 						>
+							<div className="dctc-ai-features-grid" style={{ marginBottom: '1.25rem' }}>
+								<SettingCard
+									id="enable_vision_understanding"
+									title={__('Multimodal Vision AI Processing', 'dragwyb-click-to-chat')}
+									desc={__('Sends uploaded image attachments to vision-capable models (GPT-4o, Claude 3.5, Gemini) for direct visual analysis.', 'dragwyb-click-to-chat')}
+									icon="dashicons-visibility"
+									badge={__('Vision AI', 'dragwyb-click-to-chat')}
+									checked={form.enable_vision_understanding}
+									onChange={(v) => setField('enable_vision_understanding', v)}
+								/>
+							</div>
 							<div className="dctc-ai-grid-2col">
 								<div className="dctc-ai-bot-field">
 									<label htmlFor="allowed_file_types">

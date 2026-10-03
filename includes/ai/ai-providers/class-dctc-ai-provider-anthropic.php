@@ -36,16 +36,61 @@ class DCTC_AI_Provider_Anthropic extends DCTC_AI_Provider_Base
 		$temperature = isset($options['temperature']) ? floatval($options['temperature']) : 0.7;
 		$max_tokens  = isset($options['max_tokens']) ? max(100, intval($options['max_tokens'])) : 1000;
 
-		$payload = [
-			'model'       => $model,
-			'max_tokens'  => $max_tokens,
-			'temperature' => $temperature,
-			'messages'    => [
+		$attachments = isset($options['attachments']) && is_array($options['attachments']) ? $options['attachments'] : [];
+		if (!empty($attachments)) {
+			$user_content = [];
+			if (!empty($prompt)) {
+				$user_content[] = ['type' => 'text', 'text' => trim($prompt)];
+			}
+			foreach ($attachments as $att) {
+				if (!empty($att['type']) && $att['type'] === 'image' && !empty($att['url'])) {
+					$att_id = !empty($att['attachmentId']) ? intval($att['attachmentId']) : 0;
+					$file_path = $att_id ? get_attached_file($att_id) : '';
+					if ($file_path && file_exists($file_path)) {
+						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+						$image_data = base64_encode(file_get_contents($file_path));
+						$mime_type = !empty($att['mime']) ? $att['mime'] : 'image/jpeg';
+						$user_content[] = [
+							'type'   => 'image',
+							'source' => [
+								'type'       => 'base64',
+								'media_type' => $mime_type,
+								'data'       => $image_data,
+							],
+						];
+					} else {
+						$user_content[] = [
+							'type' => 'text',
+							'text' => sprintf('[Attached Image: %s - %s]', sanitize_file_name($att['name']), esc_url_raw($att['url'])),
+						];
+					}
+				} elseif (!empty($att['name'])) {
+					$user_content[] = [
+						'type' => 'text',
+						'text' => sprintf('[Attached File: %s (%s) - %s]', sanitize_file_name($att['name']), sanitize_text_field($att['mime'] ?? ''), esc_url_raw($att['url'] ?? '')),
+					];
+				}
+			}
+			$messages = [
+				[
+					'role'    => 'user',
+					'content' => $user_content,
+				],
+			];
+		} else {
+			$messages = [
 				[
 					'role'    => 'user',
 					'content' => trim($prompt),
 				],
-			],
+			];
+		}
+
+		$payload = [
+			'model'       => $model,
+			'max_tokens'  => $max_tokens,
+			'temperature' => $temperature,
+			'messages'    => $messages,
 		];
 
 		if (!empty($system_message)) {

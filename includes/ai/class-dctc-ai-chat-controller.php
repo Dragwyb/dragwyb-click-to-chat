@@ -282,6 +282,24 @@ class DCTC_AI_Chat_Controller
 			self::log_debug('Dragwyb AI Page Context Error: ' . $e->getMessage());
 		}
 
+		// Feature 14: Multilingual Prompt Handling
+		try {
+			if (!isset($bot['enable_multilingual']) || (bool) $bot['enable_multilingual']) {
+				$pref_lang = !empty($bot['preferred_language']) ? $bot['preferred_language'] : 'auto';
+				$visitor_lang = sanitize_text_field($params['visitor_lang'] ?? '');
+				if ($pref_lang === 'auto') {
+					$system_message .= "\n\nMULTILINGUAL INSTRUCTION: Automatically detect the language of the user's message (e.g., English, Spanish, French, German, Italian, Portuguese, Hindi, Arabic, Chinese, Japanese, etc.) and reply fluently, naturally, and accurately in that EXACT same language, unless the user explicitly requests another language.";
+					if (!empty($visitor_lang)) {
+						$system_message .= " The visitor's browser/locale language is detected as: {$visitor_lang}.";
+					}
+				} else {
+					$system_message .= "\n\nMULTILINGUAL INSTRUCTION: The primary language configured is '{$pref_lang}'. Always respond in '{$pref_lang}' or the language chosen by the visitor.";
+				}
+			}
+		} catch (Exception $e) {
+			self::log_debug('Dragwyb AI Multilingual Prompt Error: ' . $e->getMessage());
+		}
+
 		try {
 			$memory = $this->get_optimized_memory($session_id, $prompt, $system_message);
 			$system_message = $memory['system_message'];
@@ -296,7 +314,8 @@ class DCTC_AI_Chat_Controller
 				$provider,
 				$model_id,
 				$bot,
-				$models
+				$models,
+				$attachments
 			);
 
 			$ai_message = isset($ai_result['message']) ? $ai_result['message'] : '';
@@ -869,11 +888,12 @@ Always expand on the previous answer when the user asks for more information.
 	/**
 	 * Call AI API with automatic failover support
 	 */
-	private function call_ai_api($prompt, $system_message, $provider, $model_id, $bot, $models = [])
+	private function call_ai_api($prompt, $system_message, $provider, $model_id, $bot, $models = [], $attachments = [])
 	{
 		$options = [
 			'temperature' => isset($bot['temperature']) ? (float) $bot['temperature'] : 0.7,
 			'max_tokens'  => isset($bot['max_tokens']) ? (int) $bot['max_tokens'] : 500,
+			'attachments' => $attachments,
 		];
 
 		$enable_failover = !isset($bot['enable_failover']) || (bool) $bot['enable_failover'];
