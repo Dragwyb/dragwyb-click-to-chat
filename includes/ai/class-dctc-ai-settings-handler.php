@@ -443,8 +443,12 @@ class DCTC_AI_Settings_Handler
 	{
 		$defaults = [
 			'models' => [
-				'openai' => 'gpt-4o-mini',
-				'google' => 'gemini-3.7-flash',
+				'openai'     => 'gpt-4o-mini',
+				'google'     => 'gemini-2.5-flash',
+				'anthropic'  => 'claude-3-5-sonnet-20241022',
+				'openrouter' => 'anthropic/claude-3.5-sonnet',
+				'groq'       => 'llama-3.3-70b-versatile',
+				'deepseek'   => 'deepseek-chat',
 			],
 			'chatbot' => [
 				'bot_name' => 'Dragwyb AI',
@@ -482,6 +486,9 @@ class DCTC_AI_Settings_Handler
 				'user_icon_preset' => 'user',
 				'action_buttons' => [],
 				'default_provider' => 'openai',
+				'fallback_provider' => '',
+				'fallback_model' => '',
+				'enable_failover' => true,
 				'knowledge_text' => '',
 				'knowledge_urls' => [],
 				'training_files' => [],
@@ -770,6 +777,9 @@ class DCTC_AI_Settings_Handler
 			'max_files_per_message' => isset($params['max_files_per_message']) ? max(1, min(10, intval($params['max_files_per_message']))) : (isset($existing_chatbot['max_files_per_message']) ? intval($existing_chatbot['max_files_per_message']) : 3),
 			'store_chat_attachments' => isset($params['store_chat_attachments']) && in_array($params['store_chat_attachments'], ['do_not_store', 'temp', 'save_with_history'], true) ? $params['store_chat_attachments'] : (isset($existing_chatbot['store_chat_attachments']) ? $existing_chatbot['store_chat_attachments'] : 'temp'),
 			'default_provider' => isset($params['default_provider']) ? sanitize_text_field($params['default_provider']) : (isset($existing_chatbot['default_provider']) ? $existing_chatbot['default_provider'] : 'openai'),
+			'fallback_provider' => isset($params['fallback_provider']) ? sanitize_text_field($params['fallback_provider']) : (isset($existing_chatbot['fallback_provider']) ? $existing_chatbot['fallback_provider'] : ''),
+			'fallback_model' => isset($params['fallback_model']) ? sanitize_text_field($params['fallback_model']) : (isset($existing_chatbot['fallback_model']) ? $existing_chatbot['fallback_model'] : ''),
+			'enable_failover' => isset($params['enable_failover']) ? (bool) $params['enable_failover'] : (isset($existing_chatbot['enable_failover']) ? (bool) $existing_chatbot['enable_failover'] : true),
 			'knowledge_text' => isset($params['knowledge_text']) ? sanitize_textarea_field($params['knowledge_text']) : (isset($existing_chatbot['knowledge_text']) ? $existing_chatbot['knowledge_text'] : ''),
 			'knowledge_urls' => isset($params['knowledge_urls']) ? $urls : (isset($existing_chatbot['knowledge_urls']) ? $existing_chatbot['knowledge_urls'] : []),
 			'training_files' => isset($params['training_files']) ? $files : (isset($existing_chatbot['training_files']) ? $existing_chatbot['training_files'] : []),

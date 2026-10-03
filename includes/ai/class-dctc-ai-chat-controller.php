@@ -215,13 +215,18 @@ class DCTC_AI_Chat_Controller
 		}
 
 		try {
-			$ai_message = $this->call_ai_api(
+			$ai_result = $this->call_ai_api(
 				$prompt,
 				$system_message,
 				$provider,
 				$model_id,
-				$bot
+				$bot,
+				$models
 			);
+
+			$ai_message = isset($ai_result['message']) ? $ai_result['message'] : '';
+			$used_provider = isset($ai_result['provider']) ? $ai_result['provider'] : $provider;
+			$used_model = isset($ai_result['model']) ? $ai_result['model'] : $model_id;
 
 			if (empty($ai_message)) {
 				if (class_exists('DCTC_Error_Logger')) {
@@ -264,7 +269,7 @@ class DCTC_AI_Chat_Controller
 		$sources = ( $show_sources && ! empty( $rag_links ) ) ? array_slice( $rag_links, 0, 3 ) : [];
 
 		try {
-			$this->save_conversation($prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources);
+			$this->save_conversation($prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $sources);
 		} catch (Exception $e) {
 			self::log_debug('Dragwyb AI AI Save Conversation Error: ' . $e->getMessage());
 		}
@@ -450,8 +455,9 @@ class DCTC_AI_Chat_Controller
 	private function get_active_provider($bot)
 	{
 		$available_providers = [];
+		$supported = DCTC_AI_Key_Store::get_supported_providers();
 
-		foreach (['openai', 'google'] as $provider) {
+		foreach ($supported as $provider) {
 			if (!empty(DCTC_AI_Key_Store::get_provider_key($provider))) {
 				$available_providers[] = $provider;
 			}
@@ -484,8 +490,12 @@ class DCTC_AI_Chat_Controller
 
 		// Fallback to default models
 		$defaults = [
-			'openai' => 'gpt-4o-mini',
-			'google' => 'gemini-3.7-flash',
+			'openai'     => 'gpt-4o-mini',
+			'google'     => 'gemini-2.5-flash',
+			'anthropic'  => 'claude-3-5-sonnet-20241022',
+			'openrouter' => 'anthropic/claude-3.5-sonnet',
+			'groq'       => 'llama-3.3-70b-versatile',
+			'deepseek'   => 'deepseek-chat',
 		];
 
 		return isset($defaults[$provider]) ? $defaults[$provider] : '';
@@ -632,129 +642,33 @@ Always expand on the previous answer when the user asks for more information.
 	}
 
 	/**
-	 * Call AI API using WordPress AI Client
+	 * Call AI API with automatic failover support
 	 */
-	private function call_ai_api($prompt, $system_message, $provider, $model_id, $bot)
+	private function call_ai_api($prompt, $system_message, $provider, $model_id, $bot, $models = [])
 	{
-		$registry = \WordPress\AiClient\AiClient::defaultRegistry();
+		$options = [
+			'temperature' => isset($bot['temperature']) ? (float) $bot['temperature'] : 0.7,
+			'max_tokens'  => isset($bot['max_tokens']) ? (int) $bot['max_tokens'] : 500,
+		];
 
-		$key = DCTC_AI_Key_Store::get_provider_key($provider);
+		$enable_failover = !isset($bot['enable_failover']) || (bool) $bot['enable_failover'];
+		$fallback_provider = '';
+		$fallback_model = '';
 
-		if (empty($key)) {
-			throw new Exception(
-				sprintf(
-					/* translators: %s: Provider name. */
-					esc_html__(
-						'API Key missing for provider: %s',
-						'dragwyb-click-to-chat'
-					),
-					esc_html( $provider )
-				)
-			);
+		if ($enable_failover) {
+			$fallback_provider = !empty($bot['fallback_provider']) ? $bot['fallback_provider'] : '';
+			$fallback_model    = !empty($bot['fallback_model']) ? $bot['fallback_model'] : (isset($models[$fallback_provider]) ? $models[$fallback_provider] : '');
 		}
 
-		/*
-		 * Authentication
-		 */
-		$auth = new \WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication(
-			$key
-		);
-
-		$registry->setProviderRequestAuthentication(
+		return DCTC_AI_Provider_Manager::get_instance()->chat_with_fallback(
+			$prompt,
+			$system_message,
 			$provider,
-			$auth
+			$model_id,
+			$options,
+			$fallback_provider,
+			$fallback_model
 		);
-
-		/*
-		 * Model
-		 */
-		$model = null;
-
-		try {
-
-			$model = $registry->getProviderModel(
-				$provider,
-				$model_id
-			);
-
-		} catch (\Throwable $e) {
-			self::log_debug('Dragwyb AI AI Model Retrieval Error: ' . $e->getMessage());
-		}
-
-		/*
-		 * Settings
-		 */
-		$temperature = isset($bot['temperature'])
-			? (float) $bot['temperature']
-			: 0.5;
-
-		$max_tokens = isset($bot['max_tokens'])
-			? (int) $bot['max_tokens']
-			: 1500;
-
-		/*
-		 * Enhanced prompt
-		 */
-		$full_prompt = trim($prompt);
-
-		/*
-		 * Build request
-		 */
-		$builder = \WordPress\AiClient\AiClient::prompt(
-			$full_prompt
-		);
-
-		$builder->usingRequestOptions(
-			\WordPress\AiClient\Providers\Http\DTO\RequestOptions::fromArray(
-				[
-					\WordPress\AiClient\Providers\Http\DTO\RequestOptions::KEY_TIMEOUT => 90,
-				]
-			)
-		);
-
-		if ($model) {
-
-			$builder->usingModel(
-				$model
-			);
-
-		} else {
-
-			$builder->usingProvider(
-				$provider
-			);
-		}
-
-		try {
-
-			$result = $builder
-				->usingSystemInstruction(
-					$system_message
-				)
-				->usingTemperature(
-					$temperature
-				)
-				->usingMaxTokens(
-					$max_tokens
-				)
-				->generateTextResult();
-
-			$response = trim(
-				$result->toText()
-			);
-
-			if (empty($response)) {
-
-				throw new Exception(
-					'Empty response received from AI provider.'
-				);
-			}
-
-			return $response;
-
-		} catch (\Throwable $e) {
-			throw new Exception( esc_html( $e->getMessage() ) );
-		}
 	}
 
 	/**

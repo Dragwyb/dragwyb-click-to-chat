@@ -186,7 +186,11 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		public function dctc_ai_increase_http_timeout( $timeout, $url ) {
 			if (
 				strpos( $url, 'generativelanguage.googleapis.com' ) !== false ||
-				strpos( $url, 'api.openai.com' ) !== false
+				strpos( $url, 'api.openai.com' ) !== false ||
+				strpos( $url, 'api.anthropic.com' ) !== false ||
+				strpos( $url, 'openrouter.ai' ) !== false ||
+				strpos( $url, 'api.groq.com' ) !== false ||
+				strpos( $url, 'api.deepseek.com' ) !== false
 			) {
 				return 60;
 			}
@@ -234,7 +238,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 
 			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 
-			$providers   = array( 'openai', 'google' );
+			$providers   = DCTC_AI_Key_Store::get_supported_providers();
 			$models_list = array();
 			foreach ( $providers as $id ) {
 				$key = DCTC_AI_Settings_Handler::dctc_ai_get_provider_key( $id );

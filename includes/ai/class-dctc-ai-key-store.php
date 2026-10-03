@@ -3,7 +3,7 @@
  * DCTC AI Key Store
  *
  * Owns AI provider API keys and secrets: storing/validating provider keys,
- * listing a provider's available models, and the symmetric encryption used
+ * listing a provider's available models, and symmetric encryption used
  * for other stored secrets (e.g. MCP server API keys).
  *
  * @package Dragwyb_Click_To_Chat
@@ -13,6 +13,8 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+require_once __DIR__ . '/ai-providers/class-dctc-ai-provider-manager.php';
+
 /**
  * Class DCTC_AI_Key_Store
  */
@@ -21,13 +23,23 @@ class DCTC_AI_Key_Store
 	use DCTC_AI_REST_Helpers;
 
 	/**
+	 * Supported providers list.
+	 *
+	 * @return array
+	 */
+	public static function get_supported_providers()
+	{
+		return DCTC_AI_Provider_Manager::$supported_providers;
+	}
+
+	/**
 	 * Check if at least one AI provider API key is configured.
 	 *
-	 * @return bool True if OpenAI or Google key is present.
+	 * @return bool True if any supported provider key is present.
 	 */
 	public static function has_configured_provider()
 	{
-		foreach (['openai', 'google'] as $provider) {
+		foreach (self::get_supported_providers() as $provider) {
 			$key = self::get_provider_key($provider);
 			if (!empty($key)) {
 				return true;
@@ -44,121 +56,65 @@ class DCTC_AI_Key_Store
 	 */
 	public static function get_provider_key($provider)
 	{
+		$provider = sanitize_key($provider);
 		$is_wp_ai_client_70 = function_exists('wp_ai_client_prompt');
 
 		if ($is_wp_ai_client_70) {
-			return get_option('connectors_ai_' . $provider . '_api_key', '');
-		} else {
-			$creds = get_option('wp_ai_client_provider_credentials', []);
-			return isset($creds[$provider]) ? $creds[$provider] : '';
+			$key = get_option('connectors_ai_' . $provider . '_api_key', '');
+			if (!empty($key)) {
+				return $key;
+			}
 		}
+
+		$creds = get_option('wp_ai_client_provider_credentials', []);
+		if (isset($creds[$provider]) && !empty($creds[$provider])) {
+			return $creds[$provider];
+		}
+
+		return get_option('connectors_ai_' . $provider . '_api_key', '');
 	}
 
 	/**
 	 * Get the list of available models for an AI provider.
 	 *
-	 * Providers are already registered on the 'init' hook (see
-	 * DCTC_AI_Module::dctc_ai_register_ai_client()), so this doesn't
-	 * re-register them — this getter runs once per provider on every
-	 * admin dashboard load. The resolved list is also cached in a
-	 * transient keyed by provider + API key, since it only changes when
-	 * the key changes or the bundled provider metadata is updated.
-	 *
-	 * @param string $provider Provider identifier (e.g. 'openai').
+	 * @param string $provider Provider identifier (e.g. 'openai', 'google', 'anthropic', etc.).
 	 * @return array Map of model ID => model display name.
 	 */
 	public static function get_models($provider)
 	{
-		$key = self::get_provider_key($provider);
+		$provider = sanitize_key($provider);
+		$manager = DCTC_AI_Provider_Manager::get_instance();
+		$adapter = $manager->get_provider($provider);
 
-		if (empty($key)) {
-			return [];
+		if ($adapter) {
+			return $adapter->get_models();
 		}
 
-		$cache_key = 'dctc_ai_models_' . $provider . '_' . md5($key);
-		$cached = get_transient($cache_key);
-
-		if (false !== $cached) {
-			return $cached;
-		}
-
-		$registry = \WordPress\AiClient\AiClient::defaultRegistry();
-
-		try {
-			$className = $registry->getProviderClassName($provider);
-
-			$auth = new \WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication($key);
-			$registry->setProviderRequestAuthentication($provider, $auth);
-
-			$modelDirectory = $className::modelMetadataDirectory();
-			$models = [];
-
-			foreach ($modelDirectory->listModelMetadata() as $model) {
-				$models[$model->getId()] = $model->getName();
-			}
-
-			set_transient($cache_key, $models, HOUR_IN_SECONDS);
-
-			return $models;
-		} catch (\Exception $e) {
-			self::log_debug('Dragwyb AI AI Providers Model Sync Error: ' . $e->getMessage());
-			return [];
-		}
+		return [];
 	}
 
 	/**
-	 * Verify an API key by attempting to list the provider's available models.
+	 * Verify an API key by delegating to provider adapter.
 	 *
-	 * @param string $provider Provider identifier (e.g. 'openai').
+	 * @param string $provider Provider identifier.
 	 * @param string $key API key to validate.
 	 * @return bool|\WP_Error True if valid, WP_Error otherwise.
 	 */
 	public function validate_api_key($provider, $key)
 	{
-		$registry = \WordPress\AiClient\AiClient::defaultRegistry();
+		$provider = sanitize_key($provider);
+		$manager = DCTC_AI_Provider_Manager::get_instance();
+		$adapter = $manager->get_provider($provider);
 
-		$provider_names = [
-			'openai' => 'OpenAI',
-			'google' => 'Google Gemini',
-		];
-		$provider_name = isset($provider_names[$provider]) ? $provider_names[$provider] : ucfirst($provider);
-
-		try {
-			$className = $registry->getProviderClassName($provider);
-
-			$auth = new \WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication($key);
-			$registry->setProviderRequestAuthentication($provider, $auth);
-
-			$modelDirectory = $className::modelMetadataDirectory();
-			$models = $modelDirectory->listModelMetadata();
-
-			if (empty($models)) {
-				/* translators: %s: AI provider name. */
-				return new \WP_Error('invalid_key', sprintf(esc_html__('Invalid or unauthorized API key for %s.', 'dragwyb-click-to-chat'), esc_html($provider_name)));
-			}
-
-			return true;
-		} catch (\Exception $e) {
-			$msg = $e->getMessage();
-			
-			if (
-				strpos($msg, '401') !== false ||
-				strpos($msg, '403') !== false ||
-				stripos($msg, 'incorrect api key') !== false ||
-				stripos($msg, 'unauthorized') !== false ||
-				stripos($msg, 'invalid') !== false ||
-				stripos($msg, 'key not found') !== false
-			) {
-				/* translators: %s: AI provider name. */
-				$error_message = sprintf(esc_html__('Invalid API key for %s. Please check your credentials.', 'dragwyb-click-to-chat'), esc_html($provider_name));
-				return new \WP_Error(
-					'invalid_key',
-					$error_message
-				);
-			}
-
-			return new \WP_Error('api_error', $msg);
+		if ($adapter) {
+			return $adapter->validate_key($key);
 		}
+
+		return new \WP_Error('unsupported_provider', sprintf(
+			/* translators: %s: Provider ID */
+			esc_html__('Unsupported AI provider: %s', 'dragwyb-click-to-chat'),
+			esc_html($provider)
+		));
 	}
 
 	/**
@@ -171,31 +127,28 @@ class DCTC_AI_Key_Store
 	public function save_provider_keys($request)
 	{
 		$params = $request->get_json_params();
-		$openai = isset($params['openai_key']) ? sanitize_text_field($params['openai_key']) : '';
-		$google = isset($params['google_key']) ? sanitize_text_field($params['google_key']) : '';
 		$models = isset($params['models']) ? (array) $params['models'] : [];
-		$default_provider = isset($params['default_provider']) ? sanitize_text_field($params['default_provider']) : '';
+		$default_provider  = isset($params['default_provider']) ? sanitize_text_field($params['default_provider']) : '';
+		$fallback_provider = isset($params['fallback_provider']) ? sanitize_text_field($params['fallback_provider']) : '';
+		$fallback_model    = isset($params['fallback_model']) ? sanitize_text_field($params['fallback_model']) : '';
+		$enable_failover   = isset($params['enable_failover']) ? (bool) $params['enable_failover'] : true;
 
 		$errors = [];
+		$supported = self::get_supported_providers();
 
-		if ($openai) {
-			$valid = $this->validate_api_key('openai', $openai);
-			if (is_wp_error($valid)) {
-				$errors['openai'] = $valid->get_error_message();
-			} else {
-				$this->persist_key('openai', $openai);
+		// Check and save keys for all supported providers
+		foreach ($supported as $p_id) {
+			$key_param = $p_id . '_key';
+			if (!empty($params[$key_param])) {
+				$raw_key = sanitize_text_field($params[$key_param]);
+				$valid = $this->validate_api_key($p_id, $raw_key);
+				if (is_wp_error($valid)) {
+					$errors[$p_id] = $valid->get_error_message();
+				} else {
+					$this->persist_key($p_id, $raw_key);
+				}
 			}
 		}
-
-		if ($google) {
-			$valid = $this->validate_api_key('google', $google);
-			if (is_wp_error($valid)) {
-				$errors['google'] = $valid->get_error_message();
-			} else {
-				$this->persist_key('google', $google);
-			}
-		}
-
 
 		// Save selected fallback models.
 		if (!empty($models)) {
@@ -206,23 +159,25 @@ class DCTC_AI_Key_Store
 			}
 		}
 
-		// Save selected default provider.
-		if ($default_provider) {
-			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-			if (isset($settings['chatbot'])) {
+		// Save chatbot provider routing settings.
+		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		if (isset($settings['chatbot'])) {
+			if ($default_provider) {
 				$settings['chatbot']['default_provider'] = $default_provider;
-				DCTC_AI_Settings_Handler::dctc_ai_persist_settings($settings);
 			}
+			$settings['chatbot']['fallback_provider'] = $fallback_provider;
+			$settings['chatbot']['fallback_model']    = $fallback_model;
+			$settings['chatbot']['enable_failover']   = $enable_failover;
+			DCTC_AI_Settings_Handler::dctc_ai_persist_settings($settings);
 		}
 
 		if (!empty($errors)) {
 			return new \WP_REST_Response(['success' => false, 'errors' => $errors], 400);
 		}
 
-		$providers = ['openai', 'google'];
 		$api_keys = [];
 		$models_list = [];
-		foreach ($providers as $id) {
+		foreach ($supported as $id) {
 			$key = self::get_provider_key($id);
 			if (!empty($key)) {
 				if (strlen($key) < 8) {
@@ -239,12 +194,12 @@ class DCTC_AI_Key_Store
 
 		return new \WP_REST_Response(
 			[
-				'success' => true,
-				'message' => esc_html__('Settings saved successfully!', 'dragwyb-click-to-chat'),
-				'api_keys' => $api_keys,
+				'success'     => true,
+				'message'     => esc_html__('Settings saved successfully!', 'dragwyb-click-to-chat'),
+				'api_keys'    => $api_keys,
 				'models_list' => $models_list,
-				'chatbot' => $chatbot_data,
-				'models' => isset($updated_settings['models']) ? $updated_settings['models'] : [],
+				'chatbot'     => $chatbot_data,
+				'models'      => isset($updated_settings['models']) ? $updated_settings['models'] : [],
 			],
 			200
 		);
@@ -258,9 +213,10 @@ class DCTC_AI_Key_Store
 	 */
 	public function reset_key($request)
 	{
-		$provider = sanitize_text_field($request->get_param('provider'));
+		$provider = sanitize_key($request->get_param('provider'));
+		$supported = self::get_supported_providers();
 
-		if (!in_array($provider, ['openai', 'google'], true)) {
+		if (!in_array($provider, $supported, true)) {
 			return new \WP_REST_Response(
 				['success' => false, 'message' => esc_html__('Unknown provider.', 'dragwyb-click-to-chat')],
 				400
@@ -275,14 +231,10 @@ class DCTC_AI_Key_Store
 			unset($settings['api_keys'][$provider]);
 		}
 
-		// If the reset provider was the default_provider, update it. Checks
-		// the actual key storage (self::get_provider_key()) rather than
-		// $settings['api_keys'], which normal key-saving never populates —
-		// using that would always see "no other provider configured" and
-		// wrongly clear default_provider even when one still is.
+		// If the reset provider was default_provider or fallback_provider, update them.
 		if (isset($settings['chatbot']['default_provider']) && $settings['chatbot']['default_provider'] === $provider) {
 			$remaining = [];
-			foreach (['openai', 'google'] as $p) {
+			foreach ($supported as $p) {
 				if ($p !== $provider && !empty(self::get_provider_key($p))) {
 					$remaining[] = $p;
 				}
@@ -290,22 +242,23 @@ class DCTC_AI_Key_Store
 			$settings['chatbot']['default_provider'] = !empty($remaining) ? $remaining[0] : '';
 		}
 
+		if (isset($settings['chatbot']['fallback_provider']) && $settings['chatbot']['fallback_provider'] === $provider) {
+			$settings['chatbot']['fallback_provider'] = '';
+			$settings['chatbot']['fallback_model']    = '';
+		}
+
 		DCTC_AI_Settings_Handler::dctc_ai_persist_settings($settings);
 
-		$is_wp_ai_client_70 = function_exists('wp_ai_client_prompt');
-		if ($is_wp_ai_client_70) {
-			delete_option('connectors_ai_' . $provider . '_api_key');
-		} else {
-			$creds = get_option('wp_ai_client_provider_credentials', []);
-			if (isset($creds[$provider])) {
-				unset($creds[$provider]);
-				update_option('wp_ai_client_provider_credentials', $creds);
-			}
+		delete_option('connectors_ai_' . $provider . '_api_key');
+		$creds = get_option('wp_ai_client_provider_credentials', []);
+		if (isset($creds[$provider])) {
+			unset($creds[$provider]);
+			update_option('wp_ai_client_provider_credentials', $creds);
 		}
 
 		return new \WP_REST_Response([
 			'success' => true,
-			'chatbot' => isset($settings['chatbot']) ? $settings['chatbot'] : []
+			'chatbot' => isset($settings['chatbot']) ? $settings['chatbot'] : [],
 		], 200);
 	}
 
@@ -313,11 +266,7 @@ class DCTC_AI_Key_Store
 	 * Encrypt Secret
 	 *
 	 * Authenticated symmetric encryption (AES-256-GCM) for secrets (e.g.
-	 * MCP server API keys) stored in the settings option, keyed from this
-	 * site's WordPress auth salt. The "v2:" prefix marks the authenticated
-	 * format so decrypt_secret() can tell it apart from secrets saved by
-	 * the older unauthenticated AES-256-CBC format and keep reading those
-	 * correctly too.
+	 * MCP server API keys) stored in the settings option.
 	 *
 	 * @param string $plaintext Value to encrypt.
 	 * @return string "v2:" + base64-encoded IV + tag + ciphertext, or '' on empty input/failure.
@@ -344,10 +293,7 @@ class DCTC_AI_Key_Store
 	/**
 	 * Decrypt Secret
 	 *
-	 * Reads both the current authenticated (AES-256-GCM, "v2:"-prefixed)
-	 * format and the legacy unauthenticated AES-256-CBC format produced by
-	 * encrypt_secret() before it was hardened, so secrets saved prior to
-	 * that change keep decrypting correctly.
+	 * Reads both authenticated (AES-256-GCM) and legacy AES-256-CBC.
 	 *
 	 * @param string $encoded Value produced by encrypt_secret().
 	 * @return string Decrypted plaintext, or '' on empty input/failure.
@@ -368,7 +314,7 @@ class DCTC_AI_Key_Store
 			}
 
 			$iv_length = openssl_cipher_iv_length('aes-256-gcm');
-			$tag_length = 16; // AES-GCM auth tag is always 16 bytes.
+			$tag_length = 16;
 			$iv = substr($raw, 0, $iv_length);
 			$tag = substr($raw, $iv_length, $tag_length);
 			$ciphertext = substr($raw, $iv_length + $tag_length);
@@ -378,9 +324,6 @@ class DCTC_AI_Key_Store
 			return false === $plaintext ? '' : $plaintext;
 		}
 
-		// Legacy AES-256-CBC format (no integrity check) — kept only so
-		// secrets saved before encrypt_secret() switched to GCM keep
-		// decrypting correctly. New saves always use the v2: format above.
 		$raw = base64_decode($encoded, true);
 
 		if (false === $raw) {
@@ -397,31 +340,28 @@ class DCTC_AI_Key_Store
 	}
 
 	/**
-	 * Store an AI provider's API key in the legacy (non-unified) location the
-	 * AI client SDK reads from, separately from dctc_ai_chat_assistant_settings.
+	 * Store an AI provider's API key.
 	 *
-	 * @param string $provider Provider identifier (e.g. 'openai').
+	 * @param string $provider Provider identifier.
 	 * @param string $value API key value.
 	 * @return void
 	 */
 	private function persist_key($provider, $value)
 	{
-		$provider = sanitize_text_field($provider);
-		$is_wp_ai_client_70 = function_exists('wp_ai_client_prompt');
+		$provider = sanitize_key($provider);
+		$clean_val = sanitize_text_field($value);
 
-		if ($is_wp_ai_client_70) {
-			update_option('connectors_ai_' . $provider . '_api_key', sanitize_text_field($value));
-		} else {
-			$creds = get_option('wp_ai_client_provider_credentials', []);
-			$creds[$provider] = sanitize_text_field($value);
-			update_option('wp_ai_client_provider_credentials', $creds);
-		}
+		update_option('connectors_ai_' . $provider . '_api_key', $clean_val);
+
+		$creds = get_option('wp_ai_client_provider_credentials', []);
+		$creds[$provider] = $clean_val;
+		update_option('wp_ai_client_provider_credentials', $creds);
 	}
 
 	/**
 	 * Store a provider's selected fallback model.
 	 *
-	 * @param string $provider Provider identifier (e.g. 'openai').
+	 * @param string $provider Provider identifier.
 	 * @param string $model    Selected model ID.
 	 * @return void
 	 */

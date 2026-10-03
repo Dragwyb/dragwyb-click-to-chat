@@ -1,15 +1,16 @@
 /**
  * AI Engine & Prompt Settings — Unified single-page customizer for:
- * 1. AI Providers & API Keys (Modern Card View Grid)
- * 2. System Persona & Instructions
- * 3. Model Parameters & Accuracy
+ * 1. AI Providers & API Keys (Multi-Provider Card View Grid)
+ * 2. Automatic Failover & High Availability (Backup Provider)
+ * 3. System Persona & Instructions
+ * 4. Model Parameters & Accuracy
  */
 import { useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
 import Toggle from '../components/Toggle';
-import { PROVIDERS } from '../utils/providers';
+import { PROVIDERS, formatProviderLabel } from '../utils/providers';
 
 const PROMPT_HINT = __(
 	'Explain how your chatbot should sound and behave—its tone, what it helps with, and any rules it should follow.',
@@ -30,8 +31,17 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 		// Providers & Models
 		openai_key: '',
 		google_key: '',
+		anthropic_key: '',
+		openrouter_key: '',
+		groq_key: '',
+		deepseek_key: '',
 		models: settings?.models || {},
 		default_provider: chatbot.default_provider || 'openai',
+
+		// Failover & High Availability
+		enable_failover: chatbot.enable_failover !== false,
+		fallback_provider: chatbot.fallback_provider || '',
+		fallback_model: chatbot.fallback_model || '',
 
 		// System Prompt & Parameters
 		system_prompt: chatbot.system_prompt || '',
@@ -55,12 +65,19 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 		setSaving(true);
 
 		try {
-			// 1. Save API keys & models
+			// 1. Save API keys, models & provider routing
 			const apiPayload = {
 				openai_key: form.openai_key,
 				google_key: form.google_key,
+				anthropic_key: form.anthropic_key,
+				openrouter_key: form.openrouter_key,
+				groq_key: form.groq_key,
+				deepseek_key: form.deepseek_key,
 				models: form.models,
 				default_provider: form.default_provider,
+				fallback_provider: form.fallback_provider,
+				fallback_model: form.fallback_model,
+				enable_failover: form.enable_failover,
 			};
 
 			// 2. Save prompt instructions & parameters
@@ -68,6 +85,10 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				system_prompt: form.system_prompt,
 				temperature: form.temperature,
 				max_tokens: form.max_tokens,
+				default_provider: form.default_provider,
+				fallback_provider: form.fallback_provider,
+				fallback_model: form.fallback_model,
+				enable_failover: form.enable_failover,
 			};
 
 			const [resApi, resBot] = await Promise.all([
@@ -107,14 +128,26 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				...form,
 				openai_key: '',
 				google_key: '',
+				anthropic_key: '',
+				openrouter_key: '',
+				groq_key: '',
+				deepseek_key: '',
 				default_provider: resApi.chatbot?.default_provider || form.default_provider,
+				fallback_provider: resApi.chatbot?.fallback_provider || form.fallback_provider,
+				fallback_model: resApi.chatbot?.fallback_model || form.fallback_model,
 			};
 
 			setForm((prev) => ({
 				...prev,
 				openai_key: '',
 				google_key: '',
+				anthropic_key: '',
+				openrouter_key: '',
+				groq_key: '',
+				deepseek_key: '',
 				default_provider: resApi.chatbot?.default_provider || prev.default_provider,
+				fallback_provider: resApi.chatbot?.fallback_provider || prev.fallback_provider,
+				fallback_model: resApi.chatbot?.fallback_model || prev.fallback_model,
 			}));
 			setSaved(nextSaved);
 		} catch (err) {
@@ -157,6 +190,8 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 					...prev,
 					[`${provider}_key`]: '',
 					default_provider: res.chatbot?.default_provider || '',
+					fallback_provider: res.chatbot?.fallback_provider || '',
+					fallback_model: res.chatbot?.fallback_model || '',
 					models: { ...prev.models, [provider]: '' },
 				};
 				setSaved(next);
@@ -174,11 +209,15 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 
 	const temp = Number(form.temperature);
 
+	// Get connected providers list for fallback selection
+	const connectedProviderIds = Object.keys(PROVIDERS).filter((id) => hasKey(id));
+	const fallbackCandidates = connectedProviderIds.filter((id) => id !== form.default_provider);
+
 	return (
 		<div className="dctc-ai-engine-settings">
 			<form onSubmit={onSubmit}>
 				{ /* =========================================================================
-				     SECTION 1: AI Providers & API Keys (Card View Grid)
+				     SECTION 1: AI Providers & API Keys (Multi-Provider Grid)
 				   ========================================================================= */ }
 				<section className="dctc-ai-card">
 					<header className="dctc-ai-card__header">
@@ -211,11 +250,7 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 										<header className="dctc-ai-provider-card__header">
 											<div className="dctc-ai-provider-card__header-left">
 												<div className="dctc-ai-provider-icon-box">
-													{id === 'openai' ? (
-														<span className="dashicons dashicons-superhero-alt" />
-													) : (
-														<span className="dashicons dashicons-star-filled" />
-													)}
+													<span className={`dashicons dashicons-${meta.icon || 'admin-generic'}`} />
 												</div>
 												<div>
 													<h3 className="dctc-ai-provider-card__title">{meta.name}</h3>
@@ -255,6 +290,10 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 										</header>
 
 										<div className="dctc-ai-provider-card__body">
+											<p className="dctc-ai-bot-hint" style={{ marginTop: 0, marginBottom: '0.75rem' }}>
+												{meta.desc}
+											</p>
+
 											<div className="dctc-ai-bot-field">
 												<div className="dctc-ai-api-field__label-row">
 													<label htmlFor={`${id}_key`}>
@@ -353,7 +392,106 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				</section>
 
 				{ /* =========================================================================
-				     SECTION 2: System Persona & Instructions Card
+				     SECTION 2: Automatic Failover & High Availability
+				   ========================================================================= */ }
+				<section className="dctc-ai-card">
+					<header className="dctc-ai-card__header">
+						<div className="dctc-ai-card__header-left">
+							<div className="dctc-ai-card-icon">
+								<span className="dashicons dashicons-shield" />
+							</div>
+							<div>
+								<h2 className="dctc-ai-card__title">
+									{__('Automatic Failover & High Availability', 'dragwyb-click-to-chat')}
+								</h2>
+								<p className="dctc-ai-card__desc">
+									{__('Seamlessly route chat requests to a secondary backup provider if your primary AI provider experiences rate limits or downtime.', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+						</div>
+						<div className="dctc-ai-card__header-right">
+							<Toggle
+								id="enable_failover"
+								checked={form.enable_failover}
+								onChange={(val) => setField('enable_failover', val)}
+								label={__('Enable Failover Chain', 'dragwyb-click-to-chat')}
+							/>
+						</div>
+					</header>
+
+					{form.enable_failover && (
+						<div className="dctc-ai-card__body">
+							<div className="dctc-ai-grid-2col">
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="fallback_provider">
+										{__('Backup / Fallback Provider', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="fallback_provider"
+										className="dctc-ai-bot-select"
+										value={form.fallback_provider}
+										onChange={(e) => {
+											const chosenProvider = e.target.value;
+											setForm((prev) => ({
+												...prev,
+												fallback_provider: chosenProvider,
+												fallback_model: prev.models[chosenProvider] || '',
+											}));
+										}}
+									>
+										<option value="">
+											{fallbackCandidates.length > 0
+												? __('Auto-select other connected provider', 'dragwyb-click-to-chat')
+												: __('None (Connect 2+ providers for failover)', 'dragwyb-click-to-chat')}
+										</option>
+										{Object.keys(PROVIDERS).map((pId) => {
+											if (pId === form.default_provider) return null;
+											const isConn = hasKey(pId);
+											return (
+												<option key={pId} value={pId}>
+													{formatProviderLabel(pId)} {isConn ? `(${__('Connected', 'dragwyb-click-to-chat')})` : `(${__('Key Missing', 'dragwyb-click-to-chat')})`}
+												</option>
+											);
+										})}
+									</select>
+									<p className="dctc-ai-bot-hint">
+										{__('If the primary provider hits a 429 quota limit or network timeout, the chatbot will automatically query this backup provider.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								{form.fallback_provider && (
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="fallback_model">
+											{__('Backup Model', 'dragwyb-click-to-chat')}
+										</label>
+										<select
+											id="fallback_model"
+											className="dctc-ai-bot-select"
+											value={form.fallback_model}
+											onChange={(e) => setField('fallback_model', e.target.value)}
+										>
+											{modelsList[form.fallback_provider] && Object.keys(modelsList[form.fallback_provider]).length > 0 ? (
+												Object.entries(modelsList[form.fallback_provider]).map(([mId, label]) => (
+													<option key={mId} value={mId}>
+														{label}
+													</option>
+												))
+											) : (
+												<option value="">{__('Default Provider Model', 'dragwyb-click-to-chat')}</option>
+											)}
+										</select>
+										<p className="dctc-ai-bot-hint">
+											{__('Select specific model to use when executing backup failover.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								)}
+							</div>
+						</div>
+					)}
+				</section>
+
+				{ /* =========================================================================
+				     SECTION 3: System Persona & Instructions Card
 				   ========================================================================= */ }
 				<section className="dctc-ai-card">
 					<header className="dctc-ai-card__header">
@@ -395,7 +533,7 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				</section>
 
 				{ /* =========================================================================
-				     SECTION 3: Model Parameters & Chat Accuracy Card
+				     SECTION 4: Model Parameters & Chat Accuracy Card
 				   ========================================================================= */ }
 				<section className="dctc-ai-card">
 					<header className="dctc-ai-card__header">
