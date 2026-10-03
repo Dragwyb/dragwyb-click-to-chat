@@ -5,9 +5,8 @@ import { useState, useEffect, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Toast from './components/Toast';
 import SetupWizard from './wizard/SetupWizard';
-import ApiKeys from './sections/ApiKeys';
 import ChatbotSettings from './sections/ChatbotSettings';
-import Instructions from './sections/Instructions';
+import AiEngineSettings from './sections/AiEngineSettings';
 import KnowledgeBase from './sections/KnowledgeBase';
 import ChatSessions from './sections/ChatSessions';
 import ChatPreview from './sections/ChatPreview';
@@ -25,24 +24,14 @@ const TABS = [
 		component: ChatbotSettings,
 	},
 	{
-		id: 'instructions',
-		label: __( 'Instructions', 'dragwyb-click-to-chat' ),
-		icon: 'dashicons-edit',
-		desc: __(
-			'Set how your chatbot talks, what it helps with, and how creative its replies are.',
-			'dragwyb-click-to-chat'
-		),
-		component: Instructions,
-	},
-	{
-		id: 'api-keys',
-		label: __( 'API Keys', 'dragwyb-click-to-chat' ),
+		id: 'ai-engine',
+		label: __( 'AI Engine & Prompt', 'dragwyb-click-to-chat' ),
 		icon: 'dashicons-rest-api',
 		desc: __(
-			'Configure your AI providers and select your preferred chatbot models.',
+			'Configure your AI providers, API keys, models, system instructions, and response behavior.',
 			'dragwyb-click-to-chat'
 		),
-		component: ApiKeys,
+		component: AiEngineSettings,
 	},
 	{
 		id: 'knowledge-base',
@@ -89,7 +78,7 @@ const TABS = [
 const NAV_GROUPS = [
 	{
 		label: __( 'Setup', 'dragwyb-click-to-chat' ),
-		items: [ 'chatbot-settings', 'instructions', 'api-keys' ],
+		items: [ 'chatbot-settings', 'ai-engine' ],
 	},
 	{
 		label: __( 'Knowledge', 'dragwyb-click-to-chat' ),
@@ -120,6 +109,14 @@ export default function App( { settings: initialSettings } ) {
 		const hash = window.location.hash.replace( '#', '' );
 		if ( hash === 'display-settings' ) {
 			return 'chatbot-settings';
+		}
+		if (
+			hash === 'api-keys' ||
+			hash === 'instructions' ||
+			hash === 'providers' ||
+			hash === 'prompt'
+		) {
+			return 'ai-engine';
 		}
 		if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
 			return hash;
@@ -157,7 +154,14 @@ export default function App( { settings: initialSettings } ) {
 	useEffect( () => {
 		const onHash = () => {
 			const hash = window.location.hash.replace( '#', '' );
-			if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
+			if (
+				hash === 'api-keys' ||
+				hash === 'instructions' ||
+				hash === 'providers' ||
+				hash === 'prompt'
+			) {
+				setActiveTab( 'ai-engine' );
+			} else if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
 				setActiveTab( hash );
 			}
 		};
