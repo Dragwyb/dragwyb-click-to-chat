@@ -1559,6 +1559,12 @@ input:focus-visible + .dctc-ai-toggle-slider {
   display: flex;
   align-items: center;
 }
+
+.dctc-ai-form-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
 .dctc-ai-unsaved-badge,
 .dctc-ai-saved-badge {
   display: inline-flex;
@@ -1589,6 +1595,29 @@ input:focus-visible + .dctc-ai-toggle-slider {
 }
 .dctc-ai-dot.is-success {
   background: #10b981;
+}
+
+/* --- Spinner & Animation --- */
+.dctc-ai-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: dctc-ai-spin 0.75s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes dctc-ai-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dctc-ai-spin {
+  animation: dctc-ai-spin 1s linear infinite;
+  display: inline-block;
 }
 
 /* --- Buttons System --- */
@@ -2196,6 +2225,14 @@ body.dctc-ai-modal-open {
   .dctc-ai-form-footer .dctc-ai-btn-primary {
     width: 100%;
   }
+  .dctc-ai-form-footer__actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .dctc-ai-form-footer__actions .dctc-ai-btn {
+    width: 100%;
+  }
   .dctc-ai-action-buttons-header {
     display: none;
   }
@@ -2379,23 +2416,7 @@ body.dctc-ai-modal-open {
   text-decoration: underline;
 }
 
-.dctc-ai-kb-footer {
-  justify-content: flex-end;
-  padding-top: 0.5rem;
-}
 
-.dctc-ai-kb-footer .dctc-ai-btn-primary .dashicons {
-  font-size: 1.125rem;
-  height: 1.125rem;
-  width: 1.125rem;
-}
-
-@media (max-width: 768px) {
-  .dctc-ai-kb-footer .dctc-ai-btn-primary {
-    width: 100%;
-  }
-
-}
 
 @media (max-width: 480px) {
   .dctc-ai-content {
@@ -2418,7 +2439,7 @@ body.dctc-ai-modal-open {
 }
 
 .dctc-ai-kb-settings {
-  padding: 20px 0;
+  padding-top: 20px;
 }
 
 .dctc-ai-kb-warning {
@@ -2488,6 +2509,10 @@ body.dctc-ai-modal-open {
   border-radius: 8px;
   margin-bottom: 20px;
   overflow: visible;
+}
+
+.dctc-ai-kb-card:last-child{
+  margin-bottom: 0px;
 }
 
 .dctc-ai-kb-card__header {
@@ -2715,14 +2740,6 @@ body.dctc-ai-modal-open {
   margin: 6px 0 0;
 }
 
-.dctc-ai-kb-footer {
-  background: #fafafa;
-  border-top: 1px solid var(--dctc-ai-border-hover);
-  display: flex;
-  gap: 12px;
-  padding: 20px;
-}
-
 .dctc-ai-kb-db-options {
   display: grid;
   gap: 12px;
@@ -2730,14 +2747,8 @@ body.dctc-ai-modal-open {
 }
 
 @media (max-width: 768px) {
-  .dctc-ai-kb-card__header,
-  .dctc-ai-kb-footer {
+  .dctc-ai-kb-card__header {
     flex-direction: column;
-  }
-
-.dctc-ai-kb-footer .dctc-ai-btn {
-    justify-content: center;
-    width: 100%;
   }
 
 .dctc-ai-kb-db-options,

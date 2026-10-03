@@ -2070,12 +2070,11 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 						{saving ? (
 							<>
 								<span className="dctc-ai-spinner" aria-hidden="true" />{' '}
-								{__('Saving All Settings…', 'dragwyb-click-to-chat')}
+								{__('Saving Changes…', 'dragwyb-click-to-chat')}
 							</>
 						) : (
 							<>
-								<span className="dashicons dashicons-saved" aria-hidden="true" />{' '}
-								{__('Save All Chatbot Settings', 'dragwyb-click-to-chat')}
+								{__('Save', 'dragwyb-click-to-chat')}
 							</>
 						)}
 					</button>

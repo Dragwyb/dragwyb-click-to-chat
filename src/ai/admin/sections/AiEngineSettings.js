@@ -16,17 +16,17 @@ const PROMPT_HINT = __(
 	'dragwyb-click-to-chat'
 );
 
-export default function AiEngineSettings( { settings, onSave, showNotice } ) {
-	const [ saving, setSaving ] = useState( false );
-	const [ resetting, setResetting ] = useState( {} );
-	const [ confirmProvider, setConfirmProvider ] = useState( null );
-	const [ modelsList, setModelsList ] = useState(
+export default function AiEngineSettings({ settings, onSave, showNotice }) {
+	const [saving, setSaving] = useState(false);
+	const [resetting, setResetting] = useState({});
+	const [confirmProvider, setConfirmProvider] = useState(null);
+	const [modelsList, setModelsList] = useState(
 		() => window.dctc_ai_data?.models_list || {}
 	);
 
 	const chatbot = settings?.chatbot || {};
 
-	const buildForm = () => ( {
+	const buildForm = () => ({
 		// Providers & Models
 		openai_key: '',
 		google_key: '',
@@ -37,22 +37,22 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 		system_prompt: chatbot.system_prompt || '',
 		temperature: chatbot.temperature ?? 0.7,
 		max_tokens: chatbot.max_tokens ?? 500,
-	} );
+	});
 
-	const [ form, setForm ] = useState( buildForm );
-	const [ saved, setSaved ] = useState( buildForm );
-	const dirty = JSON.stringify( form ) !== JSON.stringify( saved );
+	const [form, setForm] = useState(buildForm);
+	const [saved, setSaved] = useState(buildForm);
+	const dirty = JSON.stringify(form) !== JSON.stringify(saved);
 
-	const hasKey = ( id ) => !! settings?.api_keys?.[ id ];
-	const maskedKey = ( id ) => settings?.api_keys?.[ id ] || '';
+	const hasKey = (id) => !!settings?.api_keys?.[id];
+	const maskedKey = (id) => settings?.api_keys?.[id] || '';
 
-	const setField = ( key, value ) => {
-		setForm( ( prev ) => ( { ...prev, [ key ]: value } ) );
+	const setField = (key, value) => {
+		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const onSubmit = async ( e ) => {
+	const onSubmit = async (e) => {
 		e.preventDefault();
-		setSaving( true );
+		setSaving(true);
 
 		try {
 			// 1. Save API keys & models
@@ -70,37 +70,37 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 				max_tokens: form.max_tokens,
 			};
 
-			const [ resApi, resBot ] = await Promise.all( [
-				apiFetch( {
+			const [resApi, resBot] = await Promise.all([
+				apiFetch({
 					path: '/dctc-ai/v1/save-settings',
 					method: 'POST',
 					data: apiPayload,
-				} ),
-				apiFetch( {
+				}),
+				apiFetch({
 					path: '/dctc-ai/v1/save-bot-settings',
 					method: 'POST',
 					data: botPayload,
-				} ),
-			] );
+				}),
+			]);
 
 			showNotice(
-				__( 'AI Engine & Prompt settings saved successfully!', 'dragwyb-click-to-chat' ),
+				__('AI Engine & Prompt settings saved successfully!', 'dragwyb-click-to-chat'),
 				'success'
 			);
 
-			onSave( {
+			onSave({
 				api_keys: resApi.api_keys || settings?.api_keys || {},
 				chatbot: {
 					...chatbot,
-					...( resBot || {} ),
-					...( resApi.chatbot || {} ),
+					...(resBot || {}),
+					...(resApi.chatbot || {}),
 					...botPayload,
 				},
 				models: resApi.models || form.models,
-			} );
+			});
 
-			if ( resApi.models_list ) {
-				setModelsList( resApi.models_list );
+			if (resApi.models_list) {
+				setModelsList(resApi.models_list);
 			}
 
 			const nextSaved = {
@@ -110,73 +110,73 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 				default_provider: resApi.chatbot?.default_provider || form.default_provider,
 			};
 
-			setForm( ( prev ) => ( {
+			setForm((prev) => ({
 				...prev,
 				openai_key: '',
 				google_key: '',
 				default_provider: resApi.chatbot?.default_provider || prev.default_provider,
-			} ) );
-			setSaved( nextSaved );
-		} catch ( err ) {
+			}));
+			setSaved(nextSaved);
+		} catch (err) {
 			let msg = err.message;
-			if ( err.errors && typeof err.errors === 'object' ) {
-				msg = Object.values( err.errors ).join( ' | ' );
+			if (err.errors && typeof err.errors === 'object') {
+				msg = Object.values(err.errors).join(' | ');
 			}
 			showNotice(
-				msg || __( 'Failed to save AI engine settings', 'dragwyb-click-to-chat' ),
+				msg || __('Failed to save AI engine settings', 'dragwyb-click-to-chat'),
 				'error'
 			);
 		} finally {
-			setSaving( false );
+			setSaving(false);
 		}
 	};
 
-	const resetKey = async ( provider ) => {
-		setResetting( ( prev ) => ( { ...prev, [ provider ]: true } ) );
+	const resetKey = async (provider) => {
+		setResetting((prev) => ({ ...prev, [provider]: true }));
 		try {
-			const res = await apiFetch( {
+			const res = await apiFetch({
 				path: '/dctc-ai/v1/reset-key',
 				method: 'POST',
 				data: { provider },
-			} );
+			});
 			showNotice(
-				__( 'Key reset successfully!', 'dragwyb-click-to-chat' ),
+				__('Key reset successfully!', 'dragwyb-click-to-chat'),
 				'success'
 			);
 			const apiKeys = { ...settings?.api_keys };
-			delete apiKeys[ provider ];
+			delete apiKeys[provider];
 			const models = { ...settings?.models };
-			delete models[ provider ];
-			onSave( {
+			delete models[provider];
+			onSave({
 				api_keys: apiKeys,
 				models,
 				chatbot: res.chatbot || settings?.chatbot,
-			} );
-			setForm( ( prev ) => {
+			});
+			setForm((prev) => {
 				const next = {
 					...prev,
-					[ `${ provider }_key` ]: '',
+					[`${provider}_key`]: '',
 					default_provider: res.chatbot?.default_provider || '',
-					models: { ...prev.models, [ provider ]: '' },
+					models: { ...prev.models, [provider]: '' },
 				};
-				setSaved( next );
+				setSaved(next);
 				return next;
-			} );
-		} catch ( err ) {
+			});
+		} catch (err) {
 			showNotice(
-				err.message || __( 'Failed to reset key', 'dragwyb-click-to-chat' ),
+				err.message || __('Failed to reset key', 'dragwyb-click-to-chat'),
 				'error'
 			);
 		} finally {
-			setResetting( ( prev ) => ( { ...prev, [ provider ]: false } ) );
+			setResetting((prev) => ({ ...prev, [provider]: false }));
 		}
 	};
 
-	const temp = Number( form.temperature );
+	const temp = Number(form.temperature);
 
 	return (
 		<div className="dctc-ai-engine-settings">
-			<form onSubmit={ onSubmit }>
+			<form onSubmit={onSubmit}>
 				{ /* =========================================================================
 				     SECTION 1: AI Providers & API Keys (Card View Grid)
 				   ========================================================================= */ }
@@ -188,10 +188,10 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 							</div>
 							<div>
 								<h2 className="dctc-ai-card__title">
-									{ __( 'AI Providers & API Keys', 'dragwyb-click-to-chat' ) }
+									{__('AI Providers & API Keys', 'dragwyb-click-to-chat')}
 								</h2>
 								<p className="dctc-ai-card__desc">
-									{ __( 'Connect your AI provider API keys, select your primary intelligence model, and choose your active provider.', 'dragwyb-click-to-chat' ) }
+									{__('Connect your AI provider API keys, select your primary intelligence model, and choose your active provider.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						</div>
@@ -199,155 +199,155 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 
 					<div className="dctc-ai-card__body">
 						<div className="dctc-ai-providers-grid">
-							{ Object.entries( PROVIDERS ).map( ( [ id, meta ] ) => {
-								const isConnected = hasKey( id );
+							{Object.entries(PROVIDERS).map(([id, meta]) => {
+								const isConnected = hasKey(id);
 								const isActive = form.default_provider === id;
 
 								return (
 									<article
-										key={ id }
-										className={ `dctc-ai-provider-card ${ isConnected ? 'is-connected' : '' } ${ isActive ? 'is-active-provider' : '' }` }
+										key={id}
+										className={`dctc-ai-provider-card ${isConnected ? 'is-connected' : ''} ${isActive ? 'is-active-provider' : ''}`}
 									>
 										<header className="dctc-ai-provider-card__header">
 											<div className="dctc-ai-provider-card__header-left">
 												<div className="dctc-ai-provider-icon-box">
-													{ id === 'openai' ? (
+													{id === 'openai' ? (
 														<span className="dashicons dashicons-superhero-alt" />
 													) : (
 														<span className="dashicons dashicons-star-filled" />
 													)}
 												</div>
 												<div>
-													<h3 className="dctc-ai-provider-card__title">{ meta.name }</h3>
-													<span className={ `dctc-ai-provider-status-badge ${ isConnected ? 'is-connected' : 'is-unconfigured' }` }>
+													<h3 className="dctc-ai-provider-card__title">{meta.name}</h3>
+													<span className={`dctc-ai-provider-status-badge ${isConnected ? 'is-connected' : 'is-unconfigured'}`}>
 														<span className="dctc-ai-status-indicator" />
-														{ isConnected
-															? ( isActive ? __( 'Active Provider', 'dragwyb-click-to-chat' ) : __( 'Connected', 'dragwyb-click-to-chat' ) )
-															: __( 'Not Configured', 'dragwyb-click-to-chat' )
+														{isConnected
+															? (isActive ? __('Active Provider', 'dragwyb-click-to-chat') : __('Connected', 'dragwyb-click-to-chat'))
+															: __('Not Configured', 'dragwyb-click-to-chat')
 														}
 													</span>
 												</div>
 											</div>
 
-											{ isConnected && (
+											{isConnected && (
 												<div className="dctc-ai-provider-card__toggle-wrap">
 													<label className="dctc-ai-provider-toggle-label">
 														<span className="dctc-ai-provider-toggle-text">
-															{ isActive ? __( 'Active', 'dragwyb-click-to-chat' ) : __( 'Use as Active', 'dragwyb-click-to-chat' ) }
+															{isActive ? __('Active', 'dragwyb-click-to-chat') : __('Use as Active', 'dragwyb-click-to-chat')}
 														</span>
 														<Toggle
-															id={ `toggle_${ id }` }
-															checked={ isActive }
-															onChange={ ( checked ) => {
-																if ( checked ) {
-																	setField( 'default_provider', id );
+															id={`toggle_${id}`}
+															checked={isActive}
+															onChange={(checked) => {
+																if (checked) {
+																	setField('default_provider', id);
 																} else {
-																	const other = Object.keys( PROVIDERS ).find(
-																		( p ) => p !== id && hasKey( p )
+																	const other = Object.keys(PROVIDERS).find(
+																		(p) => p !== id && hasKey(p)
 																	);
-																	setField( 'default_provider', other || '' );
+																	setField('default_provider', other || '');
 																}
-															} }
+															}}
 														/>
 													</label>
 												</div>
-											) }
+											)}
 										</header>
 
 										<div className="dctc-ai-provider-card__body">
 											<div className="dctc-ai-bot-field">
 												<div className="dctc-ai-api-field__label-row">
-													<label htmlFor={ `${ id }_key` }>
-														{ __( 'API Key', 'dragwyb-click-to-chat' ) }
+													<label htmlFor={`${id}_key`}>
+														{__('API Key', 'dragwyb-click-to-chat')}
 													</label>
-													{ isConnected && (
+													{isConnected && (
 														<button
 															type="button"
 															className="dctc-ai-api-btn-reset"
-															onClick={ () => setConfirmProvider( id ) }
-															disabled={ resetting[ id ] }
+															onClick={() => setConfirmProvider(id)}
+															disabled={resetting[id]}
 														>
-															{ resetting[ id ] ? (
+															{resetting[id] ? (
 																<span className="dctc-ai-spinner" aria-hidden="true" />
 															) : (
-																__( 'Reset Key', 'dragwyb-click-to-chat' )
-															) }
+																__('Reset Key', 'dragwyb-click-to-chat')
+															)}
 														</button>
-													) }
+													)}
 												</div>
 
 												<div className="dctc-ai-input-with-icon">
 													<span className="dashicons dashicons-admin-network" />
 													<input
 														type="text"
-														id={ `${ id }_key` }
+														id={`${id}_key`}
 														className={
 															'dctc-ai-bot-input' +
-															( isConnected ? ' dctc-ai-api-input--masked' : '' )
+															(isConnected ? ' dctc-ai-api-input--masked' : '')
 														}
-														value={ isConnected ? maskedKey( id ) : form[ `${ id }_key` ] }
-														onChange={ ( e ) => setField( `${ id }_key`, e.target.value ) }
-														placeholder={ sprintf(
+														value={isConnected ? maskedKey(id) : form[`${id}_key`]}
+														onChange={(e) => setField(`${id}_key`, e.target.value)}
+														placeholder={sprintf(
 															/* translators: %s: provider name */
-															__( 'Enter your %s API key', 'dragwyb-click-to-chat' ),
+															__('Enter your %s API key', 'dragwyb-click-to-chat'),
 															meta.name
-														) }
-														disabled={ isConnected }
+														)}
+														disabled={isConnected}
 													/>
 												</div>
 
 												<div className="dctc-ai-api-help-row">
 													<a
-														href={ meta.link }
+														href={meta.link}
 														className="dctc-ai-api-help-link"
 														target="_blank"
 														rel="noopener noreferrer"
 													>
 														<span className="dashicons dashicons-external" aria-hidden="true" />
-														{ sprintf(
+														{sprintf(
 															/* translators: %s: provider name */
-															__( 'Get %s API key', 'dragwyb-click-to-chat' ),
+															__('Get %s API key', 'dragwyb-click-to-chat'),
 															meta.name
-														) }
+														)}
 													</a>
 												</div>
 											</div>
 
-											{ isConnected &&
-												modelsList[ id ] &&
-												Object.keys( modelsList[ id ] ).length > 0 && (
-													<div className="dctc-ai-bot-field" style={ { marginTop: '0.875rem' } }>
-														<label htmlFor={ `models_${ id }` }>
-															{ __( 'Active Model', 'dragwyb-click-to-chat' ) }
+											{isConnected &&
+												modelsList[id] &&
+												Object.keys(modelsList[id]).length > 0 && (
+													<div className="dctc-ai-bot-field" style={{ marginTop: '0.875rem' }}>
+														<label htmlFor={`models_${id}`}>
+															{__('Active Model', 'dragwyb-click-to-chat')}
 														</label>
 														<select
-															id={ `models_${ id }` }
+															id={`models_${id}`}
 															className="dctc-ai-bot-select"
-															value={ form.models[ id ] || '' }
-															onChange={ ( e ) =>
-																setForm( ( prev ) => ( {
+															value={form.models[id] || ''}
+															onChange={(e) =>
+																setForm((prev) => ({
 																	...prev,
 																	models: {
 																		...prev.models,
-																		[ id ]: e.target.value,
+																		[id]: e.target.value,
 																	},
-																} ) )
+																}))
 															}
 														>
-															{ Object.entries( modelsList[ id ] ).map(
-																( [ modelId, label ] ) => (
-																	<option key={ modelId } value={ modelId }>
-																		{ label }
+															{Object.entries(modelsList[id]).map(
+																([modelId, label]) => (
+																	<option key={modelId} value={modelId}>
+																		{label}
 																	</option>
 																)
-															) }
+															)}
 														</select>
 													</div>
-												) }
+												)}
 										</div>
 									</article>
 								);
-							} ) }
+							})}
 						</div>
 					</div>
 				</section>
@@ -363,10 +363,10 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 							</div>
 							<div>
 								<h2 className="dctc-ai-card__title">
-									{ __( 'System Persona & Instructions', 'dragwyb-click-to-chat' ) }
+									{__('System Persona & Instructions', 'dragwyb-click-to-chat')}
 								</h2>
 								<p className="dctc-ai-card__desc">
-									{ __( 'Define how your AI assistant speaks, behaves, answers questions, and represents your brand.', 'dragwyb-click-to-chat' ) }
+									{__('Define how your AI assistant speaks, behaves, answers questions, and represents your brand.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						</div>
@@ -375,21 +375,21 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 					<div className="dctc-ai-card__body">
 						<div className="dctc-ai-bot-field">
 							<label htmlFor="system_prompt">
-								{ __( 'Custom ChatBot System Prompt', 'dragwyb-click-to-chat' ) }
+								{__('Custom ChatBot System Prompt', 'dragwyb-click-to-chat')}
 							</label>
 							<textarea
 								id="system_prompt"
 								className="dctc-ai-bot-input dctc-ai-bot-textarea"
-								style={ { minHeight: '120px' } }
+								style={{ minHeight: '120px' }}
 								rows="5"
-								value={ form.system_prompt }
-								onChange={ ( e ) => setField( 'system_prompt', e.target.value ) }
-								placeholder={ __(
+								value={form.system_prompt}
+								onChange={(e) => setField('system_prompt', e.target.value)}
+								placeholder={__(
 									"For example: You are a friendly customer assistant for our website. Answer visitor questions clearly, recommend relevant products, and keep responses concise and helpful.",
 									'dragwyb-click-to-chat'
-								) }
+								)}
 							/>
-							<p className="dctc-ai-bot-hint">{ PROMPT_HINT }</p>
+							<p className="dctc-ai-bot-hint">{PROMPT_HINT}</p>
 						</div>
 					</div>
 				</section>
@@ -405,10 +405,10 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 							</div>
 							<div>
 								<h2 className="dctc-ai-card__title">
-									{ __( 'Model Parameters & Accuracy', 'dragwyb-click-to-chat' ) }
+									{__('Model Parameters & Accuracy', 'dragwyb-click-to-chat')}
 								</h2>
 								<p className="dctc-ai-card__desc">
-									{ __( 'Fine-tune AI response creativity, precision, and maximum output length.', 'dragwyb-click-to-chat' ) }
+									{__('Fine-tune AI response creativity, precision, and maximum output length.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						</div>
@@ -419,10 +419,10 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 							<div className="dctc-ai-bot-field">
 								<div className="dctc-ai-instructions-param__head">
 									<label htmlFor="temperature">
-										{ __( 'Chat Accuracy / Temperature', 'dragwyb-click-to-chat' ) }
+										{__('Chat Accuracy / Temperature', 'dragwyb-click-to-chat')}
 									</label>
 									<span className="dctc-ai-instructions-value-badge">
-										{ temp.toFixed( 1 ) }
+										{temp.toFixed(1)}
 									</span>
 								</div>
 								<input
@@ -432,35 +432,35 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 									min="0"
 									max="2"
 									step="0.1"
-									value={ form.temperature }
-									onChange={ ( e ) => setField( 'temperature', e.target.value ) }
+									value={form.temperature}
+									onChange={(e) => setField('temperature', e.target.value)}
 								/>
 								<div className="dctc-ai-instructions-range-labels">
-									<span>{ __( 'Focused / Precise (0.0)', 'dragwyb-click-to-chat' ) }</span>
-									<span>{ __( 'Balanced (0.7)', 'dragwyb-click-to-chat' ) }</span>
-									<span>{ __( 'Creative (2.0)', 'dragwyb-click-to-chat' ) }</span>
+									<span>{__('Focused / Precise (0.0)', 'dragwyb-click-to-chat')}</span>
+									<span>{__('Balanced (0.7)', 'dragwyb-click-to-chat')}</span>
+									<span>{__('Creative (2.0)', 'dragwyb-click-to-chat')}</span>
 								</div>
 								<p className="dctc-ai-bot-hint">
-									{ __( 'Lower values produce precise, predictable responses; higher values encourage creative answers.', 'dragwyb-click-to-chat' ) }
+									{__('Lower values produce precise, predictable responses; higher values encourage creative answers.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 
 							<div className="dctc-ai-bot-field">
 								<label htmlFor="max_tokens">
-									{ __( 'Max Tokens (Response Length)', 'dragwyb-click-to-chat' ) }
+									{__('Max Tokens (Response Length)', 'dragwyb-click-to-chat')}
 								</label>
 								<input
 									type="number"
 									id="max_tokens"
 									className="dctc-ai-bot-input"
-									value={ form.max_tokens }
-									onChange={ ( e ) => setField( 'max_tokens', e.target.value ) }
+									value={form.max_tokens}
+									onChange={(e) => setField('max_tokens', e.target.value)}
 									min="100"
 									max="8192"
 									step="50"
 								/>
 								<p className="dctc-ai-bot-hint">
-									{ __( 'Sets the maximum length limit for chatbot responses in a single message.', 'dragwyb-click-to-chat' ) }
+									{__('Sets the maximum length limit for chatbot responses in a single message.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						</div>
@@ -472,55 +472,55 @@ export default function AiEngineSettings( { settings, onSave, showNotice } ) {
 				   ========================================================================= */ }
 				<footer className="dctc-ai-form-footer">
 					<div className="dctc-ai-form-footer__status">
-						{ dirty ? (
+						{dirty ? (
 							<span className="dctc-ai-unsaved-badge">
 								<span className="dctc-ai-dot is-warning" />
-								{ __( 'Unsaved changes', 'dragwyb-click-to-chat' ) }
+								{__('Unsaved changes', 'dragwyb-click-to-chat')}
 							</span>
 						) : (
 							<span className="dctc-ai-saved-badge">
 								<span className="dctc-ai-dot is-success" />
-								{ __( 'All settings up to date', 'dragwyb-click-to-chat' ) }
+								{__('All settings saved', 'dragwyb-click-to-chat')}
 							</span>
-						) }
+						)}
 					</div>
 
 					<button
 						type="submit"
 						className="dctc-ai-btn dctc-ai-btn-primary"
-						disabled={ saving || ! dirty }
+						disabled={saving || !dirty}
 					>
-						{ saving ? (
+						{saving ? (
 							<>
 								<span className="dctc-ai-spinner" aria-hidden="true" />
-								{ __( 'Saving Settings…', 'dragwyb-click-to-chat' ) }
+								{__('Saving Settings…', 'dragwyb-click-to-chat')}
 							</>
 						) : (
-							__( 'Save Settings', 'dragwyb-click-to-chat' )
-						) }
+							__('Save Settings', 'dragwyb-click-to-chat')
+						)}
 					</button>
 				</footer>
 			</form>
 
 			<ConfirmModal
-				open={ !! confirmProvider }
-				title={ __( 'Reset API key', 'dragwyb-click-to-chat' ) }
-				message={ sprintf(
+				open={!!confirmProvider}
+				title={__('Reset API key', 'dragwyb-click-to-chat')}
+				message={sprintf(
 					/* translators: %s: provider name */
 					__(
 						'Are you sure you want to reset the %s API key? This cannot be undone.',
 						'dragwyb-click-to-chat'
 					),
-					PROVIDERS[ confirmProvider ]?.name || ''
-				) }
-				confirmLabel={ __( 'Reset Key', 'dragwyb-click-to-chat' ) }
-				busy={ resetting[ confirmProvider ] }
-				onCancel={ () => setConfirmProvider( null ) }
-				onConfirm={ () => {
+					PROVIDERS[confirmProvider]?.name || ''
+				)}
+				confirmLabel={__('Reset Key', 'dragwyb-click-to-chat')}
+				busy={resetting[confirmProvider]}
+				onCancel={() => setConfirmProvider(null)}
+				onConfirm={() => {
 					const provider = confirmProvider;
-					setConfirmProvider( null );
-					resetKey( provider );
-				} }
+					setConfirmProvider(null);
+					resetKey(provider);
+				}}
 			/>
 		</div>
 	);

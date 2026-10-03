@@ -11,8 +11,8 @@ import {
 } from '../utils/providers';
 
 const SUBTABS = [
-	{ id: 'sources', label: __( 'Sources', 'dragwyb-click-to-chat' ) },
-	{ id: 'vector-db', label: __( 'Database', 'dragwyb-click-to-chat' ) },
+	{ id: 'sources', label: __('Sources', 'dragwyb-click-to-chat') },
+	{ id: 'vector-db', label: __('Database', 'dragwyb-click-to-chat') },
 ];
 
 const TEXT_HINT = __(
@@ -26,14 +26,14 @@ const URL_HINT = __(
 const DEFAULT_NO_DATA =
 	"I don't have information about your question in my knowledge base. Please rephrase or ask about topics I have knowledge of.";
 
-export default function KnowledgeBase( { settings, onSave, showNotice } ) {
-	const [ saving, setSaving ] = useState( false );
-	const [ indexing, setIndexing ] = useState( false );
-	const [ indexStatus, setIndexStatus ] = useState( null );
-	const [ stats, setStats ] = useState( null );
-	const [ availableTypes, setAvailableTypes ] = useState( [] );
-	const [ subtab, setSubtab ] = useState( 'sources' );
-	const [ confirmReset, setConfirmReset ] = useState( false );
+export default function KnowledgeBase({ settings, onSave, showNotice }) {
+	const [saving, setSaving] = useState(false);
+	const [indexing, setIndexing] = useState(false);
+	const [indexStatus, setIndexStatus] = useState(null);
+	const [stats, setStats] = useState(null);
+	const [availableTypes, setAvailableTypes] = useState([]);
+	const [subtab, setSubtab] = useState('sources');
+	const [confirmReset, setConfirmReset] = useState(false);
 
 	const chatbot = settings?.chatbot || {};
 	const rag = settings?.rag || {};
@@ -43,55 +43,55 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 		rag.vector_db?.index_name
 	);
 
-	const [ knowledgeText, setKnowledgeText ] = useState(
+	const [knowledgeText, setKnowledgeText] = useState(
 		chatbot.knowledge_text || ''
 	);
-	const [ urls, setUrls ] = useState(
-		Array.isArray( chatbot.knowledge_urls ) && chatbot.knowledge_urls.length
+	const [urls, setUrls] = useState(
+		Array.isArray(chatbot.knowledge_urls) && chatbot.knowledge_urls.length
 			? chatbot.knowledge_urls
 			: []
 	);
-	const [ trainingFiles, setTrainingFiles ] = useState(
-		Array.isArray( chatbot.training_files ) ? chatbot.training_files : []
+	const [trainingFiles, setTrainingFiles] = useState(
+		Array.isArray(chatbot.training_files) ? chatbot.training_files : []
 	);
-	const [ selectedPostTypes, setSelectedPostTypes ] = useState(
-		rag.post_types || [ 'post', 'page' ]
+	const [selectedPostTypes, setSelectedPostTypes] = useState(
+		rag.post_types || ['post', 'page']
 	);
-	const [ chunkSize, setChunkSize ] = useState( rag.chunk_size || 1000 );
-	const [ maxResults, setMaxResults ] = useState( rag.max_results || 5 );
-	const [ vectorDb, setVectorDb ] = useState(
+	const [chunkSize, setChunkSize] = useState(rag.chunk_size || 1000);
+	const [maxResults, setMaxResults] = useState(rag.max_results || 5);
+	const [vectorDb, setVectorDb] = useState(
 		rag.vector_db?.provider || 'sqlite'
 	);
-	const [ requireIndexed, setRequireIndexed ] = useState(
+	const [requireIndexed, setRequireIndexed] = useState(
 		rag.require_indexed_data || false
 	);
-	const [ noDataMessage, setNoDataMessage ] = useState(
+	const [noDataMessage, setNoDataMessage] = useState(
 		rag.no_data_message || DEFAULT_NO_DATA
 	);
-	const [ pineconeKey, setPineconeKey ] = useState(
+	const [pineconeKey, setPineconeKey] = useState(
 		rag.vector_db?.api_key || ''
 	);
-	const [ pineconeHost, setPineconeHost ] = useState(
+	const [pineconeHost, setPineconeHost] = useState(
 		rag.vector_db?.host || ''
 	);
-	const [ pineconeIndex, setPineconeIndex ] = useState(
+	const [pineconeIndex, setPineconeIndex] = useState(
 		rag.vector_db?.index_name || ''
 	);
 
-	const [ embeddingProvider, setEmbeddingProvider ] = useState( () =>
-		resolveEmbeddingProvider( settings )
+	const [embeddingProvider, setEmbeddingProvider] = useState(() =>
+		resolveEmbeddingProvider(settings)
 	);
 
-	const [ savedSnapshot, setSavedSnapshot ] = useState( () => ( {
+	const [savedSnapshot, setSavedSnapshot] = useState(() => ({
 		knowledgeText: chatbot.knowledge_text || '',
 		urls:
-			Array.isArray( chatbot.knowledge_urls ) && chatbot.knowledge_urls.length
+			Array.isArray(chatbot.knowledge_urls) && chatbot.knowledge_urls.length
 				? chatbot.knowledge_urls
 				: [],
-		trainingFiles: Array.isArray( chatbot.training_files )
+		trainingFiles: Array.isArray(chatbot.training_files)
 			? chatbot.training_files
 			: [],
-		selectedPostTypes: rag.post_types || [ 'post', 'page' ],
+		selectedPostTypes: rag.post_types || ['post', 'page'],
 		maxChunkSize: rag.chunk_size || 1000,
 		maxResults: rag.max_results || 5,
 		vectorDb: rag.vector_db?.provider || 'sqlite',
@@ -100,29 +100,29 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 		pineconeApiKey: rag.vector_db?.api_key || '',
 		pineconeHost: rag.vector_db?.host || '',
 		pineconeIndexName: rag.vector_db?.index_name || '',
-		embeddingProviderValue: resolveEmbeddingProvider( settings ),
-	} ) );
+		embeddingProviderValue: resolveEmbeddingProvider(settings),
+	}));
 
-	useEffect( () => {
-		if ( ! rag.embeddings?.provider ) {
-			const p = resolveEmbeddingProvider( settings );
-			setEmbeddingProvider( p );
-			setSavedSnapshot( ( prev ) => ( {
+	useEffect(() => {
+		if (!rag.embeddings?.provider) {
+			const p = resolveEmbeddingProvider(settings);
+			setEmbeddingProvider(p);
+			setSavedSnapshot((prev) => ({
 				...prev,
 				embeddingProviderValue: p,
-			} ) );
+			}));
 		}
 	}, [
 		settings?.api_keys?.openai,
 		settings?.api_keys?.google,
 		settings?.chatbot?.default_provider,
 		rag.embeddings?.provider,
-	] );
+	]);
 
 	const currentSnapshot = {
 		knowledgeText,
 		urls,
-		trainingFiles: trainingFiles.map( ( f ) =>
+		trainingFiles: trainingFiles.map((f) =>
 			typeof f === 'object' ? f.id : f
 		),
 		selectedPostTypes,
@@ -137,83 +137,83 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 		embeddingProviderValue: embeddingProvider,
 	};
 	const dirty =
-		JSON.stringify( currentSnapshot ) !== JSON.stringify( savedSnapshot );
+		JSON.stringify(currentSnapshot) !== JSON.stringify(savedSnapshot);
 
 	const embedInfo =
 		embeddingProvider === 'google'
 			? {
-					provider: 'Google Gemini',
-					model: 'gemini-embedding-001',
-					key: settings?.api_keys?.google ? 'google' : null,
-					dimensions: 768,
-			  }
+				provider: 'Google Gemini',
+				model: 'gemini-embedding-001',
+				key: settings?.api_keys?.google ? 'google' : null,
+				dimensions: 768,
+			}
 			: {
-					provider: 'OpenAI',
-					model: 'text-embedding-3-small',
-					key: settings?.api_keys?.openai ? 'openai' : null,
-					dimensions: 1536,
-			  };
+				provider: 'OpenAI',
+				model: 'text-embedding-3-small',
+				key: settings?.api_keys?.openai ? 'openai' : null,
+				dimensions: 1536,
+			};
 
 	const indexedTypes = stats?.indexed_post_types || [];
 	const postTypesChanged =
-		!! stats &&
-		( selectedPostTypes.length !== indexedTypes.length ||
-			selectedPostTypes.some( ( t ) => ! new Set( indexedTypes ).has( t ) ) );
+		!!stats &&
+		(selectedPostTypes.length !== indexedTypes.length ||
+			selectedPostTypes.some((t) => !new Set(indexedTypes).has(t)));
 
-	useEffect( () => {
+	useEffect(() => {
 		fetchPostTypes();
 		fetchStats();
-	}, [] );
+	}, []);
 
 	const fetchPostTypes = async () => {
 		try {
-			const res = await apiFetch( {
+			const res = await apiFetch({
 				path: '/dctc-ai/v1/rag/post-types',
 				method: 'GET',
-			} );
-			setAvailableTypes( res.types || [] );
-		} catch ( e ) {
-			console.error( 'Failed to fetch post types:', e );
+			});
+			setAvailableTypes(res.types || []);
+		} catch (e) {
+			console.error('Failed to fetch post types:', e);
 		}
 	};
 
 	const fetchStats = async () => {
 		try {
-			const res = await apiFetch( {
+			const res = await apiFetch({
 				path: '/dctc-ai/v1/rag/stats',
 				method: 'GET',
-			} );
-			setStats( res );
-		} catch ( e ) {
-			console.error( 'Failed to fetch RAG stats:', e );
+			});
+			setStats(res);
+		} catch (e) {
+			console.error('Failed to fetch RAG stats:', e);
 		}
 	};
 
 	const progressPct = indexStatus
 		? indexStatus.status === 'indexing' && indexStatus.docs_total > 0
 			? Math.round(
-					( indexStatus.docs_processed / indexStatus.docs_total ) * 100
-			  )
+				(indexStatus.docs_processed / indexStatus.docs_total) * 100
+			)
 			: indexStatus.status === 'embedding' && indexStatus.embed_total > 0
-			? Math.round(
-					( indexStatus.embed_processed / indexStatus.embed_total ) * 100
-			  )
-			: indexStatus.status === 'completed'
-			? 100
-			: 0
+				? Math.round(
+					(indexStatus.embed_processed / indexStatus.embed_total) * 100
+				)
+				: indexStatus.status === 'completed'
+					? 100
+					: 0
 		: 0;
 
 	const progressLabel = indexStatus
 		? indexStatus.status === 'indexing'
 			? sprintf(
-					/* translators: 1: processed, 2: total */
-					__( 'Indexing documents… %1$d/%2$d', 'dragwyb-click-to-chat' ),
-					indexStatus.docs_processed,
-					indexStatus.docs_total
-			  )
+				/* translators: 1: processed, 2: total */
+				__('Indexing documents… %1$d/%2$d', 'dragwyb-click-to-chat'),
+				indexStatus.docs_processed,
+				indexStatus.docs_total
+			)
 			: indexStatus.status === 'embedding'
-			? indexStatus.embed_total > 0
-				? sprintf(
+				? indexStatus.embed_total > 0
+					? sprintf(
 						/* translators: 1: processed, 2: total */
 						__(
 							'Generating embeddings… %1$d/%2$d',
@@ -221,42 +221,42 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 						),
 						indexStatus.embed_processed,
 						indexStatus.embed_total
-				  )
-				: __( 'Generating embeddings…', 'dragwyb-click-to-chat' )
-			: ''
+					)
+					: __('Generating embeddings…', 'dragwyb-click-to-chat')
+				: ''
 		: '';
 
 	const pollIndex = () => {
 		const tick = async () => {
 			let status;
 			try {
-				status = await apiFetch( {
+				status = await apiFetch({
 					path: '/dctc-ai/v1/rag/index/status',
 					method: 'GET',
-				} );
-				setIndexStatus( status );
-			} catch ( e ) {
-				console.error( 'Failed to fetch indexing status:', e );
-				setIndexing( false );
+				});
+				setIndexStatus(status);
+			} catch (e) {
+				console.error('Failed to fetch indexing status:', e);
+				setIndexing(false);
 				return;
 			}
-			if ( status.status !== 'indexing' && status.status !== 'embedding' ) {
-				setIndexing( false );
+			if (status.status !== 'indexing' && status.status !== 'embedding') {
+				setIndexing(false);
 				fetchStats();
 			} else {
-				setTimeout( tick, 2000 );
+				setTimeout(tick, 2000);
 			}
 		};
 		tick();
 	};
 
-	const onSubmit = async ( e ) => {
+	const onSubmit = async (e) => {
 		e.preventDefault();
-		setSaving( true );
-		const fileIds = trainingFiles.map( ( f ) =>
-			typeof f === 'object' ? f.id : parseInt( f, 10 )
+		setSaving(true);
+		const fileIds = trainingFiles.map((f) =>
+			typeof f === 'object' ? f.id : parseInt(f, 10)
 		);
-		const cleanUrls = urls.filter( ( u ) => !! u.trim() );
+		const cleanUrls = urls.filter((u) => !!u.trim());
 		const botPayload = {
 			knowledge_text: knowledgeText,
 			knowledge_urls: cleanUrls,
@@ -264,8 +264,8 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 		};
 		const ragPayload = {
 			post_types: selectedPostTypes,
-			chunk_size: parseInt( chunkSize, 10 ),
-			max_results: parseInt( maxResults, 10 ),
+			chunk_size: parseInt(chunkSize, 10),
+			max_results: parseInt(maxResults, 10),
 			require_indexed_data: requireIndexed,
 			no_data_message: noDataMessage,
 			vector_db: {
@@ -277,45 +277,45 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 			embeddings: { provider: embeddingProvider },
 		};
 		try {
-			await apiFetch( {
+			await apiFetch({
 				path: '/dctc-ai/v1/save-bot-settings',
 				method: 'POST',
 				data: botPayload,
-			} );
-			await apiFetch( {
+			});
+			await apiFetch({
 				path: '/dctc-ai/v1/rag/settings',
 				method: 'POST',
 				data: ragPayload,
-			} );
-			onSave( {
+			});
+			onSave({
 				chatbot: { ...chatbot, ...botPayload },
 				rag: { ...rag, ...ragPayload },
-			} );
-			setSavedSnapshot( currentSnapshot );
+			});
+			setSavedSnapshot(currentSnapshot);
 			showNotice(
 				postTypesChanged
 					? __(
-							'Settings saved! Please re-index your content to apply the changes.',
-							'dragwyb-click-to-chat'
-					  )
+						'Settings saved! Please re-index your content to apply the changes.',
+						'dragwyb-click-to-chat'
+					)
 					: __(
-							'Knowledge base and RAG settings saved successfully!',
-							'dragwyb-click-to-chat'
-					  )
+						'Knowledge base and RAG settings saved successfully!',
+						'dragwyb-click-to-chat'
+					)
 			);
-		} catch ( err ) {
-			console.error( 'Save error:', err );
+		} catch (err) {
+			console.error('Save error:', err);
 			showNotice(
-				err.message || __( 'Failed to save settings', 'dragwyb-click-to-chat' ),
+				err.message || __('Failed to save settings', 'dragwyb-click-to-chat'),
 				'error'
 			);
 		} finally {
-			setSaving( false );
+			setSaving(false);
 		}
 	};
 
 	const startIndex = async () => {
-		if ( selectedPostTypes.length === 0 ) {
+		if (selectedPostTypes.length === 0) {
 			showNotice(
 				__(
 					'Please select at least one content type to index or enable website indexing',
@@ -325,14 +325,14 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 			);
 			return;
 		}
-		setIndexing( true );
-		setIndexStatus( null );
+		setIndexing(true);
+		setIndexStatus(null);
 		try {
-			const res = await apiFetch( {
+			const res = await apiFetch({
 				path: '/dctc-ai/v1/rag/index',
 				method: 'POST',
 				data: {
-					post_types: [ ...selectedPostTypes ],
+					post_types: [...selectedPostTypes],
 					index_sources: {
 						knowledge_text: true,
 						urls: true,
@@ -340,39 +340,39 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 						website: true,
 					},
 				},
-			} );
-			if ( ! res.success ) {
+			});
+			if (!res.success) {
 				showNotice(
 					res.message ||
-						__( 'Failed to start indexing', 'dragwyb-click-to-chat' ),
+					__('Failed to start indexing', 'dragwyb-click-to-chat'),
 					'error'
 				);
-				setIndexing( false );
+				setIndexing(false);
 				return;
 			}
 			showNotice(
 				res.message ||
-					__( 'Content indexing started!', 'dragwyb-click-to-chat' )
+				__('Content indexing started!', 'dragwyb-click-to-chat')
 			);
-			if ( res.status === 'queued' ) {
+			if (res.status === 'queued') {
 				pollIndex();
 			} else {
-				setIndexing( false );
+				setIndexing(false);
 				fetchStats();
 			}
-		} catch ( err ) {
-			console.error( 'Indexing error:', err );
+		} catch (err) {
+			console.error('Indexing error:', err);
 			showNotice(
-				err.message || __( 'Failed to index content', 'dragwyb-click-to-chat' ),
+				err.message || __('Failed to index content', 'dragwyb-click-to-chat'),
 				'error'
 			);
-			setIndexing( false );
+			setIndexing(false);
 		}
 	};
 
 	const resetPinecone = async () => {
-		setConfirmReset( false );
-		setSaving( true );
+		setConfirmReset(false);
+		setSaving(true);
 		try {
 			const payload = {
 				...rag,
@@ -383,21 +383,21 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 					index_name: '',
 				},
 			};
-			await apiFetch( {
+			await apiFetch({
 				path: '/dctc-ai/v1/rag/settings',
 				method: 'POST',
 				data: payload,
-			} );
-			setPineconeKey( '' );
-			setPineconeHost( '' );
-			setPineconeIndex( '' );
-			setSavedSnapshot( ( prev ) => ( {
+			});
+			setPineconeKey('');
+			setPineconeHost('');
+			setPineconeIndex('');
+			setSavedSnapshot((prev) => ({
 				...prev,
 				pineconeApiKey: '',
 				pineconeHost: '',
 				pineconeIndexName: '',
-			} ) );
-			onSave( {
+			}));
+			onSave({
 				rag: {
 					...rag,
 					vector_db: {
@@ -407,26 +407,26 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 						index_name: '',
 					},
 				},
-			} );
+			});
 			showNotice(
-				__( 'Pinecone settings reset successfully!', 'dragwyb-click-to-chat' )
+				__('Pinecone settings reset successfully!', 'dragwyb-click-to-chat')
 			);
-		} catch ( err ) {
+		} catch (err) {
 			showNotice(
 				err.message ||
-					__( 'Failed to reset Pinecone settings', 'dragwyb-click-to-chat' ),
+				__('Failed to reset Pinecone settings', 'dragwyb-click-to-chat'),
 				'error'
 			);
 		} finally {
-			setSaving( false );
+			setSaving(false);
 		}
 	};
 
-	const togglePostType = ( value ) => {
-		setSelectedPostTypes( ( prev ) =>
-			prev.includes( value )
-				? prev.filter( ( v ) => v !== value )
-				: [ ...prev, value ]
+	const togglePostType = (value) => {
+		setSelectedPostTypes((prev) =>
+			prev.includes(value)
+				? prev.filter((v) => v !== value)
+				: [...prev, value]
 		);
 	};
 
@@ -435,27 +435,27 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 			<nav
 				className="dctc-ai-kb-subnav"
 				role="tablist"
-				aria-label={ __( 'Knowledge base sections', 'dragwyb-click-to-chat' ) }
+				aria-label={__('Knowledge base sections', 'dragwyb-click-to-chat')}
 			>
-				{ SUBTABS.map( ( tab ) => (
+				{SUBTABS.map((tab) => (
 					<button
-						key={ tab.id }
+						key={tab.id}
 						type="button"
 						role="tab"
-						aria-selected={ subtab === tab.id }
+						aria-selected={subtab === tab.id}
 						className={
-							'dctc-ai-kb-subtab ' + ( subtab === tab.id ? 'active' : '' )
+							'dctc-ai-kb-subtab ' + (subtab === tab.id ? 'active' : '')
 						}
-						onClick={ () => setSubtab( tab.id ) }
+						onClick={() => setSubtab(tab.id)}
 					>
-						{ tab.label }
+						{tab.label}
 					</button>
-				) ) }
+				))}
 			</nav>
 
-			<form onSubmit={ onSubmit }>
-				{ /* Sources */ }
-				<div className={ subtab === 'sources' ? '' : 'dctc-ai-kb-panel--hidden' }>
+			<form onSubmit={onSubmit}>
+				{ /* Sources */}
+				<div className={subtab === 'sources' ? '' : 'dctc-ai-kb-panel--hidden'}>
 					<article className="dctc-ai-kb-card">
 						<header className="dctc-ai-kb-card__header">
 							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
@@ -463,21 +463,21 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 							</span>
 							<div className="dctc-ai-kb-card__heading">
 								<h3 className="dctc-ai-kb-card__title">
-									{ __( 'Direct Text Knowledge', 'dragwyb-click-to-chat' ) }
+									{__('Direct Text Knowledge', 'dragwyb-click-to-chat')}
 								</h3>
-								<p className="dctc-ai-kb-card__desc">{ TEXT_HINT }</p>
+								<p className="dctc-ai-kb-card__desc">{TEXT_HINT}</p>
 							</div>
 						</header>
 						<div className="dctc-ai-kb-card__body">
 							<textarea
 								className="dctc-ai-kb-textarea"
 								rows="8"
-								value={ knowledgeText }
-								onChange={ ( e ) => setKnowledgeText( e.target.value ) }
-								placeholder={ __(
+								value={knowledgeText}
+								onChange={(e) => setKnowledgeText(e.target.value)}
+								placeholder={__(
 									'Enter factual information directly…',
 									'dragwyb-click-to-chat'
-								) }
+								)}
 							/>
 						</div>
 					</article>
@@ -489,15 +489,15 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 							</span>
 							<div className="dctc-ai-kb-card__heading">
 								<h3 className="dctc-ai-kb-card__title">
-									{ __( 'Web Pages (URLs)', 'dragwyb-click-to-chat' ) }
+									{__('Web Pages (URLs)', 'dragwyb-click-to-chat')}
 								</h3>
-								<p className="dctc-ai-kb-card__desc">{ URL_HINT }</p>
+								<p className="dctc-ai-kb-card__desc">{URL_HINT}</p>
 							</div>
 						</header>
 						<div className="dctc-ai-kb-card__body">
 							<div className="dctc-ai-kb-url-list">
-								{ urls.map( ( url, idx ) => (
-									<div key={ idx } className="dctc-ai-kb-url-item">
+								{urls.map((url, idx) => (
+									<div key={idx} className="dctc-ai-kb-url-item">
 										<span
 											className="dctc-ai-kb-url-item__icon dashicons dashicons-admin-links"
 											aria-hidden="true"
@@ -505,29 +505,29 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 										<input
 											type="url"
 											className="dctc-ai-kb-url-input"
-											value={ url }
-											onChange={ ( e ) => {
+											value={url}
+											onChange={(e) => {
 												const value = e.target.value;
-												setUrls( ( prev ) => {
-													const next = [ ...prev ];
-													next[ idx ] = value;
+												setUrls((prev) => {
+													const next = [...prev];
+													next[idx] = value;
 													return next;
-												} );
-											} }
+												});
+											}}
 											placeholder="https://example.com/page"
 										/>
 										<button
 											type="button"
 											className="dctc-ai-kb-url-remove"
-											onClick={ () =>
-												setUrls( ( prev ) =>
-													prev.filter( ( _, i ) => i !== idx )
+											onClick={() =>
+												setUrls((prev) =>
+													prev.filter((_, i) => i !== idx)
 												)
 											}
-											aria-label={ __(
+											aria-label={__(
 												'Remove URL',
 												'dragwyb-click-to-chat'
-											) }
+											)}
 										>
 											<span
 												className="dashicons dashicons-trash"
@@ -535,22 +535,22 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 											/>
 										</button>
 									</div>
-								) ) }
+								))}
 							</div>
 							<button
 								type="button"
 								className="dctc-ai-kb-add-url"
-								onClick={ () => setUrls( [ ...urls, '' ] ) }
+								onClick={() => setUrls([...urls, ''])}
 							>
-								{ __( '+ Add URL', 'dragwyb-click-to-chat' ) }
+								{__('+ Add URL', 'dragwyb-click-to-chat')}
 							</button>
 						</div>
 					</article>
 				</div>
 
-				{ /* Database */ }
+				{ /* Database */}
 				<div
-					className={ subtab === 'vector-db' ? '' : 'dctc-ai-kb-panel--hidden' }
+					className={subtab === 'vector-db' ? '' : 'dctc-ai-kb-panel--hidden'}
 				>
 					<article className="dctc-ai-kb-card">
 						<header className="dctc-ai-kb-card__header">
@@ -559,56 +559,56 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 							</span>
 							<div className="dctc-ai-kb-card__heading">
 								<h3 className="dctc-ai-kb-card__title">
-									{ __(
+									{__(
 										'Website Content to Index',
 										'dragwyb-click-to-chat'
-									) }
+									)}
 								</h3>
 								<p className="dctc-ai-kb-card__desc">
-									{ __(
+									{__(
 										'Select which post types to include. Leave all unchecked to skip indexing your website content.',
 										'dragwyb-click-to-chat'
-									) }
+									)}
 								</p>
 							</div>
 						</header>
 						<div className="dctc-ai-kb-card__body">
 							<div className="dctc-ai-kb-post-types">
-								{ availableTypes.length > 0 ? (
-									availableTypes.map( ( type ) => (
-										<label key={ type.value } className="dctc-ai-checkbox">
+								{availableTypes.length > 0 ? (
+									availableTypes.map((type) => (
+										<label key={type.value} className="dctc-ai-checkbox">
 											<input
 												type="checkbox"
-												checked={ selectedPostTypes.includes( type.value ) }
-												onChange={ () => togglePostType( type.value ) }
+												checked={selectedPostTypes.includes(type.value)}
+												onChange={() => togglePostType(type.value)}
 											/>
 											<span className="dctc-ai-checkbox__label">
-												{ type.label } ({ type.count })
+												{type.label} ({type.count})
 											</span>
 										</label>
-									) )
+									))
 								) : (
 									<p className="dctc-ai-hint">
-										{ __(
+										{__(
 											'No post types available.',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</p>
-								) }
+								)}
 							</div>
-							{ indexing && indexStatus && (
+							{indexing && indexStatus && (
 								<div className="dctc-ai-kb-index-progress" role="status">
 									<div className="dctc-ai-kb-index-progress__bar">
 										<div
 											className="dctc-ai-kb-index-progress__fill"
-											style={ { width: `${ progressPct }%` } }
+											style={{ width: `${progressPct}%` }}
 										/>
 									</div>
 									<p className="dctc-ai-kb-index-progress__label">
-										{ progressLabel }
+										{progressLabel}
 									</p>
 								</div>
-							) }
+							)}
 						</div>
 					</article>
 
@@ -619,39 +619,39 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 							</span>
 							<div className="dctc-ai-kb-card__heading">
 								<h3 className="dctc-ai-kb-card__title">
-									{ __( 'Database', 'dragwyb-click-to-chat' ) }
+									{__('Database', 'dragwyb-click-to-chat')}
 								</h3>
 								<p className="dctc-ai-kb-card__desc">
-									{ __(
+									{__(
 										'Choose where to store your document embeddings for semantic search.',
 										'dragwyb-click-to-chat'
-									) }
+									)}
 								</p>
 							</div>
 						</header>
 						<div className="dctc-ai-kb-card__body">
 							<div className="dctc-ai-kb-db-options">
-								{ VECTOR_DB_OPTIONS.map( ( opt ) => (
-									<label key={ opt.value } className="dctc-ai-radio-card">
+								{VECTOR_DB_OPTIONS.map((opt) => (
+									<label key={opt.value} className="dctc-ai-radio-card">
 										<input
 											type="radio"
 											name="vector_db"
-											value={ opt.value }
-											checked={ vectorDb === opt.value }
-											onChange={ ( e ) => setVectorDb( e.target.value ) }
+											value={opt.value}
+											checked={vectorDb === opt.value}
+											onChange={(e) => setVectorDb(e.target.value)}
 										/>
 										<span className="dctc-ai-radio-card__label">
-											<strong>{ opt.label }</strong>
+											<strong>{opt.label}</strong>
 											<br />
-											<small>{ opt.desc }</small>
+											<small>{opt.desc}</small>
 										</span>
 									</label>
-								) ) }
+								))}
 							</div>
 						</div>
 					</article>
 
-					{ vectorDb === 'pinecone' && (
+					{vectorDb === 'pinecone' && (
 						<article className="dctc-ai-kb-card dctc-ai-kb-pinecone-card">
 							<header className="dctc-ai-kb-card__header dctc-ai-kb-pinecone-header">
 								<div className="dctc-ai-kb-pinecone-header__main">
@@ -663,19 +663,19 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 									</span>
 									<div className="dctc-ai-kb-card__heading">
 										<h3 className="dctc-ai-kb-card__title dctc-ai-kb-pinecone-title">
-											{ __(
+											{__(
 												'Pinecone Configuration',
 												'dragwyb-click-to-chat'
-											) }
-											{ embedInfo.dimensions && (
+											)}
+											{embedInfo.dimensions && (
 												<span className="dctc-ai-info-tooltip-wrapper">
 													<button
 														type="button"
 														className="dctc-ai-info-btn"
-														aria-label={ __(
+														aria-label={__(
 															'Dimensions info',
 															'dragwyb-click-to-chat'
-														) }
+														)}
 													>
 														i
 													</button>
@@ -683,7 +683,7 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 														className="dctc-ai-info-tooltip"
 														role="tooltip"
 													>
-														{ sprintf(
+														{sprintf(
 															/* translators: 1: provider name, 2: dimensions */
 															__(
 																'Because you selected %1$s, your Pinecone index must be created with exactly %2$d dimensions.',
@@ -691,99 +691,99 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 															),
 															embedInfo.provider,
 															embedInfo.dimensions
-														) }
+														)}
 													</span>
 												</span>
-											) }
+											)}
 										</h3>
 										<p className="dctc-ai-kb-card__desc">
-											{ __(
+											{__(
 												'Connect your Pinecone cloud vector database.',
 												'dragwyb-click-to-chat'
-											) }{ ' ' }
+											)}{' '}
 											<a
 												className="dctc-ai-kb-pinecone-console-link"
 												href="https://app.pinecone.io/"
 												target="_blank"
 												rel="noopener noreferrer"
 											>
-												{ __(
+												{__(
 													'Open Pinecone Console',
 													'dragwyb-click-to-chat'
-												) }{ ' ' }
+												)}{' '}
 												→
 											</a>
 										</p>
 									</div>
 								</div>
-								{ hasPineconeSaved && (
+								{hasPineconeSaved && (
 									<button
 										type="button"
 										className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm dctc-ai-kb-pinecone-reset-btn"
-										onClick={ () => setConfirmReset( true ) }
+										onClick={() => setConfirmReset(true)}
 									>
-										{ __( 'Reset Settings', 'dragwyb-click-to-chat' ) }
+										{__('Reset Settings', 'dragwyb-click-to-chat')}
 									</button>
-								) }
+								)}
 							</header>
 							<div className="dctc-ai-kb-card__body">
 								<div className="dctc-ai-kb-form-group">
 									<label className="dctc-ai-label">
-										{ __( 'Pinecone API Key', 'dragwyb-click-to-chat' ) }
+										{__('Pinecone API Key', 'dragwyb-click-to-chat')}
 										<input
 											type="password"
 											className="dctc-ai-input"
-											value={ pineconeKey }
-											onChange={ ( e ) => setPineconeKey( e.target.value ) }
+											value={pineconeKey}
+											onChange={(e) => setPineconeKey(e.target.value)}
 											placeholder="pcsk_..."
 										/>
 									</label>
 									<p className="dctc-ai-hint">
-										{ __(
+										{__(
 											'You can generate an API key from the "API Keys" section in your Pinecone dashboard.',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</p>
 								</div>
 								<div className="dctc-ai-kb-form-group">
 									<label className="dctc-ai-label">
-										{ __( 'Pinecone Host', 'dragwyb-click-to-chat' ) }
+										{__('Pinecone Host', 'dragwyb-click-to-chat')}
 										<input
 											type="text"
 											className="dctc-ai-input"
-											value={ pineconeHost }
-											onChange={ ( e ) => setPineconeHost( e.target.value ) }
+											value={pineconeHost}
+											onChange={(e) => setPineconeHost(e.target.value)}
 											placeholder="https://index-xxxxx.svc.aped-4627-b74a.pinecone.io"
 										/>
 									</label>
 									<p className="dctc-ai-hint">
-										{ __(
+										{__(
 											'The host URL for your index. Find this by clicking on your index in the Pinecone dashboard.',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</p>
 								</div>
 								<div className="dctc-ai-kb-form-group">
 									<label className="dctc-ai-label">
-										{ __( 'Index Name', 'dragwyb-click-to-chat' ) }
+										{__('Index Name', 'dragwyb-click-to-chat')}
 										<input
 											type="text"
 											className="dctc-ai-input"
-											value={ pineconeIndex }
-											onChange={ ( e ) => setPineconeIndex( e.target.value ) }
+											value={pineconeIndex}
+											onChange={(e) => setPineconeIndex(e.target.value)}
 											placeholder="e.g. dctc-ai-index"
 										/>
 									</label>
 									<p className="dctc-ai-hint">
-										{ __(
+										{__(
 											'The exact name of the index you created.',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</p>
 								</div>
 							</div>
 						</article>
-					) }
+					)}
 
 					<article className="dctc-ai-kb-card">
 						<header className="dctc-ai-kb-card__header">
@@ -792,170 +792,197 @@ export default function KnowledgeBase( { settings, onSave, showNotice } ) {
 							</span>
 							<div className="dctc-ai-kb-card__heading">
 								<h3 className="dctc-ai-kb-card__title">
-									{ __( 'Embedding Configuration', 'dragwyb-click-to-chat' ) }
+									{__('Embedding Configuration', 'dragwyb-click-to-chat')}
 								</h3>
 								<p className="dctc-ai-kb-card__desc">
-									{ __(
+									{__(
 										'Select the AI provider to generate vector embeddings.',
 										'dragwyb-click-to-chat'
-									) }
+									)}
 								</p>
 							</div>
 						</header>
 						<div className="dctc-ai-kb-card__body">
 							<div className="dctc-ai-kb-form-group">
 								<div
-									style={ {
+									style={{
 										display: 'flex',
 										alignItems: 'center',
 										marginBottom: '0.375rem',
-									} }
+									}}
 								>
 									<label
 										className="dctc-ai-label"
-										style={ { marginBottom: 0 } }
+										style={{ marginBottom: 0 }}
 									>
-										{ __( 'Embedding Provider', 'dragwyb-click-to-chat' ) }
+										{__('Embedding Provider', 'dragwyb-click-to-chat')}
 									</label>
-									{ vectorDb === 'pinecone' && (
+									{vectorDb === 'pinecone' && (
 										<div className="dctc-ai-info-tooltip-wrapper">
 											<button
 												type="button"
 												className="dctc-ai-info-btn"
-												aria-label={ __(
+												aria-label={__(
 													'Dimensions info',
 													'dragwyb-click-to-chat'
-												) }
+												)}
 											>
 												i
 											</button>
 											<div className="dctc-ai-info-tooltip">
-												{ sprintf(
+												{sprintf(
 													__(
 														'Because you selected %1$s, your Pinecone index must be created with exactly %2$d dimensions.',
 														'dragwyb-click-to-chat'
 													),
 													embeddingProvider === 'google'
 														? __(
-																'Google Gemini (gemini-embedding-001)',
-																'dragwyb-click-to-chat'
-														  )
+															'Google Gemini (gemini-embedding-001)',
+															'dragwyb-click-to-chat'
+														)
 														: __(
-																'OpenAI (text-embedding-3-small)',
-																'dragwyb-click-to-chat'
-														  ),
+															'OpenAI (text-embedding-3-small)',
+															'dragwyb-click-to-chat'
+														),
 													embeddingProvider === 'google' ? 768 : 1536
-												) }
+												)}
 											</div>
 										</div>
-									) }
+									)}
 								</div>
 								<select
 									className="dctc-ai-select dctc-ai-kb-embedding-select"
-									value={ embeddingProvider }
-									onChange={ ( e ) => setEmbeddingProvider( e.target.value ) }
+									value={embeddingProvider}
+									onChange={(e) => setEmbeddingProvider(e.target.value)}
 								>
 									<option value="openai">
-										{ __(
+										{__(
 											'OpenAI (text-embedding-3-small)',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</option>
 									<option value="google">
-										{ __(
+										{__(
 											'Google Gemini (gemini-embedding-001)',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</option>
 								</select>
 								<p className="dctc-ai-hint">
-									{ __(
+									{__(
 										'Select the provider to use for processing your knowledge base into vectors.',
 										'dragwyb-click-to-chat'
-									) }
+									)}
 								</p>
 							</div>
 							<div className="dctc-ai-kb-info-block">
 								<p>
 									<strong>
-										{ __( 'Status:', 'dragwyb-click-to-chat' ) }
+										{__('Status:', 'dragwyb-click-to-chat')}
 									</strong>
-									{ embedInfo.key ? (
+									{embedInfo.key ? (
 										<span className="dctc-ai-kb-status dctc-ai-kb-status--ok">
-											✓{ ' ' }
-											{ __(
+											✓{' '}
+											{__(
 												'API Key Configured',
 												'dragwyb-click-to-chat'
-											) }
+											)}
 										</span>
 									) : (
 										<span className="dctc-ai-kb-status dctc-ai-kb-status--missing">
-											✗{ ' ' }
-											{ __( 'API Key Missing', 'dragwyb-click-to-chat' ) }
+											✗{' '}
+											{__('API Key Missing', 'dragwyb-click-to-chat')}
 										</span>
-									) }
+									)}
 								</p>
 								<p>
 									<strong>
-										{ __(
+										{__(
 											'Required Index Dimensions:',
 											'dragwyb-click-to-chat'
-										) }
-									</strong>{ ' ' }
-									{ embedInfo.dimensions }
+										)}
+									</strong>{' '}
+									{embedInfo.dimensions}
 								</p>
-								{ ! embedInfo.key && (
+								{!embedInfo.key && (
 									<p className="dctc-ai-kb-warning">
-										{ __(
+										{__(
 											'⚠️ No AI API key found for the selected provider. Please add an API key in the API Keys tab to enable RAG indexing.',
 											'dragwyb-click-to-chat'
-										) }
+										)}
 									</p>
-								) }
+								)}
 							</div>
 						</div>
 					</article>
 				</div>
 
-				<footer className="dctc-ai-kb-footer">
-					<button
-						type="submit"
-						className="dctc-ai-btn dctc-ai-btn-primary"
-						disabled={ saving || ! dirty }
-					>
-						{ saving
-							? __( 'Saving…', 'dragwyb-click-to-chat' )
-							: __( 'Save', 'dragwyb-click-to-chat' ) }
-					</button>
-					{ subtab === 'vector-db' && selectedPostTypes.length > 0 && (
+				<footer className="dctc-ai-form-footer">
+					<div className="dctc-ai-form-footer__status">
+						{dirty ? (
+							<span className="dctc-ai-unsaved-badge">
+								<span className="dctc-ai-dot is-warning" />
+								{__('Unsaved changes', 'dragwyb-click-to-chat')}
+							</span>
+						) : (
+							<span className="dctc-ai-saved-badge">
+								<span className="dctc-ai-dot is-success" />
+								{__('All settings saved', 'dragwyb-click-to-chat')}
+							</span>
+						)}
+					</div>
+
+					<div className="dctc-ai-form-footer__actions">
+						{subtab === 'vector-db' && selectedPostTypes.length > 0 && (
+							<button
+								type="button"
+								className="dctc-ai-btn dctc-ai-btn-secondary"
+								onClick={startIndex}
+								disabled={indexing}
+							>
+								<span
+									className={`dashicons dashicons-update ${indexing ? 'dctc-ai-spin' : ''
+										}`}
+									aria-hidden="true"
+								/>{' '}
+								{indexing
+									? __('Indexing…', 'dragwyb-click-to-chat')
+									: __('Index Content Now', 'dragwyb-click-to-chat')}
+							</button>
+						)}
 						<button
-							type="button"
-							className="dctc-ai-btn dctc-ai-btn-secondary"
-							onClick={ startIndex }
-							disabled={ indexing }
+							type="submit"
+							className="dctc-ai-btn dctc-ai-btn-primary"
+							disabled={saving || !dirty}
 						>
-							<span className="dashicons dashicons-update" aria-hidden="true" />
-							{ indexing
-								? __( 'Indexing…', 'dragwyb-click-to-chat' )
-								: __( 'Index Content Now', 'dragwyb-click-to-chat' ) }
+							{saving ? (
+								<>
+									<span className="dctc-ai-spinner" aria-hidden="true" />{' '}
+									{__('Saving Changes…', 'dragwyb-click-to-chat')}
+								</>
+							) : (
+								<>
+									{__('Save', 'dragwyb-click-to-chat')}
+								</>
+							)}
 						</button>
-					) }
+					</div>
 				</footer>
 			</form>
 
 			<ConfirmModal
-				open={ confirmReset }
-				title={ __( 'Reset Pinecone settings', 'dragwyb-click-to-chat' ) }
-				message={ __(
+				open={confirmReset}
+				title={__('Reset Pinecone settings', 'dragwyb-click-to-chat')}
+				message={__(
 					'Are you sure you want to clear your Pinecone API Key, Host, and Index Name?',
 					'dragwyb-click-to-chat'
-				) }
-				confirmLabel={ __(
+				)}
+				confirmLabel={__(
 					'Reset Pinecone Settings',
 					'dragwyb-click-to-chat'
-				) }
-				onCancel={ () => setConfirmReset( false ) }
-				onConfirm={ resetPinecone }
+				)}
+				onCancel={() => setConfirmReset(false)}
+				onConfirm={resetPinecone}
 			/>
 		</div>
 	);
