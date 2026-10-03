@@ -7,7 +7,6 @@ import Toast from './components/Toast';
 import SetupWizard from './wizard/SetupWizard';
 import ApiKeys from './sections/ApiKeys';
 import ChatbotSettings from './sections/ChatbotSettings';
-import DisplaySettings from './sections/DisplaySettings';
 import Instructions from './sections/Instructions';
 import KnowledgeBase from './sections/KnowledgeBase';
 import ChatSessions from './sections/ChatSessions';
@@ -16,34 +15,14 @@ import ErrorLogs from './sections/ErrorLogs';
 
 const TABS = [
 	{
-		id: 'api-keys',
-		label: __( 'API Keys', 'dragwyb-click-to-chat' ),
-		icon: 'dashicons-rest-api',
-		desc: __(
-			'Configure your AI providers and select your preferred chatbot models.',
-			'dragwyb-click-to-chat'
-		),
-		component: ApiKeys,
-	},
-	{
 		id: 'chatbot-settings',
-		label: __( 'Chatbot', 'dragwyb-click-to-chat' ),
+		label: __( 'Chatbot Settings', 'dragwyb-click-to-chat' ),
 		icon: 'dashicons-admin-settings',
 		desc: __(
-			'Customize your chatbot name, greeting message, and behavioral features.',
+			'Configure bot identity, site-wide visibility, triggers, file uploads, avatars & styling.',
 			'dragwyb-click-to-chat'
 		),
 		component: ChatbotSettings,
-	},
-	{
-		id: 'display-settings',
-		label: __( 'Display Options', 'dragwyb-click-to-chat' ),
-		icon: 'dashicons-align-center',
-		desc: __(
-			'Configure where and how your chatbot appears on the frontend.',
-			'dragwyb-click-to-chat'
-		),
-		component: DisplaySettings,
 	},
 	{
 		id: 'instructions',
@@ -54,6 +33,16 @@ const TABS = [
 			'dragwyb-click-to-chat'
 		),
 		component: Instructions,
+	},
+	{
+		id: 'api-keys',
+		label: __( 'API Keys', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-rest-api',
+		desc: __(
+			'Configure your AI providers and select your preferred chatbot models.',
+			'dragwyb-click-to-chat'
+		),
+		component: ApiKeys,
 	},
 	{
 		id: 'knowledge-base',
@@ -100,7 +89,7 @@ const TABS = [
 const NAV_GROUPS = [
 	{
 		label: __( 'Setup', 'dragwyb-click-to-chat' ),
-		items: [ 'api-keys', 'chatbot-settings', 'display-settings', 'instructions' ],
+		items: [ 'chatbot-settings', 'instructions', 'api-keys' ],
 	},
 	{
 		label: __( 'Knowledge', 'dragwyb-click-to-chat' ),
@@ -129,10 +118,13 @@ export default function App( { settings: initialSettings } ) {
 
 	const [ activeTab, setActiveTab ] = useState( () => {
 		const hash = window.location.hash.replace( '#', '' );
+		if ( hash === 'display-settings' ) {
+			return 'chatbot-settings';
+		}
 		if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
 			return hash;
 		}
-		return visibleTabs[ 0 ]?.id || 'api-keys';
+		return visibleTabs[ 0 ]?.id || 'chatbot-settings';
 	} );
 
 	const showNotice = useCallback( ( message, type = 'success' ) => {
@@ -204,8 +196,13 @@ export default function App( { settings: initialSettings } ) {
 
 			<header className="dctc-ai-dashboard-header">
 				<div className="dctc-ai-brand">
-					<span className="dashicons dashicons-format-chat" aria-hidden="true" />
-					<span>{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }</span>
+					<div className="dctc-ai-brand__icon-wrap" aria-hidden="true">
+						<span className="dashicons dashicons-format-chat" />
+					</div>
+					<div className="dctc-ai-brand__text-wrap">
+						<span className="dctc-ai-brand__title">{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }</span>
+						<span className="dctc-ai-brand__badge">{ __( 'PRO', 'dragwyb-click-to-chat' ) }</span>
+					</div>
 				</div>
 				<nav
 					className="dctc-ai-tabs"
@@ -249,8 +246,10 @@ export default function App( { settings: initialSettings } ) {
 
 			<main className="dctc-ai-content">
 				<header className="dctc-ai-content-header">
-					<h1 id="dctc-ai-tab-title">{ current?.label }</h1>
-					<p id="dctc-ai-tab-desc">{ current?.desc }</p>
+					<div className="dctc-ai-content-header__meta">
+						<h1 id="dctc-ai-tab-title">{ current?.label }</h1>
+						<p id="dctc-ai-tab-desc">{ current?.desc }</p>
+					</div>
 				</header>
 
 				{ notice && (
