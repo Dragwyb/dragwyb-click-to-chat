@@ -8,6 +8,7 @@ import SetupWizard from './wizard/SetupWizard';
 import ChatbotSettings from './sections/ChatbotSettings';
 import AiEngineSettings from './sections/AiEngineSettings';
 import KnowledgeBase from './sections/KnowledgeBase';
+import LeadsManagement from './sections/LeadsManagement';
 import ChatSessions from './sections/ChatSessions';
 import ChatPreview from './sections/ChatPreview';
 import ErrorLogs from './sections/ErrorLogs';
@@ -42,6 +43,16 @@ const TABS = [
 			'dragwyb-click-to-chat'
 		),
 		component: KnowledgeBase,
+	},
+	{
+		id: 'leads',
+		label: __( 'AI Leads', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-id',
+		desc: __(
+			'Review, qualify, search, filter, update statuses, and export leads collected by your AI assistant.',
+			'dragwyb-click-to-chat'
+		),
+		component: LeadsManagement,
 	},
 	{
 		id: 'chat-sessions',
@@ -85,8 +96,12 @@ const NAV_GROUPS = [
 		items: [ 'knowledge-base' ],
 	},
 	{
+		label: __( 'Leads & Insights', 'dragwyb-click-to-chat' ),
+		items: [ 'leads', 'chat-sessions' ],
+	},
+	{
 		label: __( 'Monitor', 'dragwyb-click-to-chat' ),
-		items: [ 'chat-sessions', 'chat-preview', 'error-logs' ],
+		items: [ 'chat-preview', 'error-logs' ],
 	},
 ];
 

@@ -21,6 +21,9 @@ require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-key-store.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-mcp-controller.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-rag-controller.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-chat-controller.php';
+require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-usage-tracker.php';
+require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-leads-controller.php';
+require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-woocommerce.php';
 
 /**
  * Class DCTC_AI_Settings_Handler
@@ -58,6 +61,13 @@ class DCTC_AI_Settings_Handler
 	private $chat_controller;
 
 	/**
+	 * Leads Controller
+	 *
+	 * @var DCTC_AI_Leads_Controller
+	 */
+	private $leads_controller;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct()
@@ -66,6 +76,7 @@ class DCTC_AI_Settings_Handler
 		$this->rag_controller = new DCTC_AI_RAG_Controller();
 		$this->mcp_controller = new DCTC_AI_MCP_Controller($this->key_store);
 		$this->chat_controller = new DCTC_AI_Chat_Controller($this->rag_controller, $this->mcp_controller);
+		$this->leads_controller = new DCTC_AI_Leads_Controller();
 
 		add_action('rest_api_init', [$this, 'dctc_ai_register_routes']);
 	}
@@ -165,6 +176,26 @@ class DCTC_AI_Settings_Handler
 			[
 				'methods' => \WP_REST_Server::READABLE,
 				'callback' => [$this->chat_controller, 'get_sessions'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/sessions/(?P<session_id>[a-zA-Z0-9_-]+)/summarize',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this->chat_controller, 'summarize_session'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/analytics',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this->chat_controller, 'get_analytics'],
 				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
 			]
 		);
@@ -308,6 +339,99 @@ class DCTC_AI_Settings_Handler
 				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
 			]
 		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/usage-stats',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this, 'dctc_ai_get_usage_stats'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		// AI Lead Capture endpoints
+		register_rest_route(
+			'dctc-ai/v1',
+			'/leads/capture',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this->leads_controller, 'capture_lead'],
+				'permission_callback' => [$this->leads_controller, 'permission_check_capture'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/leads',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this->leads_controller, 'get_leads'],
+				'permission_callback' => [$this->leads_controller, 'permission_check_admin'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/leads/(?P<id>\d+)/status',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this->leads_controller, 'update_status'],
+				'permission_callback' => [$this->leads_controller, 'permission_check_admin'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/leads/(?P<id>\d+)',
+			[
+				'methods' => \WP_REST_Server::DELETABLE,
+				'callback' => [$this->leads_controller, 'delete_lead'],
+				'permission_callback' => [$this->leads_controller, 'permission_check_admin'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/leads/export',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this->leads_controller, 'export_csv'],
+				'permission_callback' => [$this->leads_controller, 'permission_check_admin'],
+			]
+		);
+
+		// WooCommerce AI Sales Assistant endpoints
+		$wc_controller = new DCTC_AI_WooCommerce();
+		register_rest_route(
+			'dctc-ai/v1',
+			'/woocommerce/products',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$wc_controller, 'rest_search_products'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/woocommerce/cart',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$wc_controller, 'rest_get_cart'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/woocommerce/order-status',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$wc_controller, 'rest_lookup_order'],
+				'permission_callback' => '__return_true',
+			]
+		);
 	}
 
 	/**
@@ -435,6 +559,21 @@ class DCTC_AI_Settings_Handler
 	}
 
 	/**
+	 * Return AI usage metrics and budget status for the admin dashboard.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_get_usage_stats($request)
+	{
+		$stats = class_exists('DCTC_AI_Usage_Tracker') ? DCTC_AI_Usage_Tracker::get_usage_stats() : [];
+		return new \WP_REST_Response([
+			'success' => true,
+			'stats'   => $stats,
+		], 200);
+	}
+
+	/**
 	 * Get Unified Settings
 	 *
 	 * @return array The complete multidimensional array of plugin settings.
@@ -495,8 +634,52 @@ class DCTC_AI_Settings_Handler
 				'knowledge_urls' => [],
 				'training_files' => [],
 				'rate_limit_per_minute' => 20,
+				'enable_usage_limits' => true,
+				'visitor_daily_message_limit' => 50,
+				'monthly_request_budget' => 5000,
+				'budget_limit_message' => 'You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.',
+				'enable_budget_email_alerts' => true,
+				'alert_email' => '',
 				'enable_error_log' => false,
 				'error_log_retention_days' => 0,
+				'enable_lead_capture' => false,
+				'lead_trigger_type' => 'manual',
+				'lead_trigger_delay' => 30,
+				'lead_trigger_message_count' => 3,
+				'lead_form_title' => 'Contact Our Team',
+				'lead_form_subtitle' => 'Leave your details and our team will get back to you shortly.',
+				'lead_fields' => [
+					'name' => true,
+					'email' => true,
+					'phone' => true,
+					'company' => false,
+					'company_size' => false,
+					'budget' => true,
+					'timeline' => true,
+					'interest' => true,
+					'requirement' => true,
+				],
+				'lead_qualification_threshold' => 70,
+				'enable_ai_intent_scoring' => true,
+				'enable_lead_email_alerts' => true,
+				'lead_notification_email' => '',
+				'lead_webhook_url' => '',
+				'enable_human_handoff' => true,
+				'handoff_channels' => ['whatsapp', 'phone', 'email'],
+				'handoff_whatsapp_number' => '',
+				'handoff_phone_number' => '',
+				'handoff_email_address' => '',
+				'handoff_template' => "Hi! I was chatting with your AI assistant on {page_url} regarding: \"{summary}\". My question: \"{question}\".",
+				'enable_business_hours' => false,
+				'business_hours_start' => '09:00',
+				'business_hours_end' => '18:00',
+				'business_hours_days' => ['mon', 'tue', 'wed', 'thu', 'fri'],
+				'business_hours_timezone' => function_exists('wp_timezone_string') ? wp_timezone_string() : 'UTC',
+				'offline_handoff_message' => 'Our live human team is currently offline (Operating hours: Monday-Friday, 9:00 AM - 6:00 PM). Please leave an inquiry or send an email and we will get back to you shortly.',
+				'handoff_privacy_include_name' => true,
+				'handoff_privacy_include_summary' => true,
+				'handoff_privacy_include_question' => true,
+				'handoff_privacy_include_page' => true,
 			],
 			'display' => [
 				'entire_site' => false,
@@ -600,6 +783,31 @@ class DCTC_AI_Settings_Handler
 			'max_files_per_message',
 			'store_chat_attachments',
 			'action_buttons',
+			'enable_lead_capture',
+			'lead_trigger_type',
+			'lead_trigger_delay',
+			'lead_trigger_message_count',
+			'lead_form_title',
+			'lead_form_subtitle',
+			'lead_fields',
+			'lead_qualification_threshold',
+			'enable_ai_intent_scoring',
+			'enable_human_handoff',
+			'handoff_channels',
+			'handoff_whatsapp_number',
+			'handoff_phone_number',
+			'handoff_email_address',
+			'handoff_template',
+			'enable_business_hours',
+			'business_hours_start',
+			'business_hours_end',
+			'business_hours_days',
+			'business_hours_timezone',
+			'offline_handoff_message',
+			'handoff_privacy_include_name',
+			'handoff_privacy_include_summary',
+			'handoff_privacy_include_question',
+			'handoff_privacy_include_page',
 		];
 
 		$public_chatbot = [];
@@ -609,13 +817,32 @@ class DCTC_AI_Settings_Handler
 			}
 		}
 
+		// Pull fallback contact channels from parent Click to Chat settings if blank in AI settings
+		$parent_settings = get_option('dctc_settings', []);
+		if (empty($public_chatbot['handoff_whatsapp_number']) && !empty($parent_settings['whatsapp_value'])) {
+			$public_chatbot['handoff_whatsapp_number'] = $parent_settings['whatsapp_value'];
+		}
+		if (empty($public_chatbot['handoff_phone_number']) && !empty($parent_settings['phone_value'])) {
+			$public_chatbot['handoff_phone_number'] = $parent_settings['phone_value'];
+		}
+		if (empty($public_chatbot['handoff_email_address'])) {
+			$public_chatbot['handoff_email_address'] = !empty($parent_settings['email_value']) ? $parent_settings['email_value'] : get_option('admin_email');
+		}
+
+		$is_within_hours = class_exists('DCTC_AI_Chat_Controller')
+			? DCTC_AI_Chat_Controller::is_within_business_hours($chatbot)
+			: true;
+		$public_chatbot['is_within_business_hours'] = $is_within_hours;
+
 		$is_admin = current_user_can('manage_options');
+		$is_wc_active = class_exists('DCTC_AI_WooCommerce') && DCTC_AI_WooCommerce::is_active();
 
 		return [
 			'chatbot' => $public_chatbot,
 			'display' => $display,
 			'has_api_key' => DCTC_AI_Key_Store::has_configured_provider(),
 			'is_admin' => $is_admin,
+			'is_woocommerce_active' => $is_wc_active,
 			'settings_url' => $is_admin ? admin_url('admin.php?page=dragwyb-click-to-chat-ai') : '',
 		];
 	}
@@ -788,8 +1015,62 @@ class DCTC_AI_Settings_Handler
 			'knowledge_urls' => isset($params['knowledge_urls']) ? $urls : (isset($existing_chatbot['knowledge_urls']) ? $existing_chatbot['knowledge_urls'] : []),
 			'training_files' => isset($params['training_files']) ? $files : (isset($existing_chatbot['training_files']) ? $existing_chatbot['training_files'] : []),
 			'rate_limit_per_minute' => isset($params['rate_limit_per_minute']) ? max(1, min(300, intval($params['rate_limit_per_minute']))) : (isset($existing_chatbot['rate_limit_per_minute']) ? intval($existing_chatbot['rate_limit_per_minute']) : 20),
+			'enable_usage_limits' => isset($params['enable_usage_limits']) ? (bool) $params['enable_usage_limits'] : (isset($existing_chatbot['enable_usage_limits']) ? (bool) $existing_chatbot['enable_usage_limits'] : true),
+			'visitor_daily_message_limit' => isset($params['visitor_daily_message_limit']) ? max(0, intval($params['visitor_daily_message_limit'])) : (isset($existing_chatbot['visitor_daily_message_limit']) ? intval($existing_chatbot['visitor_daily_message_limit']) : 50),
+			'monthly_request_budget' => isset($params['monthly_request_budget']) ? max(0, intval($params['monthly_request_budget'])) : (isset($existing_chatbot['monthly_request_budget']) ? intval($existing_chatbot['monthly_request_budget']) : 5000),
+			'budget_limit_message' => isset($params['budget_limit_message']) ? sanitize_textarea_field($params['budget_limit_message']) : (isset($existing_chatbot['budget_limit_message']) ? $existing_chatbot['budget_limit_message'] : 'You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.'),
+			'enable_budget_email_alerts' => isset($params['enable_budget_email_alerts']) ? (bool) $params['enable_budget_email_alerts'] : (isset($existing_chatbot['enable_budget_email_alerts']) ? (bool) $existing_chatbot['enable_budget_email_alerts'] : true),
+			'alert_email' => isset($params['alert_email']) ? sanitize_email($params['alert_email']) : (isset($existing_chatbot['alert_email']) ? $existing_chatbot['alert_email'] : ''),
 			'enable_error_log' => isset($params['enable_error_log']) ? (bool) $params['enable_error_log'] : (isset($existing_chatbot['enable_error_log']) ? (bool) $existing_chatbot['enable_error_log'] : false),
 			'error_log_retention_days' => isset($params['error_log_retention_days']) ? max(0, intval($params['error_log_retention_days'])) : (isset($existing_chatbot['error_log_retention_days']) ? intval($existing_chatbot['error_log_retention_days']) : 0),
+			'enable_lead_capture' => isset($params['enable_lead_capture']) ? (bool) $params['enable_lead_capture'] : (isset($existing_chatbot['enable_lead_capture']) ? (bool) $existing_chatbot['enable_lead_capture'] : false),
+			'lead_trigger_type' => isset($params['lead_trigger_type']) && in_array($params['lead_trigger_type'], ['manual', 'time_delay', 'message_count', 'intent'], true) ? $params['lead_trigger_type'] : (isset($existing_chatbot['lead_trigger_type']) ? $existing_chatbot['lead_trigger_type'] : 'manual'),
+			'lead_trigger_delay' => isset($params['lead_trigger_delay']) ? max(5, min(300, intval($params['lead_trigger_delay']))) : (isset($existing_chatbot['lead_trigger_delay']) ? intval($existing_chatbot['lead_trigger_delay']) : 30),
+			'lead_trigger_message_count' => isset($params['lead_trigger_message_count']) ? max(1, min(20, intval($params['lead_trigger_message_count']))) : (isset($existing_chatbot['lead_trigger_message_count']) ? intval($existing_chatbot['lead_trigger_message_count']) : 3),
+			'lead_form_title' => isset($params['lead_form_title']) ? sanitize_text_field($params['lead_form_title']) : (isset($existing_chatbot['lead_form_title']) ? $existing_chatbot['lead_form_title'] : 'Contact Our Team'),
+			'lead_form_subtitle' => isset($params['lead_form_subtitle']) ? sanitize_textarea_field($params['lead_form_subtitle']) : (isset($existing_chatbot['lead_form_subtitle']) ? $existing_chatbot['lead_form_subtitle'] : 'Leave your details and our team will get back to you shortly.'),
+			'lead_fields' => isset($params['lead_fields']) && is_array($params['lead_fields']) ? [
+				'name' => isset($params['lead_fields']['name']) ? (bool) $params['lead_fields']['name'] : true,
+				'email' => isset($params['lead_fields']['email']) ? (bool) $params['lead_fields']['email'] : true,
+				'phone' => isset($params['lead_fields']['phone']) ? (bool) $params['lead_fields']['phone'] : true,
+				'company' => isset($params['lead_fields']['company']) ? (bool) $params['lead_fields']['company'] : false,
+				'company_size' => isset($params['lead_fields']['company_size']) ? (bool) $params['lead_fields']['company_size'] : false,
+				'budget' => isset($params['lead_fields']['budget']) ? (bool) $params['lead_fields']['budget'] : true,
+				'timeline' => isset($params['lead_fields']['timeline']) ? (bool) $params['lead_fields']['timeline'] : true,
+				'interest' => isset($params['lead_fields']['interest']) ? (bool) $params['lead_fields']['interest'] : true,
+				'requirement' => isset($params['lead_fields']['requirement']) ? (bool) $params['lead_fields']['requirement'] : true,
+			] : (isset($existing_chatbot['lead_fields']) ? $existing_chatbot['lead_fields'] : [
+				'name' => true,
+				'email' => true,
+				'phone' => true,
+				'company' => false,
+				'company_size' => false,
+				'budget' => true,
+				'timeline' => true,
+				'interest' => true,
+				'requirement' => true,
+			]),
+			'lead_qualification_threshold' => isset($params['lead_qualification_threshold']) ? max(0, min(100, intval($params['lead_qualification_threshold']))) : (isset($existing_chatbot['lead_qualification_threshold']) ? intval($existing_chatbot['lead_qualification_threshold']) : 70),
+			'enable_ai_intent_scoring' => isset($params['enable_ai_intent_scoring']) ? (bool) $params['enable_ai_intent_scoring'] : (isset($existing_chatbot['enable_ai_intent_scoring']) ? (bool) $existing_chatbot['enable_ai_intent_scoring'] : true),
+			'enable_lead_email_alerts' => isset($params['enable_lead_email_alerts']) ? (bool) $params['enable_lead_email_alerts'] : (isset($existing_chatbot['enable_lead_email_alerts']) ? (bool) $existing_chatbot['enable_lead_email_alerts'] : true),
+			'lead_notification_email' => isset($params['lead_notification_email']) ? sanitize_email($params['lead_notification_email']) : (isset($existing_chatbot['lead_notification_email']) ? $existing_chatbot['lead_notification_email'] : ''),
+			'lead_webhook_url' => isset($params['lead_webhook_url']) ? esc_url_raw($params['lead_webhook_url']) : (isset($existing_chatbot['lead_webhook_url']) ? $existing_chatbot['lead_webhook_url'] : ''),
+			'enable_human_handoff' => isset($params['enable_human_handoff']) ? (bool) $params['enable_human_handoff'] : (isset($existing_chatbot['enable_human_handoff']) ? (bool) $existing_chatbot['enable_human_handoff'] : true),
+			'handoff_channels' => isset($params['handoff_channels']) && is_array($params['handoff_channels']) ? array_values(array_intersect($params['handoff_channels'], ['whatsapp', 'phone', 'email'])) : (isset($existing_chatbot['handoff_channels']) ? $existing_chatbot['handoff_channels'] : ['whatsapp', 'phone', 'email']),
+			'handoff_whatsapp_number' => isset($params['handoff_whatsapp_number']) ? sanitize_text_field($params['handoff_whatsapp_number']) : (isset($existing_chatbot['handoff_whatsapp_number']) ? $existing_chatbot['handoff_whatsapp_number'] : ''),
+			'handoff_phone_number' => isset($params['handoff_phone_number']) ? sanitize_text_field($params['handoff_phone_number']) : (isset($existing_chatbot['handoff_phone_number']) ? $existing_chatbot['handoff_phone_number'] : ''),
+			'handoff_email_address' => isset($params['handoff_email_address']) ? sanitize_email($params['handoff_email_address']) : (isset($existing_chatbot['handoff_email_address']) ? $existing_chatbot['handoff_email_address'] : ''),
+			'handoff_template' => isset($params['handoff_template']) ? sanitize_textarea_field($params['handoff_template']) : (isset($existing_chatbot['handoff_template']) ? $existing_chatbot['handoff_template'] : "Hi! I was chatting with your AI assistant on {page_url} regarding: \"{summary}\". My question: \"{question}\"."),
+			'enable_business_hours' => isset($params['enable_business_hours']) ? (bool) $params['enable_business_hours'] : (isset($existing_chatbot['enable_business_hours']) ? (bool) $existing_chatbot['enable_business_hours'] : false),
+			'business_hours_start' => isset($params['business_hours_start']) ? sanitize_text_field($params['business_hours_start']) : (isset($existing_chatbot['business_hours_start']) ? $existing_chatbot['business_hours_start'] : '09:00'),
+			'business_hours_end' => isset($params['business_hours_end']) ? sanitize_text_field($params['business_hours_end']) : (isset($existing_chatbot['business_hours_end']) ? $existing_chatbot['business_hours_end'] : '18:00'),
+			'business_hours_days' => isset($params['business_hours_days']) && is_array($params['business_hours_days']) ? array_values(array_intersect($params['business_hours_days'], ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])) : (isset($existing_chatbot['business_hours_days']) ? $existing_chatbot['business_hours_days'] : ['mon', 'tue', 'wed', 'thu', 'fri']),
+			'business_hours_timezone' => isset($params['business_hours_timezone']) ? sanitize_text_field($params['business_hours_timezone']) : (isset($existing_chatbot['business_hours_timezone']) ? $existing_chatbot['business_hours_timezone'] : (function_exists('wp_timezone_string') ? wp_timezone_string() : 'UTC')),
+			'offline_handoff_message' => isset($params['offline_handoff_message']) ? sanitize_textarea_field($params['offline_handoff_message']) : (isset($existing_chatbot['offline_handoff_message']) ? $existing_chatbot['offline_handoff_message'] : 'Our live human team is currently offline (Operating hours: Monday-Friday, 9:00 AM - 6:00 PM). Please leave an inquiry or send an email and we will get back to you shortly.'),
+			'handoff_privacy_include_name' => isset($params['handoff_privacy_include_name']) ? (bool) $params['handoff_privacy_include_name'] : (isset($existing_chatbot['handoff_privacy_include_name']) ? (bool) $existing_chatbot['handoff_privacy_include_name'] : true),
+			'handoff_privacy_include_summary' => isset($params['handoff_privacy_include_summary']) ? (bool) $params['handoff_privacy_include_summary'] : (isset($existing_chatbot['handoff_privacy_include_summary']) ? (bool) $existing_chatbot['handoff_privacy_include_summary'] : true),
+			'handoff_privacy_include_question' => isset($params['handoff_privacy_include_question']) ? (bool) $params['handoff_privacy_include_question'] : (isset($existing_chatbot['handoff_privacy_include_question']) ? (bool) $existing_chatbot['handoff_privacy_include_question'] : true),
+			'handoff_privacy_include_page' => isset($params['handoff_privacy_include_page']) ? (bool) $params['handoff_privacy_include_page'] : (isset($existing_chatbot['handoff_privacy_include_page']) ? (bool) $existing_chatbot['handoff_privacy_include_page'] : true),
 		];
 
 		$settings['chatbot'] = $chatbot_settings;

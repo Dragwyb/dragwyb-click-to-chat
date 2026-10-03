@@ -34,12 +34,17 @@ class DCTC_AI_DB {
 			model varchar(100) NOT NULL,
 			provider varchar(100) NOT NULL,
 			content longtext NOT NULL,
+			summary text DEFAULT NULL,
+			sentiment varchar(30) DEFAULT 'neutral' NOT NULL,
+			intent_tag varchar(50) DEFAULT 'general' NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY session_id (session_id),
-			KEY status (status)
+			KEY status (status),
+			KEY sentiment (sentiment),
+			KEY intent_tag (intent_tag)
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -110,6 +115,83 @@ class DCTC_AI_DB {
 		) $charset_collate;";
 
 		dbDelta( $sql_embeddings );
+
+		// Leads Table
+		$leads_table = $wpdb->prefix . 'dctc_ai_leads';
+		$sql_leads   = "CREATE TABLE `$leads_table` (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			session_id varchar(100) DEFAULT '' NOT NULL,
+			name varchar(150) DEFAULT '' NOT NULL,
+			email varchar(150) DEFAULT '' NOT NULL,
+			phone varchar(50) DEFAULT '' NOT NULL,
+			company varchar(150) DEFAULT '' NOT NULL,
+			company_size varchar(100) DEFAULT '' NOT NULL,
+			budget varchar(100) DEFAULT '' NOT NULL,
+			timeline varchar(100) DEFAULT '' NOT NULL,
+			interest varchar(255) DEFAULT '' NOT NULL,
+			requirement text,
+			source_url varchar(2083) DEFAULT '' NOT NULL,
+			score int(11) DEFAULT 0 NOT NULL,
+			intent_level varchar(50) DEFAULT 'medium' NOT NULL,
+			score_breakdown longtext,
+			status varchar(30) DEFAULT 'new' NOT NULL,
+			consent tinyint(1) DEFAULT 1 NOT NULL,
+			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+			PRIMARY KEY (id),
+			KEY session_id (session_id),
+			KEY email (email),
+			KEY status (status),
+			KEY score (score),
+			KEY created_at (created_at)
+		) $charset_collate;";
+
+		dbDelta( $sql_leads );
+
+		// Leads column migrations for existing tables
+		$leads_table_esc = esc_sql( $leads_table );
+		$leads_cols = $wpdb->get_col( $wpdb->prepare(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = %s AND TABLE_SCHEMA = DATABASE()",
+			$leads_table_esc
+		) );
+
+		if ( ! empty( $leads_cols ) ) {
+			$col_defs = [
+				'company_size'    => "ADD COLUMN `company_size` varchar(100) DEFAULT '' NOT NULL AFTER `company`",
+				'budget'          => "ADD COLUMN `budget` varchar(100) DEFAULT '' NOT NULL AFTER `company_size`",
+				'timeline'        => "ADD COLUMN `timeline` varchar(100) DEFAULT '' NOT NULL AFTER `budget`",
+				'interest'        => "ADD COLUMN `interest` varchar(255) DEFAULT '' NOT NULL AFTER `timeline`",
+				'intent_level'    => "ADD COLUMN `intent_level` varchar(50) DEFAULT 'medium' NOT NULL AFTER `score`",
+				'score_breakdown' => "ADD COLUMN `score_breakdown` longtext AFTER `intent_level`",
+			];
+			foreach ( $col_defs as $col => $sql_part ) {
+				if ( ! in_array( $col, $leads_cols, true ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$wpdb->query( "ALTER TABLE `$leads_table_esc` $sql_part" );
+				}
+			}
+		}
+
+		// Sessions column migrations for existing tables
+		$sessions_table_esc = esc_sql( $sessions_table );
+		$session_cols = $wpdb->get_col( $wpdb->prepare(
+			"SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = %s AND TABLE_SCHEMA = DATABASE()",
+			$sessions_table_esc
+		) );
+
+		if ( ! empty( $session_cols ) ) {
+			$sess_defs = [
+				'summary'    => "ADD COLUMN `summary` text DEFAULT NULL AFTER `content`",
+				'sentiment'  => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
+				'intent_tag' => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
+			];
+			foreach ( $sess_defs as $col => $sql_part ) {
+				if ( ! in_array( $col, $session_cols, true ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$wpdb->query( "ALTER TABLE `$sessions_table_esc` $sql_part" );
+				}
+			}
+		}
 
 		// Add vector_id column if it doesn't exist (migration)
 		$chunks_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
@@ -351,5 +433,244 @@ class DCTC_AI_DB {
 
 		return is_numeric( $deleted ) ? intval( $deleted ) : 0;
 	}
+
+	/**
+	 * Insert or update a captured lead.
+	 *
+	 * @param array $lead
+	 * @return int Lead ID
+	 */
+	public static function save_lead( array $lead ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+		$time  = current_time( 'mysql' );
+
+		$data = [
+			'session_id'      => sanitize_text_field( $lead['session_id'] ?? '' ),
+			'name'            => sanitize_text_field( $lead['name'] ?? '' ),
+			'email'           => sanitize_email( $lead['email'] ?? '' ),
+			'phone'           => sanitize_text_field( $lead['phone'] ?? '' ),
+			'company'         => sanitize_text_field( $lead['company'] ?? '' ),
+			'company_size'    => sanitize_text_field( $lead['company_size'] ?? '' ),
+			'budget'          => sanitize_text_field( $lead['budget'] ?? '' ),
+			'timeline'        => sanitize_text_field( $lead['timeline'] ?? '' ),
+			'interest'        => sanitize_text_field( $lead['interest'] ?? '' ),
+			'requirement'     => sanitize_textarea_field( $lead['requirement'] ?? '' ),
+			'source_url'      => esc_url_raw( $lead['source_url'] ?? '' ),
+			'score'           => intval( $lead['score'] ?? 0 ),
+			'intent_level'    => sanitize_key( $lead['intent_level'] ?? 'medium' ),
+			'score_breakdown' => is_array( $lead['score_breakdown'] ?? null ) ? wp_json_encode( $lead['score_breakdown'] ) : ( $lead['score_breakdown'] ?? '' ),
+			'status'          => sanitize_key( $lead['status'] ?? 'new' ),
+			'consent'         => ! empty( $lead['consent'] ) ? 1 : 0,
+			'updated_at'      => $time,
+		];
+
+		if ( ! empty( $lead['id'] ) ) {
+			$wpdb->update( $table, $data, [ 'id' => absint( $lead['id'] ) ] );
+			return absint( $lead['id'] );
+		}
+
+		$data['created_at'] = $time;
+		$wpdb->insert( $table, $data );
+		return $wpdb->insert_id;
+	}
+
+	/**
+	 * Get leads with optional status filter and search.
+	 *
+	 * @param int    $limit
+	 * @param int    $offset
+	 * @param string $status
+	 * @param string $search
+	 * @return array
+	 */
+	public static function get_leads( $limit = 50, $offset = 0, $status = '', $search = '' ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+
+		$where = ' WHERE 1=1';
+		$params = [];
+
+		if ( ! empty( $status ) && 'all' !== $status ) {
+			$where .= ' AND status = %s';
+			$params[] = sanitize_key( $status );
+		}
+
+		if ( ! empty( $search ) ) {
+			$like = '%' . $wpdb->esc_like( sanitize_text_field( $search ) ) . '%';
+			$where .= ' AND (name LIKE %s OR email LIKE %s OR phone LIKE %s OR company LIKE %s OR requirement LIKE %s)';
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+		}
+
+		$limit_sql = sprintf( ' ORDER BY id DESC LIMIT %d OFFSET %d', max( 1, intval( $limit ) ), max( 0, intval( $offset ) ) );
+
+		if ( ! empty( $params ) ) {
+			$query = $wpdb->prepare( "SELECT * FROM {$table}{$where}{$limit_sql}", ...$params );
+		} else {
+			$query = "SELECT * FROM {$table}{$where}{$limit_sql}";
+		}
+
+		$results = $wpdb->get_results( $query, ARRAY_A );
+		return is_array( $results ) ? $results : [];
+	}
+
+	/**
+	 * Get total count of leads for pagination.
+	 *
+	 * @param string $status
+	 * @param string $search
+	 * @return int
+	 */
+	public static function get_leads_count( $status = '', $search = '' ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+
+		$where = ' WHERE 1=1';
+		$params = [];
+
+		if ( ! empty( $status ) && 'all' !== $status ) {
+			$where .= ' AND status = %s';
+			$params[] = sanitize_key( $status );
+		}
+
+		if ( ! empty( $search ) ) {
+			$like = '%' . $wpdb->esc_like( sanitize_text_field( $search ) ) . '%';
+			$where .= ' AND (name LIKE %s OR email LIKE %s OR phone LIKE %s OR company LIKE %s OR requirement LIKE %s)';
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+			$params[] = $like;
+		}
+
+		if ( ! empty( $params ) ) {
+			$count = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table}{$where}", ...$params ) );
+		} else {
+			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table}{$where}" );
+		}
+
+		return intval( $count );
+	}
+
+	/**
+	 * Delete a lead by ID.
+	 *
+	 * @param int $id
+	 * @return bool
+	 */
+	public static function delete_lead( $id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+		return (bool) $wpdb->delete( $table, [ 'id' => absint( $id ) ], [ '%d' ] );
+	}
+
+	/**
+	 * Update lead status.
+	 *
+	 * @param int    $id
+	 * @param string $status
+	 * @return bool
+	 */
+	public static function update_lead_status( $id, $status ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+		return (bool) $wpdb->update(
+			$table,
+			[
+				'status'     => sanitize_key( $status ),
+				'updated_at' => current_time( 'mysql' ),
+			],
+			[ 'id' => absint( $id ) ],
+			[ '%s', '%s' ],
+			[ '%d' ]
+		);
+	}
+	/**
+	 * Update session summary, sentiment, and intent tag.
+	 *
+	 * @param string $session_id
+	 * @param string $summary
+	 * @param string $sentiment
+	 * @param string $intent_tag
+	 * @return bool
+	 */
+	public static function update_session_summary( $session_id, $summary, $sentiment = 'neutral', $intent_tag = 'general' ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_sessions';
+		return (bool) $wpdb->update(
+			$table,
+			[
+				'summary'    => sanitize_textarea_field( $summary ),
+				'sentiment'  => sanitize_key( $sentiment ),
+				'intent_tag' => sanitize_key( $intent_tag ),
+				'updated_at' => current_time( 'mysql' ),
+			],
+			[ 'session_id' => sanitize_text_field( $session_id ) ],
+			[ '%s', '%s', '%s', '%s' ],
+			[ '%s' ]
+		);
+	}
+
+	/**
+	 * Get comprehensive conversation analytics & business intelligence.
+	 *
+	 * @return array
+	 */
+	public static function get_conversation_analytics() {
+		global $wpdb;
+		$sess_table  = $wpdb->prefix . 'dctc_ai_sessions';
+		$leads_table = $wpdb->prefix . 'dctc_ai_leads';
+
+		$total_conversations = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$sess_table}`" );
+		$today_start = current_time( 'Y-m-d 00:00:00' );
+		$today_conversations = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$sess_table}` WHERE created_at >= %s", $today_start ) );
+
+		$total_leads = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$leads_table}`" );
+		$qualified_leads = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$leads_table}` WHERE status = 'qualified' OR score >= 70" );
+
+		$conversion_rate = $total_conversations > 0 ? round( ( $total_leads / $total_conversations ) * 100, 1 ) : 0;
+
+		// Sentiment Breakdown
+		$sentiment_rows = $wpdb->get_results( "SELECT sentiment, COUNT(*) as count FROM `{$sess_table}` GROUP BY sentiment", ARRAY_A );
+		$sentiments = [ 'positive' => 0, 'neutral' => 0, 'frustrated' => 0 ];
+		if ( is_array( $sentiment_rows ) ) {
+			foreach ( $sentiment_rows as $sr ) {
+				$key = sanitize_key( $sr['sentiment'] ?: 'neutral' );
+				$sentiments[ $key ] = (int) $sr['count'];
+			}
+		}
+
+		// Intent Breakdown
+		$intent_rows = $wpdb->get_results( "SELECT intent_tag, COUNT(*) as count FROM `{$sess_table}` GROUP BY intent_tag ORDER BY count DESC LIMIT 6", ARRAY_A );
+		$intents = [];
+		if ( is_array( $intent_rows ) ) {
+			foreach ( $intent_rows as $ir ) {
+				$key = $ir['intent_tag'] ? sanitize_key( $ir['intent_tag'] ) : 'general';
+				$intents[ $key ] = (int) $ir['count'];
+			}
+		}
+
+		// Estimated AI Resolution Rate (conversations with positive/neutral sentiment and no errors)
+		$frustrated_count = $sentiments['frustrated'] ?? 0;
+		$resolved_count = max( 0, $total_conversations - $frustrated_count );
+		$resolution_rate = $total_conversations > 0 ? round( ( $resolved_count / $total_conversations ) * 100, 1 ) : 100;
+
+		return [
+			'total_conversations' => $total_conversations,
+			'today_conversations' => $today_conversations,
+			'total_leads'         => $total_leads,
+			'qualified_leads'     => $qualified_leads,
+			'conversion_rate'     => $conversion_rate,
+			'resolution_rate'     => $resolution_rate,
+			'sentiments'          => $sentiments,
+			'intents'             => $intents,
+		];
+	}
 }
+
+
 

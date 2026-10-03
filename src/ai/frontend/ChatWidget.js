@@ -336,6 +336,44 @@ export default function ChatWidget( { settings, inline } ) {
 		return template.replace( '{support_url}', supportUrl );
 	};
 
+	const getHandoffMessage = () => {
+		let lastUserQuestion = '';
+		for ( let i = messages.length - 1; i >= 0; i-- ) {
+			if ( messages[ i ].role === 'user' && messages[ i ].content ) {
+				lastUserQuestion = messages[ i ].content.replace( /\[Attached Files\]/g, '' ).trim();
+				break;
+			}
+		}
+		if ( ! lastUserQuestion && input.trim() ) {
+			lastUserQuestion = input.trim();
+		}
+		const template =
+			chatbot.handoff_template ||
+			'Hi! I was chatting with your AI assistant on {page_url} regarding: "{summary}". My question: "{question}".';
+		const visitorName =
+			chatbot.handoff_privacy_include_name !== false && leadFormData.name
+				? leadFormData.name
+				: __( 'Visitor', 'dragwyb-click-to-chat' );
+		const summaryText =
+			chatbot.handoff_privacy_include_summary !== false && lastUserQuestion
+				? lastUserQuestion.slice( 0, 120 )
+				: __( 'General Inquiry', 'dragwyb-click-to-chat' );
+		const questionText =
+			chatbot.handoff_privacy_include_question !== false && lastUserQuestion
+				? lastUserQuestion.slice( 0, 150 )
+				: __( 'Support Assistance', 'dragwyb-click-to-chat' );
+		const pageUrlText =
+			chatbot.handoff_privacy_include_page !== false
+				? window.location.href
+				: '';
+
+		return template
+			.replace( '{visitor_name}', visitorName )
+			.replace( '{summary}', summaryText )
+			.replace( '{question}', questionText )
+			.replace( '{page_url}', pageUrlText );
+	};
+
 	const suggestedQuestions = chatbot.enable_pre_questions
 		? [
 				chatbot.pre_question_1,
@@ -397,6 +435,72 @@ export default function ChatWidget( { settings, inline } ) {
 	const [ emailDraft, setEmailDraft ] = useState( '' );
 	const [ emailError, setEmailError ] = useState( '' );
 	const [ pendingPrompt, setPendingPrompt ] = useState( '' );
+
+	// AI Lead Capture State
+	const [ showLeadForm, setShowLeadForm ] = useState( false );
+	const [ leadFormSubmitted, setLeadFormSubmitted ] = useState( false );
+	const [ leadFormSubmitting, setLeadFormSubmitting ] = useState( false );
+	const [ leadFormError, setLeadFormError ] = useState( '' );
+	const [ leadFormData, setLeadFormData ] = useState( {
+		name: '',
+		email: '',
+		phone: '',
+		company: '',
+		company_size: '',
+		budget: '',
+		timeline: '',
+		interest: '',
+		requirement: '',
+	} );
+
+	// Feature 10: Human Handoff State
+	const [ showHandoffCard, setShowHandoffCard ] = useState( false );
+
+	// Feature 11: WooCommerce Sales & Order Tracker State
+	const [ showOrderTracker, setShowOrderTracker ] = useState( false );
+	const [ orderLookupId, setOrderLookupId ] = useState( '' );
+	const [ orderLookupEmail, setOrderLookupEmail ] = useState( '' );
+	const [ orderLookupResult, setOrderLookupResult ] = useState( null );
+	const [ orderLookupLoading, setOrderLookupLoading ] = useState( false );
+	const [ orderLookupError, setOrderLookupError ] = useState( '' );
+
+	const isWcActive = settings?.is_woocommerce_active !== false;
+
+	const handleOrderLookup = async ( e ) => {
+		if ( e && e.preventDefault ) {
+			e.preventDefault();
+		}
+		setOrderLookupError( '' );
+		setOrderLookupResult( null );
+
+		const orderNum = parseInt( orderLookupId, 10 );
+		if ( ! orderNum || isNaN( orderNum ) ) {
+			setOrderLookupError( __( 'Please enter a valid numeric Order ID.', 'dragwyb-click-to-chat' ) );
+			return;
+		}
+
+		setOrderLookupLoading( true );
+		try {
+			const res = await apiFetch( {
+				path: '/dctc-ai/v1/woocommerce/order-status',
+				method: 'POST',
+				data: {
+					order_id: orderNum,
+					email: orderLookupEmail.trim(),
+				},
+			} );
+
+			if ( res && res.success ) {
+				setOrderLookupResult( res );
+			} else {
+				setOrderLookupError( res?.message || __( 'Order not found. Please verify details.', 'dragwyb-click-to-chat' ) );
+			}
+		} catch ( err ) {
+			setOrderLookupError( err?.message || __( 'Could not find order. Please verify your order number and billing email.', 'dragwyb-click-to-chat' ) );
+		} finally {
+			setOrderLookupLoading( false );
+		}
+	};
 
 	const messagesEndRef = useRef( null );
 	const inputRef = useRef( null );
@@ -531,7 +635,49 @@ export default function ChatWidget( { settings, inline } ) {
 		if ( messagesEndRef.current ) {
 			messagesEndRef.current.scrollIntoView( { behavior: 'smooth' } );
 		}
-	}, [ messages, isLoading, attachments ] );
+	}, [ messages, isLoading, attachments, showLeadForm ] );
+
+	// Auto-prompt Lead Form based on configured triggers
+	useEffect( () => {
+		if ( ! chatbot.enable_lead_capture || leadFormSubmitted || showLeadForm ) {
+			return;
+		}
+		if ( chatbot.lead_trigger_type === 'time_delay' && isOpen ) {
+			const delaySec = parseInt( chatbot.lead_trigger_delay, 10 ) || 30;
+			const timer = setTimeout( () => {
+				setShowLeadForm( true );
+			}, delaySec * 1000 );
+			return () => clearTimeout( timer );
+		}
+	}, [
+		chatbot.enable_lead_capture,
+		chatbot.lead_trigger_type,
+		chatbot.lead_trigger_delay,
+		isOpen,
+		leadFormSubmitted,
+		showLeadForm,
+	] );
+
+	useEffect( () => {
+		if ( ! chatbot.enable_lead_capture || leadFormSubmitted || showLeadForm ) {
+			return;
+		}
+		if ( chatbot.lead_trigger_type === 'message_count' ) {
+			const targetCount =
+				parseInt( chatbot.lead_trigger_message_count, 10 ) || 3;
+			const userCount = messages.filter( ( m ) => m.role === 'user' ).length;
+			if ( userCount >= targetCount ) {
+				setShowLeadForm( true );
+			}
+		}
+	}, [
+		chatbot.enable_lead_capture,
+		chatbot.lead_trigger_type,
+		chatbot.lead_trigger_message_count,
+		messages,
+		leadFormSubmitted,
+		showLeadForm,
+	] );
 
 	const toggleOpen = () => setIsOpen( ( open ) => ! open );
 
@@ -887,6 +1033,9 @@ export default function ChatWidget( { settings, inline } ) {
 				const responseActionButtons = Array.isArray( response.action_buttons )
 					? response.action_buttons
 					: [];
+				const responseProducts = Array.isArray( response.products )
+					? response.products
+					: [];
 
 				setMessages( ( prev ) => [
 					...prev,
@@ -895,6 +1044,7 @@ export default function ChatWidget( { settings, inline } ) {
 						content: botMessage,
 						sources: responseSources,
 						action_buttons: responseActionButtons,
+						products: responseProducts,
 					},
 				] );
 			} else {
@@ -978,6 +1128,88 @@ export default function ChatWidget( { settings, inline } ) {
 			const promptToSend = pendingPrompt;
 			setPendingPrompt( '' );
 			handleSend( null, promptToSend );
+		}
+	};
+
+	const handleLeadSubmit = async ( e ) => {
+		if ( e && e.preventDefault ) {
+			e.preventDefault();
+		}
+		setLeadFormError( '' );
+
+		if (
+			! leadFormData.name &&
+			! leadFormData.email &&
+			! leadFormData.phone
+		) {
+			setLeadFormError(
+				__(
+					'Please provide at least a name, email or phone number.',
+					'dragwyb-click-to-chat'
+				)
+			);
+			return;
+		}
+
+		if (
+			leadFormData.email &&
+			! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test( leadFormData.email )
+		) {
+			setLeadFormError(
+				__(
+					'Please enter a valid email address.',
+					'dragwyb-click-to-chat'
+				)
+			);
+			return;
+		}
+
+		setLeadFormSubmitting( true );
+		try {
+			const res = await apiFetch( {
+				path: '/dctc-ai/v1/leads/capture',
+				method: 'POST',
+				data: {
+					...leadFormData,
+					session_id: sessionId,
+					source_url: window.location.href,
+				},
+			} );
+
+			if ( res && res.success ) {
+				setLeadFormSubmitted( true );
+				setShowLeadForm( false );
+				setMessages( ( prev ) => [
+					...prev,
+					{
+						role: 'bot',
+						content:
+							res.message ||
+							__(
+								'Thank you! Your information has been received. Our team will contact you shortly.',
+								'dragwyb-click-to-chat'
+							),
+					},
+				] );
+			} else {
+				setLeadFormError(
+					res?.message ||
+						__(
+							'Failed to submit form. Please try again.',
+							'dragwyb-click-to-chat'
+						)
+				);
+			}
+		} catch ( err ) {
+			setLeadFormError(
+				err?.message ||
+					__(
+						'Error submitting contact info. Please try again.',
+						'dragwyb-click-to-chat'
+					)
+			);
+		} finally {
+			setLeadFormSubmitting( false );
 		}
 	};
 
@@ -1089,6 +1321,65 @@ export default function ChatWidget( { settings, inline } ) {
 							},
 							createElement( 'span', {
 								className: 'dashicons dashicons-trash',
+								'aria-hidden': 'true',
+							} )
+						),
+					chatbot.enable_lead_capture &&
+						! leadFormSubmitted &&
+						createElement(
+							'button',
+							{
+								className: 'dctc-ai-chat-clear',
+								onClick: () => setShowLeadForm( ( prev ) => ! prev ),
+								title:
+									chatbot.lead_form_title ||
+									__( 'Contact Our Team', 'dragwyb-click-to-chat' ),
+								'aria-label':
+									chatbot.lead_form_title ||
+									__( 'Contact Our Team', 'dragwyb-click-to-chat' ),
+								style: {
+									background: showLeadForm ? 'rgba(255,255,255,0.2)' : 'none',
+									borderRadius: '6px',
+								},
+							},
+							createElement( 'span', {
+								className: 'dashicons dashicons-id',
+								'aria-hidden': 'true',
+							} )
+						),
+					chatbot.enable_human_handoff !== false &&
+						createElement(
+							'button',
+							{
+								className: 'dctc-ai-chat-clear',
+								onClick: () => setShowHandoffCard( ( prev ) => ! prev ),
+								title: __( 'Talk to Human Specialist', 'dragwyb-click-to-chat' ),
+								'aria-label': __( 'Talk to Human Specialist', 'dragwyb-click-to-chat' ),
+								style: {
+									background: showHandoffCard ? 'rgba(255,255,255,0.2)' : 'none',
+									borderRadius: '6px',
+								},
+							},
+							createElement( 'span', {
+								className: 'dashicons dashicons-groups',
+								'aria-hidden': 'true',
+							} )
+						),
+					isWcActive &&
+						createElement(
+							'button',
+							{
+								className: 'dctc-ai-chat-clear',
+								onClick: () => setShowOrderTracker( ( prev ) => ! prev ),
+								title: __( 'Track WooCommerce Order', 'dragwyb-click-to-chat' ),
+								'aria-label': __( 'Track WooCommerce Order', 'dragwyb-click-to-chat' ),
+								style: {
+									background: showOrderTracker ? 'rgba(255,255,255,0.2)' : 'none',
+									borderRadius: '6px',
+								},
+							},
+							createElement( 'span', {
+								className: 'dashicons dashicons-cart',
 								'aria-hidden': 'true',
 							} )
 						),
@@ -1433,6 +1724,101 @@ export default function ChatWidget( { settings, inline } ) {
 															createElement( 'span', null, btn.label )
 														)
 													)
+												),
+											message.products &&
+												message.products.length > 0 &&
+												createElement(
+													'div',
+													{ className: 'dctc-ai-products-grid' },
+													message.products.map( ( prod, pIdx ) =>
+														createElement(
+															'div',
+															{ key: prod.id || pIdx, className: 'dctc-ai-product-card' },
+															prod.image &&
+																createElement(
+																	'div',
+																	{ className: 'dctc-ai-product-thumb-wrap' },
+																	createElement( 'img', {
+																		src: prod.image,
+																		alt: prod.title,
+																		className: 'dctc-ai-product-thumb',
+																		loading: 'lazy',
+																	} ),
+																	prod.is_on_sale &&
+																		createElement(
+																			'span',
+																			{ className: 'dctc-ai-product-badge' },
+																			__( 'SALE', 'dragwyb-click-to-chat' )
+																		)
+																),
+															createElement(
+																'div',
+																{ className: 'dctc-ai-product-info' },
+																createElement(
+																	'strong',
+																	{ className: 'dctc-ai-product-title', title: prod.title },
+																	prod.title
+																),
+																createElement(
+																	'div',
+																	{ className: 'dctc-ai-product-meta-row' },
+																	createElement(
+																		'span',
+																		{ className: 'dctc-ai-product-price' },
+																		prod.formatted_price
+																	),
+																	createElement(
+																		'span',
+																		{
+																			className: `dctc-ai-stock-pill ${
+																				prod.in_stock ? 'is-in-stock' : 'is-out-of-stock'
+																			}`,
+																		},
+																		prod.in_stock
+																			? __( 'In Stock', 'dragwyb-click-to-chat' )
+																			: __( 'Out of Stock', 'dragwyb-click-to-chat' )
+																	)
+																),
+																prod.rating > 0 &&
+																	createElement(
+																		'div',
+																		{ className: 'dctc-ai-product-rating' },
+																		'★'.repeat( Math.round( prod.rating ) ),
+																		createElement(
+																			'span',
+																			{ className: 'dctc-ai-rating-num' },
+																			` (${ prod.rating.toFixed( 1 ) })`
+																		)
+																	),
+																createElement(
+																	'div',
+																	{ className: 'dctc-ai-product-buttons' },
+																	createElement(
+																		'a',
+																		{
+																			href: prod.permalink,
+																			target: '_blank',
+																			rel: 'noopener noreferrer',
+																			className: 'dctc-ai-product-btn dctc-ai-product-btn--view',
+																		},
+																		__( 'View', 'dragwyb-click-to-chat' )
+																	),
+																	prod.in_stock &&
+																		createElement(
+																			'a',
+																			{
+																				href: prod.add_to_cart_url,
+																				target: '_blank',
+																				rel: 'noopener noreferrer',
+																				className: 'dctc-ai-product-btn dctc-ai-product-btn--cart',
+																				style: { background: primaryColor },
+																			},
+																			'🛒 ' + __( 'Add', 'dragwyb-click-to-chat' )
+																		)
+																)
+															)
+														)
+													)
 												)
 									  )
 									: message.content &&
@@ -1488,6 +1874,857 @@ export default function ChatWidget( { settings, inline } ) {
 									createElement( 'span', null )
 								)
 							)
+						),
+					// Interactive Lead Capture Card
+					showLeadForm &&
+						createElement(
+							'div',
+							{
+								className: 'dctc-ai-lead-card',
+								style: {
+									background: '#ffffff',
+									border: '1px solid #e2e8f0',
+									borderRadius: '12px',
+									padding: '1.25rem',
+									margin: '0.75rem 0',
+									boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+								},
+							},
+							createElement(
+								'div',
+								{
+									style: {
+										display: 'flex',
+										justifyContent: 'space-between',
+										alignItems: 'flex-start',
+										marginBottom: '0.75rem',
+									},
+								},
+								createElement(
+									'div',
+									null,
+									createElement(
+										'strong',
+										{
+											style: {
+												display: 'block',
+												fontSize: '0.95rem',
+												color: '#0f172a',
+											},
+										},
+										chatbot.lead_form_title ||
+											__( 'Contact Our Team', 'dragwyb-click-to-chat' )
+									),
+									createElement(
+										'span',
+										{
+											style: {
+												fontSize: '0.8rem',
+												color: '#64748b',
+											},
+										},
+										chatbot.lead_form_subtitle ||
+											__(
+												'Leave your details and our team will get back to you shortly.',
+												'dragwyb-click-to-chat'
+											)
+									)
+								),
+								createElement(
+									'button',
+									{
+										type: 'button',
+										onClick: () => setShowLeadForm( false ),
+										style: {
+											background: 'none',
+											border: 'none',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											fontSize: '1rem',
+											padding: '2px 6px',
+										},
+										title: __( 'Close', 'dragwyb-click-to-chat' ),
+									},
+									'✕'
+								)
+							),
+							createElement(
+								'form',
+								{
+									onSubmit: handleLeadSubmit,
+									style: {
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.6rem',
+									},
+								},
+								( ! chatbot.lead_fields || chatbot.lead_fields.name !== false ) &&
+									createElement( 'input', {
+										type: 'text',
+										placeholder: __( 'Your Name', 'dragwyb-click-to-chat' ),
+										value: leadFormData.name,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												name: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+										},
+									} ),
+								( ! chatbot.lead_fields || chatbot.lead_fields.email !== false ) &&
+									createElement( 'input', {
+										type: 'email',
+										placeholder: __(
+											'Your Email Address',
+											'dragwyb-click-to-chat'
+										),
+										value: leadFormData.email,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												email: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+										},
+									} ),
+								( ! chatbot.lead_fields || chatbot.lead_fields.phone !== false ) &&
+									createElement( 'input', {
+										type: 'tel',
+										placeholder: __(
+											'Your Phone / WhatsApp',
+											'dragwyb-click-to-chat'
+										),
+										value: leadFormData.phone,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												phone: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+										},
+									} ),
+								chatbot.lead_fields &&
+									chatbot.lead_fields.company &&
+									createElement( 'input', {
+										type: 'text',
+										placeholder: __(
+											'Company / Organization',
+											'dragwyb-click-to-chat'
+										),
+										value: leadFormData.company,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												company: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+										},
+									} ),
+								chatbot.lead_fields &&
+									chatbot.lead_fields.company_size &&
+									createElement(
+										'select',
+										{
+											value: leadFormData.company_size,
+											onChange: ( e ) =>
+												setLeadFormData( {
+													...leadFormData,
+													company_size: e.target.value,
+												} ),
+											style: {
+												padding: '0.45rem 0.75rem',
+												borderRadius: '6px',
+												border: '1px solid #cbd5e1',
+												fontSize: '0.85rem',
+												background: '#ffffff',
+											},
+										},
+										createElement(
+											'option',
+											{ value: '' },
+											__(
+												'-- Select Company Size --',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '1-10' },
+											__(
+												'1 - 10 employees',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '11-50' },
+											__(
+												'11 - 50 employees',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '51-200' },
+											__(
+												'51 - 200 employees',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '200+' },
+											__(
+												'200+ Enterprise',
+												'dragwyb-click-to-chat'
+											)
+										)
+									),
+								chatbot.lead_fields &&
+									chatbot.lead_fields.budget &&
+									createElement(
+										'select',
+										{
+											value: leadFormData.budget,
+											onChange: ( e ) =>
+												setLeadFormData( {
+													...leadFormData,
+													budget: e.target.value,
+												} ),
+											style: {
+												padding: '0.45rem 0.75rem',
+												borderRadius: '6px',
+												border: '1px solid #cbd5e1',
+												fontSize: '0.85rem',
+												background: '#ffffff',
+											},
+										},
+										createElement(
+											'option',
+											{ value: '' },
+											__(
+												'-- Select Budget Range --',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '< $1,000' },
+											'< $1,000'
+										),
+										createElement(
+											'option',
+											{ value: '$1,000 - $5,000' },
+											'$1,000 - $5,000'
+										),
+										createElement(
+											'option',
+											{ value: '$5,000 - $20,000' },
+											'$5,000 - $20,000'
+										),
+										createElement(
+											'option',
+											{ value: '$20,000+' },
+											'$20,000+'
+										)
+									),
+								chatbot.lead_fields &&
+									chatbot.lead_fields.timeline &&
+									createElement(
+										'select',
+										{
+											value: leadFormData.timeline,
+											onChange: ( e ) =>
+												setLeadFormData( {
+													...leadFormData,
+													timeline: e.target.value,
+												} ),
+											style: {
+												padding: '0.45rem 0.75rem',
+												borderRadius: '6px',
+												border: '1px solid #cbd5e1',
+												fontSize: '0.85rem',
+												background: '#ffffff',
+											},
+										},
+										createElement(
+											'option',
+											{ value: '' },
+											__(
+												'-- Purchase Timeline --',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: 'Immediate / ASAP' },
+											__(
+												'Immediate / ASAP',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: 'Within 1 Month' },
+											__(
+												'Within 1 Month',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: '1 - 3 Months' },
+											__(
+												'1 - 3 Months',
+												'dragwyb-click-to-chat'
+											)
+										),
+										createElement(
+											'option',
+											{ value: 'Just Exploring' },
+											__(
+												'Just Exploring',
+												'dragwyb-click-to-chat'
+											)
+										)
+									),
+								chatbot.lead_fields &&
+									chatbot.lead_fields.interest &&
+									createElement( 'input', {
+										type: 'text',
+										placeholder: __(
+											'Product / Service of Interest',
+											'dragwyb-click-to-chat'
+										),
+										value: leadFormData.interest,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												interest: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+										},
+									} ),
+								( ! chatbot.lead_fields || chatbot.lead_fields.requirement !== false ) &&
+									createElement( 'textarea', {
+										placeholder: __(
+											'How can we help you?',
+											'dragwyb-click-to-chat'
+										),
+										rows: 2,
+										value: leadFormData.requirement,
+										onChange: ( e ) =>
+											setLeadFormData( {
+												...leadFormData,
+												requirement: e.target.value,
+											} ),
+										style: {
+											padding: '0.45rem 0.75rem',
+											borderRadius: '6px',
+											border: '1px solid #cbd5e1',
+											fontSize: '0.85rem',
+											resize: 'vertical',
+										},
+									} ),
+								leadFormError &&
+									createElement(
+										'span',
+										{
+											style: {
+												color: '#ef4444',
+												fontSize: '0.8rem',
+											},
+										},
+										leadFormError
+									),
+								createElement(
+									'div',
+									{
+										style: {
+											display: 'flex',
+											justifyContent: 'flex-end',
+											gap: '0.5rem',
+											marginTop: '0.3rem',
+										},
+									},
+									createElement(
+										'button',
+										{
+											type: 'button',
+											onClick: () => setShowLeadForm( false ),
+											style: {
+												padding: '0.4rem 0.8rem',
+												borderRadius: '6px',
+												border: '1px solid #cbd5e1',
+												background: '#f8fafc',
+												color: '#475569',
+												fontSize: '0.85rem',
+												cursor: 'pointer',
+											},
+										},
+										__( 'Cancel', 'dragwyb-click-to-chat' )
+									),
+									createElement(
+										'button',
+										{
+											type: 'submit',
+											disabled: leadFormSubmitting,
+											style: {
+												padding: '0.4rem 0.9rem',
+												borderRadius: '6px',
+												border: 'none',
+												background: primaryColor,
+												color: '#ffffff',
+												fontSize: '0.85rem',
+												fontWeight: 600,
+												cursor: leadFormSubmitting
+													? 'not-allowed'
+													: 'pointer',
+												opacity: leadFormSubmitting
+													? 0.7
+													: 1,
+											},
+										},
+										leadFormSubmitting
+											? __( 'Sending...', 'dragwyb-click-to-chat' )
+											: __( 'Submit Info', 'dragwyb-click-to-chat' )
+									)
+								)
+							)
+						),
+					// Interactive Human Handoff Card
+					showHandoffCard &&
+						createElement(
+							'div',
+							{
+								className: 'dctc-ai-handoff-card',
+								style: {
+									background: '#ffffff',
+									border: '1px solid #e2e8f0',
+									borderRadius: '12px',
+									padding: '1.25rem',
+									margin: '0.75rem 0',
+									boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+								},
+							},
+							createElement(
+								'div',
+								{
+									style: {
+										display: 'flex',
+										justifyContent: 'space-between',
+										alignItems: 'flex-start',
+										marginBottom: '0.75rem',
+									},
+								},
+								createElement(
+									'div',
+									null,
+									createElement(
+										'strong',
+										{
+											style: {
+												display: 'block',
+												fontSize: '0.95rem',
+												color: '#0f172a',
+											},
+										},
+										__( 'Connect with Human Team', 'dragwyb-click-to-chat' )
+									),
+									createElement(
+										'span',
+										{
+											style: {
+												fontSize: '0.8rem',
+												color: chatbot.is_within_business_hours !== false ? '#16a34a' : '#ea580c',
+												fontWeight: 500,
+												display: 'inline-flex',
+												alignItems: 'center',
+												gap: '4px',
+												marginTop: '2px',
+											},
+										},
+										chatbot.is_within_business_hours !== false
+											? `🟢 ${ __( 'Specialists are Online Now', 'dragwyb-click-to-chat' ) }`
+											: `🌙 ${ __( 'Outside Operating Hours', 'dragwyb-click-to-chat' ) }`
+									)
+								),
+								createElement(
+									'button',
+									{
+										type: 'button',
+										onClick: () => setShowHandoffCard( false ),
+										style: {
+											background: 'none',
+											border: 'none',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											fontSize: '1rem',
+											padding: '2px 6px',
+										},
+										title: __( 'Close', 'dragwyb-click-to-chat' ),
+									},
+									'✕'
+								)
+							),
+							// Context Preview Box
+							createElement(
+								'div',
+								{
+									style: {
+										background: '#f8fafc',
+										border: '1px solid #e2e8f0',
+										borderRadius: '8px',
+										padding: '0.65rem 0.85rem',
+										marginBottom: '0.85rem',
+										fontSize: '0.8rem',
+										color: '#475569',
+									},
+								},
+								createElement(
+									'span',
+									{
+										style: {
+											display: 'block',
+											fontWeight: 600,
+											color: '#334155',
+											marginBottom: '3px',
+											fontSize: '0.75rem',
+											textTransform: 'uppercase',
+											letterSpacing: '0.03em',
+										},
+									},
+									__( 'Prefilled Message for WhatsApp / Email:', 'dragwyb-click-to-chat' )
+								),
+								getHandoffMessage()
+							),
+							// Channel Action Buttons
+							createElement(
+								'div',
+								{
+									style: {
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.5rem',
+									},
+								},
+								( ! chatbot.handoff_channels || chatbot.handoff_channels.includes( 'whatsapp' ) ) &&
+									( chatbot.handoff_whatsapp_number || '' ) &&
+									createElement(
+										'a',
+										{
+											href: `https://wa.me/${ ( chatbot.handoff_whatsapp_number || '' ).replace( /[^0-9]/g, '' ) }?text=${ encodeURIComponent( getHandoffMessage() ) }`,
+											target: '_blank',
+											rel: 'noopener noreferrer',
+											style: {
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												gap: '0.5rem',
+												padding: '0.6rem 1rem',
+												background: '#25D366',
+												color: '#ffffff',
+												borderRadius: '8px',
+												fontWeight: 600,
+												fontSize: '0.85rem',
+												textDecoration: 'none',
+											},
+										},
+										renderLauncherIcon( 'whatsapp' ),
+										__( 'Continue on WhatsApp', 'dragwyb-click-to-chat' )
+									),
+								( ! chatbot.handoff_channels || chatbot.handoff_channels.includes( 'phone' ) ) &&
+									( chatbot.handoff_phone_number || '' ) &&
+									chatbot.is_within_business_hours !== false &&
+									createElement(
+										'a',
+										{
+											href: `tel:${ ( chatbot.handoff_phone_number || '' ).replace( /[^0-9+]/g, '' ) }`,
+											style: {
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												gap: '0.5rem',
+												padding: '0.55rem 1rem',
+												background: '#0284c7',
+												color: '#ffffff',
+												borderRadius: '8px',
+												fontWeight: 600,
+												fontSize: '0.85rem',
+												textDecoration: 'none',
+											},
+										},
+										createElement( 'span', { className: 'dashicons dashicons-phone' } ),
+										sprintf( __( 'Call Agent (%s)', 'dragwyb-click-to-chat' ), chatbot.handoff_phone_number )
+									),
+								( ! chatbot.handoff_channels || chatbot.handoff_channels.includes( 'email' ) ) &&
+									( chatbot.handoff_email_address || '' ) &&
+									createElement(
+										'a',
+										{
+											href: `mailto:${ chatbot.handoff_email_address }?subject=${ encodeURIComponent( __( 'AI Chat Handoff Inquiry', 'dragwyb-click-to-chat' ) ) }&body=${ encodeURIComponent( getHandoffMessage() ) }`,
+											target: '_blank',
+											rel: 'noopener noreferrer',
+											style: {
+												display: 'flex',
+												alignItems: 'center',
+												justifyContent: 'center',
+												gap: '0.5rem',
+												padding: '0.55rem 1rem',
+												background: '#f1f5f9',
+												color: '#334155',
+												border: '1px solid #cbd5e1',
+												borderRadius: '8px',
+												fontWeight: 600,
+												fontSize: '0.85rem',
+												textDecoration: 'none',
+											},
+										},
+										createElement( 'span', { className: 'dashicons dashicons-email' } ),
+										__( 'Send Email / Ticket', 'dragwyb-click-to-chat' )
+									)
+							)
+						),
+					// Interactive Secure Order Status Tracker Card
+					showOrderTracker &&
+						createElement(
+							'div',
+							{
+								className: 'dctc-ai-order-tracker-card',
+								style: {
+									background: '#ffffff',
+									border: '1px solid #e2e8f0',
+									borderRadius: '12px',
+									padding: '1.25rem',
+									margin: '0.75rem 0',
+									boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+								},
+							},
+							createElement(
+								'div',
+								{
+									style: {
+										display: 'flex',
+										justifyContent: 'space-between',
+										alignItems: 'flex-start',
+										marginBottom: '0.75rem',
+									},
+								},
+								createElement(
+									'div',
+									null,
+									createElement(
+										'strong',
+										{
+											style: {
+												display: 'block',
+												fontSize: '0.95rem',
+												color: '#0f172a',
+											},
+										},
+										__( '📦 Track Your Order Status', 'dragwyb-click-to-chat' )
+									),
+									createElement(
+										'span',
+										{
+											style: {
+												fontSize: '0.8rem',
+												color: '#64748b',
+											},
+										},
+										__( 'Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat' )
+									)
+								),
+								createElement(
+									'button',
+									{
+										type: 'button',
+										onClick: () => {
+											setShowOrderTracker( false );
+											setOrderLookupResult( null );
+											setOrderLookupError( '' );
+										},
+										style: {
+											background: 'none',
+											border: 'none',
+											cursor: 'pointer',
+											color: '#94a3b8',
+											fontSize: '1rem',
+											padding: '2px 6px',
+										},
+										title: __( 'Close', 'dragwyb-click-to-chat' ),
+									},
+									'✕'
+								)
+							),
+							createElement(
+								'form',
+								{
+									onSubmit: handleOrderLookup,
+									style: {
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.6rem',
+									},
+								},
+								createElement( 'input', {
+									type: 'number',
+									placeholder: __( 'Order ID (e.g. 1042)', 'dragwyb-click-to-chat' ),
+									value: orderLookupId,
+									onChange: ( e ) => setOrderLookupId( e.target.value ),
+									required: true,
+									style: {
+										padding: '0.45rem 0.75rem',
+										borderRadius: '6px',
+										border: '1px solid #cbd5e1',
+										fontSize: '0.85rem',
+									},
+								} ),
+								createElement( 'input', {
+									type: 'email',
+									placeholder: __( 'Billing Email Address', 'dragwyb-click-to-chat' ),
+									value: orderLookupEmail,
+									onChange: ( e ) => setOrderLookupEmail( e.target.value ),
+									style: {
+										padding: '0.45rem 0.75rem',
+										borderRadius: '6px',
+										border: '1px solid #cbd5e1',
+										fontSize: '0.85rem',
+									},
+								} ),
+								orderLookupError &&
+									createElement(
+										'span',
+										{
+											style: {
+												color: '#ef4444',
+												fontSize: '0.8rem',
+											},
+										},
+										orderLookupError
+									),
+								createElement(
+									'button',
+									{
+										type: 'submit',
+										disabled: orderLookupLoading,
+										style: {
+											padding: '0.45rem 0.9rem',
+											borderRadius: '6px',
+											border: 'none',
+											background: primaryColor,
+											color: '#ffffff',
+											fontSize: '0.85rem',
+											fontWeight: 600,
+											cursor: orderLookupLoading ? 'not-allowed' : 'pointer',
+											opacity: orderLookupLoading ? 0.7 : 1,
+										},
+									},
+									orderLookupLoading
+										? __( 'Verifying Order...', 'dragwyb-click-to-chat' )
+										: __( 'Look Up Order Status', 'dragwyb-click-to-chat' )
+								)
+							),
+							// Order Lookup Result Card
+							orderLookupResult &&
+								createElement(
+									'div',
+									{
+										style: {
+											marginTop: '0.85rem',
+											padding: '0.85rem',
+											background: '#f8fafc',
+											borderRadius: '8px',
+											border: '1px solid #e2e8f0',
+										},
+									},
+									createElement(
+										'div',
+										{
+											style: {
+												display: 'flex',
+												justifyContent: 'space-between',
+												alignItems: 'center',
+												marginBottom: '0.5rem',
+											},
+										},
+										createElement(
+											'strong',
+											{ style: { color: '#0f172a', fontSize: '0.9rem' } },
+											`Order #${ orderLookupResult.order_number }`
+										),
+										createElement(
+											'span',
+											{
+												style: {
+													padding: '2px 8px',
+													borderRadius: '999px',
+													fontSize: '0.75rem',
+													fontWeight: 600,
+													textTransform: 'uppercase',
+													background:
+														orderLookupResult.status === 'completed'
+															? '#dcfce7'
+															: orderLookupResult.status === 'processing'
+															? '#e0f2fe'
+															: '#fef3c7',
+													color:
+														orderLookupResult.status === 'completed'
+															? '#15803d'
+															: orderLookupResult.status === 'processing'
+															? '#0369a1'
+															: '#b45309',
+												},
+											},
+											orderLookupResult.status_label || orderLookupResult.status
+										)
+									),
+									createElement(
+										'div',
+										{ style: { fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' } },
+										`📅 ${ orderLookupResult.date_created } • 💰 ${ orderLookupResult.formatted_total }`
+									),
+									orderLookupResult.items &&
+										orderLookupResult.items.length > 0 &&
+										createElement(
+											'ul',
+											{
+												style: {
+													margin: '0.4rem 0 0 0',
+													paddingLeft: '1.1rem',
+													fontSize: '0.8rem',
+													color: '#334155',
+												},
+											},
+											orderLookupResult.items.map( ( it, itIdx ) =>
+												createElement(
+													'li',
+													{ key: itIdx },
+													`${ it.name } × ${ it.quantity } (${ it.subtotal })`
+												)
+											)
+										)
+								)
 						),
 					createElement( 'div', { ref: messagesEndRef } )
 				),

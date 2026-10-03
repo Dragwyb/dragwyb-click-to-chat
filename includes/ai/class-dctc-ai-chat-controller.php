@@ -102,6 +102,33 @@ class DCTC_AI_Chat_Controller
 			];
 		}, $params['attachments']))) : [];
 
+		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+
+		if (empty($settings)) {
+			return $this->error_response(
+				esc_html__('Plugin settings not configured.', 'dragwyb-click-to-chat'),
+				500
+			);
+		}
+
+		$bot = isset($settings['chatbot']) ? $settings['chatbot'] : [];
+		$models = isset($settings['models']) ? $settings['models'] : [];
+
+		// Check AI Usage & Budget Limits
+		if (class_exists('DCTC_AI_Usage_Tracker')) {
+			$budget_check = DCTC_AI_Usage_Tracker::check_budget_and_limits($session_id);
+			if (isset($budget_check['allowed']) && !$budget_check['allowed']) {
+				return $this->save_and_respond(
+					$budget_check['message'],
+					$session_id,
+					$bot,
+					$email,
+					$prompt,
+					!empty($budget_check['action_buttons']) ? $budget_check['action_buttons'] : []
+				);
+			}
+		}
+
 		if (!current_user_can('manage_options')) {
 			$cookie_session_id = isset($_COOKIE['dctc_ai_session_id']) ? sanitize_text_field(wp_unslash($_COOKIE['dctc_ai_session_id'])) : '';
 			if (empty($cookie_session_id) || $cookie_session_id !== $session_id) {
@@ -123,17 +150,25 @@ class DCTC_AI_Chat_Controller
 			$prompt = esc_html__('Please analyze the attached file(s).', 'dragwyb-click-to-chat');
 		}
 
-		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		// Feature 10: Human Handoff Intent Detection
+		if (!empty($prompt) && (!isset($bot['enable_human_handoff']) || (bool) $bot['enable_human_handoff']) && self::detect_human_handoff_intent($prompt)) {
+			$is_online = self::is_within_business_hours($bot);
+			$handoff_text = $is_online
+				? esc_html__('I can connect you directly with our team! Choose your preferred channel below to continue with a human specialist.', 'dragwyb-click-to-chat')
+				: (!empty($bot['offline_handoff_message']) ? $bot['offline_handoff_message'] : esc_html__('Our live human team is currently offline. Please leave an inquiry or reach us via email.', 'dragwyb-click-to-chat'));
 
-		if (empty($settings)) {
-			return $this->error_response(
-				esc_html__('Plugin settings not configured.', 'dragwyb-click-to-chat'),
-				500
+			$action_buttons = self::build_handoff_action_buttons($bot, $prompt, $is_online);
+
+			return $this->save_and_respond(
+				$handoff_text,
+				$session_id,
+				$bot,
+				$email,
+				$prompt,
+				$action_buttons,
+				true
 			);
 		}
-
-		$bot = isset($settings['chatbot']) ? $settings['chatbot'] : [];
-		$models = isset($settings['models']) ? $settings['models'] : [];
 
 		if (empty($bot) || empty($models)) {
 			return $this->error_response(
@@ -208,6 +243,17 @@ class DCTC_AI_Chat_Controller
 		}
 
 		try {
+			if (class_exists('DCTC_AI_WooCommerce')) {
+				$wc_context = DCTC_AI_WooCommerce::build_llm_product_context($prompt);
+				if (!empty($wc_context)) {
+					$system_message .= $wc_context;
+				}
+			}
+		} catch (Exception $e) {
+			self::log_debug('Dragwyb AI WooCommerce Context Error: ' . $e->getMessage());
+		}
+
+		try {
 			$memory = $this->get_optimized_memory($session_id, $prompt, $system_message);
 			$system_message = $memory['system_message'];
 		} catch (Exception $e) {
@@ -275,10 +321,29 @@ class DCTC_AI_Chat_Controller
 		}
 
 		try {
+			if (class_exists('DCTC_AI_Usage_Tracker')) {
+				$est_tokens = max(10, intval((strlen($prompt) + strlen($ai_message)) / 4));
+				DCTC_AI_Usage_Tracker::record_usage($session_id, $used_provider, $used_model, $est_tokens);
+			}
+		} catch (Exception $e) {
+			self::log_debug('Dragwyb AI AI Record Usage Error: ' . $e->getMessage());
+		}
+
+		try {
 			$formatted_messages = $this->get_formatted_messages($session_id);
 		} catch (Exception $e) {
 			self::log_debug('Dragwyb AI AI Get Formatted Messages Error: ' . $e->getMessage());
 			$formatted_messages = [];
+		}
+
+		$wc_products = [];
+		if (class_exists('DCTC_AI_WooCommerce') && DCTC_AI_WooCommerce::is_active()) {
+			if (preg_match('/\b(product|products|buy|purchase|price|cost|recommend|shop|shoes|shirt|item|items|store|catalog)\b/i', $prompt)) {
+				$wc_products = DCTC_AI_WooCommerce::search_products($prompt, 3);
+				if (empty($wc_products)) {
+					$wc_products = DCTC_AI_WooCommerce::get_recommendations('popular', 3);
+				}
+			}
 		}
 
 		return new \WP_REST_Response(
@@ -289,6 +354,7 @@ class DCTC_AI_Chat_Controller
 				'messages' => $formatted_messages,
 				'sources' => $sources,
 				'reference_links' => $sources,
+				'products' => $wc_products,
 			],
 			200
 		);
@@ -390,6 +456,136 @@ class DCTC_AI_Chat_Controller
 			],
 			200
 		);
+	}
+
+	/**
+	 * REST callback: Generate or retrieve an AI executive summary for a session.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function summarize_session($request)
+	{
+		$session_id = sanitize_text_field($request->get_param('session_id'));
+		if (empty($session_id)) {
+			return $this->error_response(__('Session ID is required.', 'dragwyb-click-to-chat'), 400);
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_sessions';
+		$session = $wpdb->get_row(
+			$wpdb->prepare("SELECT * FROM {$table} WHERE session_id = %s", $session_id),
+			ARRAY_A
+		);
+
+		if (!$session) {
+			return $this->error_response(__('Session not found.', 'dragwyb-click-to-chat'), 404);
+		}
+
+		$messages_raw = json_decode($session['content'] ?? '[]', true);
+		if (!is_array($messages_raw) || empty($messages_raw)) {
+			return $this->error_response(__('Conversation has no messages to summarize.', 'dragwyb-click-to-chat'), 400);
+		}
+
+		// Prepare conversation transcript for AI analysis
+		$transcript_lines = [];
+		foreach ($messages_raw as $m) {
+			$role = ($m['role'] ?? 'user') === 'user' ? 'Visitor' : 'Assistant';
+			$text = wp_strip_all_tags($m['content'] ?? '');
+			if (!empty($text)) {
+				$transcript_lines[] = "{$role}: {$text}";
+			}
+		}
+		$transcript = implode("\n", array_slice($transcript_lines, -30));
+
+		$system_prompt = "You are an executive conversation analyst. Analyze the provided customer chat transcript and output ONLY a valid JSON object without markdown formatting or backticks:
+{
+  \"goal\": \"1-2 sentence summary of what the customer wanted\",
+  \"questions\": [\"key question 1\", \"key question 2\"],
+  \"topics\": [\"topic or product 1\", \"topic 2\"],
+  \"sentiment\": \"positive\" or \"neutral\" or \"frustrated\",
+  \"intent_tag\": \"inquiry\" or \"support\" or \"purchase\" or \"feedback\",
+  \"next_action\": \"recommended followup or next step\"
+}";
+
+		$user_prompt = "Transcript:\n" . $transcript;
+
+		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$bot = isset($settings['chatbot']) ? $settings['chatbot'] : [];
+		$models = isset($settings['models']) ? $settings['models'] : [];
+		$provider = !empty($bot['default_provider']) ? $bot['default_provider'] : 'openai';
+		$model_id = !empty($models[$provider]) ? $models[$provider] : '';
+
+		$summary_data = null;
+
+		try {
+			$ai_res = $this->call_ai_api($user_prompt, $system_prompt, $provider, $model_id, $bot, $models);
+			$raw_text = trim($ai_res['message'] ?? '');
+			$raw_text = preg_replace('/^```(?:json)?\s*/i', '', $raw_text);
+			$raw_text = preg_replace('/\s*```$/', '', $raw_text);
+			$parsed = json_decode($raw_text, true);
+
+			if (is_array($parsed) && !empty($parsed['goal'])) {
+				$summary_data = [
+					'goal'        => sanitize_text_field($parsed['goal']),
+					'questions'   => array_map('sanitize_text_field', (array) ($parsed['questions'] ?? [])),
+					'topics'      => array_map('sanitize_text_field', (array) ($parsed['topics'] ?? [])),
+					'sentiment'   => in_array($parsed['sentiment'] ?? '', ['positive', 'neutral', 'frustrated'], true) ? $parsed['sentiment'] : 'neutral',
+					'intent_tag'  => in_array($parsed['intent_tag'] ?? '', ['inquiry', 'support', 'purchase', 'feedback'], true) ? $parsed['intent_tag'] : 'general',
+					'next_action' => sanitize_text_field($parsed['next_action'] ?? ''),
+				];
+			}
+		} catch (\Throwable $e) {
+			self::log_debug('Session summarize AI error: ' . $e->getMessage());
+		}
+
+		// Fallback heuristic if AI call fails or is unavailable
+		if (!$summary_data) {
+			$first_user_msg = '';
+			foreach ($messages_raw as $m) {
+				if (($m['role'] ?? '') === 'user') {
+					$first_user_msg = wp_strip_all_tags($m['content'] ?? '');
+					break;
+				}
+			}
+			$summary_data = [
+				'goal'        => !empty($first_user_msg) ? sprintf(__('Customer inquired about: %s', 'dragwyb-click-to-chat'), substr($first_user_msg, 0, 100)) : __('General conversation with AI Assistant', 'dragwyb-click-to-chat'),
+				'questions'   => [!empty($first_user_msg) ? substr($first_user_msg, 0, 100) : __('General inquiry', 'dragwyb-click-to-chat')],
+				'topics'      => [__('General', 'dragwyb-click-to-chat')],
+				'sentiment'   => 'neutral',
+				'intent_tag'  => 'inquiry',
+				'next_action' => __('Review full conversation log', 'dragwyb-click-to-chat'),
+			];
+		}
+
+		// Save in database
+		DCTC_AI_DB::update_session_summary(
+			$session_id,
+			wp_json_encode($summary_data),
+			$summary_data['sentiment'],
+			$summary_data['intent_tag']
+		);
+
+		return new \WP_REST_Response([
+			'success'    => true,
+			'session_id' => $session_id,
+			'summary'    => $summary_data,
+		], 200);
+	}
+
+	/**
+	 * REST callback: Return conversation analytics.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function get_analytics($request)
+	{
+		$analytics = DCTC_AI_DB::get_conversation_analytics();
+		return new \WP_REST_Response([
+			'success'   => true,
+			'analytics' => $analytics,
+		], 200);
 	}
 
 	/**
@@ -732,14 +928,152 @@ Always expand on the previous answer when the user asks for more information.
 	}
 
 	/**
+	 * Detect if visitor prompt expresses intent to speak with a human agent.
+	 *
+	 * @param string $prompt
+	 * @return bool
+	 */
+	public static function detect_human_handoff_intent($prompt)
+	{
+		if (empty($prompt)) {
+			return false;
+		}
+
+		$patterns = [
+			'/\b(human|real person|live agent|support agent|human agent|representative|talk to someone|talk to a human|talk to an agent|connect with human|customer care|customer support|operator|live chat with human)\b/i',
+			'/\b(call me|call support|phone support|speak with someone|speak to someone|speak with an agent|whatsapp support|chat on whatsapp)\b/i',
+		];
+
+		foreach ($patterns as $pattern) {
+			if (preg_match($pattern, $prompt)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check if current time falls within configured business hours.
+	 *
+	 * @param array $bot_settings
+	 * @return bool
+	 */
+	public static function is_within_business_hours($bot_settings)
+	{
+		if (empty($bot_settings['enable_business_hours'])) {
+			return true;
+		}
+
+		try {
+			$tz_str = !empty($bot_settings['business_hours_timezone']) ? $bot_settings['business_hours_timezone'] : (function_exists('wp_timezone_string') ? wp_timezone_string() : 'UTC');
+			$tz = new DateTimeZone($tz_str ?: 'UTC');
+			$now = new DateTime('now', $tz);
+
+			$day_map = [
+				1 => 'mon',
+				2 => 'tue',
+				3 => 'wed',
+				4 => 'thu',
+				5 => 'fri',
+				6 => 'sat',
+				7 => 'sun',
+			];
+			$current_day_num = (int) $now->format('N');
+			$current_day_slug = $day_map[$current_day_num] ?? 'mon';
+
+			$allowed_days = !empty($bot_settings['business_hours_days']) && is_array($bot_settings['business_hours_days'])
+				? $bot_settings['business_hours_days']
+				: ['mon', 'tue', 'wed', 'thu', 'fri'];
+
+			if (!in_array($current_day_slug, $allowed_days, true)) {
+				return false;
+			}
+
+			$start_str = !empty($bot_settings['business_hours_start']) ? $bot_settings['business_hours_start'] : '09:00';
+			$end_str = !empty($bot_settings['business_hours_end']) ? $bot_settings['business_hours_end'] : '18:00';
+
+			$current_time = $now->format('H:i');
+			return ($current_time >= $start_str && $current_time <= $end_str);
+		} catch (\Throwable $e) {
+			return true;
+		}
+	}
+
+	/**
+	 * Build human handoff action buttons with contextual WhatsApp link.
+	 *
+	 * @param array  $bot
+	 * @param string $prompt
+	 * @param bool   $is_online
+	 * @return array
+	 */
+	public static function build_handoff_action_buttons($bot, $prompt, $is_online = true)
+	{
+		$action_buttons = [];
+		$parent_settings = get_option('dctc_settings', []);
+
+		$wa_num = !empty($bot['handoff_whatsapp_number']) ? $bot['handoff_whatsapp_number'] : (!empty($parent_settings['whatsapp_value']) ? $parent_settings['whatsapp_value'] : '');
+		$phone_num = !empty($bot['handoff_phone_number']) ? $bot['handoff_phone_number'] : (!empty($parent_settings['phone_value']) ? $parent_settings['phone_value'] : '');
+		$email_addr = !empty($bot['handoff_email_address']) ? $bot['handoff_email_address'] : (!empty($parent_settings['email_value']) ? $parent_settings['email_value'] : get_option('admin_email'));
+
+		$safe_prompt = substr(wp_strip_all_tags($prompt), 0, 150);
+
+		if (!empty($wa_num)) {
+			$clean_phone = preg_replace('/[^0-9]/', '', $wa_num);
+			$template = !empty($bot['handoff_template'])
+				? $bot['handoff_template']
+				: "Hi! I was chatting with your AI assistant on {page_url} regarding: \"{summary}\". My question: \"{question}\".";
+
+			$wa_msg = str_replace(
+				['{question}', '{summary}', '{page_url}', '{visitor_name}'],
+				[$safe_prompt, $safe_prompt, home_url(), 'Visitor'],
+				$template
+			);
+
+			$action_buttons[] = [
+				'id' => 'btn_wa_handoff',
+				'label' => __('💬 Chat on WhatsApp', 'dragwyb-click-to-chat'),
+				'url' => 'https://wa.me/' . $clean_phone . '?text=' . rawurlencode($wa_msg),
+				'target' => '_blank',
+				'type' => 'whatsapp',
+			];
+		}
+
+		if (!empty($phone_num) && $is_online) {
+			$action_buttons[] = [
+				'id' => 'btn_phone_handoff',
+				'label' => __('📞 Call Human Agent', 'dragwyb-click-to-chat'),
+				'url' => 'tel:' . preg_replace('/[^0-9+]/', '', $phone_num),
+				'target' => '_self',
+				'type' => 'phone',
+			];
+		}
+
+		if (!empty($email_addr)) {
+			$action_buttons[] = [
+				'id' => 'btn_email_handoff',
+				'label' => __('✉️ Email Support Team', 'dragwyb-click-to-chat'),
+				'url' => 'mailto:' . antispambot($email_addr) . '?subject=' . rawurlencode(__('Customer Inquiry from AI Chat', 'dragwyb-click-to-chat')) . '&body=' . rawurlencode($safe_prompt),
+				'target' => '_blank',
+				'type' => 'email',
+			];
+		}
+
+		return $action_buttons;
+	}
+
+	/**
 	 * Save response and return
 	 */
-	private function save_and_respond($message, $session_id, $bot, $email, $prompt, $action_buttons = [])
+	private function save_and_respond($message, $session_id, $bot, $email, $prompt, $action_buttons = [], $is_handoff = false)
 	{
 		if (isset($bot['save_chat']) && (bool) $bot['save_chat']) {
 			if (class_exists('DCTC_AI_DB')) {
 				$db = new DCTC_AI_DB();
-				$db->dctc_ai_save_message($prompt, $message, $session_id, 'knowledge-base', 'no-data', $email);
+				$source_type = $is_handoff ? 'human-handoff' : 'knowledge-base';
+				$model_used = $is_handoff ? 'handoff' : 'no-data';
+				$db->dctc_ai_save_message($prompt, $message, $session_id, $source_type, $model_used, $email);
 			}
 		}
 
@@ -749,6 +1083,7 @@ Always expand on the previous answer when the user asks for more information.
 				'message' => $message,
 				'session_id' => $session_id,
 				'from_kb' => false,
+				'is_handoff' => $is_handoff,
 				'action_buttons' => $action_buttons,
 			],
 			200

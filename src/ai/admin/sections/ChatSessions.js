@@ -47,6 +47,43 @@ function escapeHtml( value ) {
 		.replace( />/g, '&gt;' );
 }
 
+function getSentimentBadge( sentiment ) {
+	switch ( sentiment ) {
+		case 'positive':
+			return { label: __( '😊 Positive', 'dragwyb-click-to-chat' ), bg: '#ecfdf5', color: '#065f46', border: '#a7f3d0' };
+		case 'frustrated':
+			return { label: __( '😤 Frustrated', 'dragwyb-click-to-chat' ), bg: '#fef2f2', color: '#991b1b', border: '#fecaca' };
+		case 'neutral':
+		default:
+			return { label: __( '😐 Neutral', 'dragwyb-click-to-chat' ), bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' };
+	}
+}
+
+function getIntentTagBadge( intent ) {
+	switch ( intent ) {
+		case 'inquiry':
+			return { label: __( 'Inquiry', 'dragwyb-click-to-chat' ), bg: '#eff6ff', color: '#1e40af' };
+		case 'support':
+			return { label: __( 'Support', 'dragwyb-click-to-chat' ), bg: '#fdf4ff', color: '#86198f' };
+		case 'purchase':
+			return { label: __( 'Purchase', 'dragwyb-click-to-chat' ), bg: '#ecfdf5', color: '#065f46' };
+		case 'feedback':
+			return { label: __( 'Feedback', 'dragwyb-click-to-chat' ), bg: '#fffbeb', color: '#92400e' };
+		default:
+			return null;
+	}
+}
+
+function parseSummary( summary ) {
+	if ( ! summary ) return null;
+	if ( typeof summary === 'object' ) return summary;
+	try {
+		return JSON.parse( summary );
+	} catch {
+		return null;
+	}
+}
+
 function lastMessagePreview( session ) {
 	const msgs = parseMessages( session.content );
 	if ( ! msgs.length ) {
@@ -107,6 +144,8 @@ function pageNumbers( current, total ) {
 
 export default function ChatSessions( { showNotice } ) {
 	const [ sessions, setSessions ] = useState( [] );
+	const [ analytics, setAnalytics ] = useState( null );
+	const [ summarizing, setSummarizing ] = useState( false );
 	const [ loading, setLoading ] = useState( true );
 	const [ search, setSearch ] = useState( '' );
 	const [ providerFilter, setProviderFilter ] = useState( 'all' );
@@ -126,6 +165,56 @@ export default function ChatSessions( { showNotice } ) {
 		window.dctc_ai_data?.sort_order || 'desc'
 	);
 	const [ perPageDraft, setPerPageDraft ] = useState( String( perPage ) );
+
+	const fetchAnalytics = useCallback( async () => {
+		try {
+			const res = await apiFetch( { path: '/dctc-ai/v1/analytics' } );
+			if ( res?.success && res.analytics ) {
+				setAnalytics( res.analytics );
+			}
+		} catch {}
+	}, [] );
+
+	useEffect( () => {
+		fetchAnalytics();
+	}, [ fetchAnalytics ] );
+
+	const handleSummarize = async ( sessionId ) => {
+		setSummarizing( true );
+		try {
+			const res = await apiFetch( {
+				path: `/dctc-ai/v1/sessions/${ sessionId }/summarize`,
+				method: 'POST',
+			} );
+			if ( res?.success && res.summary ) {
+				setSessions( ( prev ) =>
+					prev.map( ( s ) =>
+						s.session_id === sessionId
+							? { ...s, summary: res.summary, sentiment: res.summary.sentiment, intent_tag: res.summary.intent_tag }
+							: s
+					)
+				);
+				if ( viewing && viewing.session_id === sessionId ) {
+					setViewing( ( prev ) => ( {
+						...prev,
+						summary: res.summary,
+						sentiment: res.summary.sentiment,
+						intent_tag: res.summary.intent_tag,
+					} ) );
+				}
+				fetchAnalytics();
+				if ( showNotice ) {
+					showNotice( __( 'AI Conversation Summary generated successfully.', 'dragwyb-click-to-chat' ), 'success' );
+				}
+			}
+		} catch ( err ) {
+			if ( showNotice ) {
+				showNotice( err.message || __( 'Failed to generate summary.', 'dragwyb-click-to-chat' ), 'error' );
+			}
+		} finally {
+			setSummarizing( false );
+		}
+	};
 
 	useEffect( () => {
 		setLoadLimitDraft( loadLimit );
@@ -442,6 +531,60 @@ export default function ChatSessions( { showNotice } ) {
 
 	return (
 		<div className="dctc-ai-sessions">
+			{ /* Top Conversation Analytics Metrics */ }
+			{ analytics && (
+				<div className="dctc-ai-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
+							{ __( 'Total Conversations', 'dragwyb-click-to-chat' ) }
+						</span>
+						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#0f172a', marginTop: '0.25rem' }}>
+							{ Number( analytics.total_conversations || 0 ).toLocaleString() }
+							{ analytics.today_conversations > 0 && (
+								<span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#10b981', marginLeft: '0.5rem' }}>
+									(+{ analytics.today_conversations } { __( 'today', 'dragwyb-click-to-chat' ) })
+								</span>
+							) }
+						</div>
+					</div>
+
+					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981', textTransform: 'uppercase' }}>
+							{ __( 'AI Resolution Rate', 'dragwyb-click-to-chat' ) }
+						</span>
+						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#065f46', marginTop: '0.25rem' }}>
+							{ analytics.resolution_rate || 100 }%
+						</div>
+					</div>
+
+					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6366f1', textTransform: 'uppercase' }}>
+							{ __( 'Lead Conversion Rate', 'dragwyb-click-to-chat' ) }
+						</span>
+						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#4338ca', marginTop: '0.25rem' }}>
+							{ analytics.conversion_rate || 0 }%
+						</div>
+					</div>
+
+					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase' }}>
+							{ __( 'Visitor Sentiment', 'dragwyb-click-to-chat' ) }
+						</span>
+						<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
+							<span style={{ background: '#ecfdf5', color: '#065f46', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
+								😊 { analytics.sentiments?.positive || 0 }
+							</span>
+							<span style={{ background: '#f8fafc', color: '#475569', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
+								😐 { analytics.sentiments?.neutral || 0 }
+							</span>
+							<span style={{ background: '#fef2f2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
+								😤 { analytics.sentiments?.frustrated || 0 }
+							</span>
+						</div>
+					</div>
+				</div>
+			) }
+
 			<div className="dctc-ai-sessions-toolbar">
 				<div className="dctc-ai-sessions-toolbar__left">
 					<div className="dctc-ai-sessions-search">
@@ -656,6 +799,20 @@ export default function ChatSessions( { showNotice } ) {
 												<span className="dctc-ai-sessions-user__name">
 													{ email }
 												</span>
+												{ ( session.sentiment || session.intent_tag ) && (
+													<div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem' }}>
+														{ session.sentiment && (
+															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getSentimentBadge( session.sentiment ).bg, color: getSentimentBadge( session.sentiment ).color }}>
+																{ getSentimentBadge( session.sentiment ).label }
+															</span>
+														) }
+														{ session.intent_tag && getIntentTagBadge( session.intent_tag ) && (
+															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getIntentTagBadge( session.intent_tag ).bg, color: getIntentTagBadge( session.intent_tag ).color }}>
+																{ getIntentTagBadge( session.intent_tag ).label }
+															</span>
+														) }
+													</div>
+												) }
 											</td>
 											<td className="dctc-ai-sessions-provider">
 												{ session.provider ? (
@@ -909,6 +1066,56 @@ export default function ChatSessions( { showNotice } ) {
 							);
 						} )() }
 						<div className="dctc-ai-modal-body">
+							{ /* AI Executive Summary Section */ }
+							{ ( () => {
+								const summ = parseSummary( viewing.summary );
+								return (
+									<div style={{ marginBottom: '1.25rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+											<strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+												✨ { __( 'AI Executive Summary', 'dragwyb-click-to-chat' ) }
+											</strong>
+											<button
+												type="button"
+												className="button button-small button-secondary"
+												disabled={ summarizing }
+												onClick={ () => handleSummarize( viewing.session_id ) }
+												style={{ borderRadius: '6px', fontSize: '0.8rem' }}
+											>
+												{ summarizing ? __( 'Analyzing...', 'dragwyb-click-to-chat' ) : ( summ ? __( 'Regenerate', 'dragwyb-click-to-chat' ) : __( 'Generate Summary', 'dragwyb-click-to-chat' ) ) }
+											</button>
+										</div>
+
+										{ summ ? (
+											<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
+												<div>
+													<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Goal / Intent', 'dragwyb-click-to-chat' ) }:</strong>
+													<div style={{ color: '#0f172a', marginTop: '0.1rem' }}>{ summ.goal }</div>
+												</div>
+												{ Array.isArray( summ.questions ) && summ.questions.length > 0 && (
+													<div>
+														<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Key Questions', 'dragwyb-click-to-chat' ) }:</strong>
+														<ul style={{ margin: '0.2rem 0 0 1.2rem', color: '#334155' }}>
+															{ summ.questions.map( ( q, qIdx ) => <li key={ qIdx }>{ q }</li> ) }
+														</ul>
+													</div>
+												) }
+												{ summ.next_action && (
+													<div>
+														<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Next Action', 'dragwyb-click-to-chat' ) }:</strong>
+														<div style={{ color: '#1e40af', fontWeight: 500, marginTop: '0.1rem' }}>👉 { summ.next_action }</div>
+													</div>
+												) }
+											</div>
+										) : (
+											<p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+												{ __( 'Generate a structured executive summary with customer goals, key questions, and sentiment analysis for this chat.', 'dragwyb-click-to-chat' ) }
+											</p>
+										) }
+									</div>
+								);
+							} )() }
+
 							{ ( () => {
 								const msgs = parseMessages( viewing.content );
 								return msgs.length ? (

@@ -1579,3 +1579,186 @@
   color: #fff;
 }
 
+/* Feature 10: Human Handoff & WhatsApp Context Transfer Styles */
+.dctc-ai-handoff-card {
+  animation: dctcAiFadeSlideIn 0.25s ease forwards;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  margin: 10px 0;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+.dctc-ai-handoff-card:hover {
+  box-shadow: 0 8px 16px -3px rgba(15, 23, 42, 0.12);
+}
+.dctc-ai-tag-chip {
+  transition: all 0.15s ease;
+}
+.dctc-ai-tag-chip:hover {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+  transform: translateY(-1px);
+}
+@keyframes dctcAiFadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Feature 11: WooCommerce Product Cards & Order Tracker Styles */
+.dctc-ai-products-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  margin-top: 10px;
+}
+.dctc-ai-product-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  transition: all 0.2s ease;
+}
+.dctc-ai-product-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+.dctc-ai-product-thumb-wrap {
+  aspect-ratio: 1;
+  background: #f8fafc;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+.dctc-ai-product-thumb {
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  width: 100%;
+}
+.dctc-ai-product-card:hover .dctc-ai-product-thumb {
+  transform: scale(1.04);
+}
+.dctc-ai-product-badge {
+  background: #ef4444;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+.dctc-ai-product-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding: 10px;
+}
+.dctc-ai-product-title {
+  color: #0f172a;
+  display: -webkit-box;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.dctc-ai-product-meta-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.dctc-ai-product-price {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+}
+.dctc-ai-stock-pill {
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+}
+.dctc-ai-stock-pill.is-in-stock {
+  background: #dcfce7;
+  color: #15803d;
+}
+.dctc-ai-stock-pill.is-out-of-stock {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.dctc-ai-product-rating {
+  align-items: center;
+  color: #f59e0b;
+  display: flex;
+  font-size: 11px;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+.dctc-ai-rating-num {
+  color: #64748b;
+  font-size: 10px;
+}
+.dctc-ai-product-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+.dctc-ai-product-btn {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  justify-content: center;
+  padding: 5px 8px;
+  text-decoration: none !important;
+  transition: all 0.15s ease;
+}
+.dctc-ai-product-btn--view {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155 !important;
+  flex: 1;
+}
+.dctc-ai-product-btn--view:hover {
+  background: #e2e8f0;
+}
+.dctc-ai-product-btn--cart {
+  color: #ffffff !important;
+  flex: 1.3;
+}
+.dctc-ai-product-btn--cart:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+.dctc-ai-order-tracker-card {
+  animation: dctcAiFadeSlideIn 0.25s ease forwards;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  margin: 10px 0;
+  padding: 16px;
+}
+
+
+
