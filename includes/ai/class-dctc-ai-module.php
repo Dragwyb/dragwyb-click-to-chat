@@ -368,6 +368,30 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$session_id = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
 			$is_allowed = isset( $_COOKIE['dctc_ai_clear_allowed'] );
 
+			$page_context = array(
+				'url'           => esc_url_raw( ( is_ssl() ? 'https://' : 'http://' ) . ( isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '' ) . ( isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '' ) ),
+				'title'         => function_exists( 'wp_get_document_title' ) ? wp_get_document_title() : get_bloginfo( 'name' ),
+				'post_id'       => get_queried_object_id(),
+				'post_type'     => is_singular() ? get_post_type() : ( is_front_page() ? 'home' : ( is_archive() ? 'archive' : 'page' ) ),
+				'is_front_page' => is_front_page(),
+				'is_single'     => is_singular(),
+				'is_logged_in'  => is_user_logged_in(),
+			);
+
+			if ( function_exists( 'is_product' ) && is_product() && function_exists( 'wc_get_product' ) ) {
+				$product = wc_get_product( get_queried_object_id() );
+				if ( $product ) {
+					$page_context['product'] = array(
+						'id'       => $product->get_id(),
+						'name'     => $product->get_name(),
+						'price'    => $product->get_price(),
+						'in_stock' => $product->is_in_stock(),
+						'sku'      => $product->get_sku(),
+						'currency' => function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$',
+					);
+				}
+			}
+
 			wp_localize_script(
 				'dctc-ai-frontend-script',
 				'dctc_ai_frontend_data',
@@ -377,6 +401,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'settings'      => $settings,
 					'session_id'    => $session_id,
 					'clear_allowed' => $is_allowed,
+					'page_context'  => $page_context,
 				)
 			);
 		}
@@ -427,8 +452,41 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				}
 			}
 
+			// Device targeting
+			$target_devices = ! empty( $settings['display']['target_devices'] ) ? $settings['display']['target_devices'] : 'all';
+			if ( 'desktop_only' === $target_devices && wp_is_mobile() ) {
+				return;
+			}
+			if ( 'mobile_only' === $target_devices && ! wp_is_mobile() ) {
+				return;
+			}
 			if ( empty( $settings['display']['show_on_mobile'] ) && wp_is_mobile() ) {
 				return;
+			}
+
+			// User targeting
+			$target_users = ! empty( $settings['display']['target_users'] ) ? $settings['display']['target_users'] : 'all';
+			if ( 'logged_in' === $target_users && ! is_user_logged_in() ) {
+				return;
+			}
+			if ( 'guests' === $target_users && is_user_logged_in() ) {
+				return;
+			}
+
+			// URL path rules
+			if ( ! empty( $settings['display']['url_rules'] ) ) {
+				$current_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
+				$rules = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $settings['display']['url_rules'] ) ) ) );
+				$matched = false;
+				foreach ( $rules as $rule ) {
+					if ( false !== strpos( $current_uri, $rule ) || fnmatch( $rule, $current_uri ) ) {
+						$matched = true;
+						break;
+					}
+				}
+				if ( ! $matched ) {
+					return;
+				}
 			}
 
 			$this->dctc_ai_render_chatbot_ui();

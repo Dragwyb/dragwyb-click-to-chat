@@ -253,6 +253,35 @@ class DCTC_AI_Chat_Controller
 			self::log_debug('Dragwyb AI WooCommerce Context Error: ' . $e->getMessage());
 		}
 
+		// Feature 13: Page-Aware Context Injection
+		try {
+			$page_context = $request->get_param('page_context');
+			if (!empty($page_context) && is_array($page_context) && !empty($bot['enable_page_context'])) {
+				$context_str = "\n\nCURRENT VISITED PAGE CONTEXT:\n";
+				if (!empty($page_context['url'])) {
+					$context_str .= "- Page URL: " . esc_url_raw($page_context['url']) . "\n";
+				}
+				if (!empty($page_context['title'])) {
+					$context_str .= "- Page Title: " . sanitize_text_field($page_context['title']) . "\n";
+				}
+				if (!empty($page_context['post_type'])) {
+					$context_str .= "- Page Type: " . sanitize_text_field($page_context['post_type']) . "\n";
+				}
+				if (!empty($page_context['product']) && is_array($page_context['product'])) {
+					$p = $page_context['product'];
+					$currency = sanitize_text_field($p['currency'] ?? '$');
+					$price = sanitize_text_field($p['price'] ?? '');
+					$stock = !empty($p['in_stock']) ? 'In Stock' : 'Out of Stock';
+					$sku = !empty($p['sku']) ? ", SKU: " . sanitize_text_field($p['sku']) : "";
+					$context_str .= "- Product Currently Viewed: " . sanitize_text_field($p['name'] ?? '') . " (Price: {$currency}{$price}, Stock: {$stock}{$sku})\n";
+				}
+				$context_str .= "When the user asks questions referring to 'this page', 'this product', 'how much is this', or 'what is this', use the above page context directly.\n";
+				$system_message .= $context_str;
+			}
+		} catch (Exception $e) {
+			self::log_debug('Dragwyb AI Page Context Error: ' . $e->getMessage());
+		}
+
 		try {
 			$memory = $this->get_optimized_memory($session_id, $prompt, $system_message);
 			$system_message = $memory['system_message'];

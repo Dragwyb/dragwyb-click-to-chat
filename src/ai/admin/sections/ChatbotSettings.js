@@ -258,6 +258,18 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		workflow_webhook_url: chatbot.workflow_webhook_url || '',
 		ticket_notification_email: chatbot.ticket_notification_email || '',
 		appointment_notification_email: chatbot.appointment_notification_email || '',
+		enable_page_context: chatbot.enable_page_context !== false,
+
+		// Advance / Smart Triggers & Targeting
+		enable_smart_triggers: !!display.enable_smart_triggers,
+		trigger_scroll_depth: display.trigger_scroll_depth ?? 50,
+		trigger_exit_intent: !!display.trigger_exit_intent,
+		trigger_inactivity: display.trigger_inactivity ?? 30,
+		trigger_action: display.trigger_action || 'show_bubble',
+		proactive_bubble_message: display.proactive_bubble_message || '👋 Hi there! Have a question about this page? Let me know if I can help!',
+		target_devices: display.target_devices || 'all',
+		target_users: display.target_users || 'all',
+		url_rules: display.url_rules || '',
 
 		// Advance / Conversation Features
 		save_chat: !!chatbot.save_chat,
@@ -565,6 +577,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			workflow_webhook_url: form.workflow_webhook_url,
 			ticket_notification_email: form.ticket_notification_email,
 			appointment_notification_email: form.appointment_notification_email,
+			enable_page_context: form.enable_page_context,
 			enable_error_log: form.enable_error_log,
 			error_log_retention_days: form.error_log_retention_days,
 		};
@@ -588,6 +601,15 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			trigger_type: form.trigger_type,
 			trigger_delay: form.trigger_delay,
 			time_delay: form.time_delay,
+			enable_smart_triggers: form.enable_smart_triggers,
+			trigger_scroll_depth: form.trigger_scroll_depth,
+			trigger_exit_intent: form.trigger_exit_intent,
+			trigger_inactivity: form.trigger_inactivity,
+			trigger_action: form.trigger_action,
+			proactive_bubble_message: form.proactive_bubble_message,
+			target_devices: form.target_devices,
+			target_users: form.target_users,
+			url_rules: form.url_rules,
 		};
 
 		try {
@@ -1946,6 +1968,173 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 								/>
 								<p className="dctc-ai-bot-hint">
 									{__('Dispatches real-time JSON payload whenever AI tools or actions are executed.', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+						</SwitcherCard>
+
+						{ /* Page-Aware AI & Smart Behavioral Triggers */}
+						<SwitcherCard
+							id="enable_smart_triggers"
+							title={__('Page-Aware AI & Smart Behavioral Triggers', 'dragwyb-click-to-chat')}
+							desc={__('Dynamically inject visited page, post & WooCommerce product context into AI prompts, and trigger proactive greetings on user interaction.', 'dragwyb-click-to-chat')}
+							icon="dashicons-visibility"
+							badge={__('Proactive AI', 'dragwyb-click-to-chat')}
+							checked={form.enable_smart_triggers}
+							onChange={(v) => setField('enable_smart_triggers', v)}
+							disabledNotice={__('Enable to automatically inject page context and activate smart behavioral triggers (scroll depth, exit intent, inactivity, proactive teaser bubbles).', 'dragwyb-click-to-chat')}
+						>
+							<div className="dctc-ai-features-grid" style={{ marginBottom: '1.25rem' }}>
+								<SettingCard
+									id="enable_page_context"
+									title={__('Page Context Injection', 'dragwyb-click-to-chat')}
+									desc={__('Pass current visited page title, URL, post type & WooCommerce product details into the AI prompt for page-tailored answers.', 'dragwyb-click-to-chat')}
+									icon="dashicons-admin-page"
+									badge={__('Context Aware', 'dragwyb-click-to-chat')}
+									checked={form.enable_page_context}
+									onChange={(v) => setField('enable_page_context', v)}
+								/>
+								<SettingCard
+									id="trigger_exit_intent"
+									title={__('Exit Intent Trigger (Desktop)', 'dragwyb-click-to-chat')}
+									desc={__('Detect when user cursor moves toward browser top bar or tab bar to show proactive greeting before leaving.', 'dragwyb-click-to-chat')}
+									icon="dashicons-external"
+									badge={__('Conversion', 'dragwyb-click-to-chat')}
+									checked={form.trigger_exit_intent}
+									onChange={(v) => setField('trigger_exit_intent', v)}
+								/>
+							</div>
+
+							<div className="dctc-ai-grid-2col">
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="trigger_action">
+										{__('Trigger Response Action', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="trigger_action"
+										className="dctc-ai-bot-select"
+										value={form.trigger_action}
+										onChange={(e) => setField('trigger_action', e.target.value)}
+									>
+										<option value="show_bubble">{__('Show Proactive Teaser Bubble (Subtle & Non-Intrusive)', 'dragwyb-click-to-chat')}</option>
+										<option value="open_chat">{__('Auto-Open Full Chat Window', 'dragwyb-click-to-chat')}</option>
+									</select>
+									<p className="dctc-ai-bot-hint">
+										{__('Choose how the widget responds when a behavioral trigger condition is met.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="trigger_scroll_depth">
+										{__('Scroll Depth Trigger Percentage', 'dragwyb-click-to-chat')}
+									</label>
+									<div className="dctc-ai-inline-input-row">
+										<input
+											type="number"
+											id="trigger_scroll_depth"
+											className="dctc-ai-bot-input dctc-ai-input--narrow"
+											min="10"
+											max="100"
+											step="5"
+											value={form.trigger_scroll_depth}
+											onChange={(e) =>
+												setField('trigger_scroll_depth', parseInt(e.target.value, 10) || 50)
+											}
+										/>
+										<span className="dctc-ai-input-unit-label">% of page</span>
+									</div>
+									<p className="dctc-ai-bot-hint">
+										{__('Fires when user scrolls past this percentage of page height.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+							</div>
+
+							<div className="dctc-ai-grid-2col" style={{ marginTop: '1rem' }}>
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="trigger_inactivity">
+										{__('User Inactivity Timeout (Seconds)', 'dragwyb-click-to-chat')}
+									</label>
+									<div className="dctc-ai-inline-input-row">
+										<input
+											type="number"
+											id="trigger_inactivity"
+											className="dctc-ai-bot-input dctc-ai-input--narrow"
+											min="5"
+											max="300"
+											value={form.trigger_inactivity}
+											onChange={(e) =>
+												setField('trigger_inactivity', parseInt(e.target.value, 10) || 30)
+											}
+										/>
+										<span className="dctc-ai-input-unit-label">seconds</span>
+									</div>
+									<p className="dctc-ai-bot-hint">
+										{__('Triggers if visitor is idle on the page without scrolling or clicking.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="target_devices">
+										{__('Device Targeting Filter', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="target_devices"
+										className="dctc-ai-bot-select"
+										value={form.target_devices}
+										onChange={(e) => setField('target_devices', e.target.value)}
+									>
+										<option value="all">{__('All Devices (Desktop & Mobile)', 'dragwyb-click-to-chat')}</option>
+										<option value="desktop_only">{__('Desktop Only', 'dragwyb-click-to-chat')}</option>
+										<option value="mobile_only">{__('Mobile Only', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+							</div>
+
+							<div className="dctc-ai-grid-2col" style={{ marginTop: '1rem' }}>
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="target_users">
+										{__('Visitor Audience Targeting', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="target_users"
+										className="dctc-ai-bot-select"
+										value={form.target_users}
+										onChange={(e) => setField('target_users', e.target.value)}
+									>
+										<option value="all">{__('All Visitors (Logged-in & Guests)', 'dragwyb-click-to-chat')}</option>
+										<option value="guests">{__('Guest Visitors Only', 'dragwyb-click-to-chat')}</option>
+										<option value="logged_in">{__('Logged-in Users Only', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="proactive_bubble_message">
+										{__('Proactive Teaser Greeting Message', 'dragwyb-click-to-chat')}
+									</label>
+									<input
+										type="text"
+										id="proactive_bubble_message"
+										className="dctc-ai-bot-input"
+										value={form.proactive_bubble_message}
+										onChange={(e) => setField('proactive_bubble_message', e.target.value)}
+										placeholder="👋 Hi there! Have questions about this page? Let me know!"
+									/>
+								</div>
+							</div>
+
+							<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>
+								<label htmlFor="url_rules">
+									{__('Target Specific URL Paths (Optional)', 'dragwyb-click-to-chat')}
+								</label>
+								<textarea
+									id="url_rules"
+									className="dctc-ai-bot-textarea"
+									rows="2"
+									value={form.url_rules}
+									onChange={(e) => setField('url_rules', e.target.value)}
+									placeholder="/pricing&#10;/shop/*&#10;/contact"
+								/>
+								<p className="dctc-ai-bot-hint">
+									{__('Leave empty to apply sitewide. Enter one path or wildcard pattern per line to restrict triggers to specific pages.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						</SwitcherCard>

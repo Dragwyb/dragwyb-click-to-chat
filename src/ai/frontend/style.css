@@ -1760,5 +1760,102 @@
   padding: 16px;
 }
 
-
-
+/* -------------------------------------------------------------------------
+   Feature 13: Proactive Teaser Bubble
+   ------------------------------------------------------------------------- */
+.dctc-ai-proactive-bubble {
+  animation: dctcAiProactivePop 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+  bottom: calc(100% + 8px);
+  cursor: pointer;
+  margin-bottom: 12px;
+  max-width: 310px;
+  min-width: 240px;
+  padding: 14px 16px;
+  position: absolute;
+  right: 0;
+  transform-origin: bottom right;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 999998;
+}
+.dctc-ai-proactive-bubble:hover {
+  box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.2);
+  transform: translateY(-2px);
+}
+.dctc-ai-proactive-bubble-close {
+  align-items: center;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  font-size: 16px;
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  transition: all 0.15s ease;
+  width: 22px;
+  z-index: 2;
+}
+.dctc-ai-proactive-bubble-close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.dctc-ai-proactive-bubble-inner {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+.dctc-ai-proactive-bubble-avatar {
+  flex-shrink: 0;
+  height: 38px;
+  width: 38px;
+}
+.dctc-ai-proactive-bubble-avatar .dctc-ai-avatar,
+.dctc-ai-proactive-bubble-avatar .dctc-ai-avatar-preset {
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  height: 38px;
+  width: 38px;
+}
+.dctc-ai-proactive-bubble-content {
+  flex: 1;
+  min-width: 0;
+  padding-right: 12px;
+}
+.dctc-ai-proactive-bubble-text {
+  color: #1e293b;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  margin: 0 0 6px 0 !important;
+}
+.dctc-ai-proactive-bubble-cta {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.15s ease;
+}
+.dctc-ai-proactive-bubble:hover .dctc-ai-proactive-bubble-cta {
+  transform: translateX(3px);
+}
+@keyframes dctcAiProactivePop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

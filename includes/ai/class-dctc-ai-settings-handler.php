@@ -722,6 +722,7 @@ class DCTC_AI_Settings_Handler
 				'workflow_webhook_url' => '',
 				'ticket_notification_email' => '',
 				'appointment_notification_email' => '',
+				'enable_page_context' => true,
 			],
 			'display' => [
 				'entire_site' => false,
@@ -742,6 +743,15 @@ class DCTC_AI_Settings_Handler
 				'launcher_text' => 'Chat with us',
 				'assistant_icon' => '',
 				'launcher_icon_preset' => 'chat',
+				'enable_smart_triggers' => false,
+				'trigger_scroll_depth' => 50,
+				'trigger_exit_intent' => false,
+				'trigger_inactivity' => 30,
+				'trigger_action' => 'show_bubble',
+				'proactive_bubble_message' => '👋 Hi there! Have a question about this page? Let me know if I can help!',
+				'target_devices' => 'all',
+				'target_users' => 'all',
+				'url_rules' => '',
 			],
 			'rag' => [
 				'enabled' => true,
@@ -852,6 +862,7 @@ class DCTC_AI_Settings_Handler
 			'handoff_privacy_include_page',
 			'enable_ai_tools',
 			'enabled_tools',
+			'enable_page_context',
 		];
 
 		$public_chatbot = [];
@@ -1120,6 +1131,7 @@ class DCTC_AI_Settings_Handler
 			'workflow_webhook_url' => isset($params['workflow_webhook_url']) ? esc_url_raw($params['workflow_webhook_url']) : (isset($existing_chatbot['workflow_webhook_url']) ? $existing_chatbot['workflow_webhook_url'] : ''),
 			'ticket_notification_email' => isset($params['ticket_notification_email']) ? sanitize_email($params['ticket_notification_email']) : (isset($existing_chatbot['ticket_notification_email']) ? $existing_chatbot['ticket_notification_email'] : ''),
 			'appointment_notification_email' => isset($params['appointment_notification_email']) ? sanitize_email($params['appointment_notification_email']) : (isset($existing_chatbot['appointment_notification_email']) ? $existing_chatbot['appointment_notification_email'] : ''),
+			'enable_page_context' => isset($params['enable_page_context']) ? (bool) $params['enable_page_context'] : (isset($existing_chatbot['enable_page_context']) ? (bool) $existing_chatbot['enable_page_context'] : true),
 		];
 
 		$settings['chatbot'] = $chatbot_settings;
@@ -1181,6 +1193,15 @@ class DCTC_AI_Settings_Handler
 		$custom_vertical = isset($params['custom_vertical']) ? max(0, floatval($params['custom_vertical'])) : 24;
 		$custom_horizontal = isset($params['custom_horizontal']) ? max(0, floatval($params['custom_horizontal'])) : 24;
 
+		$allowed_target_devices = ['all', 'desktop_only', 'mobile_only'];
+		$target_devices = isset($params['target_devices']) && in_array($params['target_devices'], $allowed_target_devices, true) ? $params['target_devices'] : 'all';
+
+		$allowed_target_users = ['all', 'logged_in', 'guests'];
+		$target_users = isset($params['target_users']) && in_array($params['target_users'], $allowed_target_users, true) ? $params['target_users'] : 'all';
+
+		$allowed_trigger_actions = ['show_bubble', 'open_chat'];
+		$trigger_action = isset($params['trigger_action']) && in_array($params['trigger_action'], $allowed_trigger_actions, true) ? $params['trigger_action'] : 'show_bubble';
+
 		$display_settings = [
 			'entire_site' => isset($params['entire_site']) ? (bool) $params['entire_site'] : false,
 			'exclude_pages' => isset($params['exclude_pages']) ? sanitize_text_field($params['exclude_pages']) : '',
@@ -1200,6 +1221,15 @@ class DCTC_AI_Settings_Handler
 			'launcher_text' => isset($params['launcher_text']) ? sanitize_text_field($params['launcher_text']) : 'Chat with us',
 			'assistant_icon' => isset($params['assistant_icon']) ? esc_url_raw($params['assistant_icon']) : '',
 			'launcher_icon_preset' => isset($params['launcher_icon_preset']) ? sanitize_text_field($params['launcher_icon_preset']) : 'chat',
+			'enable_smart_triggers' => isset($params['enable_smart_triggers']) ? (bool) $params['enable_smart_triggers'] : false,
+			'trigger_scroll_depth' => isset($params['trigger_scroll_depth']) ? max(10, min(100, intval($params['trigger_scroll_depth']))) : 50,
+			'trigger_exit_intent' => isset($params['trigger_exit_intent']) ? (bool) $params['trigger_exit_intent'] : false,
+			'trigger_inactivity' => isset($params['trigger_inactivity']) ? max(5, min(300, intval($params['trigger_inactivity']))) : 30,
+			'trigger_action' => $trigger_action,
+			'proactive_bubble_message' => isset($params['proactive_bubble_message']) ? sanitize_text_field($params['proactive_bubble_message']) : '👋 Hi there! Have a question about this page? Let me know if I can help!',
+			'target_devices' => $target_devices,
+			'target_users' => $target_users,
+			'url_rules' => isset($params['url_rules']) ? sanitize_textarea_field($params['url_rules']) : '',
 		];
 
 		$settings = self::dctc_ai_get_all_settings();

@@ -411,6 +411,7 @@ export default function ChatWidget( { settings, inline } ) {
 		.filter( Boolean );
 
 	const [ isOpen, setIsOpen ] = useState( false );
+	const [ proactiveBubbleOpen, setProactiveBubbleOpen ] = useState( false );
 	const [ launcherVisible, setLauncherVisible ] = useState( () => {
 		const delay = parseInt( display.time_delay, 10 ) || 0;
 		return delay <= 0;
@@ -593,24 +594,127 @@ export default function ChatWidget( { settings, inline } ) {
 		};
 	}, [ isOpen, inline ] );
 
-	// Auto-open after delay when configured for sitewide floating widget.
+	const fireProactiveTrigger = () => {
+		try {
+			if ( window.sessionStorage && window.sessionStorage.getItem( 'dctc_ai_trigger_fired' ) ) {
+				return;
+			}
+			if ( window.sessionStorage ) {
+				window.sessionStorage.setItem( 'dctc_ai_trigger_fired', '1' );
+			}
+		} catch ( e ) {
+			// ignore storage quota/security restrictions
+		}
+
+		if ( display.trigger_action === 'open_chat' ) {
+			setIsOpen( true );
+		} else {
+			setProactiveBubbleOpen( true );
+		}
+	};
+
+	// Auto-open or trigger bubble after delay when configured for sitewide floating widget.
 	useEffect( () => {
 		if (
-			display.trigger_type === 'delay' &&
-			display.entire_site &&
-			! inline
+			( display.trigger_type === 'delay' || display.enable_smart_triggers ) &&
+			! inline &&
+			! isOpen &&
+			! proactiveBubbleOpen
 		) {
-			const ms = 1000 * ( parseInt( display.trigger_delay, 10 ) || 3 );
+			const ms = 1000 * ( parseInt( display.trigger_delay, 10 ) || 5 );
 			const timer = setTimeout( () => {
-				setIsOpen( true );
+				fireProactiveTrigger();
 			}, ms );
 			return () => clearTimeout( timer );
 		}
 	}, [
 		display.trigger_type,
-		display.entire_site,
+		display.enable_smart_triggers,
 		display.trigger_delay,
+		display.trigger_action,
 		inline,
+		isOpen,
+		proactiveBubbleOpen,
+	] );
+
+	// Smart Behavioral Trigger: Scroll Depth
+	useEffect( () => {
+		if ( ! display.enable_smart_triggers || inline || isOpen || proactiveBubbleOpen ) {
+			return;
+		}
+		const targetDepth = parseInt( display.trigger_scroll_depth, 10 ) || 50;
+		const handleScroll = () => {
+			const docH = document.documentElement.scrollHeight - window.innerHeight;
+			if ( docH <= 0 ) {
+				return;
+			}
+			const scrollPct = ( window.scrollY / docH ) * 100;
+			if ( scrollPct >= targetDepth ) {
+				fireProactiveTrigger();
+			}
+		};
+		window.addEventListener( 'scroll', handleScroll, { passive: true } );
+		return () => window.removeEventListener( 'scroll', handleScroll );
+	}, [
+		display.enable_smart_triggers,
+		display.trigger_scroll_depth,
+		display.trigger_action,
+		inline,
+		isOpen,
+		proactiveBubbleOpen,
+	] );
+
+	// Smart Behavioral Trigger: Exit Intent (Desktop)
+	useEffect( () => {
+		if ( ! display.enable_smart_triggers || ! display.trigger_exit_intent || inline || isOpen || proactiveBubbleOpen ) {
+			return;
+		}
+		const handleMouseLeave = ( e ) => {
+			if ( e.clientY <= 15 ) {
+				fireProactiveTrigger();
+			}
+		};
+		document.documentElement.addEventListener( 'mouseleave', handleMouseLeave );
+		return () => document.documentElement.removeEventListener( 'mouseleave', handleMouseLeave );
+	}, [
+		display.enable_smart_triggers,
+		display.trigger_exit_intent,
+		display.trigger_action,
+		inline,
+		isOpen,
+		proactiveBubbleOpen,
+	] );
+
+	// Smart Behavioral Trigger: User Inactivity
+	useEffect( () => {
+		if ( ! display.enable_smart_triggers || inline || isOpen || proactiveBubbleOpen ) {
+			return;
+		}
+		const idleSec = parseInt( display.trigger_inactivity, 10 ) || 30;
+		let idleTimer = setTimeout( () => {
+			fireProactiveTrigger();
+		}, idleSec * 1000 );
+
+		const resetIdle = () => {
+			clearTimeout( idleTimer );
+			idleTimer = setTimeout( () => {
+				fireProactiveTrigger();
+			}, idleSec * 1000 );
+		};
+
+		const events = [ 'mousemove', 'keydown', 'touchstart', 'scroll' ];
+		events.forEach( ( evt ) => window.addEventListener( evt, resetIdle, { passive: true } ) );
+		return () => {
+			clearTimeout( idleTimer );
+			events.forEach( ( evt ) => window.removeEventListener( evt, resetIdle ) );
+		};
+	}, [
+		display.enable_smart_triggers,
+		display.trigger_inactivity,
+		display.trigger_action,
+		inline,
+		isOpen,
+		proactiveBubbleOpen,
 	] );
 
 	// Delay launcher appearance after page load.
@@ -994,6 +1098,11 @@ export default function ChatWidget( { settings, inline } ) {
 		}
 
 		try {
+			const activePageContext = window.dctc_ai_frontend_data?.page_context || {
+				url: window.location.href,
+				title: document.title,
+			};
+
 			const response = await apiFetch( {
 				path: '/dctc-ai/v1/chat',
 				method: 'POST',
@@ -1002,6 +1111,7 @@ export default function ChatWidget( { settings, inline } ) {
 					session_id: sessionId,
 					email,
 					attachments: readyAttachments,
+					page_context: activePageContext,
 				},
 			} );
 
@@ -3220,6 +3330,68 @@ export default function ChatWidget( { settings, inline } ) {
 								)
 							)
 					  )
+			),
+
+		// Proactive Teaser Bubble (Behavioral Triggers)
+		! inline &&
+			! isOpen &&
+			proactiveBubbleOpen &&
+			launcherVisible &&
+			createElement(
+				'div',
+				{
+					id: 'dctc-ai-proactive-bubble',
+					className: 'dctc-ai-proactive-bubble',
+					role: 'dialog',
+					'aria-label': __( 'AI Assistant Greeting', 'dragwyb-click-to-chat' ),
+				},
+				createElement(
+					'button',
+					{
+						type: 'button',
+						className: 'dctc-ai-proactive-bubble-close',
+						onClick: ( e ) => {
+							e.stopPropagation();
+							setProactiveBubbleOpen( false );
+						},
+						title: __( 'Dismiss', 'dragwyb-click-to-chat' ),
+						'aria-label': __( 'Dismiss greeting', 'dragwyb-click-to-chat' ),
+					},
+					'×'
+				),
+				createElement(
+					'div',
+					{
+						className: 'dctc-ai-proactive-bubble-inner',
+						onClick: () => {
+							setProactiveBubbleOpen( false );
+							setIsOpen( true );
+						},
+					},
+					createElement(
+						'div',
+						{ className: 'dctc-ai-proactive-bubble-avatar' },
+						renderBotAvatar( botAvatar, botIconPreset, primaryColor )
+					),
+					createElement(
+						'div',
+						{ className: 'dctc-ai-proactive-bubble-content' },
+						createElement(
+							'p',
+							{ className: 'dctc-ai-proactive-bubble-text' },
+							display.proactive_bubble_message ||
+								__( '👋 Hi there! Have a question about this page? Let me know!', 'dragwyb-click-to-chat' )
+						),
+						createElement(
+							'span',
+							{
+								className: 'dctc-ai-proactive-bubble-cta',
+								style: { color: primaryColor },
+							},
+							__( 'Chat with AI →', 'dragwyb-click-to-chat' )
+						)
+					)
+				)
 			),
 
 		// Launcher Button
