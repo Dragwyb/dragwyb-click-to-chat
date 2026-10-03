@@ -250,6 +250,15 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		handoff_privacy_include_question: chatbot.handoff_privacy_include_question !== false,
 		handoff_privacy_include_page: chatbot.handoff_privacy_include_page !== false,
 
+		// Advance / AI Agents, Tools & Automation Workflows
+		enable_ai_tools: chatbot.enable_ai_tools !== false,
+		enabled_tools: Array.isArray(chatbot.enabled_tools)
+			? chatbot.enabled_tools
+			: ['search_products', 'get_order_status', 'create_support_ticket', 'book_appointment', 'search_website_content'],
+		workflow_webhook_url: chatbot.workflow_webhook_url || '',
+		ticket_notification_email: chatbot.ticket_notification_email || '',
+		appointment_notification_email: chatbot.appointment_notification_email || '',
+
 		// Advance / Conversation Features
 		save_chat: !!chatbot.save_chat,
 		chat_retention_days: chatbot.chat_retention_days ?? 0,
@@ -551,6 +560,11 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			handoff_privacy_include_summary: form.handoff_privacy_include_summary,
 			handoff_privacy_include_question: form.handoff_privacy_include_question,
 			handoff_privacy_include_page: form.handoff_privacy_include_page,
+			enable_ai_tools: form.enable_ai_tools,
+			enabled_tools: form.enabled_tools,
+			workflow_webhook_url: form.workflow_webhook_url,
+			ticket_notification_email: form.ticket_notification_email,
+			appointment_notification_email: form.appointment_notification_email,
 			enable_error_log: form.enable_error_log,
 			error_log_retention_days: form.error_log_retention_days,
 		};
@@ -1833,7 +1847,110 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							</div>
 						</SwitcherCard>
 
-						{ /* 6. Save Chat History & Retention Policy (Conditional Switcher Card) */}
+						{ /* 6. AI Business Tools & Workflow Automation (Conditional Switcher Card) */}
+						<SwitcherCard
+							id="enable_ai_tools"
+							title={__('AI Business Tools & Workflow Automation', 'dragwyb-click-to-chat')}
+							desc={__('Allow AI models to safely execute real-world business actions (products, order checks, ticket logging, appointment scheduling, and webhooks).', 'dragwyb-click-to-chat')}
+							icon="dashicons-admin-generic"
+							badge={__('Agent Actions', 'dragwyb-click-to-chat')}
+							checked={form.enable_ai_tools}
+							onChange={(v) => setField('enable_ai_tools', v)}
+							disabledNotice={__('Turn on to equip your AI assistant with real business actions and workflow automation.', 'dragwyb-click-to-chat')}
+						>
+							<div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+								<strong style={{ display: 'block', marginBottom: '0.6rem', color: '#1e293b', fontSize: '0.9rem' }}>
+									{__('Active AI Business Tools & Capabilities', 'dragwyb-click-to-chat')}
+								</strong>
+								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '0.85rem' }}>
+									{[
+										{ id: 'search_products', label: __('🛍️ WooCommerce Product Search', 'dragwyb-click-to-chat'), desc: __('Find matching store items with live prices and stock', 'dragwyb-click-to-chat') },
+										{ id: 'get_order_status', label: __('📦 Order Status Verification', 'dragwyb-click-to-chat'), desc: __('Check order delivery status with billing email protection', 'dragwyb-click-to-chat') },
+										{ id: 'create_support_ticket', label: __('🎫 Support Ticket Dispatcher', 'dragwyb-click-to-chat'), desc: __('File customer tickets with priority and notify team', 'dragwyb-click-to-chat') },
+										{ id: 'book_appointment', label: __('📅 Appointment & Demo Booking', 'dragwyb-click-to-chat'), desc: __('Schedule consultations and callbacks with clients', 'dragwyb-click-to-chat') },
+										{ id: 'search_website_content', label: __('🔍 Website Content Search', 'dragwyb-click-to-chat'), desc: __('Find published articles, guides, and pages', 'dragwyb-click-to-chat') },
+									].map((tool) => {
+										const isToolActive = Array.isArray(form.enabled_tools) && form.enabled_tools.includes(tool.id);
+										return (
+											<div key={tool.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', background: '#ffffff', padding: '0.75rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+												<input
+													type="checkbox"
+													id={`tool_${tool.id}`}
+													checked={isToolActive}
+													onChange={(e) => {
+														const current = Array.isArray(form.enabled_tools) ? [...form.enabled_tools] : [];
+														const next = e.target.checked
+															? [...current, tool.id]
+															: current.filter((x) => x !== tool.id);
+														setField('enabled_tools', next);
+													}}
+													style={{ marginTop: '3px' }}
+												/>
+												<label htmlFor={`tool_${tool.id}`} style={{ cursor: 'pointer', margin: 0 }}>
+													<strong style={{ display: 'block', fontSize: '0.85rem', color: '#1e293b' }}>{tool.label}</strong>
+													<span style={{ fontSize: '0.75rem', color: '#64748b' }}>{tool.desc}</span>
+												</label>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+
+							<div className="dctc-ai-grid-2col" style={{ marginTop: '1.25rem' }}>
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="ticket_notification_email">
+										{__('Support Ticket Alert Email', 'dragwyb-click-to-chat')}
+									</label>
+									<input
+										type="email"
+										id="ticket_notification_email"
+										className="dctc-ai-bot-input"
+										value={form.ticket_notification_email}
+										onChange={(e) => setField('ticket_notification_email', e.target.value)}
+										placeholder={__('Leave blank to use admin email', 'dragwyb-click-to-chat')}
+									/>
+									<p className="dctc-ai-bot-hint">
+										{__('Email address to receive immediate alerts when tickets are created.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="appointment_notification_email">
+										{__('Appointment Booking Alert Email', 'dragwyb-click-to-chat')}
+									</label>
+									<input
+										type="email"
+										id="appointment_notification_email"
+										className="dctc-ai-bot-input"
+										value={form.appointment_notification_email}
+										onChange={(e) => setField('appointment_notification_email', e.target.value)}
+										placeholder={__('Leave blank to use admin email', 'dragwyb-click-to-chat')}
+									/>
+									<p className="dctc-ai-bot-hint">
+										{__('Email address to receive consultation and demo booking requests.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+							</div>
+
+							<div className="dctc-ai-bot-field" style={{ marginTop: '1.25rem' }}>
+								<label htmlFor="workflow_webhook_url">
+									{__('Automation Action Webhook URL (Zapier / Make / Slack / CRM)', 'dragwyb-click-to-chat')}
+								</label>
+								<input
+									type="url"
+									id="workflow_webhook_url"
+									className="dctc-ai-bot-input"
+									value={form.workflow_webhook_url}
+									onChange={(e) => setField('workflow_webhook_url', e.target.value)}
+									placeholder="https://hooks.zapier.com/hooks/catch/..."
+								/>
+								<p className="dctc-ai-bot-hint">
+									{__('Dispatches real-time JSON payload whenever AI tools or actions are executed.', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+						</SwitcherCard>
+
+						{ /* 7. Save Chat History & Retention Policy (Conditional Switcher Card) */}
 						<SwitcherCard
 							id="save_chat"
 							title={__('Conversation History & Retention Policy', 'dragwyb-click-to-chat')}

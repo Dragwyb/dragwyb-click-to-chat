@@ -24,6 +24,7 @@ require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-chat-controller.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-usage-tracker.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-leads-controller.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-woocommerce.php';
+require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-tool-registry.php';
 
 /**
  * Class DCTC_AI_Settings_Handler
@@ -432,6 +433,42 @@ class DCTC_AI_Settings_Handler
 				'permission_callback' => '__return_true',
 			]
 		);
+
+		// AI Agents, Tools & Automation Workflows endpoints
+		register_rest_route(
+			'dctc-ai/v1',
+			'/tools',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => function() {
+					return new \WP_REST_Response([
+						'success' => true,
+						'tools'   => DCTC_AI_Tool_Registry::get_all_tools(),
+					], 200);
+				},
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/tools/execute',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => function($request) {
+					$params = $request->get_json_params();
+					$tool_name = sanitize_key($params['tool'] ?? '');
+					$args = (array) ($params['arguments'] ?? []);
+					$context = [
+						'session_id' => sanitize_text_field($params['session_id'] ?? ''),
+						'email'      => sanitize_email($params['email'] ?? ''),
+					];
+					$res = DCTC_AI_Tool_Registry::execute_tool($tool_name, $args, $context);
+					return new \WP_REST_Response($res, !empty($res['success']) ? 200 : 400);
+				},
+				'permission_callback' => '__return_true',
+			]
+		);
 	}
 
 	/**
@@ -680,6 +717,11 @@ class DCTC_AI_Settings_Handler
 				'handoff_privacy_include_summary' => true,
 				'handoff_privacy_include_question' => true,
 				'handoff_privacy_include_page' => true,
+				'enable_ai_tools' => true,
+				'enabled_tools' => ['search_products', 'get_order_status', 'create_support_ticket', 'book_appointment', 'search_website_content'],
+				'workflow_webhook_url' => '',
+				'ticket_notification_email' => '',
+				'appointment_notification_email' => '',
 			],
 			'display' => [
 				'entire_site' => false,
@@ -808,6 +850,8 @@ class DCTC_AI_Settings_Handler
 			'handoff_privacy_include_summary',
 			'handoff_privacy_include_question',
 			'handoff_privacy_include_page',
+			'enable_ai_tools',
+			'enabled_tools',
 		];
 
 		$public_chatbot = [];
@@ -1071,6 +1115,11 @@ class DCTC_AI_Settings_Handler
 			'handoff_privacy_include_summary' => isset($params['handoff_privacy_include_summary']) ? (bool) $params['handoff_privacy_include_summary'] : (isset($existing_chatbot['handoff_privacy_include_summary']) ? (bool) $existing_chatbot['handoff_privacy_include_summary'] : true),
 			'handoff_privacy_include_question' => isset($params['handoff_privacy_include_question']) ? (bool) $params['handoff_privacy_include_question'] : (isset($existing_chatbot['handoff_privacy_include_question']) ? (bool) $existing_chatbot['handoff_privacy_include_question'] : true),
 			'handoff_privacy_include_page' => isset($params['handoff_privacy_include_page']) ? (bool) $params['handoff_privacy_include_page'] : (isset($existing_chatbot['handoff_privacy_include_page']) ? (bool) $existing_chatbot['handoff_privacy_include_page'] : true),
+			'enable_ai_tools' => isset($params['enable_ai_tools']) ? (bool) $params['enable_ai_tools'] : (isset($existing_chatbot['enable_ai_tools']) ? (bool) $existing_chatbot['enable_ai_tools'] : true),
+			'enabled_tools' => isset($params['enabled_tools']) && is_array($params['enabled_tools']) ? array_values(array_map('sanitize_key', $params['enabled_tools'])) : (isset($existing_chatbot['enabled_tools']) ? $existing_chatbot['enabled_tools'] : ['search_products', 'get_order_status', 'create_support_ticket', 'book_appointment', 'search_website_content']),
+			'workflow_webhook_url' => isset($params['workflow_webhook_url']) ? esc_url_raw($params['workflow_webhook_url']) : (isset($existing_chatbot['workflow_webhook_url']) ? $existing_chatbot['workflow_webhook_url'] : ''),
+			'ticket_notification_email' => isset($params['ticket_notification_email']) ? sanitize_email($params['ticket_notification_email']) : (isset($existing_chatbot['ticket_notification_email']) ? $existing_chatbot['ticket_notification_email'] : ''),
+			'appointment_notification_email' => isset($params['appointment_notification_email']) ? sanitize_email($params['appointment_notification_email']) : (isset($existing_chatbot['appointment_notification_email']) ? $existing_chatbot['appointment_notification_email'] : ''),
 		];
 
 		$settings['chatbot'] = $chatbot_settings;
