@@ -626,10 +626,85 @@ class DCTC_AI_Settings_Handler
 							'mcp_tools'   => rest_url('dctc-ai/v1/mcp/tools'),
 							'leads'       => rest_url('dctc-ai/v1/leads'),
 							'copilot'     => rest_url('dctc-ai/v1/copilot'),
+							'inbox'       => rest_url('dctc-ai/v1/inbox/conversations'),
 						],
 					], 200);
 				},
 				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		// Feature 16: Unified Inbox REST endpoints
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-inbox-controller.php';
+		$inbox_controller = new DCTC_AI_Inbox_Controller();
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [$inbox_controller, 'get_conversations'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations/(?P<id>[a-zA-Z0-9_\-]+)',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [$inbox_controller, 'get_conversation'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations/(?P<id>[a-zA-Z0-9_\-]+)/reply',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$inbox_controller, 'send_reply'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations/(?P<id>[a-zA-Z0-9_\-]+)/status',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$inbox_controller, 'update_status'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations/(?P<id>[a-zA-Z0-9_\-]+)/assign',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$inbox_controller, 'assign_agent'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/conversations/(?P<id>[a-zA-Z0-9_\-]+)/notes',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$inbox_controller, 'add_internal_note'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/inbox/agents',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [$inbox_controller, 'get_agents'],
+				'permission_callback' => [$inbox_controller, 'permission_check'],
 			]
 		);
 	}

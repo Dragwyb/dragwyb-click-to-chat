@@ -4904,3 +4904,469 @@ body.dctc-ai-modal-open {
   cursor: not-allowed;
 }
 
+/* -------------------------------------------------------------------------
+   Feature 16: Unified Inbox 3-Pane Styles
+   ------------------------------------------------------------------------- */
+.dctc-ai-inbox-container {
+  background: var(--dctc-ai-surface, #ffffff);
+  border: 1px solid var(--dctc-ai-border, #e2e8f0);
+  border-radius: 14px;
+  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.08);
+  display: flex;
+  height: calc(100vh - 170px);
+  min-height: 600px;
+  overflow: hidden;
+}
+
+/* Left Pane: Conversations Directory */
+.dctc-ai-inbox-sidebar {
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 320px;
+}
+.dctc-ai-inbox-channel-tabs {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  overflow-x: auto;
+  padding: 6px;
+  gap: 4px;
+}
+.dctc-ai-inbox-channel-btn {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 6px 10px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.dctc-ai-inbox-channel-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+.dctc-ai-inbox-channel-btn.is-active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.dctc-ai-inbox-search-row {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.dctc-ai-inbox-search-input {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 12.5px;
+  padding: 6px 10px;
+  width: 100%;
+}
+.dctc-ai-inbox-search-input:focus {
+  border-color: #2563eb;
+  outline: none;
+}
+
+.dctc-ai-inbox-status-pills {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+.dctc-ai-inbox-status-pill {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 12px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+.dctc-ai-inbox-status-pill.is-active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.dctc-ai-inbox-list {
+  flex: 1;
+  overflow-y: auto;
+}
+.dctc-ai-inbox-item {
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  padding: 12px 14px;
+  transition: background 0.15s ease;
+}
+.dctc-ai-inbox-item:hover {
+  background: #f8fafc;
+}
+.dctc-ai-inbox-item.is-selected {
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+}
+.dctc-ai-inbox-item.is-unread {
+  font-weight: 600;
+}
+.dctc-ai-inbox-item-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.dctc-ai-inbox-item-user {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+.dctc-ai-inbox-item-user strong {
+  color: #1e293b;
+  font-size: 12.5px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dctc-ai-inbox-item-time {
+  color: #94a3b8;
+  font-size: 10.5px;
+}
+.dctc-ai-inbox-item-preview {
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0 0 6px 0 !important;
+  max-height: 32px;
+  overflow: hidden;
+}
+.dctc-ai-inbox-item-footer {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+}
+.dctc-ai-inbox-status-tag {
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 5px;
+  text-transform: uppercase;
+}
+.dctc-ai-inbox-status-tag.status--active {
+  background: #ecfdf5;
+  color: #059669;
+}
+.dctc-ai-inbox-status-tag.status--waiting_human {
+  background: #fffbeb;
+  color: #d97706;
+}
+.dctc-ai-inbox-status-tag.status--assigned {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.dctc-ai-inbox-status-tag.status--resolved {
+  background: #f1f5f9;
+  color: #64748b;
+}
+.dctc-ai-inbox-unread-badge {
+  background: #ef4444;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+}
+.dctc-ai-inbox-assigned-badge {
+  color: #475569;
+  font-size: 10.5px;
+}
+
+.dctc-ai-inbox-pagination {
+  align-items: center;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-size: 11.5px;
+}
+
+/* Middle Pane: Thread & Composer */
+.dctc-ai-inbox-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.dctc-ai-inbox-thread-header {
+  align-items: center;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 18px;
+}
+.dctc-ai-inbox-thread-title {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+.dctc-ai-inbox-thread-title h4 {
+  font-size: 14px;
+  margin: 0 !important;
+}
+.dctc-ai-inbox-thread-title small {
+  color: #64748b;
+}
+.dctc-ai-inbox-thread-actions {
+  display: flex;
+  gap: 8px;
+}
+.dctc-ai-inbox-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.dctc-ai-inbox-thread-stream {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 18px;
+}
+.dctc-ai-inbox-msg {
+  display: flex;
+  gap: 10px;
+  max-width: 85%;
+}
+.dctc-ai-inbox-msg.is-user {
+  align-self: flex-start;
+}
+.dctc-ai-inbox-msg.is-bot {
+  align-self: flex-start;
+}
+.dctc-ai-inbox-msg.is-agent {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+.dctc-ai-inbox-msg-avatar {
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 15px;
+  height: 32px;
+  justify-content: center;
+  width: 32px;
+}
+.dctc-ai-inbox-msg.is-agent .dctc-ai-inbox-msg-avatar {
+  background: #dbeafe;
+}
+.dctc-ai-inbox-msg-content {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.dctc-ai-inbox-msg.is-agent .dctc-ai-inbox-msg-content {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+.dctc-ai-inbox-msg.is-agent .dctc-ai-inbox-msg-text p {
+  color: #ffffff !important;
+}
+.dctc-ai-inbox-msg-meta {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 11px;
+}
+.dctc-ai-inbox-msg.is-agent .dctc-ai-inbox-msg-meta {
+  color: rgba(255, 255, 255, 0.85);
+}
+.dctc-ai-inbox-msg-text {
+  font-size: 13px;
+  line-height: 1.45;
+}
+.dctc-ai-inbox-msg-text p {
+  margin: 0 !important;
+}
+
+.dctc-ai-inbox-internal-note-card {
+  align-self: center;
+  background: #fffbeb;
+  border: 1px dashed #f59e0b;
+  border-radius: 8px;
+  max-width: 80%;
+  padding: 10px 14px;
+  width: 100%;
+}
+.dctc-ai-inbox-internal-note-header {
+  align-items: center;
+  color: #b45309;
+  display: flex;
+  font-size: 11px;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.dctc-ai-inbox-internal-note-card p {
+  color: #78350f;
+  font-size: 12.5px;
+  margin: 0 !important;
+}
+
+.dctc-ai-inbox-composer {
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 12px 18px;
+}
+.dctc-ai-inbox-composer-modes {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.dctc-ai-inbox-mode-tab {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 10px;
+}
+.dctc-ai-inbox-mode-tab.is-active {
+  background: #2563eb;
+  color: #ffffff;
+}
+.dctc-ai-inbox-composer-box {
+  display: flex;
+  gap: 10px;
+}
+.dctc-ai-inbox-composer-box textarea {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  flex: 1;
+  font-size: 13px;
+  padding: 8px 12px;
+  resize: none;
+}
+.dctc-ai-inbox-composer-box textarea:focus {
+  border-color: #2563eb;
+  outline: none;
+}
+
+/* Right Pane: Visitor Context */
+.dctc-ai-inbox-profile-sidebar {
+  border-left: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 18px;
+  width: 280px;
+}
+.dctc-ai-inbox-profile-card {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 14px;
+  text-align: center;
+}
+.dctc-ai-inbox-profile-avatar {
+  align-items: center;
+  background: #eff6ff;
+  border-radius: 50%;
+  display: flex;
+  font-size: 24px;
+  height: 48px;
+  justify-content: center;
+  margin-bottom: 8px;
+  width: 48px;
+}
+.dctc-ai-inbox-profile-card h4 {
+  font-size: 13.5px;
+  margin: 0 0 2px 0 !important;
+  word-break: break-all;
+}
+.dctc-ai-inbox-profile-sub {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.dctc-ai-inbox-context-section h5 {
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 700;
+  margin: 0 0 8px 0 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.dctc-ai-inbox-tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dctc-ai-inbox-tag {
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.dctc-ai-inbox-summary-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 10px;
+}
+.dctc-ai-inbox-summary-box p {
+  margin: 0 !important;
+}
+
+.dctc-ai-inbox-lead-details {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+.dctc-ai-inbox-lead-row {
+  display: flex;
+  font-size: 11.5px;
+  justify-content: space-between;
+}
+.dctc-ai-inbox-lead-row a {
+  color: #059669;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.dctc-ai-inbox-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dctc-ai-btn--block {
+  text-align: center;
+  width: 100%;
+}
+
+

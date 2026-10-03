@@ -11,10 +11,21 @@ import KnowledgeBase from './sections/KnowledgeBase';
 import LeadsManagement from './sections/LeadsManagement';
 import ChatSessions from './sections/ChatSessions';
 import AdminCopilot from './sections/AdminCopilot';
+import UnifiedInbox from './sections/UnifiedInbox';
 import ChatPreview from './sections/ChatPreview';
 import ErrorLogs from './sections/ErrorLogs';
 
 const TABS = [
+	{
+		id: 'unified-inbox',
+		label: __( 'Unified Inbox', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-email',
+		desc: __(
+			'Multi-channel conversation hub bridging AI chatbot, WhatsApp handoffs, emails, agent assignment & live replies.',
+			'dragwyb-click-to-chat'
+		),
+		component: UnifiedInbox,
+	},
 	{
 		id: 'chatbot-settings',
 		label: __( 'Chatbot Settings', 'dragwyb-click-to-chat' ),
@@ -99,16 +110,16 @@ const TABS = [
 
 const NAV_GROUPS = [
 	{
+		label: __( 'Inbox & Intelligence', 'dragwyb-click-to-chat' ),
+		items: [ 'unified-inbox', 'ai-copilot', 'leads', 'chat-sessions' ],
+	},
+	{
 		label: __( 'Setup', 'dragwyb-click-to-chat' ),
 		items: [ 'chatbot-settings', 'ai-engine' ],
 	},
 	{
 		label: __( 'Knowledge', 'dragwyb-click-to-chat' ),
 		items: [ 'knowledge-base' ],
-	},
-	{
-		label: __( 'Leads & Insights', 'dragwyb-click-to-chat' ),
-		items: [ 'ai-copilot', 'leads', 'chat-sessions' ],
 	},
 	{
 		label: __( 'Monitor', 'dragwyb-click-to-chat' ),

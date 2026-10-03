@@ -37,12 +37,20 @@ class DCTC_AI_DB {
 			summary text DEFAULT NULL,
 			sentiment varchar(30) DEFAULT 'neutral' NOT NULL,
 			intent_tag varchar(50) DEFAULT 'general' NOT NULL,
+			channel varchar(30) DEFAULT 'chatbot' NOT NULL,
+			assigned_to bigint(20) unsigned DEFAULT 0 NOT NULL,
+			unread_count int(11) DEFAULT 0 NOT NULL,
+			tags text DEFAULT NULL,
+			internal_notes longtext DEFAULT NULL,
+			lead_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY session_id (session_id),
 			KEY status (status),
+			KEY channel (channel),
+			KEY assigned_to (assigned_to),
 			KEY sentiment (sentiment),
 			KEY intent_tag (intent_tag)
 		) $charset_collate;";
@@ -181,9 +189,15 @@ class DCTC_AI_DB {
 
 		if ( ! empty( $session_cols ) ) {
 			$sess_defs = [
-				'summary'    => "ADD COLUMN `summary` text DEFAULT NULL AFTER `content`",
-				'sentiment'  => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
-				'intent_tag' => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
+				'summary'        => "ADD COLUMN `summary` text DEFAULT NULL AFTER `content`",
+				'sentiment'      => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
+				'intent_tag'     => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
+				'channel'        => "ADD COLUMN `channel` varchar(30) DEFAULT 'chatbot' NOT NULL AFTER `intent_tag`",
+				'assigned_to'    => "ADD COLUMN `assigned_to` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `channel`",
+				'unread_count'   => "ADD COLUMN `unread_count` int(11) DEFAULT 0 NOT NULL AFTER `assigned_to`",
+				'tags'           => "ADD COLUMN `tags` text DEFAULT NULL AFTER `unread_count`",
+				'internal_notes' => "ADD COLUMN `internal_notes` longtext DEFAULT NULL AFTER `tags`",
+				'lead_id'        => "ADD COLUMN `lead_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `internal_notes`",
 			];
 			foreach ( $sess_defs as $col => $sql_part ) {
 				if ( ! in_array( $col, $session_cols, true ) ) {
