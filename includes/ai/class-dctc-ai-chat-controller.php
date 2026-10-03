@@ -87,6 +87,20 @@ class DCTC_AI_Chat_Controller
 		$prompt = isset($params['prompt']) ? sanitize_textarea_field($params['prompt']) : '';
 		$session_id = isset($params['session_id']) ? sanitize_text_field($params['session_id']) : 'default';
 		$email = isset($params['email']) ? sanitize_email($params['email']) : '';
+		$attachments = isset($params['attachments']) && is_array($params['attachments']) ? array_values(array_filter(array_map(function($att) {
+			if (!is_array($att)) {
+				return null;
+			}
+			return [
+				'id' => isset($att['id']) ? sanitize_text_field($att['id']) : uniqid('att_'),
+				'attachmentId' => isset($att['attachmentId']) ? intval($att['attachmentId']) : 0,
+				'type' => (isset($att['type']) && $att['type'] === 'image') ? 'image' : 'file',
+				'name' => isset($att['name']) ? sanitize_file_name($att['name']) : '',
+				'size' => isset($att['size']) ? intval($att['size']) : 0,
+				'mime' => isset($att['mime']) ? sanitize_text_field($att['mime']) : '',
+				'url' => isset($att['url']) ? esc_url_raw($att['url']) : '',
+			];
+		}, $params['attachments']))) : [];
 
 		if (!current_user_can('manage_options')) {
 			$cookie_session_id = isset($_COOKIE['dctc_ai_session_id']) ? sanitize_text_field(wp_unslash($_COOKIE['dctc_ai_session_id'])) : '';
@@ -98,11 +112,15 @@ class DCTC_AI_Chat_Controller
 			}
 		}
 
-		if (empty($prompt)) {
+		if (empty($prompt) && empty($attachments)) {
 			return $this->error_response(
 				esc_html__('Empty prompt provided.', 'dragwyb-click-to-chat'),
 				400
 			);
+		}
+
+		if (empty($prompt) && !empty($attachments)) {
+			$prompt = esc_html__('Please analyze the attached file(s).', 'dragwyb-click-to-chat');
 		}
 
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
@@ -136,7 +154,17 @@ class DCTC_AI_Chat_Controller
 			}
 		} catch (Exception $e) {
 			self::log_debug('Dragwyb AI AI Chat Active Provider/Model Error: ' . $e->getMessage());
-			$error_message = current_user_can('manage_options') ? $e->getMessage() : esc_html__('An error occurred while processing your request.', 'dragwyb-click-to-chat');
+			$is_admin = current_user_can('manage_options');
+			if ($is_admin) {
+				$settings_url = admin_url('admin.php?page=dragwyb-click-to-chat-ai');
+				$error_message = sprintf(
+					/* translators: %s: AI Assistant settings URL */
+					__('AI Provider API key is not configured. Please [configure your AI Provider API key](%s) in settings.', 'dragwyb-click-to-chat'),
+					esc_url($settings_url)
+				);
+			} else {
+				$error_message = esc_html__('AI Assistant is currently offline for maintenance. Please check back later.', 'dragwyb-click-to-chat');
+			}
 			return $this->error_response($error_message, 400);
 		}
 		try {

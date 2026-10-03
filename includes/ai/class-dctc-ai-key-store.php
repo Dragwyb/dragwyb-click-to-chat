@@ -21,6 +21,22 @@ class DCTC_AI_Key_Store
 	use DCTC_AI_REST_Helpers;
 
 	/**
+	 * Check if at least one AI provider API key is configured.
+	 *
+	 * @return bool True if OpenAI or Google key is present.
+	 */
+	public static function has_configured_provider()
+	{
+		foreach (['openai', 'google'] as $provider) {
+			$key = self::get_provider_key($provider);
+			if (!empty($key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * Get a stored AI provider API key.
 	 *
 	 * @param string $provider Identifier for the AI provider.
