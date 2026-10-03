@@ -307,6 +307,15 @@ class DCTC_AI_Chat_Controller
 			self::log_debug('Dragwyb AI AI Memory Optimization Error: ' . $e->getMessage());
 		}
 
+		/**
+		 * Filters the final compiled system prompt before sending to AI provider.
+		 *
+		 * @param string $system_message
+		 * @param string $session_id
+		 * @param array  $bot
+		 */
+		$system_message = apply_filters('dctc_ai_chat_system_prompt', $system_message, $session_id, $bot);
+
 		try {
 			$ai_result = $this->call_ai_api(
 				$prompt,
@@ -321,6 +330,15 @@ class DCTC_AI_Chat_Controller
 			$ai_message = isset($ai_result['message']) ? $ai_result['message'] : '';
 			$used_provider = isset($ai_result['provider']) ? $ai_result['provider'] : $provider;
 			$used_model = isset($ai_result['model']) ? $ai_result['model'] : $model_id;
+
+			/**
+			 * Filters the raw AI assistant response text.
+			 *
+			 * @param string $ai_message
+			 * @param string $prompt
+			 * @param string $session_id
+			 */
+			$ai_message = apply_filters('dctc_ai_chat_response', $ai_message, $prompt, $session_id);
 
 			if (empty($ai_message)) {
 				if (class_exists('DCTC_Error_Logger')) {
@@ -393,6 +411,17 @@ class DCTC_AI_Chat_Controller
 				}
 			}
 		}
+
+		/**
+		 * Action triggered whenever a chat round completes successfully.
+		 *
+		 * @param string $session_id
+		 * @param string $prompt
+		 * @param string $ai_message
+		 * @param string $used_model
+		 * @param string $used_provider
+		 */
+		do_action('dctc_ai_chat_completed', $session_id, $prompt, $ai_message, $used_model, $used_provider);
 
 		return new \WP_REST_Response(
 			[

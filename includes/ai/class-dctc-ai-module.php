@@ -54,6 +54,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-db.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-site-analyzer.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-memory-optimizer.php';
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+			DCTC_AI_Abilities::init();
 
 			// Initialize REST Handlers.
 			new DCTC_AI_Settings_Handler();

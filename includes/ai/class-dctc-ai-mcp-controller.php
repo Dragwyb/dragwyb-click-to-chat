@@ -269,4 +269,225 @@ class DCTC_AI_MCP_Controller
 
 		return $server;
 	}
+
+	/**
+	 * Get MCP Server Manifest & Information.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function get_manifest($request)
+	{
+		return new \WP_REST_Response([
+			'name'            => 'dragwyb-click-to-chat-mcp',
+			'version'         => defined('DCTC_VERSION') ? DCTC_VERSION : '1.1.0',
+			'protocolVersion' => '2024-11-05',
+			'capabilities'    => [
+				'tools'     => ['listChanged' => false],
+				'resources' => ['subscribe' => false, 'listChanged' => false],
+				'prompts'   => ['listChanged' => false],
+			],
+			'serverInfo'      => [
+				'name'    => 'Dragwyb Click to Chat WordPress AI MCP Server',
+				'version' => defined('DCTC_VERSION') ? DCTC_VERSION : '1.1.0',
+				'website' => home_url(),
+			],
+		], 200);
+	}
+
+	/**
+	 * REST callback: list all MCP tools (derived from registered WordPress abilities).
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function get_tools($request)
+	{
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+		$abilities = DCTC_AI_Abilities::get_abilities(true);
+
+		$tools = [];
+		foreach ($abilities as $id => $ab) {
+			$tools[] = [
+				'name'        => str_replace(['dragwyb/', '/'], ['', '_'], $ab['id']),
+				'description' => $ab['description'],
+				'inputSchema' => $ab['parameters'],
+			];
+		}
+
+		return new \WP_REST_Response(['tools' => $tools], 200);
+	}
+
+	/**
+	 * REST callback: execute an MCP tool.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function execute_tool($request)
+	{
+		$tool_name = sanitize_text_field($request->get_param('tool'));
+		$params    = $request->get_json_params() ?: [];
+		$arguments = isset($params['arguments']) && is_array($params['arguments']) ? $params['arguments'] : $params;
+
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+		$result = DCTC_AI_Abilities::execute_ability($tool_name, $arguments);
+
+		return new \WP_REST_Response([
+			'content' => [
+				[
+					'type' => 'text',
+					'text' => wp_json_encode($result, JSON_PRETTY_PRINT),
+				],
+			],
+			'isError' => empty($result['success']),
+		], !empty($result['success']) ? 200 : 400);
+	}
+
+	/**
+	 * Handle standard MCP JSON-RPC 2.0 requests.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function handle_jsonrpc($request)
+	{
+		$body = $request->get_json_params();
+		if (!is_array($body) || empty($body['jsonrpc']) || $body['jsonrpc'] !== '2.0') {
+			return new \WP_REST_Response([
+				'jsonrpc' => '2.0',
+				'id'      => $body['id'] ?? null,
+				'error'   => [
+					'code'    => -32600,
+					'message' => 'Invalid JSON-RPC 2.0 Request',
+				],
+			], 400);
+		}
+
+		$id     = $body['id'] ?? null;
+		$method = sanitize_text_field($body['method'] ?? '');
+		$params = is_array($body['params'] ?? null) ? $body['params'] : [];
+
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+
+		switch ($method) {
+			case 'initialize':
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'result'  => [
+						'protocolVersion' => '2024-11-05',
+						'capabilities'    => [
+							'tools'     => ['listChanged' => false],
+							'resources' => ['subscribe' => false, 'listChanged' => false],
+							'prompts'   => ['listChanged' => false],
+						],
+						'serverInfo'      => [
+							'name'    => 'Dragwyb AI WordPress MCP Server',
+							'version' => defined('DCTC_VERSION') ? DCTC_VERSION : '1.1.0',
+						],
+					],
+				], 200);
+
+			case 'ping':
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'result'  => (object) [],
+				], 200);
+
+			case 'tools/list':
+				$abilities = DCTC_AI_Abilities::get_abilities(true);
+				$tools = [];
+				foreach ($abilities as $ab) {
+					$tools[] = [
+						'name'        => str_replace(['dragwyb/', '/'], ['', '_'], $ab['id']),
+						'description' => $ab['description'],
+						'inputSchema' => $ab['parameters'],
+					];
+				}
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'result'  => ['tools' => $tools],
+				], 200);
+
+			case 'tools/call':
+				$tool_name = sanitize_text_field($params['name'] ?? '');
+				$args      = is_array($params['arguments'] ?? null) ? $params['arguments'] : [];
+				$result    = DCTC_AI_Abilities::execute_ability($tool_name, $args);
+
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'result'  => [
+						'content' => [
+							[
+								'type' => 'text',
+								'text' => wp_json_encode($result, JSON_PRETTY_PRINT),
+							],
+						],
+						'isError' => empty($result['success']),
+					],
+				], 200);
+
+			case 'resources/list':
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'result'  => [
+						'resources' => [
+							[
+								'uri'         => 'wordpress://site/info',
+								'name'        => 'WordPress Site Information',
+								'description' => 'Current site title, description, and base URL',
+								'mimeType'    => 'application/json',
+							],
+						],
+					],
+				], 200);
+
+			case 'resources/read':
+				$uri = sanitize_text_field($params['uri'] ?? '');
+				if ($uri === 'wordpress://site/info') {
+					$site_info = [
+						'name'        => get_bloginfo('name'),
+						'url'         => home_url(),
+						'description' => get_bloginfo('description'),
+					];
+					return new \WP_REST_Response([
+						'jsonrpc' => '2.0',
+						'id'      => $id,
+						'result'  => [
+							'contents' => [
+								[
+									'uri'      => $uri,
+									'mimeType' => 'application/json',
+									'text'     => wp_json_encode($site_info, JSON_PRETTY_PRINT),
+								],
+							],
+						],
+					], 200);
+				}
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'error'   => [
+						'code'    => -32602,
+						'message' => 'Resource URI not found',
+					],
+				], 404);
+
+			default:
+				return new \WP_REST_Response([
+					'jsonrpc' => '2.0',
+					'id'      => $id,
+					'error'   => [
+						'code'    => -32601,
+						'message' => sprintf('Method not found: %s', esc_html($method)),
+					],
+				], 404);
+		}
+	}
 }
+

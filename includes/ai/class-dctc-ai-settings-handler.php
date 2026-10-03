@@ -522,6 +522,116 @@ class DCTC_AI_Settings_Handler
 				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
 			]
 		);
+
+		// Feature 15: WordPress Abilities & Developer API endpoints
+		register_rest_route(
+			'dctc-ai/v1',
+			'/abilities',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => function($request) {
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+					$is_admin = current_user_can('manage_options');
+					$abilities = DCTC_AI_Abilities::get_abilities(!$is_admin);
+					return new \WP_REST_Response([
+						'success'   => true,
+						'abilities' => array_values($abilities),
+					], 200);
+				},
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/abilities/(?P<ability>[a-zA-Z0-9_\-\/]+)/execute',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => function($request) {
+					$ability_name = sanitize_text_field($request->get_param('ability'));
+					$params = $request->get_json_params() ?: [];
+					$args = isset($params['arguments']) && is_array($params['arguments']) ? $params['arguments'] : $params;
+					$context = [
+						'session_id' => sanitize_text_field($params['session_id'] ?? ''),
+						'email'      => sanitize_email($params['email'] ?? ''),
+					];
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+					$result = DCTC_AI_Abilities::execute_ability($ability_name, $args, $context);
+					return new \WP_REST_Response($result, !empty($result['success']) ? 200 : 400);
+				},
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		// Feature 15: MCP (Model Context Protocol) Server endpoints
+		register_rest_route(
+			'dctc-ai/v1',
+			'/mcp/manifest',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [$this->mcp_controller, 'get_manifest'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/mcp/tools',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => [$this->mcp_controller, 'get_tools'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/mcp/tools/(?P<tool>[a-zA-Z0-9_\-]+)',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$this->mcp_controller, 'execute_tool'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/mcp/rpc',
+			[
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => [$this->mcp_controller, 'handle_jsonrpc'],
+				'permission_callback' => '__return_true',
+			]
+		);
+
+		// Feature 15: Developer Meta & Diagnostics endpoint
+		register_rest_route(
+			'dctc-ai/v1',
+			'/developer/info',
+			[
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => function() {
+					$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+					$bot = $settings['chatbot'] ?? [];
+					return new \WP_REST_Response([
+						'success'         => true,
+						'plugin'          => 'Dragwyb Click to Chat AI',
+						'version'         => defined('DCTC_VERSION') ? DCTC_VERSION : '1.1.0',
+						'schema_version'  => '2.0.0',
+						'active_provider' => $bot['default_provider'] ?? 'openai',
+						'endpoints'       => [
+							'chat'        => rest_url('dctc-ai/v1/chat'),
+							'abilities'   => rest_url('dctc-ai/v1/abilities'),
+							'mcp_rpc'     => rest_url('dctc-ai/v1/mcp/rpc'),
+							'mcp_tools'   => rest_url('dctc-ai/v1/mcp/tools'),
+							'leads'       => rest_url('dctc-ai/v1/leads'),
+							'copilot'     => rest_url('dctc-ai/v1/copilot'),
+						],
+					], 200);
+				},
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
 	}
 
 	/**
