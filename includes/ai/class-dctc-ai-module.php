@@ -75,9 +75,12 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$basename = defined( 'DCTC_BASENAME' ) ? DCTC_BASENAME : plugin_basename( DCTC_FILE );
 			add_action( 'plugin_action_links_' . $basename, array( $this, 'dctc_ai_add_settings_link' ) );
 
-			// Cache Invalidation Hooks.
-			add_action( 'save_post', array( $this, 'dctc_ai_invalidate_mcp_cache' ) );
-			add_action( 'delete_post', array( $this, 'dctc_ai_invalidate_mcp_cache' ) );
+			// Cache Invalidation & Knowledge Base Auto-Sync Hooks.
+			add_action( 'save_post', array( $this, 'dctc_ai_handle_post_save' ), 20, 2 );
+			add_action( 'before_delete_post', array( $this, 'dctc_ai_handle_post_delete' ), 20, 1 );
+			add_action( 'wp_trash_post', array( $this, 'dctc_ai_handle_post_delete' ), 20, 1 );
+			add_action( 'transition_post_status', array( $this, 'dctc_ai_handle_status_transition' ), 20, 3 );
+			add_action( 'dctc_ai_async_index_post', array( $this, 'dctc_ai_process_async_index_post' ), 10, 1 );
 
 			// Integrations & Helpers.
 			add_action( 'init', array( $this, 'dctc_ai_init_integrations' ) );
@@ -650,6 +653,136 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 */
 		public function dctc_ai_invalidate_mcp_cache() {
 			wp_cache_delete( 'dctc_ai_site_context', 'dctc_ai_mcp' );
+		}
+
+		/**
+		 * Handle post save: schedule async indexing if published and configured, or purge if unpublished.
+		 *
+		 * @param int     $post_id Post ID.
+		 * @param WP_Post $post    Post object.
+		 * @return void
+		 */
+		public function dctc_ai_handle_post_save( $post_id, $post ) {
+			$this->dctc_ai_invalidate_mcp_cache();
+
+			if ( ! $post instanceof WP_Post ) {
+				return;
+			}
+
+			if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+				return;
+			}
+
+			if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+				return;
+			}
+
+			// Verify user capability if in admin context.
+			if ( is_admin() && ! current_user_can( 'edit_post', $post_id ) ) {
+				return;
+			}
+
+			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			if ( empty( $settings['rag'] ) || empty( $settings['rag']['enabled'] ) ) {
+				return;
+			}
+
+			$auto_update = isset( $settings['rag']['indexing']['auto_update'] )
+				? (bool) $settings['rag']['indexing']['auto_update']
+				: ( isset( $settings['rag']['auto_update'] ) ? (bool) $settings['rag']['auto_update'] : true );
+
+			if ( ! $auto_update ) {
+				return;
+			}
+
+			$configured_types = ! empty( $settings['rag']['post_types'] ) && is_array( $settings['rag']['post_types'] )
+				? $settings['rag']['post_types']
+				: array( 'post', 'page' );
+
+			if ( ! in_array( $post->post_type, $configured_types, true ) ) {
+				return;
+			}
+
+			if ( 'publish' === $post->post_status ) {
+				if ( ! wp_next_scheduled( 'dctc_ai_async_index_post', array( $post_id ) ) ) {
+					wp_schedule_single_event( time(), 'dctc_ai_async_index_post', array( $post_id ) );
+				}
+			} else {
+				$this->dctc_ai_handle_post_delete( $post_id );
+			}
+		}
+
+		/**
+		 * Handle post status transition (e.g. from publish to trash/draft).
+		 *
+		 * @param string  $new_status New status.
+		 * @param string  $old_status Old status.
+		 * @param WP_Post $post       Post object.
+		 * @return void
+		 */
+		public function dctc_ai_handle_status_transition( $new_status, $old_status, $post ) {
+			if ( 'publish' === $old_status && 'publish' !== $new_status && $post instanceof WP_Post ) {
+				$this->dctc_ai_handle_post_delete( $post->ID );
+			}
+		}
+
+		/**
+		 * Purge document chunks and vectors when post is trashed or deleted.
+		 *
+		 * @param int $post_id Post ID.
+		 * @return void
+		 */
+		public function dctc_ai_handle_post_delete( $post_id ) {
+			$this->dctc_ai_invalidate_mcp_cache();
+
+			if ( ! class_exists( 'DCTC_AI_Indexer' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-indexer.php';
+			}
+
+			try {
+				$indexer = new DCTC_AI_Indexer();
+				$indexer->remove_document( 'post_' . absint( $post_id ) );
+			} catch ( Exception $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Dragwyb AI Auto-Sync Delete Error: ' . $e->getMessage() );
+				}
+			}
+		}
+
+		/**
+		 * Process background async indexing of a post via cron.
+		 *
+		 * @param int $post_id Post ID.
+		 * @return void
+		 */
+		public function dctc_ai_process_async_index_post( $post_id ) {
+			$post = get_post( absint( $post_id ) );
+			if ( ! $post || 'publish' !== $post->post_status ) {
+				return;
+			}
+
+			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$configured_types = ! empty( $settings['rag']['post_types'] ) && is_array( $settings['rag']['post_types'] )
+				? $settings['rag']['post_types']
+				: array( 'post', 'page' );
+
+			if ( ! in_array( $post->post_type, $configured_types, true ) ) {
+				return;
+			}
+
+			if ( ! class_exists( 'DCTC_AI_Indexer' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-indexer.php';
+			}
+
+			try {
+				$indexer = new DCTC_AI_Indexer();
+				$indexer->index_post( $post );
+				$this->dctc_ai_invalidate_mcp_cache();
+			} catch ( Exception $e ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					error_log( 'Dragwyb AI Auto-Sync Async Index Error: ' . $e->getMessage() );
+				}
+			}
 		}
 	}
 

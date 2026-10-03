@@ -351,6 +351,7 @@ export default function ChatWidget( { settings, inline } ) {
 
 	const showBotAvatarInChat = !! chatbot.show_bot_avatar_in_chat;
 	const showUserAvatarInChat = !! chatbot.show_user_avatar_in_chat;
+	const showSources = chatbot.show_sources !== false;
 	const enableUploads = !! chatbot.enable_uploads;
 	const maxUploadSizeMb = parseInt( chatbot.max_upload_size, 10 ) || 5;
 	const maxFilesPerMsg = parseInt( chatbot.max_files_per_message, 10 ) || 3;
@@ -880,9 +881,21 @@ export default function ChatWidget( { settings, inline } ) {
 						botMessage.content ||
 						JSON.stringify( botMessage );
 				}
+				const responseSources = Array.isArray( response.sources )
+					? response.sources
+					: ( Array.isArray( response.reference_links ) ? response.reference_links : [] );
+				const responseActionButtons = Array.isArray( response.action_buttons )
+					? response.action_buttons
+					: [];
+
 				setMessages( ( prev ) => [
 					...prev,
-					{ role: 'bot', content: botMessage },
+					{
+						role: 'bot',
+						content: botMessage,
+						sources: responseSources,
+						action_buttons: responseActionButtons,
+					},
 				] );
 			} else {
 				setMessages( ( prev ) => [
@@ -1322,7 +1335,105 @@ export default function ChatWidget( { settings, inline } ) {
 														message.content
 													)
 												)
-											)
+											),
+											showSources &&
+												message.sources &&
+												message.sources.length > 0 &&
+												createElement(
+													'div',
+													{ className: 'dctc-ai-sources' },
+													createElement(
+														'span',
+														{ className: 'dctc-ai-sources__label' },
+														__( 'Sources:', 'dragwyb-click-to-chat' )
+													),
+													createElement(
+														'div',
+														{ className: 'dctc-ai-sources__list' },
+														message.sources.slice( 0, 3 ).map( ( src, srcIdx ) =>
+															createElement(
+																'a',
+																{
+																	key: srcIdx,
+																	href: src.url || '#',
+																	target: '_blank',
+																	rel: 'noopener noreferrer',
+																	className: 'dctc-ai-source-chip',
+																	title: src.title,
+																},
+																createElement(
+																	'svg',
+																	{
+																		width: '12',
+																		height: '12',
+																		viewBox: '0 0 24 24',
+																		fill: 'none',
+																		stroke: 'currentColor',
+																		strokeWidth: '2',
+																		strokeLinecap: 'round',
+																		strokeLinejoin: 'round',
+																		className: 'dctc-ai-source-chip__icon',
+																		'aria-hidden': 'true',
+																	},
+																	createElement( 'path', {
+																		d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
+																	} ),
+																	createElement( 'polyline', {
+																		points: '15 3 21 3 21 9',
+																	} ),
+																	createElement( 'line', {
+																		x1: '10',
+																		y1: '14',
+																		x2: '21',
+																		y2: '3',
+																	} )
+																),
+																createElement(
+																	'span',
+																	{ className: 'dctc-ai-source-chip__title' },
+																	src.title || src.url
+																)
+															)
+														)
+													)
+												),
+											message.action_buttons &&
+												message.action_buttons.length > 0 &&
+												createElement(
+													'div',
+													{ className: 'dctc-ai-msg-actions' },
+													message.action_buttons.map( ( btn, bIdx ) =>
+														createElement(
+															'a',
+															{
+																key: bIdx,
+																href: btn.url,
+																target: btn.target || '_blank',
+																rel: 'noopener noreferrer',
+																className:
+																	'dctc-ai-msg-action-btn' +
+																	( btn.type === 'whatsapp'
+																		? ' is-whatsapp'
+																		: '' ),
+															},
+															btn.type === 'whatsapp' &&
+																createElement(
+																	'svg',
+																	{
+																		width: '13',
+																		height: '13',
+																		viewBox: '0 0 24 24',
+																		fill: 'currentColor',
+																		style: { marginRight: '4px' },
+																	},
+																	createElement( 'path', {
+																		d: 'M17.472 14.382c-.301-.15-1.782-.879-2.057-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.677-1.633-.928-2.235-.244-.587-.493-.507-.677-.517-.175-.008-.376-.01-.577-.01-.201 0-.527.075-.803.376-.276.301-1.053 1.028-1.053 2.508 0 1.479 1.078 2.908 1.229 3.109.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.782-.728 2.033-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zm-5.467 7.518h-.005a10.84 10.84 0 0 1-5.526-1.509l-.396-.235-4.108 1.077 1.096-4.004-.258-.411a10.835 10.835 0 0 1-1.666-5.783c0-5.99 4.874-10.865 10.869-10.865a10.81 10.81 0 0 1 7.684 3.184 10.812 10.812 0 0 1 3.18 7.686c0 5.992-4.874 10.866-10.868 10.866z',
+																	} )
+																),
+															createElement( 'span', null, btn.label )
+														)
+													)
+												)
 									  )
 									: message.content &&
 									  message.content.trim()

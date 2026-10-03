@@ -150,9 +150,10 @@ class DCTC_AI_DB {
 	 * @param string $provider   The AI provider used.
 	 * @param string $model      The AI model used.
 	 * @param string $email      The user email.
+	 * @param array  $sources    Optional source links/citations.
 	 * @return string The final session_id used.
 	 */
-	public function dctc_ai_save_message( $prompt, $response, $session_id = 'default', $provider = '', $model = '', $email = '' ) {
+	public function dctc_ai_save_message( $prompt, $response, $session_id = 'default', $provider = '', $model = '', $email = '', $sources = [] ) {
 		$prompt     = sanitize_textarea_field( $prompt );
 		$response   = wp_kses_post( $response );
 		$session_id = sanitize_text_field( $session_id );
@@ -180,17 +181,31 @@ class DCTC_AI_DB {
 			);
 		}
 
+		$assistant_entry = [
+			'role'       => 'assistant',
+			'content'    => $response,
+			'created_at' => $time,
+		];
+
+		if ( ! empty( $sources ) && is_array( $sources ) ) {
+			$assistant_entry['sources'] = array_values( array_filter( array_map( function( $s ) {
+				if ( ! is_array( $s ) || empty( $s['title'] ) ) {
+					return null;
+				}
+				return [
+					'title' => sanitize_text_field( $s['title'] ),
+					'url'   => esc_url_raw( $s['url'] ?? '' ),
+				];
+			}, $sources ) ) );
+		}
+
 		$new_messages = [
 			[
 				'role'       => 'user',
 				'content'    => $prompt,
 				'created_at' => $time,
 			],
-			[
-				'role'       => 'assistant',
-				'content'    => $response,
-				'created_at' => $time,
-			],
+			$assistant_entry,
 		];
 
 		if ( $existing_messages ) {

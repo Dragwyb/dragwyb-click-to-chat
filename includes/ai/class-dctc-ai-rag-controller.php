@@ -229,12 +229,22 @@ class DCTC_AI_RAG_Controller
 			? sanitize_textarea_field($params['no_data_message'])
 			: (isset($existing_rag['no_data_message']) ? $existing_rag['no_data_message'] : 'I don\'t have information about your question in my knowledge base.');
 
+		$auto_update = isset($params['auto_update'])
+			? (bool) $params['auto_update']
+			: (isset($existing_rag['indexing']['auto_update']) ? (bool) $existing_rag['indexing']['auto_update'] : (isset($existing_rag['auto_update']) ? (bool) $existing_rag['auto_update'] : true));
+
+		$min_confidence = isset($params['min_confidence'])
+			? floatval($params['min_confidence'])
+			: (isset($existing_rag['min_confidence']) ? floatval($existing_rag['min_confidence']) : 0.65);
+
 		$settings['rag'] = [
 			'enabled' => true,
 			'post_types' => $post_types,
 			'chunk_size' => $chunk_size,
 			'max_results' => $max_results,
+			'min_confidence' => $min_confidence,
 			'auto_index' => $auto_index,
+			'auto_update' => $auto_update,
 			'vector_db' => $vector_db,
 			'require_indexed_data' => $require_indexed_data,
 			'no_data_message' => $no_data_message,
@@ -243,9 +253,7 @@ class DCTC_AI_RAG_Controller
 				'chunk_overlap' => isset($params['chunk_overlap'])
 					? (int) $params['chunk_overlap']
 					: 100,
-				'auto_update' => isset($params['auto_update'])
-					? (bool) $params['auto_update']
-					: true,
+				'auto_update' => $auto_update,
 			],
 			'embeddings' => [
 				'provider' => isset($params['embeddings']['provider'])
@@ -701,7 +709,31 @@ class DCTC_AI_RAG_Controller
 			$result['require_data_missing'] = true;
 			$result['message'] = !empty($no_data_message)
 				? $no_data_message
-				: '❌ ' . esc_html__('I don\'t have information about your question in my knowledge base.', 'dragwyb-click-to-chat');
+				: '❌ ' . esc_html__('I don\'t have verified information about your question in my knowledge base. Would you like to reach our support team?', 'dragwyb-click-to-chat');
+
+			// Feature 03: Build human handoff buttons (WhatsApp / Support Link)
+			$fallback_buttons = [];
+			$ctc_settings = get_option('dctc_settings', []);
+			$wa_number = isset($ctc_settings['whatsapp_number']) ? trim($ctc_settings['whatsapp_number']) : '';
+			if (!empty($wa_number)) {
+				$clean_wa = preg_replace('/[^0-9]/', '', $wa_number);
+				$fallback_buttons[] = [
+					'label' => __('Chat on WhatsApp', 'dragwyb-click-to-chat'),
+					'url' => 'https://wa.me/' . $clean_wa . '?text=' . rawurlencode(sprintf(__('Hi, I had a question on your site: "%s"', 'dragwyb-click-to-chat'), mb_substr($prompt, 0, 80))),
+					'type' => 'whatsapp',
+					'target' => '_blank',
+				];
+			}
+			$support_url = !empty($bot['support_url']) ? $bot['support_url'] : '';
+			if (!empty($support_url)) {
+				$fallback_buttons[] = [
+					'label' => __('Contact Support', 'dragwyb-click-to-chat'),
+					'url' => esc_url($support_url),
+					'type' => 'link',
+					'target' => '_blank',
+				];
+			}
+			$result['action_buttons'] = $fallback_buttons;
 		}
 
 		return $result;

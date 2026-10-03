@@ -95,8 +95,14 @@ class DCTC_AI_Retriever {
 		$settings         = $this->get_settings();
 		$configured_types = ! empty( $settings['post_types'] ) ? $settings['post_types'] : [ 'post', 'page' ];
 		$registered_types = get_post_types();
+		$min_confidence   = isset( $settings['min_confidence'] ) ? (float) $settings['min_confidence'] : 0.65;
 
 		foreach ( $results as $result ) {
+			$similarity = isset( $result['similarity'] ) ? (float) $result['similarity'] : 0;
+			if ( $similarity < $min_confidence ) {
+				continue;
+			}
+
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 			$chunk = $wpdb->get_row(
 				$wpdb->prepare(

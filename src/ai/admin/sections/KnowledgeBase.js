@@ -65,6 +65,9 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 	const [requireIndexed, setRequireIndexed] = useState(
 		rag.require_indexed_data || false
 	);
+	const [minConfidence, setMinConfidence] = useState(
+		rag.min_confidence !== undefined ? parseFloat(rag.min_confidence) : 0.65
+	);
 	const [noDataMessage, setNoDataMessage] = useState(
 		rag.no_data_message || DEFAULT_NO_DATA
 	);
@@ -76,6 +79,12 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 	);
 	const [pineconeIndex, setPineconeIndex] = useState(
 		rag.vector_db?.index_name || ''
+	);
+
+	const [autoUpdate, setAutoUpdate] = useState(
+		rag.indexing?.auto_update !== undefined
+			? !!rag.indexing.auto_update
+			: (rag.auto_update !== undefined ? !!rag.auto_update : true)
 	);
 
 	const [embeddingProvider, setEmbeddingProvider] = useState(() =>
@@ -96,11 +105,17 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 		maxResults: rag.max_results || 5,
 		vectorDb: rag.vector_db?.provider || 'sqlite',
 		requireIndexedData: rag.require_indexed_data || false,
+		minConfidence:
+			rag.min_confidence !== undefined ? parseFloat(rag.min_confidence) : 0.65,
 		noDataMessage: rag.no_data_message || DEFAULT_NO_DATA,
 		pineconeApiKey: rag.vector_db?.api_key || '',
 		pineconeHost: rag.vector_db?.host || '',
 		pineconeIndexName: rag.vector_db?.index_name || '',
 		embeddingProviderValue: resolveEmbeddingProvider(settings),
+		autoUpdate:
+			rag.indexing?.auto_update !== undefined
+				? !!rag.indexing.auto_update
+				: (rag.auto_update !== undefined ? !!rag.auto_update : true),
 	}));
 
 	useEffect(() => {
@@ -130,11 +145,13 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 		maxResults,
 		vectorDb,
 		requireIndexedData: requireIndexed,
+		minConfidence,
 		noDataMessage,
 		pineconeApiKey: pineconeKey,
 		pineconeHost,
 		pineconeIndexName: pineconeIndex,
 		embeddingProviderValue: embeddingProvider,
+		autoUpdate,
 	};
 	const dirty =
 		JSON.stringify(currentSnapshot) !== JSON.stringify(savedSnapshot);
@@ -267,6 +284,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 			chunk_size: parseInt(chunkSize, 10),
 			max_results: parseInt(maxResults, 10),
 			require_indexed_data: requireIndexed,
+			min_confidence: parseFloat(minConfidence),
 			no_data_message: noDataMessage,
 			vector_db: {
 				provider: vectorDb,
@@ -275,6 +293,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 				index_name: vectorDb === 'pinecone' ? pineconeIndex : '',
 			},
 			embeddings: { provider: embeddingProvider },
+			auto_update: autoUpdate,
 		};
 		try {
 			await apiFetch({
@@ -596,6 +615,26 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									</p>
 								)}
 							</div>
+							<div className="dctc-ai-kb-auto-sync-opt" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+								<label className="dctc-ai-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+									<input
+										type="checkbox"
+										checked={autoUpdate}
+										onChange={(e) => setAutoUpdate(e.target.checked)}
+										style={{ marginTop: '2px' }}
+									/>
+									<span className="dctc-ai-checkbox__label">
+										<strong>{__('Auto-Sync Content Updates', 'dragwyb-click-to-chat')}</strong>
+										<br />
+										<small style={{ color: '#64748b' }}>
+											{__(
+												'Automatically index or update posts and WooCommerce products in the background when published or edited, and purge them when moved to trash or unpublished.',
+												'dragwyb-click-to-chat'
+											)}
+										</small>
+									</span>
+								</label>
+							</div>
 							{indexing && indexStatus && (
 								<div className="dctc-ai-kb-index-progress" role="status">
 									<div className="dctc-ai-kb-index-progress__bar">
@@ -913,6 +952,90 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									</p>
 								)}
 							</div>
+						</div>
+					</article>
+
+					{ /* Hallucination Protection & Fallback (Feature 03) */}
+					<article className="dctc-ai-kb-card">
+						<header className="dctc-ai-kb-card__header">
+							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
+								<span className="dashicons dashicons-shield" />
+							</span>
+							<div className="dctc-ai-kb-card__heading">
+								<h3 className="dctc-ai-kb-card__title">
+									{__('Hallucination Protection & Fallback', 'dragwyb-click-to-chat')}
+								</h3>
+								<p className="dctc-ai-kb-card__desc">
+									{__(
+										'Control confidence thresholds and prevent the AI from inventing facts when knowledge base evidence is insufficient.',
+										'dragwyb-click-to-chat'
+									)}
+								</p>
+							</div>
+						</header>
+						<div className="dctc-ai-kb-card__body">
+							<div className="dctc-ai-kb-form-group">
+								<label className="dctc-ai-label">
+									{__('Minimum Evidence Confidence Threshold', 'dragwyb-click-to-chat')}
+								</label>
+								<select
+									className="dctc-ai-select"
+									value={minConfidence}
+									onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
+								>
+									<option value={0.75}>{__('Strict (0.75) — Highest grounding, minimal hallucination', 'dragwyb-click-to-chat')}</option>
+									<option value={0.65}>{__('Balanced (0.65) — Recommended for most websites', 'dragwyb-click-to-chat')}</option>
+									<option value={0.50}>{__('Permissive (0.50) — Tolerates looser matches', 'dragwyb-click-to-chat')}</option>
+								</select>
+								<p className="dctc-ai-hint">
+									{__(
+										'Retrieved chunks with a similarity score below this threshold are filtered out to prevent answering from weak or irrelevant context.',
+										'dragwyb-click-to-chat'
+									)}
+								</p>
+							</div>
+
+							<div className="dctc-ai-kb-form-group" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+								<label className="dctc-ai-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+									<input
+										type="checkbox"
+										checked={requireIndexed}
+										onChange={(e) => setRequireIndexed(e.target.checked)}
+										style={{ marginTop: '2px' }}
+									/>
+									<span className="dctc-ai-checkbox__label">
+										<strong>{__('Strict Knowledge Base Mode', 'dragwyb-click-to-chat')}</strong>
+										<br />
+										<small style={{ color: '#64748b' }}>
+											{__(
+												'Only answer if sufficient verified evidence is found in your knowledge base. When insufficient, trigger fallback with human support handoff.',
+												'dragwyb-click-to-chat'
+											)}
+										</small>
+									</span>
+								</label>
+							</div>
+
+							{requireIndexed && (
+								<div className="dctc-ai-kb-form-group" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+									<label className="dctc-ai-label">
+										{__('Fallback / Unknown-Answer Message', 'dragwyb-click-to-chat')}
+									</label>
+									<textarea
+										className="dctc-ai-textarea"
+										rows={3}
+										value={noDataMessage}
+										onChange={(e) => setNoDataMessage(e.target.value)}
+										placeholder={DEFAULT_NO_DATA}
+									/>
+									<p className="dctc-ai-hint">
+										{__(
+											'Message shown to visitors when no verified evidence is found. Support handoff buttons (WhatsApp / Contact) will be offered alongside this message.',
+											'dragwyb-click-to-chat'
+										)}
+									</p>
+								</div>
+							)}
 						</div>
 					</article>
 				</div>

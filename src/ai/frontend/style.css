@@ -453,6 +453,94 @@
   border-radius: 26px !important;
   padding: 14px 22px;
 }
+.dctc-ai-sources {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.dctc-ai-sources__label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.dctc-ai-sources__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dctc-ai-source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 4px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #334155;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+}
+.dctc-ai-source-chip:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+.dctc-ai-source-chip__icon {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  opacity: 0.7;
+}
+.dctc-ai-source-chip__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.dctc-ai-msg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(226, 232, 240, 0.7);
+}
+.dctc-ai-msg-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--dctc-ai-primary, #6366f1);
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.15s ease-in-out;
+}
+.dctc-ai-msg-action-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.dctc-ai-msg-action-btn.is-whatsapp {
+  background: #25d366;
+  color: #fff !important;
+}
+.dctc-ai-msg-action-btn.is-whatsapp:hover {
+  background: #1ebc57;
+}
 .dctc-ai-message-error {
   align-self: flex-start;
   background: hsla(0, 86%, 97%, 0.88);

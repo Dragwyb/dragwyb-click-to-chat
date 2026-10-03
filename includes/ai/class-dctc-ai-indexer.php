@@ -355,9 +355,20 @@ class DCTC_AI_Indexer
 
 			$document_id = 'post_' . $post->ID;
 
+			$content_to_index = $post->post_content;
+			$product_meta_text = '';
+
+			// If WooCommerce product, extract rich metadata (price, stock, SKU, attributes, categories)
+			if ('product' === $post->post_type && function_exists('wc_get_product')) {
+				$product_meta_text = $this->get_product_metadata_text($post->ID);
+				if (!empty($product_meta_text)) {
+					$content_to_index .= "\n\n" . $product_meta_text;
+				}
+			}
+
 			$current_hash = md5(
 				$post->post_title .
-				$post->post_content
+				$content_to_index
 			);
 
 			$existing = $this->get_document(
@@ -372,6 +383,9 @@ class DCTC_AI_Indexer
 				return true;
 			}
 
+			// Clean up previous chunks and vectors to prevent obsolete/ghost chunks
+			$this->remove_document_chunks($document_id);
+
 			/*
 			 * Store document
 			 */
@@ -381,7 +395,7 @@ class DCTC_AI_Indexer
 					'post_id' => $post->ID,
 					'post_type' => $post->post_type,
 					'title' => $post->post_title,
-					'content' => $post->post_content,
+					'content' => $content_to_index,
 					'excerpt' => $post->post_excerpt,
 					'url' => get_permalink($post),
 					'hash' => $current_hash,
@@ -393,7 +407,7 @@ class DCTC_AI_Indexer
 			 * Create chunks
 			 */
 			$chunks = $this->chunk_content(
-				$post->post_content,
+				$content_to_index,
 				$post->post_title
 			);
 
@@ -781,18 +795,15 @@ class DCTC_AI_Indexer
 	}
 
 	/**
-	 * Remove Document
-	 *
-	 * Removes a document and its chunks.
+	 * Remove document chunks and associated vectors.
 	 *
 	 * @param string $document_id Document ID.
-	 * @return bool Success status
+	 * @return bool
 	 */
-	public function remove_document($document_id)
+	public function remove_document_chunks($document_id)
 	{
 		global $wpdb;
 
-		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
 		$chunks_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_chunks');
 
 		// Get all chunk IDs first to delete from vector DB
@@ -816,6 +827,25 @@ class DCTC_AI_Indexer
 			['%s']
 		);
 
+		return true;
+	}
+
+	/**
+	 * Remove Document
+	 *
+	 * Removes a document and its chunks.
+	 *
+	 * @param string $document_id Document ID.
+	 * @return bool Success status
+	 */
+	public function remove_document($document_id)
+	{
+		global $wpdb;
+
+		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
+
+		$this->remove_document_chunks($document_id);
+
 		// Remove document
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct deletion from custom table.
 		$wpdb->delete(
@@ -825,6 +855,95 @@ class DCTC_AI_Indexer
 		);
 
 		return true;
+	}
+
+	/**
+	 * Extract rich product metadata for WooCommerce products.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string Formatted metadata text.
+	 */
+	private function get_product_metadata_text($post_id)
+	{
+		if (!function_exists('wc_get_product')) {
+			return '';
+		}
+
+		$product = wc_get_product($post_id);
+		if (!$product) {
+			return '';
+		}
+
+		$details = [];
+		$currency_symbol = function_exists('get_woocommerce_currency_symbol') ? get_woocommerce_currency_symbol() : '$';
+
+		// Pricing
+		$price = $product->get_price();
+		$regular_price = $product->get_regular_price();
+		$sale_price = $product->get_sale_price();
+
+		if ($product->is_on_sale() && !empty($sale_price)) {
+			$details[] = sprintf('Price: %s%s (Regular: %s%s, On Sale)', $currency_symbol, $sale_price, $currency_symbol, $regular_price);
+		} elseif (!empty($price)) {
+			$details[] = sprintf('Price: %s%s', $currency_symbol, $price);
+		}
+
+		// SKU
+		$sku = $product->get_sku();
+		if (!empty($sku)) {
+			$details[] = 'SKU: ' . $sku;
+		}
+
+		// Stock
+		$stock_status = $product->get_stock_status();
+		$stock_label = ('instock' === $stock_status) ? 'In Stock' : (('outofstock' === $stock_status) ? 'Out of Stock' : 'On Backorder');
+		if ($product->managing_stock()) {
+			$qty = $product->get_stock_quantity();
+			$stock_label .= " ({$qty} available)";
+		}
+		$details[] = 'Stock Status: ' . $stock_label;
+
+		// Categories
+		$categories = wp_get_post_terms($post_id, 'product_cat', ['fields' => 'names']);
+		if (!empty($categories) && !is_wp_error($categories)) {
+			$details[] = 'Categories: ' . implode(', ', $categories);
+		}
+
+		// Tags
+		$tags = wp_get_post_terms($post_id, 'product_tag', ['fields' => 'names']);
+		if (!empty($tags) && !is_wp_error($tags)) {
+			$details[] = 'Tags: ' . implode(', ', $tags);
+		}
+
+		// Attributes
+		$attributes = $product->get_attributes();
+		if (!empty($attributes)) {
+			$attr_strings = [];
+			foreach ($attributes as $attribute) {
+				if (is_object($attribute) && method_exists($attribute, 'get_name')) {
+					$name = function_exists('wc_attribute_label') ? wc_attribute_label($attribute->get_name()) : $attribute->get_name();
+					$options = [];
+					if (method_exists($attribute, 'is_taxonomy') && $attribute->is_taxonomy()) {
+						$terms = function_exists('wc_get_product_terms') ? wc_get_product_terms($product->get_id(), $attribute->get_name(), ['fields' => 'names']) : [];
+						$options = !is_wp_error($terms) ? $terms : [];
+					} elseif (method_exists($attribute, 'get_options')) {
+						$options = $attribute->get_options();
+					}
+					if (!empty($options)) {
+						$attr_strings[] = $name . ': ' . implode(', ', (array) $options);
+					}
+				}
+			}
+			if (!empty($attr_strings)) {
+				$details[] = 'Attributes: ' . implode('; ', $attr_strings);
+			}
+		}
+
+		if (empty($details)) {
+			return '';
+		}
+
+		return "Product Specifications & Details:\n- " . implode("\n- ", $details);
 	}
 
 	/**

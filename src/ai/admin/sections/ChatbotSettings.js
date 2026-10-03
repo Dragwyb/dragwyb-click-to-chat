@@ -241,6 +241,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		bubble_style: chatbot.bubble_style || 'rounded',
 		show_bot_avatar_in_chat: chatbot.show_bot_avatar_in_chat !== false,
 		show_user_avatar_in_chat: chatbot.show_user_avatar_in_chat !== false,
+		show_sources: chatbot.show_sources !== false,
 	});
 
 	const [form, setForm] = useState(buildForm);
@@ -420,6 +421,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			bubble_style: form.bubble_style,
 			show_bot_avatar_in_chat: form.show_bot_avatar_in_chat,
 			show_user_avatar_in_chat: form.show_user_avatar_in_chat,
+			show_sources: form.show_sources,
 			bot_icon_preset: form.bot_icon_preset,
 			user_avatar: form.user_avatar,
 			user_icon_preset: form.user_icon_preset,
@@ -1650,6 +1652,13 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 													checked={form.show_user_avatar_in_chat}
 													onChange={(v) => setField('show_user_avatar_in_chat', v)}
 												/>
+												<SettingCard
+													id="show_sources"
+													title={__('Show Source Links in Answers', 'dragwyb-click-to-chat')}
+													desc={__('Display clickable source citation pills under AI answers when Knowledge Base content is cited.', 'dragwyb-click-to-chat')}
+													checked={form.show_sources}
+													onChange={(v) => setField('show_sources', v)}
+												/>
 											</div>
 										</div>
 
@@ -1827,6 +1836,23 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 															style={{ borderRadius: getBubbleRadiusStyle() }}
 														>
 															{form.greeting_msg || __('Hello! How can I help you today?', 'dragwyb-click-to-chat')}
+															{form.show_sources && (
+																<div className="dctc-ai-sources" style={{ marginTop: '8px', paddingTop: '6px' }}>
+																	<span className="dctc-ai-sources__label">
+																		{__('Sources:', 'dragwyb-click-to-chat')}
+																	</span>
+																	<div className="dctc-ai-sources__list">
+																		<span className="dctc-ai-source-chip">
+																			<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="dctc-ai-source-chip__icon" aria-hidden="true">
+																				<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+																				<polyline points="15 3 21 3 21 9" />
+																				<line x1="10" y1="14" x2="21" y2="3" />
+																			</svg>
+																			<span className="dctc-ai-source-chip__title">{__('Knowledge Base', 'dragwyb-click-to-chat')}</span>
+																		</span>
+																	</div>
+																</div>
+															)}
 														</div>
 													</div>
 

@@ -10,6 +10,7 @@ const FEATURES = [
 	__( 'Assistant Icon updates', 'dragwyb-click-to-chat' ),
 	__( 'Message bubble styling', 'dragwyb-click-to-chat' ),
 	__( 'Chat Launcher visibility', 'dragwyb-click-to-chat' ),
+	__( 'Source citation links & chips', 'dragwyb-click-to-chat' ),
 ];
 
 const SAMPLE_USER = __(
@@ -96,6 +97,57 @@ export default function ChatPreview( { settings } ) {
 							<Avatar className="dctc-ai-preview-widget__bot-avatar" />
 							<div className="dctc-ai-preview-widget__bubble dctc-ai-preview-widget__bubble--bot">
 								<p>{ SAMPLE_BOT }</p>
+								{ bot.show_sources !== false && (
+									<div className="dctc-ai-sources">
+										<span className="dctc-ai-sources__label">
+											{ __( 'Sources:', 'dragwyb-click-to-chat' ) }
+										</span>
+										<div className="dctc-ai-sources__list">
+											<span className="dctc-ai-source-chip">
+												<svg
+													width="11"
+													height="11"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth="2"
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													className="dctc-ai-source-chip__icon"
+													aria-hidden="true"
+												>
+													<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+													<polyline points="15 3 21 3 21 9" />
+													<line x1="10" y1="14" x2="21" y2="3" />
+												</svg>
+												<span className="dctc-ai-source-chip__title">
+													{ __( 'Documentation Guide', 'dragwyb-click-to-chat' ) }
+												</span>
+											</span>
+											<span className="dctc-ai-source-chip">
+												<svg
+													width="11"
+													height="11"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth="2"
+													strokeLinecap="round"
+													strokeLinejoin="round"
+													className="dctc-ai-source-chip__icon"
+													aria-hidden="true"
+												>
+													<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+													<polyline points="15 3 21 3 21 9" />
+													<line x1="10" y1="14" x2="21" y2="3" />
+												</svg>
+												<span className="dctc-ai-source-chip__title">
+													{ __( 'Knowledge Base FAQ', 'dragwyb-click-to-chat' ) }
+												</span>
+											</span>
+										</div>
+									</div>
+								) }
 							</div>
 						</div>
 					</div>

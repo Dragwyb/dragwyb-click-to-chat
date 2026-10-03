@@ -183,7 +183,8 @@ class DCTC_AI_Chat_Controller
 					$session_id,
 					$bot,
 					$email,
-					$prompt
+					$prompt,
+					!empty($rag_data['action_buttons']) ? $rag_data['action_buttons'] : []
 				);
 			}
 
@@ -259,8 +260,11 @@ class DCTC_AI_Chat_Controller
 			return $this->error_response($error_message, 500);
 		}
 
+		$show_sources = ! isset( $bot['show_sources'] ) || (bool) $bot['show_sources'];
+		$sources = ( $show_sources && ! empty( $rag_links ) ) ? array_slice( $rag_links, 0, 3 ) : [];
+
 		try {
-			$this->save_conversation($prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email);
+			$this->save_conversation($prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources);
 		} catch (Exception $e) {
 			self::log_debug('Dragwyb AI AI Save Conversation Error: ' . $e->getMessage());
 		}
@@ -278,7 +282,8 @@ class DCTC_AI_Chat_Controller
 				'message' => $ai_message,
 				'session_id' => $session_id,
 				'messages' => $formatted_messages,
-				'reference_links' => $rag_links,
+				'sources' => $sources,
+				'reference_links' => $sources,
 			],
 			200
 		);
@@ -755,13 +760,13 @@ Always expand on the previous answer when the user asks for more information.
 	/**
 	 * Save conversation to database
 	 */
-	private function save_conversation($prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email)
+	private function save_conversation($prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources = [])
 	{
 		// Save to database if enabled
 		if (isset($bot['save_chat']) && (bool) $bot['save_chat']) {
 			if (class_exists('DCTC_AI_DB')) {
 				$db = new DCTC_AI_DB();
-				$db->dctc_ai_save_message($prompt, $ai_message, $session_id, $provider, $model_id, $email);
+				$db->dctc_ai_save_message($prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources);
 			}
 		}
 
@@ -799,6 +804,7 @@ Always expand on the previous answer when the user asks for more information.
 							$formatted_messages[] = [
 								'role' => ($msg['role'] === 'assistant') ? 'bot' : 'user',
 								'content' => $msg['content'],
+								'sources' => isset($msg['sources']) && is_array($msg['sources']) ? $msg['sources'] : [],
 							];
 						}
 					}
@@ -814,7 +820,7 @@ Always expand on the previous answer when the user asks for more information.
 	/**
 	 * Save response and return
 	 */
-	private function save_and_respond($message, $session_id, $bot, $email, $prompt)
+	private function save_and_respond($message, $session_id, $bot, $email, $prompt, $action_buttons = [])
 	{
 		if (isset($bot['save_chat']) && (bool) $bot['save_chat']) {
 			if (class_exists('DCTC_AI_DB')) {
@@ -829,6 +835,7 @@ Always expand on the previous answer when the user asks for more information.
 				'message' => $message,
 				'session_id' => $session_id,
 				'from_kb' => false,
+				'action_buttons' => $action_buttons,
 			],
 			200
 		);
