@@ -770,6 +770,11 @@ Always expand on the previous answer when the user asks for more information.
 			return '';
 		}
 
+		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		if (isset($settings['chatbot']['memory_window_size']) && intval($settings['chatbot']['memory_window_size']) > 0) {
+			$limit = min(50, max(2, intval($settings['chatbot']['memory_window_size'])));
+		}
+
 		$table = esc_sql( $wpdb->prefix . 'dctc_ai_sessions' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.

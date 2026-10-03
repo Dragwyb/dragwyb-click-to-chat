@@ -325,4 +325,31 @@ class DCTC_AI_DB {
 
 		return (bool) $deleted;
 	}
+
+	/**
+	 * Clean up old chat sessions based on retention policy.
+	 *
+	 * @param int $days Number of days to keep. 0 means keep forever.
+	 * @return int Number of deleted rows.
+	 */
+	public static function dctc_ai_clean_old_sessions( $days ) {
+		$days = absint( $days );
+		if ( $days <= 0 ) {
+			return 0;
+		}
+
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_sessions';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM {$table} WHERE updated_at < DATE_SUB(NOW(), INTERVAL %d DAY)",
+				$days
+			)
+		);
+
+		return is_numeric( $deleted ) ? intval( $deleted ) : 0;
+	}
 }
+

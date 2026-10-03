@@ -82,6 +82,12 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			add_action( 'transition_post_status', array( $this, 'dctc_ai_handle_status_transition' ), 20, 3 );
 			add_action( 'dctc_ai_async_index_post', array( $this, 'dctc_ai_process_async_index_post' ), 10, 1 );
 
+			// Daily Maintenance & Retention Policy Cron.
+			if ( ! wp_next_scheduled( 'dctc_ai_daily_cleanup_cron' ) ) {
+				wp_schedule_event( time(), 'daily', 'dctc_ai_daily_cleanup_cron' );
+			}
+			add_action( 'dctc_ai_daily_cleanup_cron', array( $this, 'dctc_ai_run_daily_cleanups' ) );
+
 			// Integrations & Helpers.
 			add_action( 'init', array( $this, 'dctc_ai_init_integrations' ) );
 			add_filter( 'http_request_timeout', array( $this, 'dctc_ai_increase_http_timeout' ), 9999, 2 );
@@ -788,6 +794,37 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				}
 			}
 		}
+
+		/**
+		 * Execute daily retention policy cleanups for chat sessions and error logs.
+		 *
+		 * @return void
+		 */
+		public function dctc_ai_run_daily_cleanups() {
+			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$chat_retention_days = isset( $settings['chatbot']['chat_retention_days'] ) ? absint( $settings['chatbot']['chat_retention_days'] ) : 0;
+
+			if ( $chat_retention_days > 0 && class_exists( 'DCTC_AI_DB' ) ) {
+				try {
+					DCTC_AI_DB::dctc_ai_clean_old_sessions( $chat_retention_days );
+				} catch ( Exception $e ) {
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( 'Dragwyb AI Daily Retention Cleanup Error: ' . $e->getMessage() );
+					}
+				}
+			}
+
+			if ( class_exists( 'DCTC_Error_Logger' ) ) {
+				try {
+					DCTC_Error_Logger::clean_old_logs();
+				} catch ( Exception $e ) {
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( 'Dragwyb AI Daily Error Log Cleanup Error: ' . $e->getMessage() );
+					}
+				}
+			}
+		}
 	}
 
 endif;
+

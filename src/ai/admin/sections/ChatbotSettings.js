@@ -184,6 +184,8 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 
 		// Advance / Conversation Features
 		save_chat: !!chatbot.save_chat,
+		chat_retention_days: chatbot.chat_retention_days ?? 0,
+		memory_window_size: chatbot.memory_window_size ?? 10,
 		ask_email: !!chatbot.ask_email,
 		enable_pre_questions: !!chatbot.enable_pre_questions,
 		enable_uploads: !!chatbot.enable_uploads,
@@ -433,6 +435,8 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			store_chat_attachments: form.store_chat_attachments,
 			action_buttons: form.action_buttons,
 			save_chat: form.save_chat,
+			chat_retention_days: form.chat_retention_days,
+			memory_window_size: form.memory_window_size,
 			ask_email: form.ask_email,
 			enable_pre_questions: form.enable_pre_questions,
 			rate_limit_per_minute: form.rate_limit_per_minute,
@@ -1070,17 +1074,71 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							</div>
 						</section>
 
-						{ /* 3. Save Chat History & Email Capture (Conditional Switcher Card) */}
+						{ /* 3. Save Chat History & Retention Policy (Conditional Switcher Card) */}
 						<SwitcherCard
 							id="save_chat"
-							title={__('Save Chat History & Visitor Continuity', 'dragwyb-click-to-chat')}
-							desc={__('Persist conversation history so visitors retain context across page transitions.', 'dragwyb-click-to-chat')}
+							title={__('Conversation History & Retention Policy', 'dragwyb-click-to-chat')}
+							desc={__('Persist conversation logs for visitors, power AI contextual memory, and enforce automatic retention cleanup.', 'dragwyb-click-to-chat')}
 							icon="dashicons-backup"
+							badge={__('Privacy & Memory', 'dragwyb-click-to-chat')}
 							checked={form.save_chat}
 							onChange={(v) => setField('save_chat', v)}
-							disabledNotice={__('Enable chat history to maintain conversation sessions and optionally capture visitor emails.', 'dragwyb-click-to-chat')}
+							disabledNotice={__('Enable chat history to maintain conversation sessions, context memory, and automated retention.', 'dragwyb-click-to-chat')}
 						>
-							<div className="dctc-ai-features-grid">
+							<div className="dctc-ai-grid-2col">
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="chat_retention_days">
+										{__('Conversation Retention Policy (WP-Cron)', 'dragwyb-click-to-chat')}
+									</label>
+									<select
+										id="chat_retention_days"
+										className="dctc-ai-bot-select"
+										value={form.chat_retention_days}
+										onChange={(e) =>
+											setField('chat_retention_days', parseInt(e.target.value, 10) || 0)
+										}
+									>
+										<option value="0">{__('Keep Forever (No Auto-Delete)', 'dragwyb-click-to-chat')}</option>
+										<option value="7">{__('Older than 7 days', 'dragwyb-click-to-chat')}</option>
+										<option value="14">{__('Older than 14 days', 'dragwyb-click-to-chat')}</option>
+										<option value="30">{__('Older than 30 days (Recommended)', 'dragwyb-click-to-chat')}</option>
+										<option value="60">{__('Older than 60 days', 'dragwyb-click-to-chat')}</option>
+										<option value="90">{__('Older than 90 days', 'dragwyb-click-to-chat')}</option>
+										<option value="180">{__('Older than 180 days (6 months)', 'dragwyb-click-to-chat')}</option>
+										<option value="365">{__('Older than 365 days (1 year)', 'dragwyb-click-to-chat')}</option>
+									</select>
+									<p className="dctc-ai-bot-hint">
+										{__('Automatically purges old chat sessions on daily schedule to comply with privacy policies and keep database clean.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label htmlFor="memory_window_size">
+										{__('Context Memory Window (Messages)', 'dragwyb-click-to-chat')}
+									</label>
+									<div className="dctc-ai-inline-input-row">
+										<input
+											type="number"
+											id="memory_window_size"
+											className="dctc-ai-bot-input dctc-ai-input--narrow"
+											min="2"
+											max="50"
+											value={form.memory_window_size}
+											onChange={(e) =>
+												setField('memory_window_size', parseInt(e.target.value, 10) || 10)
+											}
+										/>
+										<span className="dctc-ai-input-unit-label">
+											{__('recent messages', 'dragwyb-click-to-chat')}
+										</span>
+									</div>
+									<p className="dctc-ai-bot-hint">
+										{__('Number of preceding conversation turns sent to LLM for follow-up and pronoun resolution.', 'dragwyb-click-to-chat')}
+									</p>
+								</div>
+							</div>
+
+							<div className="dctc-ai-features-grid" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9' }}>
 								<SettingCard
 									id="ask_email"
 									title={__('Ask Visitor Email for Continuity', 'dragwyb-click-to-chat')}
