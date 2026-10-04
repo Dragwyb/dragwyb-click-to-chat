@@ -165,6 +165,17 @@ class DCTC_Support_Agent_Service {
 			return false;
 		}
 
+		// Check if an agent record with this wp_user_id already exists to prevent duplicate key error.
+		if ( ! $id && $wp_user_id ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$existing_id = $wpdb->get_var(
+				$wpdb->prepare( "SELECT id FROM `$table` WHERE wp_user_id = %d LIMIT 1", $wp_user_id )
+			);
+			if ( $existing_id ) {
+				$id = absint( $existing_id );
+			}
+		}
+
 		$fields = array(
 			'support_role'               => $support_role,
 			'seniority'                  => $seniority,
@@ -179,14 +190,18 @@ class DCTC_Support_Agent_Service {
 		);
 
 		if ( $id ) {
+			$wpdb->suppress_errors( true );
 			$updated = $wpdb->update( $table, $fields, array( 'id' => $id ) );
+			$wpdb->suppress_errors( false );
 			return false !== $updated ? $id : false;
 		} else {
 			$fields['wp_user_id']               = $wp_user_id;
 			$fields['current_active_tickets']   = 0;
 			$fields['notification_preferences'] = wp_json_encode( array( 'all' => true ) );
 			$fields['created_at']               = current_time( 'mysql' );
+			$wpdb->suppress_errors( true );
 			$inserted = $wpdb->insert( $table, $fields );
+			$wpdb->suppress_errors( false );
 			return $inserted ? $wpdb->insert_id : false;
 		}
 	}

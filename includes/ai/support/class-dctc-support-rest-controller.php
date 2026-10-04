@@ -287,6 +287,16 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/support/wp-users',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_wp_users' ),
+				'permission_callback' => array( $this, 'permission_staff_agents' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/support/settings',
 			array(
 				array(
@@ -729,6 +739,31 @@ class DCTC_Support_REST_Controller {
 		$id      = $request->get_param( 'id' );
 		$deleted = DCTC_Support_Agent_Service::delete_agent( $id );
 		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
+	}
+
+	public function get_wp_users() {
+		$users = get_users(
+			array(
+				'number'  => 100,
+				'orderby' => 'display_name',
+				'order'   => 'ASC',
+				'fields'  => array( 'ID', 'display_name', 'user_email', 'user_login' ),
+			)
+		);
+
+		$formatted = array();
+		foreach ( $users as $u ) {
+			$user_obj    = get_userdata( $u->ID );
+			$formatted[] = array(
+				'id'           => (int) $u->ID,
+				'display_name' => $u->display_name,
+				'user_email'   => $u->user_email,
+				'user_login'   => $u->user_login,
+				'roles'        => $user_obj ? (array) $user_obj->roles : array(),
+			);
+		}
+
+		return new WP_REST_Response( array( 'success' => true, 'users' => $formatted ), 200 );
 	}
 
 	public function get_settings() {

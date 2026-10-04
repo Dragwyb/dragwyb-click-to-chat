@@ -1663,3 +1663,449 @@
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
   transform: translateY(-1px);
 }
+
+/* ==========================================================
+   Add Staff Agent Modal Styles
+   ========================================================== */
+.dctc-sc-modal-backdrop {
+  align-items: center;
+  animation: dctcModalFadeIn 0.2s ease-out;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.55);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 20px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 100000;
+}
+
+@keyframes dctcModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dctcModalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ==========================================================
+   Add Staff Support Agent Modal - Ultra Modern UI
+   ========================================================== */
+.dctc-sc-modal-backdrop {
+  align-items: center;
+  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.6);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  padding: 20px;
+  position: fixed;
+  right: 0;
+  top: 0;
+  z-index: 999999;
+}
+
+.dctc-sc-agent-modal-card {
+  animation: dctcModalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  max-width: 530px;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.dctc-sc-modal-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  margin: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dctc-sc-modal-top-header {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-shrink: 0;
+  gap: 14px;
+  padding: 18px 24px;
+  position: relative;
+}
+
+.dctc-sc-modal-icon-badge {
+  align-items: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+  color: #ffffff;
+  display: flex;
+  flex-shrink: 0;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+
+.dctc-sc-modal-icon-badge .dashicons {
+  color: #ffffff;
+  font-size: 22px;
+  height: 22px;
+  line-height: 1;
+  width: 22px;
+}
+
+.dctc-sc-modal-title-wrap {
+  flex: 1;
+}
+
+.dctc-sc-modal-title {
+  color: #0f172a !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin: 0 0 3px !important;
+}
+
+.dctc-sc-modal-desc {
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.dctc-sc-modal-close-btn {
+  align-items: center;
+  background: #f1f5f9;
+  border: none;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 13px;
+  height: 30px;
+  justify-content: center;
+  margin-left: auto;
+  padding: 0;
+  transition: all 0.15s ease;
+  width: 30px;
+}
+
+.dctc-sc-modal-close-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.dctc-sc-modal-body-scroll {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 20px 24px;
+}
+
+.dctc-sc-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.dctc-sc-field-label {
+  align-items: center;
+  color: #334155;
+  display: flex;
+  font-size: 12.5px;
+  font-weight: 600;
+  gap: 6px;
+  margin: 0;
+}
+
+.dctc-sc-field-label .dashicons {
+  color: #6366f1;
+  font-size: 16px;
+  height: 16px;
+  width: 16px;
+}
+
+.dctc-sc-required-star {
+  color: #ef4444;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.dctc-sc-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.dctc-sc-custom-select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #ffffff !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-position: right 12px center !important;
+  background-repeat: no-repeat !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
+  height: 40px !important;
+  line-height: 1.4 !important;
+  padding: 0 36px 0 12px !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+}
+
+.dctc-sc-custom-input {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
+  height: 40px !important;
+  line-height: 1.4 !important;
+  padding: 0 12px !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+}
+
+.dctc-sc-custom-select:focus,
+.dctc-sc-custom-input:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15) !important;
+  outline: none !important;
+}
+
+.dctc-sc-form-grid-2 {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+}
+
+.dctc-sc-field-hint {
+  color: #94a3b8;
+  display: block;
+  font-size: 11.5px;
+  line-height: 1.35;
+  margin: 0;
+}
+
+/* Tokenized Interactive Tag Input Box */
+.dctc-sc-tag-input-container {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  min-height: 42px;
+  padding: 6px 10px;
+  transition: all 0.2s ease;
+}
+
+.dctc-sc-tag-input-container:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.dctc-sc-active-tags-list {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+}
+
+.dctc-sc-tag-badge {
+  align-items: center;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  color: #4338ca;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 3px 8px;
+}
+
+.dctc-sc-tag-text {
+  line-height: 1;
+}
+
+.dctc-sc-tag-remove {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: #6366f1;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 10px;
+  height: 15px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 2px;
+  padding: 0;
+  transition: all 0.15s ease;
+  width: 15px;
+}
+
+.dctc-sc-tag-remove:hover {
+  background: #4338ca;
+  color: #ffffff;
+}
+
+.dctc-sc-tag-inline-input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  flex: 1 1 120px;
+  font-size: 12.5px !important;
+  height: auto !important;
+  margin: 0 !important;
+  min-width: 100px;
+  outline: none !important;
+  padding: 4px 6px !important;
+}
+
+/* Preset Quick-Add Chips */
+.dctc-sc-preset-skills-wrapper {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.dctc-sc-preset-label {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.dctc-sc-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dctc-sc-skill-chip {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 500;
+  gap: 4px;
+  padding: 3px 9px;
+  transition: all 0.15s ease;
+}
+
+.dctc-sc-skill-chip:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.dctc-sc-skill-chip.is-selected {
+  background: #4f46e5;
+  border: 1px solid #4338ca;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.dctc-sc-chip-icon {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Pinned Modal Footer */
+.dctc-sc-modal-footer-bar {
+  align-items: center;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+  justify-content: flex-end;
+  padding: 14px 24px;
+  position: relative;
+  z-index: 10;
+}
+
+.dctc-sc-btn-cancel {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  color: #475569 !important;
+  cursor: pointer;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 18px !important;
+  transition: all 0.15s ease !important;
+}
+
+.dctc-sc-btn-cancel:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #1e293b !important;
+}
+
+.dctc-sc-btn-submit {
+  align-items: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  border: 1px solid #3730a3 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25) !important;
+  color: #ffffff !important;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  gap: 6px;
+  padding: 8px 20px !important;
+  transition: all 0.15s ease !important;
+}
+
+.dctc-sc-btn-submit:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.dctc-sc-btn-submit:disabled {
+  opacity: 0.7;
+}
+
+
