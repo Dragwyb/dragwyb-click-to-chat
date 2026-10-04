@@ -43,6 +43,9 @@ class DCTC_AI_DB {
 			tags text DEFAULT NULL,
 			internal_notes longtext DEFAULT NULL,
 			lead_id bigint(20) unsigned DEFAULT 0 NOT NULL,
+			control_mode varchar(20) DEFAULT 'ai' NOT NULL,
+			reply_surface varchar(30) DEFAULT 'chatbot_widget' NOT NULL,
+			support_ticket_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
@@ -52,7 +55,9 @@ class DCTC_AI_DB {
 			KEY channel (channel),
 			KEY assigned_to (assigned_to),
 			KEY sentiment (sentiment),
-			KEY intent_tag (intent_tag)
+			KEY intent_tag (intent_tag),
+			KEY control_mode (control_mode),
+			KEY support_ticket_id (support_ticket_id)
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -243,6 +248,59 @@ class DCTC_AI_DB {
 		if ( empty( $current_settings ) || empty( $current_settings['rag'] ) ) {
 			$all_settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 			update_option( 'dctc_ai_chat_assistant_settings', $all_settings );
+		}
+	}
+
+	/**
+	 * Ensure all modern columns exist on existing sessions and leads tables.
+	 * Can be safely called during runtime without overhead.
+	 *
+	 * @return void
+	 */
+	public static function ensure_session_columns() {
+		global $wpdb;
+		$sessions_table     = $wpdb->prefix . 'dctc_ai_sessions';
+		$sessions_table_esc = esc_sql( $sessions_table );
+
+		// Quick check if table exists
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table_exists = $wpdb->get_var( $wpdb->prepare(
+			'SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = %s AND TABLE_SCHEMA = DATABASE()',
+			$sessions_table_esc
+		) );
+
+		if ( ! $table_exists ) {
+			self::dctc_ai_create_tables();
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$session_cols = $wpdb->get_col( $wpdb->prepare(
+			'SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = %s AND TABLE_SCHEMA = DATABASE()',
+			$sessions_table_esc
+		) );
+
+		if ( ! empty( $session_cols ) ) {
+			$sess_defs = array(
+				'summary'           => "ADD COLUMN `summary` text DEFAULT NULL AFTER `content`",
+				'sentiment'         => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
+				'intent_tag'        => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
+				'channel'           => "ADD COLUMN `channel` varchar(30) DEFAULT 'chatbot' NOT NULL AFTER `intent_tag`",
+				'assigned_to'       => "ADD COLUMN `assigned_to` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `channel`",
+				'unread_count'      => "ADD COLUMN `unread_count` int(11) DEFAULT 0 NOT NULL AFTER `assigned_to`",
+				'tags'              => "ADD COLUMN `tags` text DEFAULT NULL AFTER `unread_count`",
+				'internal_notes'    => "ADD COLUMN `internal_notes` longtext DEFAULT NULL AFTER `tags`",
+				'lead_id'           => "ADD COLUMN `lead_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `internal_notes`",
+				'control_mode'      => "ADD COLUMN `control_mode` varchar(20) DEFAULT 'ai' NOT NULL AFTER `lead_id`",
+				'reply_surface'     => "ADD COLUMN `reply_surface` varchar(30) DEFAULT 'chatbot_widget' NOT NULL AFTER `control_mode`",
+				'support_ticket_id' => "ADD COLUMN `support_ticket_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `reply_surface`",
+			);
+			foreach ( $sess_defs as $col => $sql_part ) {
+				if ( ! in_array( $col, $session_cols, true ) ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange
+					$wpdb->query( "ALTER TABLE `$sessions_table_esc` $sql_part" );
+				}
+			}
 		}
 	}
 

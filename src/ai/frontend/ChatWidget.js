@@ -514,6 +514,7 @@ export default function ChatWidget({ settings, inline }) {
 	const emojiWrapRef = useRef(null);
 	const wrapperRef = useRef(null);
 	const isMountedRef = useRef(true);
+	const baseInputRef = useRef('');
 	const attachmentsRef = useRef(attachments);
 	attachmentsRef.current = attachments;
 
@@ -605,7 +606,9 @@ export default function ChatWidget({ settings, inline }) {
 		}
 
 		if (isListening && recognitionRef.current) {
-			recognitionRef.current.stop();
+			try {
+				recognitionRef.current.stop();
+			} catch (e) { }
 			setIsListening(false);
 			return;
 		}
@@ -613,27 +616,27 @@ export default function ChatWidget({ settings, inline }) {
 		try {
 			const recognition = new SpeechRecognition();
 			recognition.continuous = false;
-			recognition.interimResults = false;
+			recognition.interimResults = true;
 			const voiceLang =
-				bot?.voice_language && bot.voice_language !== 'auto'
-					? bot.voice_language
+				chatbot?.voice_language && chatbot.voice_language !== 'auto'
+					? chatbot.voice_language
 					: (navigator.language || 'en-US');
 			recognition.lang = voiceLang;
 
 			recognition.onstart = () => {
 				setIsListening(true);
+				baseInputRef.current = input.trim();
 			};
 
 			recognition.onresult = (event) => {
 				let transcript = '';
-				for (let i = event.resultIndex; i < event.results.length; i++) {
+				for (let i = 0; i < event.results.length; i++) {
 					transcript += event.results[i][0].transcript;
 				}
-				if (transcript) {
-					setInput((prev) => {
-						const trimmed = prev.trim();
-						return trimmed ? `${trimmed} ${transcript}` : transcript;
-					});
+				const cleanTranscript = transcript.trim();
+				if (cleanTranscript) {
+					const base = baseInputRef.current;
+					setInput(base ? `${base} ${cleanTranscript}` : cleanTranscript);
 				}
 			};
 
@@ -650,7 +653,7 @@ export default function ChatWidget({ settings, inline }) {
 		} catch (err) {
 			setIsListening(false);
 		}
-	}, [isListening, bot]);
+	}, [isListening, input, chatbot?.voice_language]);
 
 	const toggleSpeakMessage = useCallback((text, msgIdx) => {
 		if (typeof window === 'undefined' || !window.speechSynthesis) {
@@ -666,8 +669,8 @@ export default function ChatWidget({ settings, inline }) {
 		window.speechSynthesis.cancel();
 		const cleanText = (text || '').replace(/[*_#`[\]()]/g, '');
 		const utterance = new SpeechSynthesisUtterance(cleanText);
-		if (bot?.voice_language && bot.voice_language !== 'auto') {
-			utterance.lang = bot.voice_language;
+		if (chatbot?.voice_language && chatbot.voice_language !== 'auto') {
+			utterance.lang = chatbot.voice_language;
 		}
 		utterance.onend = () => {
 			setSpeakingIndex(null);
@@ -677,7 +680,7 @@ export default function ChatWidget({ settings, inline }) {
 		};
 		setSpeakingIndex(msgIdx);
 		window.speechSynthesis.speak(utterance);
-	}, [speakingIndex, bot]);
+	}, [speakingIndex, chatbot?.voice_language]);
 
 	// Click / tap outside closes floating chat.
 	useEffect(() => {
@@ -1909,17 +1912,17 @@ export default function ChatWidget({ settings, inline }) {
 											'button',
 											{
 												type: 'button',
-												className: `dctc-ai-msg-tts-btn ${speakingIndex === messageIndex
+												className: `dctc-ai-msg-tts-btn ${speakingIndex === index
 													? 'is-speaking'
 													: ''
 													}`,
 												onClick: () =>
 													toggleSpeakMessage(
 														message.content,
-														messageIndex
+														index
 													),
 												title:
-													speakingIndex === messageIndex
+													speakingIndex === index
 														? __(
 															'Stop reading',
 															'dragwyb-click-to-chat'
@@ -1929,7 +1932,7 @@ export default function ChatWidget({ settings, inline }) {
 															'dragwyb-click-to-chat'
 														),
 												'aria-label':
-													speakingIndex === messageIndex
+													speakingIndex === index
 														? __(
 															'Stop reading',
 															'dragwyb-click-to-chat'
@@ -1939,7 +1942,7 @@ export default function ChatWidget({ settings, inline }) {
 															'dragwyb-click-to-chat'
 														),
 											},
-											speakingIndex === messageIndex ? '⏹️' : '🔊'
+											speakingIndex === index ? '⏹️' : '🔊'
 										)
 									),
 									message.action_buttons &&
@@ -3384,7 +3387,7 @@ export default function ChatWidget({ settings, inline }) {
 							}),
 
 							// Voice Speech-to-Text Button
-							(bot?.enable_voice_input !== false) &&
+							(chatbot?.enable_voice_input !== false) &&
 							createElement(
 								'button',
 								{

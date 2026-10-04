@@ -76,8 +76,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			add_action( 'init', array( $this, 'dctc_ai_register_ai_client' ) );
 			add_action( 'init', array( $this, 'dctc_ai_initialize_session_cookies' ) );
 			add_action( 'init', array( $this, 'dctc_ai_init_rag_engine' ) );
+			add_action( 'init', array( $this, 'dctc_ai_maybe_upgrade_schema' ) );
 			add_action( 'admin_init', array( $this, 'dctc_ai_maybe_complete_wizard' ) );
-			add_action( 'admin_init', array( $this, 'dctc_ai_maybe_upgrade_schema' ) );
 			add_action( 'admin_init', array( $this, 'dctc_ai_maybe_activation_redirect' ) );
 			add_action( 'admin_menu', array( $this, 'dctc_ai_add_admin_menu' ), 20 );
 			add_action( 'admin_enqueue_scripts', array( $this, 'dctc_ai_enqueue_admin_assets' ) );
@@ -169,17 +169,15 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 */
 		public function dctc_ai_maybe_upgrade_schema() {
 			$installed = get_option( 'dctc_ai_db_version' );
-			if ( $installed === DCTC_VERSION ) {
-				return;
-			}
+			if ( $installed !== DCTC_VERSION ) {
+				DCTC_AI_DB::dctc_ai_create_tables();
+				update_option( 'dctc_ai_db_version', DCTC_VERSION );
 
-			DCTC_AI_DB::dctc_ai_create_tables();
-			update_option( 'dctc_ai_db_version', DCTC_VERSION );
-
-			if ( ! get_option( 'dctc_ai_setup_wizard_status' ) ) {
-				update_option( 'dctc_ai_setup_wizard_status', 'pending' );
+				if ( ! get_option( 'dctc_ai_setup_wizard_status' ) ) {
+					update_option( 'dctc_ai_setup_wizard_status', 'pending' );
+				}
+				update_option( 'dctc_ai_installed', '1' );
 			}
-			update_option( 'dctc_ai_installed', '1' );
 		}
 
 		/**

@@ -33,26 +33,32 @@ class DCTC_Support_AI_Handoff_Service {
 			return false;
 		}
 
-		// Check session table control_mode
+		// Safely query session record using SELECT * to prevent MySQL unknown column errors
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT control_mode, support_ticket_id FROM `$table_sessions` WHERE session_id = %s", $session_id ),
+			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ),
 			ARRAY_A
 		);
 
-		if ( $session && 'human' === $session['control_mode'] ) {
-			return true;
-		}
+		if ( $session ) {
+			if ( ! array_key_exists( 'control_mode', $session ) && class_exists( 'DCTC_AI_DB' ) ) {
+				DCTC_AI_DB::ensure_session_columns();
+			}
 
-		// If linked to a support ticket, check ticket control_mode & status
-		if ( $session && ! empty( $session['support_ticket_id'] ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ticket = $wpdb->get_row(
-				$wpdb->prepare( "SELECT control_mode, status FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ),
-				ARRAY_A
-			);
-			if ( $ticket && ( 'human' === $ticket['control_mode'] || in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) ) {
+			if ( ! empty( $session['control_mode'] ) && 'human' === $session['control_mode'] ) {
 				return true;
+			}
+
+			// If linked to a support ticket, check ticket control_mode & status
+			if ( ! empty( $session['support_ticket_id'] ) ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$ticket = $wpdb->get_row(
+					$wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ),
+					ARRAY_A
+				);
+				if ( $ticket && ( ( ! empty( $ticket['control_mode'] ) && 'human' === $ticket['control_mode'] ) || in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) ) {
+					return true;
+				}
 			}
 		}
 
