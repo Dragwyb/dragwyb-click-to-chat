@@ -291,6 +291,16 @@ export default function App( { settings: initialSettings } ) {
 						<h1 id="dctc-ai-tab-title">{ current?.label }</h1>
 						<p id="dctc-ai-tab-desc">{ current?.desc }</p>
 					</div>
+					<div className="dctc-ai-content-header__actions">
+						<a
+							href="admin.php?page=dragwyb-click-to-chat-guide&tab=ai"
+							className="dctc-ai-guide-btn"
+							title={ __( 'View AI Assistant Documentation & Guide', 'dragwyb-click-to-chat' ) }
+						>
+							<span className="dashicons dashicons-book" aria-hidden="true" />
+							<span>{ __( 'User Guide', 'dragwyb-click-to-chat' ) }</span>
+						</a>
+					</div>
 				</header>
 
 				{ notice && (

@@ -25,31 +25,39 @@ $dctc_current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
     <!-- Success Message -->
     <div class="dctc-success-message"></div>
 
-    <!-- Header with 3 Channels Steps -->
-    <div class="dctc-header">
-        <ul class="dctc-tabs" style="max-width: 750px;">
-            <li>
-                <a href="#"
-                    class="dctc-tab <?php echo $dctc_current_step === 0 ? 'active' : ''; ?>"
-                    data-step="0">
-                    <span><?php esc_html_e('1. Select Channels', 'dragwyb-click-to-chat'); ?></span>
-                </a>
-            </li>
-            <li>
-                <a href="#"
-                    class="dctc-tab <?php echo $dctc_current_step === 1 ? 'active' : ''; ?>"
-                    data-step="1">
-                    <span><?php esc_html_e('2. Widget Customization', 'dragwyb-click-to-chat'); ?></span>
-                </a>
-            </li>
-            <li>
-                <a href="#"
-                    class="dctc-tab <?php echo $dctc_current_step === 2 ? 'active' : ''; ?>"
-                    data-step="2">
-                    <span><?php esc_html_e('3. Triggers & Targeting', 'dragwyb-click-to-chat'); ?></span>
-                </a>
-            </li>
-        </ul>
+    <!-- Header with 3 Channels Steps & Guide Link -->
+    <div class="dctc-header dctc-header-with-actions">
+        <div class="dctc-header-left">
+            <ul class="dctc-tabs" style="max-width: 750px;">
+                <li>
+                    <a href="#"
+                        class="dctc-tab <?php echo $dctc_current_step === 0 ? 'active' : ''; ?>"
+                        data-step="0">
+                        <span><?php esc_html_e('1. Select Channels', 'dragwyb-click-to-chat'); ?></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#"
+                        class="dctc-tab <?php echo $dctc_current_step === 1 ? 'active' : ''; ?>"
+                        data-step="1">
+                        <span><?php esc_html_e('2. Widget Customization', 'dragwyb-click-to-chat'); ?></span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#"
+                        class="dctc-tab <?php echo $dctc_current_step === 2 ? 'active' : ''; ?>"
+                        data-step="2">
+                        <span><?php esc_html_e('3. Triggers & Targeting', 'dragwyb-click-to-chat'); ?></span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="dctc-header-right">
+            <a href="<?php echo esc_url(admin_url('admin.php?page=dragwyb-click-to-chat-guide&tab=channels')); ?>" class="dctc-guide-link-btn" title="<?php esc_attr_e('View Channels setup documentation', 'dragwyb-click-to-chat'); ?>">
+                <span class="dashicons dashicons-book" style="font-size:16px; width:16px; height:16px; margin-right:4px;"></span>
+                <?php esc_html_e('User Guide', 'dragwyb-click-to-chat'); ?>
+            </a>
+        </div>
     </div>
 
     <!-- Main Content -->

@@ -241,7 +241,15 @@ body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #dctc-ai-admin-root {
   box-sizing: border-box;
 }
 .dctc-ai-content-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
   margin-bottom: 0.85rem;
+}
+.dctc-ai-content-header__meta {
+  flex: 1;
+  min-width: 0;
 }
 .dctc-ai-content-header h1 {
   font-size: 1.35rem;
@@ -256,6 +264,37 @@ body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #dctc-ai-admin-root {
   color: var(--dctc-ai-text-muted);
   line-height: 1.4;
   margin: 0.25rem 0 0;
+}
+.dctc-ai-content-header__actions {
+  flex-shrink: 0;
+}
+.dctc-ai-guide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+  background: #ffffff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+  border-radius: 7px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.05);
+  transition: all 0.2s ease;
+}
+.dctc-ai-guide-btn:hover {
+  background: #f5f3ff;
+  border-color: #c7d2fe;
+  color: #4338ca;
+  text-decoration: none;
+  box-shadow: 0 2px 5px rgba(99, 102, 241, 0.12);
+}
+.dctc-ai-guide-btn .dashicons {
+  font-size: 1rem;
+  width: 1rem;
+  height: 1rem;
+  color: #6366f1;
 }
 
 /* --- Subtab Navigation Bar (General, Advance, Style) --- */

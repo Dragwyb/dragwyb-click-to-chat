@@ -1205,3 +1205,533 @@ input:checked+.dctc-slider:before {
     border-radius: 8px;
     cursor: pointer;
 }
+
+/* ==========================================================================
+   Header with Right-side Actions & Guide Button
+   ========================================================================== */
+.dctc-header-with-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.dctc-header-left {
+    flex: 1;
+}
+
+.dctc-header-right {
+    flex-shrink: 0;
+}
+
+.dctc-guide-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    background: #ffffff;
+    color: #7c3aed;
+    border: 1.5px solid #ddd6fe;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(124, 58, 237, 0.08);
+}
+
+.dctc-guide-link-btn:hover {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border-color: #c4b5fd;
+    text-decoration: none;
+    box-shadow: 0 3px 8px rgba(124, 58, 237, 0.15);
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   User Guide Page - 3 Feature Tabs & Zig-Zag Layout
+   ========================================================================== */
+.dctc-guide-wrap {
+    background: #f8fafc;
+    min-height: calc(100vh - 100px);
+    padding-bottom: 60px;
+}
+
+.dctc-guide-three-tabs {
+    display: flex;
+    justify-content: center;
+    max-width: 780px;
+    margin: 0 auto;
+    background: #f1f5f9;
+    padding: 5px;
+    border-radius: 12px;
+    gap: 6px;
+}
+
+.dctc-guide-three-tabs li {
+    flex: 1;
+    margin: 0;
+}
+
+.dctc-guide-tab-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    background: transparent;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.dctc-guide-tab-btn:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.dctc-guide-tab-btn.active {
+    color: #6d28d9;
+    background: #ffffff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-weight: 700;
+}
+
+.dctc-guide-container {
+    max-width: 1060px;
+    margin: 32px auto 0;
+    padding: 0 24px;
+}
+
+/* Hero Banner (Enabled State) */
+.dctc-guide-hero-banner {
+    background: linear-gradient(135deg, #ffffff 0%, #fbf8ff 100%);
+    border: 1px solid #ede9fe;
+    border-radius: 16px;
+    padding: 28px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    box-shadow: 0 4px 16px -2px rgba(124, 58, 237, 0.06);
+    margin-bottom: 32px;
+}
+
+.dctc-guide-hero-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.dctc-guide-pill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    background: #f3e8ff;
+    color: #7e22ce;
+    border-radius: 9999px;
+    font-size: 11.5px;
+    font-weight: 600;
+}
+
+.dctc-guide-hero-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px;
+    line-height: 1.3;
+}
+
+.dctc-guide-hero-desc {
+    font-size: 14px;
+    color: #475569;
+    margin: 0;
+    line-height: 1.6;
+    max-width: 650px;
+}
+
+.dctc-guide-hero-actions {
+    flex-shrink: 0;
+}
+
+/* Quick Setup Checklist Map Bar */
+.dctc-guide-quick-map {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.dctc-quick-map-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    border-right: 1px solid #f1f5f9;
+    padding-right: 14px;
+}
+
+.dctc-quick-map-item:last-child {
+    border-right: none;
+    padding-right: 0;
+}
+
+.dctc-quick-map-item strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.dctc-quick-map-item small {
+    font-size: 11.5px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.dctc-map-badge {
+    align-self: flex-start;
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 4px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+}
+
+.dctc-map-badge.is-required {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.dctc-map-badge.is-visibility {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.dctc-map-badge.is-highlight {
+    background: #fefce8;
+    color: #ca8a04;
+    border: 1px solid #fef08a;
+}
+
+/* Alternating Zig-Zag Rows */
+.dctc-zigzag-row {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 36px 40px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.dctc-zigzag-row.is-reversed {
+    flex-direction: row-reverse;
+}
+
+.dctc-zigzag-content {
+    flex: 1 1 52%;
+}
+
+.dctc-zigzag-visual {
+    flex: 1 1 48%;
+}
+
+.dctc-step-badge-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.dctc-step-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #f5f3ff;
+    color: #6d28d9;
+    border: 1px solid #ddd6fe;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.dctc-chip-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.dctc-chip-tag.is-required {
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.dctc-chip-tag.is-visibility {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.dctc-chip-tag.is-highlight {
+    background: #fefce8;
+    color: #a16207;
+    border: 1px solid #fef08a;
+}
+
+.dctc-zigzag-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 10px;
+    line-height: 1.35;
+}
+
+.dctc-zigzag-desc {
+    font-size: 13.5px;
+    color: #475569;
+    line-height: 1.65;
+    margin: 0 0 16px;
+}
+
+.dctc-guide-bullet-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dctc-guide-bullet-list li {
+    position: relative;
+    padding-left: 22px;
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.55;
+}
+
+.dctc-guide-bullet-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    top: 1px;
+    color: #7c3aed;
+    font-weight: 700;
+    font-size: 12px;
+}
+
+/* Visual Mockup Card Container */
+.dctc-mockup-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+.dctc-mockup-header {
+    background: #0f172a;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dctc-mockup-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dctc-mockup-dot.red { background: #ef4444; }
+.dctc-mockup-dot.yellow { background: #f59e0b; }
+.dctc-mockup-dot.green { background: #10b981; }
+
+.dctc-mockup-title {
+    color: #cbd5e1;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.dctc-mockup-body {
+    padding: 18px;
+    background: #ffffff;
+}
+
+.dctc-mockup-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #fafafa;
+}
+
+.dctc-mockup-item:last-child {
+    margin-bottom: 0;
+}
+
+.dctc-mockup-item.is-active {
+    background: #ffffff;
+    border-color: #ddd6fe;
+    box-shadow: 0 1px 4px rgba(124, 58, 237, 0.08);
+}
+
+.dctc-mockup-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+.dctc-mockup-item div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.dctc-mockup-item strong {
+    font-size: 12.5px;
+    color: #0f172a;
+}
+
+.dctc-mockup-item small {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.dctc-mockup-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #059669;
+    background: #ecfdf5;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid #a7f3d0;
+}
+
+/* Disabled Hero Card State */
+.dctc-guide-disabled-hero {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 50px 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+}
+
+.dctc-guide-disabled-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.dctc-guide-disabled-title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 14px 0 10px;
+}
+
+.dctc-guide-disabled-desc {
+    font-size: 14.5px;
+    color: #475569;
+    line-height: 1.65;
+    max-width: 680px;
+    margin: 0 auto 36px;
+}
+
+.dctc-guide-benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 36px;
+    text-align: left;
+}
+
+.dctc-benefit-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dctc-benefit-icon {
+    font-size: 24px;
+}
+
+.dctc-benefit-card strong {
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.dctc-benefit-card p {
+    font-size: 12.5px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.55;
+}
+
+@media (max-width: 860px) {
+    .dctc-zigzag-row,
+    .dctc-zigzag-row.is-reversed {
+        flex-direction: column;
+        padding: 24px;
+        gap: 24px;
+    }
+    .dctc-guide-quick-map {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .dctc-quick-map-item {
+        border-right: none;
+        border-bottom: 1px solid #f1f5f9;
+        padding-bottom: 10px;
+        padding-right: 0;
+    }
+    .dctc-quick-map-item:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+    .dctc-guide-benefits-grid {
+        grid-template-columns: 1fr;
+    }
+    .dctc-guide-hero-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

@@ -51,7 +51,17 @@ function dctc_add_settings_page() {
 		'dctc_channels_page_html'
 	);
 
-	// 3. Submenu: Settings (Dedicated settings page with General & Import/Export tabs)
+	// 3. Submenu: Guide (Documentation & Walkthroughs for Channels, AI, Support)
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'Guide', 'dragwyb-click-to-chat' ),
+		__( 'Guide', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-guide',
+		'dctc_guide_page_html'
+	);
+
+	// 4. Submenu: Settings (Dedicated settings page with General & Import/Export tabs)
 	add_submenu_page(
 		'dragwyb-click-to-chat',
 		__( 'Settings', 'dragwyb-click-to-chat' ),
@@ -95,8 +105,9 @@ function dctc_admin_scripts( $hook ) {
 	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_channels = ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' );
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
+	$is_guide    = ( 'dragwyb-click-to-chat-guide' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-guide' );
 
-	if ( ! $is_channels && ! $is_settings ) {
+	if ( ! $is_channels && ! $is_settings && ! $is_guide ) {
 		return;
 	}
 
@@ -150,6 +161,34 @@ function dctc_admin_scripts( $hook ) {
 			)
 		);
 	}
+
+	if ( $is_guide ) {
+		wp_enqueue_script(
+			'dctc-admin-guide',
+			DCTC_PLUGIN_URL . 'admin/assets/js/admin-guide.js',
+			array( 'jquery' ),
+			DCTC_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'dctc-admin-guide',
+			'dctc_admin',
+			array(
+				'nonce'   => wp_create_nonce( 'dctc_nonce' ),
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+			)
+		);
+	}
+}
+
+/**
+ * Render Interactive User Guide Page (Channels, AI Assistant, Support Center).
+ *
+ * @return void
+ */
+function dctc_guide_page_html() {
+	include DCTC_PLUGIN_DIR . 'admin/guide-page.php';
 }
 
 /**
