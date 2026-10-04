@@ -133,14 +133,13 @@ class DCTC_AI_Chat_Controller {
 			}
 		}
 
-		if ( ! current_user_can( 'manage_options' ) ) {
-			$cookie_session_id = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
-			if ( empty( $cookie_session_id ) || $cookie_session_id !== $session_id ) {
-				return $this->error_response(
-					esc_html__( 'Unauthorized session access.', 'dragwyb-click-to-chat' ),
-					403
-				);
-			}
+		if ( empty( $session_id ) || ! preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $session_id ) ) {
+			$session_id = 'sess_' . wp_generate_password( 9, false );
+		}
+
+		if ( ! headers_sent() ) {
+			setcookie( 'dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+			$_COOKIE['dctc_ai_session_id'] = $session_id;
 		}
 
 		if ( empty( $prompt ) && empty( $attachments ) ) {

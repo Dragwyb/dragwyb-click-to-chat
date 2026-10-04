@@ -381,6 +381,14 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			wp_enqueue_script( 'dctc-ai-frontend-script', DCTC_PLUGIN_URL . 'build/ai/frontend/dctc-ai-frontend.js', $asset_file['dependencies'], $asset_file['version'], true );
 
 			$session_id = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
+			if ( empty( $session_id ) ) {
+				$session_id = 'sess_' . wp_generate_password( 9, false );
+				if ( ! headers_sent() ) {
+					setcookie( 'dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+					setcookie( 'dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
+				}
+				$_COOKIE['dctc_ai_session_id'] = $session_id;
+			}
 			$is_allowed = isset( $_COOKIE['dctc_ai_clear_allowed'] );
 
 			$page_context = array(
