@@ -29,7 +29,76 @@ class DCTC_Support_Portal {
 	 * Enqueue frontend scripts and styles when shortcode or page is present.
 	 */
 	public static function maybe_enqueue_portal_assets() {
-		// Assets are inlined with the shortcode output for maximum theme compatibility and zero external script delays.
+		global $post;
+		if ( ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'dragwyb_support' ) ) || is_singular() ) {
+			self::enqueue_portal_styles();
+			self::enqueue_portal_scripts();
+		}
+	}
+
+	/**
+	 * Enqueue portal styles via wp_add_inline_style on dctc-ai-frontend-style handler.
+	 */
+	public static function enqueue_portal_styles() {
+		static $enqueued = false;
+		if ( $enqueued ) {
+			return;
+		}
+		$enqueued = true;
+
+		$handle = 'dctc-ai-frontend-style';
+
+		if ( ! wp_style_is( $handle, 'registered' ) && ! wp_style_is( $handle, 'enqueued' ) ) {
+			$frontend_css = file_exists( DCTC_PLUGIN_DIR . 'build/ai/frontend/style-dctc-ai-frontend.css' )
+				? 'build/ai/frontend/style-dctc-ai-frontend.css'
+				: 'build/ai/frontend/dctc-ai-frontend.css';
+			if ( file_exists( DCTC_PLUGIN_DIR . $frontend_css ) ) {
+				wp_register_style( $handle, DCTC_PLUGIN_URL . $frontend_css, array( 'dashicons' ), defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0.0' );
+			} else {
+				wp_register_style( $handle, false, array( 'dashicons' ), defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0.0' );
+			}
+		}
+
+		if ( ! wp_style_is( $handle, 'enqueued' ) ) {
+			wp_enqueue_style( $handle );
+		}
+
+		wp_add_inline_style( $handle, self::get_portal_css() );
+	}
+
+	/**
+	 * Enqueue portal scripts via wp_add_inline_script on dctc-ai-frontend-script handler.
+	 */
+	public static function enqueue_portal_scripts() {
+		static $enqueued = false;
+		if ( $enqueued ) {
+			return;
+		}
+		$enqueued = true;
+
+		$handle = 'dctc-ai-frontend-script';
+
+		if ( ! wp_script_is( $handle, 'registered' ) && ! wp_script_is( $handle, 'enqueued' ) ) {
+			$asset_file = file_exists( DCTC_PLUGIN_DIR . 'build/ai/frontend/dctc-ai-frontend.asset.php' )
+				? require DCTC_PLUGIN_DIR . 'build/ai/frontend/dctc-ai-frontend.asset.php'
+				: array(
+					'dependencies' => array( 'wp-element' ),
+					'version'      => defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0.0',
+				);
+			wp_register_script(
+				$handle,
+				DCTC_PLUGIN_URL . 'build/ai/frontend/dctc-ai-frontend.js',
+				$asset_file['dependencies'],
+				$asset_file['version'],
+				true
+			);
+		}
+
+		if ( ! wp_script_is( $handle, 'enqueued' ) ) {
+			wp_enqueue_script( $handle );
+		}
+
+		wp_add_inline_script( $handle, self::get_portal_js(), 'after' );
 	}
 
 	/**
@@ -39,6 +108,9 @@ class DCTC_Support_Portal {
 	 * @return string HTML output.
 	 */
 	public static function render_portal_shortcode( $atts = array() ) {
+		self::enqueue_portal_styles();
+		self::enqueue_portal_scripts();
+
 		$user_id   = get_current_user_id();
 		$user      = $user_id ? get_userdata( $user_id ) : null;
 		$user_name = $user ? $user->display_name : '';
@@ -46,7 +118,7 @@ class DCTC_Support_Portal {
 
 		$categories     = DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) );
 		$all_taxonomies = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_taxonomies() : array();
-		
+
 		$taxonomy_map = array();
 		foreach ( $all_taxonomies as $tax ) {
 			if ( 'category' === $tax['slug'] ) {
@@ -91,8 +163,8 @@ class DCTC_Support_Portal {
 			);
 		}
 
-		$rest_url   = esc_url_raw( rest_url( 'dctc-ai/v1/support/portal' ) );
-		$nonce      = wp_create_nonce( 'wp_rest' );
+		$rest_url = esc_url_raw( rest_url( 'dctc-ai/v1/support/portal' ) );
+		$nonce    = wp_create_nonce( 'wp_rest' );
 
 		ob_start();
 		?>
@@ -118,7 +190,7 @@ class DCTC_Support_Portal {
 
 			<!-- View 1: Ticket List -->
 			<div id="dctc-portal-view-list" class="dctc-portal-view active">
-				<div class="dctc-portal-filter-row">
+				<div id="dctc-portal-filter-row" class="dctc-portal-filter-row" style="display:none;">
 					<input type="text" id="dctc-portal-search-input" placeholder="<?php esc_attr_e( 'Search your tickets by subject or number...', 'dragwyb-click-to-chat' ); ?>" class="dctc-portal-input" />
 				</div>
 				<div id="dctc-portal-tickets-container" class="dctc-portal-tickets-list">
@@ -258,11 +330,493 @@ class DCTC_Support_Portal {
 				</form>
 			</div>
 		</div>
+		<?php
+		return ob_get_clean();
+	}
 
-		<style>
-			/* -------------------------------------------------------------
-			   Customer Support Portal Styles
-			   ------------------------------------------------------------- */
+	/**
+	 * Get portal JS script string.
+	 *
+	 * @return string JavaScript code.
+	 */
+	public static function get_portal_js() {
+		return '
+		(function() {
+			function initSupportPortal() {
+				const root = document.getElementById("dctc-support-portal");
+				if (!root || root.getAttribute("data-initialized") === "1") return;
+				root.setAttribute("data-initialized", "1");
+
+				const restUrl = root.getAttribute("data-rest-url");
+				const nonce = root.getAttribute("data-nonce");
+				const isLoggedIn = root.getAttribute("data-user-logged-in") === "1";
+
+				const viewList = document.getElementById("dctc-portal-view-list");
+				const viewDetail = document.getElementById("dctc-portal-view-detail");
+
+				const btnNew = document.getElementById("dctc-portal-btn-new");
+				const btnMyTickets = document.getElementById("dctc-portal-btn-my-tickets");
+				const filterRow = document.getElementById("dctc-portal-filter-row");
+				const ticketsContainer = document.getElementById("dctc-portal-tickets-container");
+				const searchInput = document.getElementById("dctc-portal-search-input");
+
+				const newForm = document.getElementById("dctc-portal-new-ticket-form");
+				const replyForm = document.getElementById("dctc-portal-reply-form");
+				const closeBtn = document.getElementById("dctc-detail-close-btn");
+
+				let currentTicketUuid = null;
+				let guestToken = localStorage.getItem("dctc_guest_token") || "";
+
+				let taxonomiesData = {};
+				try {
+					const rawTaxData = root.getAttribute("data-taxonomies-data");
+					taxonomiesData = rawTaxData ? JSON.parse(rawTaxData) : {};
+				} catch (e) {
+					taxonomiesData = {};
+				}
+
+				const modalNew = document.getElementById("dctc-portal-new-modal");
+				const btnModalClose = document.getElementById("dctc-portal-modal-close");
+				const btnModalCancel = document.getElementById("dctc-portal-modal-cancel");
+
+				function showView(view) {
+					[viewList, viewDetail].forEach(function(v) {
+						if (v) v.classList.remove("active");
+					});
+					if (view) view.classList.add("active");
+
+					if (view === viewList) {
+						if (btnNew) btnNew.style.display = "inline-flex";
+						if (btnMyTickets) btnMyTickets.style.display = "none";
+					} else {
+						if (btnNew) btnNew.style.display = "inline-flex";
+						if (btnMyTickets) btnMyTickets.style.display = "inline-flex";
+					}
+				}
+
+				function openNewModal() {
+					if (!modalNew) return;
+					modalNew.style.display = "flex";
+					syncFieldVisibility();
+					setTimeout(function() {
+						const firstInput = document.getElementById("dctc-new-name") || document.getElementById("dctc-new-subject");
+						if (firstInput) firstInput.focus();
+					}, 60);
+				}
+
+				function closeNewModal() {
+					if (!modalNew) return;
+					modalNew.style.display = "none";
+				}
+
+				if (btnNew) {
+					btnNew.addEventListener("click", openNewModal);
+				}
+				if (btnModalClose) {
+					btnModalClose.addEventListener("click", closeNewModal);
+				}
+				if (btnModalCancel) {
+					btnModalCancel.addEventListener("click", closeNewModal);
+				}
+				if (modalNew) {
+					modalNew.addEventListener("click", function(e) {
+						if (e.target === modalNew) {
+							closeNewModal();
+						}
+					});
+				}
+				document.addEventListener("keydown", function(e) {
+					if (e.key === "Escape" && modalNew && modalNew.style.display !== "none") {
+						closeNewModal();
+					}
+				});
+
+				function syncFieldVisibility() {
+					const catSelect = document.getElementById("dctc-new-category");
+					const dynamicContainer = document.getElementById("dctc-portal-dynamic-subfields");
+					if (!catSelect || !dynamicContainer) return;
+
+					const opt = catSelect.options[catSelect.selectedIndex];
+					let subTaxonomies = [];
+					if (opt && opt.getAttribute("data-sub-taxonomies")) {
+						try {
+							subTaxonomies = JSON.parse(opt.getAttribute("data-sub-taxonomies"));
+						} catch(e) {
+							subTaxonomies = [];
+						}
+					}
+
+					if (!Array.isArray(subTaxonomies) || subTaxonomies.length === 0) {
+						dynamicContainer.style.display = "none";
+						dynamicContainer.innerHTML = "";
+						return;
+					}
+
+					// Collect active sub-taxonomies that actually have terms
+					const activeSubTaxes = [];
+					subTaxonomies.forEach(function(slug) {
+						const tax = taxonomiesData[slug];
+						if (tax && Array.isArray(tax.terms) && tax.terms.length > 0) {
+							activeSubTaxes.push(tax);
+						}
+					});
+
+					if (activeSubTaxes.length === 0) {
+						dynamicContainer.style.display = "none";
+						dynamicContainer.innerHTML = "";
+						return;
+					}
+
+					// If only 1 field is present, display full width; if 2 or more, use 2-column grid
+					if (activeSubTaxes.length === 1) {
+						dynamicContainer.className = "dctc-form-grid-1";
+						dynamicContainer.style.gridTemplateColumns = "1fr";
+					} else {
+						dynamicContainer.className = "dctc-form-grid-2";
+						dynamicContainer.style.gridTemplateColumns = "";
+					}
+
+					let fieldsHtml = "";
+					activeSubTaxes.forEach(function(tax) {
+						const slug = tax.slug;
+						const taxName = tax.name || slug;
+						const terms = tax.terms;
+
+						fieldsHtml += "<div class=\"dctc-form-group" + (activeSubTaxes.length === 1 ? " is-full-width" : "") + "\">";
+						fieldsHtml += "  <label for=\"dctc-subfield-" + slug + "\">" + taxName + "</label>";
+						fieldsHtml += "  <select id=\"dctc-subfield-" + slug + "\" class=\"dctc-portal-select dctc-dynamic-subfield-input\" data-tax-slug=\"" + slug + "\">";
+						fieldsHtml += "    <option value=\"\">-- Select " + taxName + " (Optional) --</option>";
+						terms.forEach(function(term) {
+							const termName = term.name || term.slug || "";
+							fieldsHtml += "    <option value=\"" + termName + "\">" + termName + "</option>";
+						});
+						fieldsHtml += "  </select>";
+						fieldsHtml += "</div>";
+					});
+
+					dynamicContainer.innerHTML = fieldsHtml;
+					dynamicContainer.style.display = "grid";
+				}
+
+				const catDropdown = document.getElementById("dctc-new-category");
+				if (catDropdown) {
+					catDropdown.addEventListener("change", syncFieldVisibility);
+				}
+
+				if (btnMyTickets) {
+					btnMyTickets.addEventListener("click", function() {
+						showView(viewList);
+						loadTickets();
+					});
+				}
+
+				// Load Tickets List
+				async function loadTickets() {
+					if (!ticketsContainer) return;
+					ticketsContainer.innerHTML = "<div class=\"dctc-portal-loading\">Loading support tickets...</div>";
+					try {
+						const headers = { "X-WP-Nonce": nonce };
+						if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+						const q = searchInput ? searchInput.value.trim() : "";
+						const url = restUrl + "/tickets" + (q ? "?search=" + encodeURIComponent(q) : "");
+						const res = await fetch(url, { headers: headers });
+						const data = await res.json();
+
+						if (data.success && data.tickets && data.tickets.length > 0) {
+							if (filterRow) filterRow.style.display = "";
+							let html = "";
+							data.tickets.forEach(function(t) {
+								const statusBadge = t.status === "open" ? "dctc-badge-open" : (t.status === "resolved" ? "dctc-badge-resolved" : "dctc-badge-closed");
+								const categoryName = t.category_name || "General";
+								const chatCount = t.chat_count !== undefined ? t.chat_count : (t.message_count || 1);
+								const agentName = t.agent_name || "Assigned Agent";
+								const tags = Array.isArray(t.tags) ? t.tags : [];
+
+								html += "<div class=\"dctc-portal-ticket-card\" data-uuid=\"" + t.uuid + "\">";
+								html += "  <div class=\"dctc-portal-card-left\" style=\"flex:1;\">";
+								html += "    <div class=\"dctc-portal-card-top\">";
+								html += "      <span class=\"dctc-portal-card-num\">#" + t.ticket_number + "</span>";
+								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + t.status + "</span>";
+								html += "      <span class=\"dctc-portal-badge-cat\">" + categoryName + "</span>";
+								html += "      <span class=\"dctc-portal-badge-agent\">" + agentName + "</span>";
+								html += "      <span class=\"dctc-portal-badge-chats\">" + chatCount + " " + (chatCount === 1 ? "chat" : "chats") + "</span>";
+								html += "    </div>";
+								html += "    <h4 class=\"dctc-portal-card-title\">" + (t.subject || "Support Ticket") + "</h4>";
+								if (tags.length > 0) {
+									html += "    <div class=\"dctc-portal-card-badges-row\">";
+									tags.forEach(function(tag) {
+										html += "      <span class=\"dctc-portal-badge-tag\">" + tag + "</span>";
+									});
+									html += "    </div>";
+								}
+								html += "  </div>";
+								html += "  <span class=\"dctc-portal-card-date\">" + (t.created_at ? t.created_at.split(" ")[0] : "") + "</span>";
+								html += "</div>";
+							});
+							ticketsContainer.innerHTML = html;
+
+							// Add click handlers
+							document.querySelectorAll(".dctc-portal-ticket-card").forEach(function(card) {
+								card.addEventListener("click", function() {
+									const uuid = this.getAttribute("data-uuid");
+									loadTicketDetail(uuid);
+								});
+							});
+						} else {
+							if (q) {
+								if (filterRow) filterRow.style.display = "";
+								ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:#6B7280;\">No tickets found matching your search.</div>";
+							} else {
+								if (filterRow) filterRow.style.display = "none";
+								ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:#6B7280;\">No support requests found. Click \"New Support Request\" to start one.</div>";
+							}
+						}
+					} catch (err) {
+						if (filterRow) filterRow.style.display = "none";
+						ticketsContainer.innerHTML = "<div style=\"color:#DC2626;text-align:center;padding:20px 0;\">Error loading support tickets. Please try again.</div>";
+					}
+				}
+
+				// Load Single Ticket Detail
+				async function loadTicketDetail(uuid) {
+					currentTicketUuid = uuid;
+					showView(viewDetail);
+					const msgContainer = document.getElementById("dctc-portal-detail-messages");
+					if (!msgContainer) return;
+					msgContainer.innerHTML = "<div>Loading conversation...</div>";
+
+					try {
+						const headers = { "X-WP-Nonce": nonce };
+						if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+						const res = await fetch(restUrl + "/tickets/" + uuid, { headers: headers });
+						const data = await res.json();
+
+						if (data.success && data.ticket) {
+							const t = data.ticket;
+							const numEl = document.getElementById("dctc-detail-num");
+							const subEl = document.getElementById("dctc-detail-subject");
+							const statEl = document.getElementById("dctc-detail-status");
+							const priEl = document.getElementById("dctc-detail-priority");
+
+							if (numEl) numEl.textContent = "#" + t.ticket_number;
+							if (subEl) subEl.textContent = t.subject;
+							if (statEl) statEl.textContent = t.status;
+							if (priEl) priEl.textContent = t.priority;
+							
+							const catElem = document.getElementById("dctc-detail-category");
+							if (catElem) catElem.textContent = (t.category_name || "General");
+							
+							const agentElem = document.getElementById("dctc-detail-agent");
+							if (agentElem) agentElem.textContent = (t.agent_name || "Support Staff");
+
+							const chatsElem = document.getElementById("dctc-detail-chats");
+							const count = t.chat_count !== undefined ? t.chat_count : (t.messages ? t.messages.length : 0);
+							if (chatsElem) chatsElem.textContent = count + " " + (count === 1 ? "chat" : "chats");
+
+							const tagsRow = document.getElementById("dctc-detail-tags-row");
+							if (tagsRow) {
+								const tags = Array.isArray(t.tags) ? t.tags : [];
+								tagsRow.innerHTML = tags.map(function(tag) {
+									return "<span class=\"dctc-portal-badge-tag\">" + tag + "</span>";
+								}).join("");
+							}
+
+							let msgHtml = "";
+							(t.messages || []).forEach(function(m) {
+								const isCustomer = m.sender_type === "customer" || m.role === "user";
+								const senderLabel = isCustomer ? "You" : (m.sender_name ? m.sender_name : "Support Team");
+								msgHtml += "<div class=\"dctc-portal-msg " + (isCustomer ? "dctc-portal-msg-customer" : "dctc-portal-msg-agent") + "\">";
+								msgHtml += "  <div class=\"dctc-portal-msg-header\">";
+								msgHtml += "    <span>" + senderLabel + "</span>";
+								msgHtml += "    <span class=\"dctc-portal-msg-time\">" + (m.created_at || "") + "</span>";
+								msgHtml += "  </div>";
+								msgHtml += "  <div class=\"dctc-portal-msg-body\">" + m.content + "</div>";
+								msgHtml += "</div>";
+							});
+
+							msgContainer.innerHTML = msgHtml || "<div>No messages yet.</div>";
+							msgContainer.scrollTop = msgContainer.scrollHeight;
+						}
+					} catch (err) {
+						msgContainer.innerHTML = "<div style=\"color:#DC2626;\">Error loading ticket details.</div>";
+					}
+				}
+
+				// Submit New Ticket
+				if (newForm) {
+					newForm.addEventListener("submit", async function(e) {
+						e.preventDefault();
+						const submitBtn = document.getElementById("dctc-new-submit-btn");
+						if (submitBtn) {
+							submitBtn.disabled = true;
+							submitBtn.textContent = "Submitting...";
+						}
+
+						const nameInput = document.getElementById("dctc-new-name");
+						const emailInput = document.getElementById("dctc-new-email");
+						const catInput = document.getElementById("dctc-new-category");
+						const subjectInput = document.getElementById("dctc-new-subject");
+						const msgInput = document.getElementById("dctc-new-message");
+
+						// Collect all dynamic subfield values
+						const tagsList = [];
+						const dynamicSubContainer = document.getElementById("dctc-portal-dynamic-subfields");
+						if (dynamicSubContainer) {
+							const subInputs = dynamicSubContainer.querySelectorAll(".dctc-dynamic-subfield-input");
+							subInputs.forEach(function(input) {
+								const val = input.value ? input.value.trim() : "";
+								if (val && !tagsList.includes(val)) {
+									tagsList.push(val);
+								}
+							});
+						}
+
+						const payload = {
+							subject: subjectInput ? subjectInput.value : "",
+							category_id: catInput ? Number(catInput.value) : 0,
+							tags: tagsList,
+							initial_message: msgInput ? msgInput.value : "",
+							customer_name: nameInput ? nameInput.value : root.getAttribute("data-user-name"),
+							customer_email: emailInput ? emailInput.value : root.getAttribute("data-user-email"),
+						};
+
+						try {
+							const headers = {
+								"Content-Type": "application/json",
+								"X-WP-Nonce": nonce
+							};
+							if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+							const res = await fetch(restUrl + "/tickets", {
+								method: "POST",
+								headers: headers,
+								body: JSON.stringify(payload)
+							});
+							const data = await res.json();
+
+							if (data.success && data.ticket) {
+								if (data.ticket.guest_access_token) {
+									guestToken = data.ticket.guest_access_token;
+									localStorage.setItem("dctc_guest_token", guestToken);
+								}
+								newForm.reset();
+								closeNewModal();
+								loadTicketDetail(data.ticket.uuid);
+							} else {
+								alert(data.message || "Could not create ticket.");
+							}
+						} catch (err) {
+							alert("Error connecting to support server.");
+						} finally {
+							if (submitBtn) {
+								submitBtn.disabled = false;
+								submitBtn.textContent = "Submit Support Request";
+							}
+						}
+					});
+				}
+
+				// Reply to Ticket
+				if (replyForm) {
+					replyForm.addEventListener("submit", async function(e) {
+						e.preventDefault();
+						if (!currentTicketUuid) return;
+
+						const replyInput = document.getElementById("dctc-portal-reply-text");
+						const replyBtn = document.getElementById("dctc-portal-send-reply-btn");
+						const msgText = replyInput ? replyInput.value.trim() : "";
+						if (!msgText) return;
+
+						if (replyBtn) {
+							replyBtn.disabled = true;
+							replyBtn.textContent = "Sending...";
+						}
+
+						try {
+							const headers = {
+								"Content-Type": "application/json",
+								"X-WP-Nonce": nonce
+							};
+							if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+							const res = await fetch(restUrl + "/tickets/" + currentTicketUuid + "/reply", {
+								method: "POST",
+								headers: headers,
+								body: JSON.stringify({ message: msgText })
+							});
+							const data = await res.json();
+
+							if (data.success) {
+								if (replyInput) replyInput.value = "";
+								loadTicketDetail(currentTicketUuid);
+							} else {
+								alert(data.message || "Could not send reply.");
+							}
+						} catch (err) {
+							alert("Error sending reply.");
+						} finally {
+							if (replyBtn) {
+								replyBtn.disabled = false;
+								replyBtn.textContent = "Send Reply";
+							}
+						}
+					});
+				}
+
+				// Close Ticket
+				if (closeBtn) {
+					closeBtn.addEventListener("click", async function() {
+						if (!currentTicketUuid) return;
+						if (!confirm("Are you sure you want to mark this ticket as closed?")) return;
+
+						try {
+							const headers = { "X-WP-Nonce": nonce };
+							if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+							const res = await fetch(restUrl + "/tickets/" + currentTicketUuid + "/close", {
+								method: "POST",
+								headers: headers
+							});
+							const data = await res.json();
+							if (data.success) {
+								loadTicketDetail(currentTicketUuid);
+							}
+						} catch (err) {
+							alert("Could not close ticket.");
+						}
+					});
+				}
+
+				if (searchInput) {
+					let searchTimeout;
+					searchInput.addEventListener("input", function() {
+						clearTimeout(searchTimeout);
+						searchTimeout = setTimeout(loadTickets, 300);
+					});
+				}
+
+				// Initial load
+				loadTickets();
+			}
+
+			if (document.readyState === "loading") {
+				document.addEventListener("DOMContentLoaded", initSupportPortal);
+			} else {
+				initSupportPortal();
+			}
+		})();
+		';
+	}
+
+	/**
+	 * Get portal CSS stylesheet string.
+	 *
+	 * @return string CSS rules.
+	 */
+	public static function get_portal_css() {
+		return '
 			.dctc-portal-root {
 				background: #ffffff;
 				border: 1px solid #E5E7EB;
@@ -355,11 +909,12 @@ class DCTC_Support_Portal {
 				padding: 10px 14px;
 				transition: all 0.15s ease-in-out;
 				width: 100%;
+				max-width: 100%;
 			}
 			.dctc-portal-select {
 				appearance: none;
 				-webkit-appearance: none;
-				background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+				background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e");
 				background-position: right 12px center;
 				background-repeat: no-repeat;
 				background-size: 16px 16px;
@@ -420,6 +975,11 @@ class DCTC_Support_Portal {
 			.dctc-portal-card-date {
 				color: #9CA3AF;
 				font-size: 12px;
+			}
+			.dctc-form-grid-1 {
+				display: grid;
+				gap: 16px;
+				grid-template-columns: 1fr;
 			}
 			.dctc-form-grid-2 {
 				display: grid;
@@ -694,427 +1254,6 @@ class DCTC_Support_Portal {
 				gap: 6px;
 				margin-top: 6px;
 			}
-		</style>
-
-		<script>
-		(function() {
-			const root = document.getElementById('dctc-support-portal');
-			if (!root) return;
-
-			const restUrl = root.getAttribute('data-rest-url');
-			const nonce = root.getAttribute('data-nonce');
-			const isLoggedIn = root.getAttribute('data-user-logged-in') === '1';
-
-			const viewList = document.getElementById('dctc-portal-view-list');
-			const viewNew = document.getElementById('dctc-portal-view-new');
-			const viewDetail = document.getElementById('dctc-portal-view-detail');
-
-			const btnNew = document.getElementById('dctc-portal-btn-new');
-			const btnMyTickets = document.getElementById('dctc-portal-btn-my-tickets');
-			const ticketsContainer = document.getElementById('dctc-portal-tickets-container');
-			const searchInput = document.getElementById('dctc-portal-search-input');
-
-			const newForm = document.getElementById('dctc-portal-new-ticket-form');
-			const replyForm = document.getElementById('dctc-portal-reply-form');
-			const closeBtn = document.getElementById('dctc-detail-close-btn');
-
-			let currentTicketUuid = null;
-			let guestToken = localStorage.getItem('dctc_guest_token') || '';
-
-			let taxonomiesData = {};
-			try {
-				const rawTaxData = root.getAttribute('data-taxonomies-data');
-				taxonomiesData = rawTaxData ? JSON.parse(rawTaxData) : {};
-			} catch (e) {
-				taxonomiesData = {};
-			}
-
-			const modalNew = document.getElementById('dctc-portal-new-modal');
-			const btnModalClose = document.getElementById('dctc-portal-modal-close');
-			const btnModalCancel = document.getElementById('dctc-portal-modal-cancel');
-
-			function showView(view) {
-				[viewList, viewDetail].forEach(v => {
-					if (v) v.classList.remove('active');
-				});
-				if (view) view.classList.add('active');
-
-				if (view === viewList) {
-					btnNew.style.display = 'inline-flex';
-					btnMyTickets.style.display = 'none';
-				} else {
-					btnNew.style.display = 'inline-flex';
-					btnMyTickets.style.display = 'inline-flex';
-				}
-			}
-
-			function openNewModal() {
-				if (!modalNew) return;
-				modalNew.style.display = 'flex';
-				syncFieldVisibility();
-				setTimeout(function() {
-					const firstInput = document.getElementById('dctc-new-name') || document.getElementById('dctc-new-subject');
-					if (firstInput) firstInput.focus();
-				}, 60);
-			}
-
-			function closeNewModal() {
-				if (!modalNew) return;
-				modalNew.style.display = 'none';
-			}
-
-			if (btnNew) {
-				btnNew.addEventListener('click', openNewModal);
-			}
-			if (btnModalClose) {
-				btnModalClose.addEventListener('click', closeNewModal);
-			}
-			if (btnModalCancel) {
-				btnModalCancel.addEventListener('click', closeNewModal);
-			}
-			if (modalNew) {
-				modalNew.addEventListener('click', function(e) {
-					if (e.target === modalNew) {
-						closeNewModal();
-					}
-				});
-			}
-			document.addEventListener('keydown', function(e) {
-				if (e.key === 'Escape' && modalNew && modalNew.style.display !== 'none') {
-					closeNewModal();
-				}
-			});
-
-			function syncFieldVisibility() {
-				const catSelect = document.getElementById('dctc-new-category');
-				const dynamicContainer = document.getElementById('dctc-portal-dynamic-subfields');
-				if (!catSelect || !dynamicContainer) return;
-
-				const opt = catSelect.options[catSelect.selectedIndex];
-				let subTaxonomies = [];
-				if (opt && opt.getAttribute('data-sub-taxonomies')) {
-					try {
-						subTaxonomies = JSON.parse(opt.getAttribute('data-sub-taxonomies'));
-					} catch(e) {
-						subTaxonomies = [];
-					}
-				}
-
-				if (!Array.isArray(subTaxonomies) || subTaxonomies.length === 0) {
-					dynamicContainer.style.display = 'none';
-					dynamicContainer.innerHTML = '';
-					return;
-				}
-
-				// Build ordered input controls based on selected sub_taxonomies (only show if taxonomy has items)
-				let fieldsHtml = '';
-				subTaxonomies.forEach(function(slug) {
-					const tax = taxonomiesData[slug];
-					if (!tax) return;
-
-					const terms = Array.isArray(tax.terms) ? tax.terms : [];
-					// If this taxonomy doesn't have any items/terms, do not show this sub field
-					if (terms.length === 0) {
-						return;
-					}
-
-					const taxName = tax.name || slug;
-
-					fieldsHtml += '<div class="dctc-form-group">';
-					fieldsHtml += '  <label for="dctc-subfield-' + slug + '">' + taxName + '</label>';
-					fieldsHtml += '  <select id="dctc-subfield-' + slug + '" class="dctc-portal-select dctc-dynamic-subfield-input" data-tax-slug="' + slug + '">';
-					fieldsHtml += '    <option value="">-- Select ' + taxName + ' (Optional) --</option>';
-					terms.forEach(function(term) {
-						const termName = term.name || term.slug || '';
-						fieldsHtml += '    <option value="' + termName + '">' + termName + '</option>';
-					});
-					fieldsHtml += '  </select>';
-					fieldsHtml += '</div>';
-				});
-
-				if (!fieldsHtml) {
-					dynamicContainer.style.display = 'none';
-					dynamicContainer.innerHTML = '';
-					return;
-				}
-
-				dynamicContainer.innerHTML = fieldsHtml;
-				dynamicContainer.style.display = 'grid';
-			}
-
-			const catDropdown = document.getElementById('dctc-new-category');
-			if (catDropdown) {
-				catDropdown.addEventListener('change', syncFieldVisibility);
-			}
-
-			btnMyTickets.addEventListener('click', function() {
-				showView(viewList);
-				loadTickets();
-			});
-
-			// Load Tickets List
-			async function loadTickets() {
-				ticketsContainer.innerHTML = '<div class="dctc-portal-loading">Loading support tickets...</div>';
-				try {
-					const headers = { 'X-WP-Nonce': nonce };
-					if (guestToken) headers['X-Guest-Token'] = guestToken;
-
-					const q = searchInput.value.trim();
-					const url = restUrl + '/tickets' + (q ? '?search=' + encodeURIComponent(q) : '');
-					const res = await fetch(url, { headers: headers });
-					const data = await res.json();
-
-					if (data.success && data.tickets && data.tickets.length > 0) {
-						let html = '';
-						data.tickets.forEach(function(t) {
-							const statusBadge = t.status === 'open' ? 'dctc-badge-open' : (t.status === 'resolved' ? 'dctc-badge-resolved' : 'dctc-badge-closed');
-							const categoryName = t.category_name || 'General';
-							const chatCount = t.chat_count !== undefined ? t.chat_count : (t.message_count || 1);
-							const agentName = t.agent_name || 'Assigned Agent';
-							const tags = Array.isArray(t.tags) ? t.tags : [];
-
-							html += '<div class="dctc-portal-ticket-card" data-uuid="' + t.uuid + '">';
-							html += '  <div class="dctc-portal-card-left" style="flex:1;">';
-							html += '    <div class="dctc-portal-card-top">';
-							html += '      <span class="dctc-portal-card-num">#' + t.ticket_number + '</span>';
-							html += '      <span class="dctc-badge ' + statusBadge + '">' + t.status + '</span>';
-							html += '      <span class="dctc-portal-badge-cat">' + categoryName + '</span>';
-							html += '      <span class="dctc-portal-badge-agent">' + agentName + '</span>';
-							html += '      <span class="dctc-portal-badge-chats">' + chatCount + ' ' + (chatCount === 1 ? 'chat' : 'chats') + '</span>';
-							html += '    </div>';
-							html += '    <h4 class="dctc-portal-card-title">' + (t.subject || 'Support Ticket') + '</h4>';
-							if (tags.length > 0) {
-								html += '    <div class="dctc-portal-card-badges-row">';
-								tags.forEach(function(tag) {
-									html += '      <span class="dctc-portal-badge-tag">' + tag + '</span>';
-								});
-								html += '    </div>';
-							}
-							html += '  </div>';
-							html += '  <span class="dctc-portal-card-date">' + (t.created_at ? t.created_at.split(' ')[0] : '') + '</span>';
-							html += '</div>';
-						});
-						ticketsContainer.innerHTML = html;
-
-						// Add click handlers
-						document.querySelectorAll('.dctc-portal-ticket-card').forEach(function(card) {
-							card.addEventListener('click', function() {
-								const uuid = this.getAttribute('data-uuid');
-								loadTicketDetail(uuid);
-							});
-						});
-					} else {
-						ticketsContainer.innerHTML = '<div style="text-align:center;padding:30px 0;color:#6B7280;">No support requests found. Click "New Support Request" to start one.</div>';
-					}
-				} catch (err) {
-					ticketsContainer.innerHTML = '<div style="color:#DC2626;">Error loading support tickets. Please try again.</div>';
-				}
-			}
-
-			// Load Single Ticket Detail
-			async function loadTicketDetail(uuid) {
-				currentTicketUuid = uuid;
-				showView(viewDetail);
-				const msgContainer = document.getElementById('dctc-portal-detail-messages');
-				msgContainer.innerHTML = '<div>Loading conversation...</div>';
-
-				try {
-					const headers = { 'X-WP-Nonce': nonce };
-					if (guestToken) headers['X-Guest-Token'] = guestToken;
-
-					const res = await fetch(restUrl + '/tickets/' + uuid, { headers: headers });
-					const data = await res.json();
-
-					if (data.success && data.ticket) {
-						const t = data.ticket;
-						document.getElementById('dctc-detail-num').textContent = '#' + t.ticket_number;
-						document.getElementById('dctc-detail-subject').textContent = t.subject;
-						document.getElementById('dctc-detail-status').textContent = t.status;
-						document.getElementById('dctc-detail-priority').textContent = t.priority;
-						
-						const catElem = document.getElementById('dctc-detail-category');
-						if (catElem) catElem.textContent = (t.category_name || 'General');
-						
-						const agentElem = document.getElementById('dctc-detail-agent');
-						if (agentElem) agentElem.textContent = (t.agent_name || 'Support Staff');
-
-						const chatsElem = document.getElementById('dctc-detail-chats');
-						const count = t.chat_count !== undefined ? t.chat_count : (t.messages ? t.messages.length : 0);
-						if (chatsElem) chatsElem.textContent = count + ' ' + (count === 1 ? 'chat' : 'chats');
-
-						const tagsRow = document.getElementById('dctc-detail-tags-row');
-						if (tagsRow) {
-							const tags = Array.isArray(t.tags) ? t.tags : [];
-							tagsRow.innerHTML = tags.map(function(tag) {
-								return '<span class="dctc-portal-badge-tag">' + tag + '</span>';
-							}).join('');
-						}
-
-						let msgHtml = '';
-						(t.messages || []).forEach(function(m) {
-							const isCustomer = m.sender_type === 'customer' || m.role === 'user';
-							const senderLabel = isCustomer ? 'You' : (m.sender_name ? m.sender_name : 'Support Team');
-							msgHtml += '<div class="dctc-portal-msg ' + (isCustomer ? 'dctc-portal-msg-customer' : 'dctc-portal-msg-agent') + '">';
-							msgHtml += '  <div class="dctc-portal-msg-header">';
-							msgHtml += '    <span>' + senderLabel + '</span>';
-							msgHtml += '    <span class="dctc-portal-msg-time">' + (m.created_at || '') + '</span>';
-							msgHtml += '  </div>';
-							msgHtml += '  <div class="dctc-portal-msg-body">' + m.content + '</div>';
-							msgHtml += '</div>';
-						});
-
-						msgContainer.innerHTML = msgHtml || '<div>No messages yet.</div>';
-						msgContainer.scrollTop = msgContainer.scrollHeight;
-					}
-				} catch (err) {
-					msgContainer.innerHTML = '<div style="color:#DC2626;">Error loading ticket details.</div>';
-				}
-			}
-
-			// Submit New Ticket
-			newForm.addEventListener('submit', async function(e) {
-				e.preventDefault();
-				const submitBtn = document.getElementById('dctc-new-submit-btn');
-				submitBtn.disabled = true;
-				submitBtn.textContent = 'Submitting...';
-
-				const nameInput = document.getElementById('dctc-new-name');
-				const emailInput = document.getElementById('dctc-new-email');
-				const catInput = document.getElementById('dctc-new-category');
-				const subjectInput = document.getElementById('dctc-new-subject');
-				const msgInput = document.getElementById('dctc-new-message');
-
-				// Collect all dynamic subfield values
-				const tagsList = [];
-				const dynamicContainer = document.getElementById('dctc-portal-dynamic-subfields');
-				if (dynamicContainer) {
-					const subInputs = dynamicContainer.querySelectorAll('.dctc-dynamic-subfield-input');
-					subInputs.forEach(function(input) {
-						const val = input.value ? input.value.trim() : '';
-						if (val && !tagsList.includes(val)) {
-							tagsList.push(val);
-						}
-					});
-				}
-
-				const payload = {
-					subject: subjectInput.value,
-					category_id: catInput ? Number(catInput.value) : 0,
-					tags: tagsList,
-					initial_message: msgInput.value,
-					customer_name: nameInput ? nameInput.value : root.getAttribute('data-user-name'),
-					customer_email: emailInput ? emailInput.value : root.getAttribute('data-user-email'),
-				};
-
-				try {
-					const headers = {
-						'Content-Type': 'application/json',
-						'X-WP-Nonce': nonce
-					};
-					if (guestToken) headers['X-Guest-Token'] = guestToken;
-
-					const res = await fetch(restUrl + '/tickets', {
-						method: 'POST',
-						headers: headers,
-						body: JSON.stringify(payload)
-					});
-					const data = await res.json();
-
-					if (data.success && data.ticket) {
-						if (data.ticket.guest_access_token) {
-							guestToken = data.ticket.guest_access_token;
-							localStorage.setItem('dctc_guest_token', guestToken);
-						}
-						newForm.reset();
-						closeNewModal();
-						loadTicketDetail(data.ticket.uuid);
-					} else {
-						alert(data.message || 'Could not create ticket.');
-					}
-				} catch (err) {
-					alert('Error connecting to support server.');
-				} finally {
-					submitBtn.disabled = false;
-					submitBtn.textContent = 'Submit Support Request';
-				}
-			});
-
-			// Reply to Ticket
-			replyForm.addEventListener('submit', async function(e) {
-				e.preventDefault();
-				if (!currentTicketUuid) return;
-
-				const replyInput = document.getElementById('dctc-portal-reply-text');
-				const replyBtn = document.getElementById('dctc-portal-send-reply-btn');
-				const msgText = replyInput.value.trim();
-				if (!msgText) return;
-
-				replyBtn.disabled = true;
-				replyBtn.textContent = 'Sending...';
-
-				try {
-					const headers = {
-						'Content-Type': 'application/json',
-						'X-WP-Nonce': nonce
-					};
-					if (guestToken) headers['X-Guest-Token'] = guestToken;
-
-					const res = await fetch(restUrl + '/tickets/' + currentTicketUuid + '/reply', {
-						method: 'POST',
-						headers: headers,
-						body: JSON.stringify({ message: msgText })
-					});
-					const data = await res.json();
-
-					if (data.success) {
-						replyInput.value = '';
-						loadTicketDetail(currentTicketUuid);
-					} else {
-						alert(data.message || 'Could not send reply.');
-					}
-				} catch (err) {
-					alert('Error sending reply.');
-				} finally {
-					replyBtn.disabled = false;
-					replyBtn.textContent = 'Send Reply';
-				}
-			});
-
-			// Close Ticket
-			closeBtn.addEventListener('click', async function() {
-				if (!currentTicketUuid) return;
-				if (!confirm('Are you sure you want to mark this ticket as closed?')) return;
-
-				try {
-					const headers = { 'X-WP-Nonce': nonce };
-					if (guestToken) headers['X-Guest-Token'] = guestToken;
-
-					const res = await fetch(restUrl + '/tickets/' + currentTicketUuid + '/close', {
-						method: 'POST',
-						headers: headers
-					});
-					const data = await res.json();
-					if (data.success) {
-						loadTicketDetail(currentTicketUuid);
-					}
-				} catch (err) {
-					alert('Could not close ticket.');
-				}
-			});
-
-			if (searchInput) {
-				let searchTimeout;
-				searchInput.addEventListener('input', function() {
-					clearTimeout(searchTimeout);
-					searchTimeout = setTimeout(loadTickets, 300);
-				});
-			}
-
-			// Initial load
-			loadTickets();
-		})();
-		</script>
-		<?php
-		return ob_get_clean();
+		';
 	}
 }
