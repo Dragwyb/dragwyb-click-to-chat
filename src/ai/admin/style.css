@@ -6421,6 +6421,127 @@ body.dctc-ai-modal-open {
   padding-bottom: 10px;
 }
 
+/* WooCommerce Context Card */
+.dctc-wc-card {
+  background: #fdfbf7;
+  border-color: #fde68a;
+}
+
+.dctc-wc-header-stats {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dctc-wc-stat-badge {
+  background: #fff;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  flex: 1;
+  padding: 6px 8px;
+  text-align: center;
+}
+
+.dctc-wc-stat-badge .stat-label {
+  color: #92400e;
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dctc-wc-stat-badge .stat-value {
+  color: #78350f;
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.dctc-wc-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dctc-wc-order-item {
+  background: #fff;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  font-size: 11.5px;
+  padding: 8px 10px;
+}
+
+.dctc-wc-order-top {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dctc-wc-order-num {
+  color: #9a3412;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.dctc-wc-order-num:hover {
+  text-decoration: underline;
+}
+
+.dctc-wc-order-status {
+  background: #ffedd5;
+  border-radius: 4px;
+  color: #9a3412;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+}
+
+.dctc-wc-order-meta {
+  color: #64748b;
+  display: flex;
+  font-size: 11px;
+  justify-content: space-between;
+}
+
+.dctc-wc-order-items {
+  color: #475569;
+  font-size: 11px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AI Assist Buttons */
+.dctc-ai-assist-btn {
+  align-items: center;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.3);
+  color: #fff !important;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  gap: 4px;
+  padding: 4px 10px !important;
+  transition: all 0.15s ease;
+}
+
+.dctc-ai-assist-btn:hover {
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.45);
+  transform: translateY(-1px);
+}
+
+.dctc-ai-assist-btn:disabled {
+  opacity: 0.6;
+  transform: none;
+}
+
+
 
 
 

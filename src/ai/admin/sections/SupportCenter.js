@@ -37,6 +37,12 @@ export default function SupportCenter( { onSaveSuccess } ) {
 	const [ isPinnedNote, setIsPinnedNote ] = useState( false );
 	const [ submitting, setSubmitting ] = useState( false );
 
+	// WooCommerce & AI Assist state
+	const [ wcData, setWcData ] = useState( null );
+	const [ wcLoading, setWcLoading ] = useState( false );
+	const [ aiSummaryLoading, setAiSummaryLoading ] = useState( false );
+	const [ aiSuggestLoading, setAiSuggestLoading ] = useState( false );
+
 	const timelineEndRef = useRef( null );
 
 	const restNonce = window.dctc_ai_data?.nonce || '';
@@ -100,6 +106,26 @@ export default function SupportCenter( { onSaveSuccess } ) {
 		}
 	}, [ currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery, restBase, restNonce, selectedTicketId ] );
 
+	// Fetch WooCommerce Context
+	const fetchWooCommerceContext = useCallback( async ( ticketId ) => {
+		if ( ! ticketId ) return;
+		setWcLoading( true );
+		try {
+			const res = await fetch( `${ restBase }/tickets/${ ticketId }/woocommerce`, {
+				headers: { 'X-WP-Nonce': restNonce },
+			} );
+			const data = await res.json();
+			if ( data.success ) {
+				setWcData( data.woocommerce || null );
+			}
+		} catch ( err ) {
+			console.error( 'Error fetching WooCommerce context:', err );
+			setWcData( null );
+		} finally {
+			setWcLoading( false );
+		}
+	}, [ restBase, restNonce ] );
+
 	// Fetch Single Ticket Details
 	const fetchTicketDetails = useCallback( async ( ticketId ) => {
 		if ( ! ticketId ) return;
@@ -130,8 +156,9 @@ export default function SupportCenter( { onSaveSuccess } ) {
 	useEffect( () => {
 		if ( selectedTicketId ) {
 			fetchTicketDetails( selectedTicketId );
+			fetchWooCommerceContext( selectedTicketId );
 		}
-	}, [ selectedTicketId, fetchTicketDetails ] );
+	}, [ selectedTicketId, fetchTicketDetails, fetchWooCommerceContext ] );
 
 	// Scroll timeline to bottom when messages update
 	useEffect( () => {
@@ -285,6 +312,57 @@ export default function SupportCenter( { onSaveSuccess } ) {
 			console.error( 'Error adding note:', err );
 		} finally {
 			setSubmitting( false );
+		}
+	};
+
+	// Action: Generate AI Summary
+	const handleGenerateAiSummary = async () => {
+		if ( ! selectedTicket ) return;
+		setAiSummaryLoading( true );
+		try {
+			const res = await fetch( `${ restBase }/tickets/${ selectedTicket.id }/ai-summary`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': restNonce,
+				},
+			} );
+			const data = await res.json();
+			if ( data.success && data.ai_summary ) {
+				setSelectedTicket( ( prev ) => ( {
+					...prev,
+					ai_summary: data.ai_summary,
+				} ) );
+				fetchTicketDetails( selectedTicket.id );
+			}
+		} catch ( err ) {
+			console.error( 'Error generating AI summary:', err );
+		} finally {
+			setAiSummaryLoading( false );
+		}
+	};
+
+	// Action: AI Suggest Reply
+	const handleSuggestAiReply = async () => {
+		if ( ! selectedTicket ) return;
+		setAiSuggestLoading( true );
+		try {
+			const res = await fetch( `${ restBase }/tickets/${ selectedTicket.id }/ai-suggest-reply`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': restNonce,
+				},
+			} );
+			const data = await res.json();
+			if ( data.success && data.suggested_reply ) {
+				setReplyText( data.suggested_reply );
+				setComposerMode( 'reply' );
+			}
+		} catch ( err ) {
+			console.error( 'Error generating reply suggestion:', err );
+		} finally {
+			setAiSuggestLoading( false );
 		}
 	};
 
@@ -618,6 +696,17 @@ export default function SupportCenter( { onSaveSuccess } ) {
 											<span className="dashicons dashicons-lock"></span>
 											{ __( 'Internal Staff Note', 'dragwyb-click-to-chat' ) }
 										</button>
+										<button
+											type="button"
+											className="dctc-ai-assist-btn"
+											onClick={ handleSuggestAiReply }
+											disabled={ aiSuggestLoading }
+											title={ __( 'Draft a reply using AI based on the conversation context', 'dragwyb-click-to-chat' ) }
+											style={ { marginLeft: 'auto' } }
+										>
+											<span className="dashicons dashicons-superhero"></span>
+											{ aiSuggestLoading ? __( 'Thinking...', 'dragwyb-click-to-chat' ) : __( '✨ Suggest AI Reply', 'dragwyb-click-to-chat' ) }
+										</button>
 									</div>
 
 									{ composerMode === 'reply' ? (
@@ -702,13 +791,73 @@ export default function SupportCenter( { onSaveSuccess } ) {
 								</div>
 
 								{ /* AI Summary & Assistance */ }
-								{ selectedTicket.ai_summary && (
-									<div className="dctc-meta-card dctc-ai-summary-card">
-										<h4 className="dctc-meta-card-title">
+								<div className="dctc-meta-card dctc-ai-summary-card">
+									<div className="dctc-meta-card-title" style={ { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }>
+										<span style={ { display: 'flex', alignItems: 'center', gap: '6px' } }>
 											<span className="dashicons dashicons-superhero"></span>
 											{ __( 'AI Summary', 'dragwyb-click-to-chat' ) }
-										</h4>
+										</span>
+										<button
+											type="button"
+											className="dctc-ai-assist-btn"
+											onClick={ handleGenerateAiSummary }
+											disabled={ aiSummaryLoading }
+											style={ { fontSize: '10px', padding: '2px 8px' } }
+										>
+											{ aiSummaryLoading ? __( 'Generating...', 'dragwyb-click-to-chat' ) : selectedTicket.ai_summary ? __( '🔄 Refresh', 'dragwyb-click-to-chat' ) : __( '✨ Summarize', 'dragwyb-click-to-chat' ) }
+										</button>
+									</div>
+									{ selectedTicket.ai_summary ? (
 										<p className="dctc-ai-summary-text">{ selectedTicket.ai_summary }</p>
+									) : (
+										<p className="dctc-empty-hint" style={ { margin: 0, fontSize: '11px', color: '#6d28d9' } }>
+											{ __( 'Click Summarize to generate an instant AI ticket overview.', 'dragwyb-click-to-chat' ) }
+										</p>
+									) }
+								</div>
+
+								{ /* WooCommerce Order History */ }
+								{ wcData && wcData.is_active && (
+									<div className="dctc-meta-card dctc-wc-card">
+										<h4 className="dctc-meta-card-title">
+											<span className="dashicons dashicons-cart"></span>
+											{ __( 'WooCommerce Orders', 'dragwyb-click-to-chat' ) }
+										</h4>
+										<div className="dctc-wc-header-stats">
+											<div className="dctc-wc-stat-badge">
+												<span className="stat-label">{ __( 'Total Spent', 'dragwyb-click-to-chat' ) }</span>
+												<span className="stat-value" dangerouslySetInnerHTML={ { __html: wcData.total_spent || '$0' } } />
+											</div>
+											<div className="dctc-wc-stat-badge">
+												<span className="stat-label">{ __( 'Lifetime Orders', 'dragwyb-click-to-chat' ) }</span>
+												<span className="stat-value">{ wcData.order_count || 0 }</span>
+											</div>
+										</div>
+										<div className="dctc-wc-orders-list">
+											{ ( wcData.recent_orders || [] ).length === 0 ? (
+												<p className="dctc-empty-hint">{ __( 'No past orders found.', 'dragwyb-click-to-chat' ) }</p>
+											) : (
+												wcData.recent_orders.map( ( order ) => (
+													<div key={ order.id } className="dctc-wc-order-item">
+														<div className="dctc-wc-order-top">
+															<a href={ order.view_url } target="_blank" rel="noreferrer" className="dctc-wc-order-num">
+																#{ order.number } ↗
+															</a>
+															<span className="dctc-wc-order-status">{ order.status_name }</span>
+														</div>
+														<div className="dctc-wc-order-meta">
+															<span>{ order.date }</span>
+															<strong dangerouslySetInnerHTML={ { __html: order.total } } />
+														</div>
+														{ order.items_summary && (
+															<div className="dctc-wc-order-items" title={ order.items_summary }>
+																{ order.items_summary }
+															</div>
+														) }
+													</div>
+												) )
+											) }
+										</div>
 									</div>
 								) }
 

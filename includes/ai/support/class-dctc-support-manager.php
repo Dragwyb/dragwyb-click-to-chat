@@ -61,6 +61,8 @@ class DCTC_Support_Manager {
 		require_once $dir . 'class-dctc-support-assignment-engine.php';
 		require_once $dir . 'class-dctc-support-ai-handoff-service.php';
 		require_once $dir . 'class-dctc-support-notification-service.php';
+		require_once $dir . 'class-dctc-support-woocommerce-service.php';
+		require_once $dir . 'class-dctc-support-ai-assist-service.php';
 		require_once $dir . 'class-dctc-support-rest-controller.php';
 		require_once $dir . 'class-dctc-support-portal.php';
 
