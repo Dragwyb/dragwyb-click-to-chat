@@ -162,8 +162,13 @@ class DCTC_Support_Ticket_Service {
 			)
 		);
 
-		// Update agent workload if assigned
-		if ( $agent_id ) {
+		// Auto-assign if not explicitly assigned
+		if ( ! $agent_id && class_exists( 'DCTC_Support_Assignment_Engine' ) ) {
+			$auto_agent_id = DCTC_Support_Assignment_Engine::assign_ticket_automatically( $ticket_id );
+			if ( $auto_agent_id ) {
+				$fields['assigned_agent_id'] = $auto_agent_id;
+			}
+		} elseif ( $agent_id ) {
 			DCTC_Support_Agent_Service::update_workload( $agent_id );
 		}
 
