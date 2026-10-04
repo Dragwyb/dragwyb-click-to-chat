@@ -55,11 +55,14 @@
 }
 
 /* --- WordPress Admin Shell Resets --- */
+body.toplevel_page_dragwyb-click-to-chat #wpcontent,
 body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #wpcontent,
+body.toplevel_page_dragwyb-click-to-chat.auto-fold #wpcontent,
 body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai.auto-fold #wpcontent {
   padding-left: 0;
   padding-right: 0;
 }
+body.toplevel_page_dragwyb-click-to-chat #wpbody-content,
 body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #wpbody-content {
   box-sizing: border-box;
   float: none;
@@ -69,6 +72,7 @@ body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #wpbody-content {
   padding-bottom: 0;
   width: 100%;
 }
+body.toplevel_page_dragwyb-click-to-chat #dctc-ai-admin-root,
 body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #dctc-ai-admin-root {
   box-sizing: border-box;
   display: block;

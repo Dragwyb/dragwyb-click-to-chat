@@ -158,7 +158,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				return;
 			}
 
-			wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat-ai' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) );
 			exit;
 		}
 
@@ -227,7 +227,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$page       = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			$is_ai_page = (
 				( $this->admin_hook && $hook === $this->admin_hook ) ||
+				'dragwyb-click-to-chat' === $page ||
 				'dragwyb-click-to-chat-ai' === $page ||
+				'toplevel_page_dragwyb-click-to-chat' === $hook ||
 				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai' === $hook
 			);
 
@@ -565,14 +567,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_add_admin_menu() {
-			$this->admin_hook = add_submenu_page(
-				'dragwyb-click-to-chat',
-				esc_html__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-				esc_html__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-				'manage_options',
-				'dragwyb-click-to-chat-ai',
-				array( $this, 'dctc_ai_render_admin_page' )
-			);
+			// Submenu structure is registered centrally in admin/settings.php.
 		}
 
 		/**
@@ -591,7 +586,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return array
 		 */
 		public function dctc_ai_add_settings_link( $links ) {
-			$ai_link = '<a href="' . esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-ai' ) ) . '">' . esc_html__( 'AI Assistant', 'dragwyb-click-to-chat' ) . '</a>';
+			$ai_link = '<a href="' . esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ) . '">' . esc_html__( 'AI Assistant', 'dragwyb-click-to-chat' ) . '</a>';
 			$links[] = $ai_link;
 			return $links;
 		}

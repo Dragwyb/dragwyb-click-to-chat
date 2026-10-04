@@ -18,7 +18,8 @@ class DCTC_Settings_Import_Export {
 
 	const OPTION_CHANNELS = 'dctc_settings';
 	const OPTION_AI       = 'dctc_ai_chat_assistant_settings';
-	const MAX_UPLOAD_BYTES = 2097152; // 2MB.
+	const OPTION_SUPPORT  = 'dctc_support_settings';
+	const MAX_UPLOAD_BYTES = 52428800; // 50MB for data exports.
 
 	/**
 	 * Allowed export / import formats.
@@ -35,7 +36,7 @@ class DCTC_Settings_Import_Export {
 	 * @return string[]
 	 */
 	public static function dctc_allowed_modules() {
-		return array( 'channels', 'ai' );
+		return array( 'channels', 'ai', 'support', 'ai_data', 'support_data' );
 	}
 
 	/**
@@ -69,7 +70,7 @@ class DCTC_Settings_Import_Export {
 		if ( empty( $modules ) ) {
 			return new WP_Error(
 				'dctc_ie_no_modules',
-				__( 'Select at least one module to export.', 'dragwyb-click-to-chat' )
+				__( 'Select at least one module or dataset to export.', 'dragwyb-click-to-chat' )
 			);
 		}
 
@@ -82,7 +83,7 @@ class DCTC_Settings_Import_Export {
 		);
 
 		if ( in_array( 'channels', $modules, true ) ) {
-			$channels = get_option( self::OPTION_CHANNELS, array() );
+			$channels            = get_option( self::OPTION_CHANNELS, array() );
 			$payload['channels'] = is_array( $channels ) ? $channels : array();
 		}
 
@@ -92,6 +93,45 @@ class DCTC_Settings_Import_Export {
 				$ai = array();
 			}
 			$payload['ai'] = self::dctc_redact_ai_settings( $ai );
+		}
+
+		if ( in_array( 'support', $modules, true ) ) {
+			$support            = get_option( self::OPTION_SUPPORT, array() );
+			$payload['support'] = is_array( $support ) ? $support : array();
+		}
+
+		if ( in_array( 'ai_data', $modules, true ) ) {
+			global $wpdb;
+			$sessions_table = $wpdb->prefix . 'dctc_ai_sessions';
+			$leads_table    = $wpdb->prefix . 'dctc_ai_leads';
+			$payload['ai_data'] = array();
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$sessions_table'" ) === $sessions_table ) {
+				$payload['ai_data']['sessions'] = $wpdb->get_results( "SELECT * FROM `$sessions_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$leads_table'" ) === $leads_table ) {
+				$payload['ai_data']['leads'] = $wpdb->get_results( "SELECT * FROM `$leads_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+		}
+
+		if ( in_array( 'support_data', $modules, true ) ) {
+			global $wpdb;
+			$tickets_table    = $wpdb->prefix . 'dctc_support_tickets';
+			$messages_table   = $wpdb->prefix . 'dctc_support_messages';
+			$categories_table = $wpdb->prefix . 'dctc_support_categories';
+			$tags_table       = $wpdb->prefix . 'dctc_support_tags';
+			$payload['support_data'] = array();
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
+				$payload['support_data']['tickets'] = $wpdb->get_results( "SELECT * FROM `$tickets_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$messages_table'" ) === $messages_table ) {
+				$payload['support_data']['messages'] = $wpdb->get_results( "SELECT * FROM `$messages_table` ORDER BY id DESC LIMIT 10000", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$categories_table'" ) === $categories_table ) {
+				$payload['support_data']['categories'] = $wpdb->get_results( "SELECT * FROM `$categories_table` ORDER BY id ASC", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tags_table'" ) === $tags_table ) {
+				$payload['support_data']['tags'] = $wpdb->get_results( "SELECT * FROM `$tags_table` ORDER BY id ASC", ARRAY_A );
+			}
 		}
 
 		return $payload;
@@ -860,6 +900,83 @@ class DCTC_Settings_Import_Export {
 				DCTC_AI_Settings_Handler::dctc_ai_persist_settings( $merged );
 			} else {
 				update_option( self::OPTION_AI, $merged, false );
+			}
+			++$applied;
+		}
+
+		if ( in_array( 'support', $modules, true ) ) {
+			if ( empty( $payload['support'] ) || ! is_array( $payload['support'] ) ) {
+				return new WP_Error(
+					'dctc_ie_no_support',
+					__( 'The file does not contain Support Center settings.', 'dragwyb-click-to-chat' )
+				);
+			}
+			$clean_support = is_array( $payload['support'] ) ? $payload['support'] : array();
+			update_option( self::OPTION_SUPPORT, $clean_support );
+			++$applied;
+		}
+
+		if ( in_array( 'ai_data', $modules, true ) && ! empty( $payload['ai_data'] ) ) {
+			global $wpdb;
+			$sessions_table = $wpdb->prefix . 'dctc_ai_sessions';
+			$leads_table    = $wpdb->prefix . 'dctc_ai_leads';
+			if ( ! empty( $payload['ai_data']['sessions'] ) && is_array( $payload['ai_data']['sessions'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$sessions_table'" ) === $sessions_table ) {
+				foreach ( $payload['ai_data']['sessions'] as $session ) {
+					if ( is_array( $session ) && ! empty( $session['session_id'] ) ) {
+						unset( $session['id'] );
+						$wpdb->replace( $sessions_table, $session );
+					}
+				}
+			}
+			if ( ! empty( $payload['ai_data']['leads'] ) && is_array( $payload['ai_data']['leads'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$leads_table'" ) === $leads_table ) {
+				foreach ( $payload['ai_data']['leads'] as $lead ) {
+					if ( is_array( $lead ) && ! empty( $lead['session_id'] ) ) {
+						unset( $lead['id'] );
+						$wpdb->replace( $leads_table, $lead );
+					}
+				}
+			}
+			++$applied;
+		}
+
+		if ( in_array( 'support_data', $modules, true ) && ! empty( $payload['support_data'] ) ) {
+			global $wpdb;
+			$tickets_table    = $wpdb->prefix . 'dctc_support_tickets';
+			$messages_table   = $wpdb->prefix . 'dctc_support_messages';
+			$categories_table = $wpdb->prefix . 'dctc_support_categories';
+			$tags_table       = $wpdb->prefix . 'dctc_support_tags';
+
+			if ( ! empty( $payload['support_data']['categories'] ) && is_array( $payload['support_data']['categories'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$categories_table'" ) === $categories_table ) {
+				foreach ( $payload['support_data']['categories'] as $cat ) {
+					if ( is_array( $cat ) && ! empty( $cat['name'] ) ) {
+						unset( $cat['id'] );
+						$wpdb->replace( $categories_table, $cat );
+					}
+				}
+			}
+			if ( ! empty( $payload['support_data']['tags'] ) && is_array( $payload['support_data']['tags'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$tags_table'" ) === $tags_table ) {
+				foreach ( $payload['support_data']['tags'] as $tag ) {
+					if ( is_array( $tag ) && ! empty( $tag['name'] ) ) {
+						unset( $tag['id'] );
+						$wpdb->replace( $tags_table, $tag );
+					}
+				}
+			}
+			if ( ! empty( $payload['support_data']['tickets'] ) && is_array( $payload['support_data']['tickets'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
+				foreach ( $payload['support_data']['tickets'] as $ticket ) {
+					if ( is_array( $ticket ) && ! empty( $ticket['uuid'] ) ) {
+						unset( $ticket['id'] );
+						$wpdb->replace( $tickets_table, $ticket );
+					}
+				}
+			}
+			if ( ! empty( $payload['support_data']['messages'] ) && is_array( $payload['support_data']['messages'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$messages_table'" ) === $messages_table ) {
+				foreach ( $payload['support_data']['messages'] as $msg ) {
+					if ( is_array( $msg ) && ! empty( $msg['ticket_id'] ) ) {
+						unset( $msg['id'] );
+						$wpdb->insert( $messages_table, $msg );
+					}
+				}
 			}
 			++$applied;
 		}

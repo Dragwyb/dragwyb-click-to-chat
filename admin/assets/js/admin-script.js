@@ -6,7 +6,7 @@
     'use strict';
 
     let currentStep = 0;
-    const totalSteps = 4;
+    const totalSteps = 3;
 
     const DCTC_Admin = {
 
@@ -65,6 +65,40 @@
                     $('.dctc-color-preview').css('background-color', ui.color.toString());
                     DCTC_Admin.updatePreview();
                 }
+            });
+
+            // Module toggle dynamic badge updates
+            $('#dctc_channels_enabled').on('change', function () {
+                const checked = $(this).is(':checked');
+                $('#dctc-status-channels')
+                    .text(checked ? 'Active' : 'Disabled')
+                    .css({
+                        background: checked ? '#ecfdf5' : '#f3f4f6',
+                        color: checked ? '#065f46' : '#6b7280',
+                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
+                    });
+            });
+
+            $('#dctc_ai_assistant_enabled').on('change', function () {
+                const checked = $(this).is(':checked');
+                $('#dctc-status-ai')
+                    .text(checked ? 'Active' : 'Disabled')
+                    .css({
+                        background: checked ? '#ecfdf5' : '#f3f4f6',
+                        color: checked ? '#065f46' : '#6b7280',
+                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
+                    });
+            });
+
+            $('#dctc_support_center_enabled').on('change', function () {
+                const checked = $(this).is(':checked');
+                $('#dctc-status-support')
+                    .text(checked ? 'Active' : 'Disabled')
+                    .css({
+                        background: checked ? '#ecfdf5' : '#f3f4f6',
+                        color: checked ? '#065f46' : '#6b7280',
+                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
+                    });
             });
 
             // --- Channel Interactions ---
@@ -593,6 +627,11 @@
                 postTypes.push($(this).val());
             });
             formData['dctc_display_post_types[]'] = postTypes;
+
+            // Module Master Toggles
+            formData.channels_enabled = $('#dctc_channels_enabled').is(':checked') ? '1' : '0';
+            formData.ai_assistant_enabled = $('#dctc_ai_assistant_enabled').is(':checked') ? '1' : '0';
+            formData.support_center_enabled = $('#dctc_support_center_enabled').is(':checked') ? '1' : '0';
 
             // AJAX save
             $.ajax({

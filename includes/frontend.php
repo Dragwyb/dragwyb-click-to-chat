@@ -58,6 +58,11 @@ class DCTC_Frontend {
 			$settings = array();
 		}
 
+		// Check if channels module is globally enabled
+		if ( isset( $settings['channels_enabled'] ) && '0' === $settings['channels_enabled'] ) {
+			return;
+		}
+
 		// Display Rules Check (only if auto-injected, not manually via shortcode)
 		if ( ! $from_shortcode ) {
 			$display_mode = isset( $settings['display_mode'] ) ? $settings['display_mode'] : 'all';

@@ -1,8 +1,8 @@
 <?php
 
 /**
- * Dragwyb Click To Chat - Main Admin Template
- * Inspired by Chaty plugin
+ * Dragwyb Click To Chat - Channels Builder Template
+ * Multi-channel social widget builder with live preview.
  */
 
 if (! defined('ABSPATH')) {
@@ -25,9 +25,9 @@ $dctc_current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
     <!-- Success Message -->
     <div class="dctc-success-message"></div>
 
-    <!-- Header with Tabs -->
+    <!-- Header with 3 Channels Steps -->
     <div class="dctc-header">
-        <ul class="dctc-tabs">
+        <ul class="dctc-tabs" style="max-width: 750px;">
             <li>
                 <a href="#"
                     class="dctc-tab <?php echo $dctc_current_step === 0 ? 'active' : ''; ?>"
@@ -47,13 +47,6 @@ $dctc_current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
                     class="dctc-tab <?php echo $dctc_current_step === 2 ? 'active' : ''; ?>"
                     data-step="2">
                     <span><?php esc_html_e('3. Triggers & Targeting', 'dragwyb-click-to-chat'); ?></span>
-                </a>
-            </li>
-            <li>
-                <a href="#"
-                    class="dctc-tab <?php echo $dctc_current_step === 3 ? 'active' : ''; ?>"
-                    data-step="3">
-                    <span><?php esc_html_e('4. Settings', 'dragwyb-click-to-chat'); ?></span>
                 </a>
             </li>
         </ul>
@@ -78,11 +71,6 @@ $dctc_current_step = isset($_GET['step']) ? intval($_GET['step']) : 0;
             <!-- Section 3: Triggers & Targeting -->
             <div class="dctc-section <?php echo $dctc_current_step === 2 ? 'active' : ''; ?>" data-section="2">
                 <?php include 'section-triggers.php'; ?>
-            </div>
-
-            <!-- Section 4: Settings -->
-            <div class="dctc-section <?php echo $dctc_current_step === 3 ? 'active' : ''; ?>" data-section="3">
-                <?php include 'section-settings.php'; ?>
             </div>
 
         </div>

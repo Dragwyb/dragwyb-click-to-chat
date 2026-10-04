@@ -1,88 +1,193 @@
 <?php
+/**
+ * Click to Chat - Admin Settings & Menu Router
+ *
+ * @package Dragwyb_Click_To_Chat
+ */
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 add_action( 'admin_menu', 'dctc_add_settings_page' );
 add_action( 'wp_ajax_dctc_save_settings', 'dctc_save_settings' );
-
 add_action( 'admin_enqueue_scripts', 'dctc_admin_scripts' );
 
+/**
+ * Register Click to Chat main menu and organized submenus.
+ * Default landing page is the AI Assistant dashboard.
+ *
+ * @return void
+ */
 function dctc_add_settings_page() {
+	// Top-level menu: Clicking "Click to Chat" opens AI Assistant by default
 	add_menu_page(
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		'manage_options',
 		'dragwyb-click-to-chat',
-		'dctc_settings_page_html',
+		'dctc_render_ai_assistant_page',
 		'dashicons-format-chat',
 		90
 	);
-	// First submenu matches top-level slug; label describes the multi-channel widget settings.
+
+	// 1. Submenu: AI Assistant (matches parent slug to rename the first submenu item)
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat',
+		'dctc_render_ai_assistant_page'
+	);
+
+	// 2. Submenu: Channels (Social multi-channel widget builder)
 	add_submenu_page(
 		'dragwyb-click-to-chat',
 		__( 'Channels', 'dragwyb-click-to-chat' ),
 		__( 'Channels', 'dragwyb-click-to-chat' ),
 		'manage_options',
+		'dragwyb-click-to-chat-channels',
+		'dctc_channels_page_html'
+	);
+
+	// 3. Submenu: Settings (Dedicated settings page with General & Import/Export tabs)
+	add_submenu_page(
 		'dragwyb-click-to-chat',
+		__( 'Settings', 'dragwyb-click-to-chat' ),
+		__( 'Settings', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-settings',
 		'dctc_settings_page_html'
+	);
+
+	// Hidden submenu alias for dragwyb-click-to-chat-ai direct links
+	add_submenu_page(
+		null,
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-ai',
+		'dctc_render_ai_assistant_page'
 	);
 }
 
+/**
+ * Render AI Assistant admin screen.
+ *
+ * @return void
+ */
+function dctc_render_ai_assistant_page() {
+	if ( class_exists( 'DCTC_AI_Module' ) ) {
+		DCTC_AI_Module::get_instance()->dctc_ai_render_admin_page();
+	} else {
+		require_once DCTC_PLUGIN_DIR . 'admin/ai/dctc-ai-dashboard.php';
+	}
+}
+
+/**
+ * Enqueue scripts and styles for Channels and Settings screens.
+ *
+ * @param string $hook Admin page hook suffix.
+ * @return void
+ */
 function dctc_admin_scripts( $hook ) {
-	// Only load on our plugin page
-	if ( 'toplevel_page_dragwyb-click-to-chat' !== $hook ) {
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	$is_channels = ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' );
+	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
+
+	if ( ! $is_channels && ! $is_settings ) {
 		return;
 	}
 
-	// Enqueue WordPress color picker
+	// Base styles
+	wp_enqueue_style( 'dashicons' );
 	wp_enqueue_style( 'wp-color-picker' );
 	wp_enqueue_script( 'wp-color-picker' );
-
-	// Enqueue WordPress media uploader
 	wp_enqueue_media();
 
-	// Enqueue admin styles and scripts
 	wp_enqueue_style(
 		'dctc-admin-style',
 		DCTC_PLUGIN_URL . 'admin/assets/css/admin-style.css',
-		array( 'wp-color-picker' ),
+		array( 'wp-color-picker', 'dashicons' ),
 		DCTC_VERSION
 	);
 
-	wp_enqueue_script(
-		'dctc-admin-script',
-		DCTC_PLUGIN_URL . 'admin/assets/js/admin-script.js',
-		array( 'jquery', 'wp-color-picker' ),
-		DCTC_VERSION,
-		true
-	);
+	if ( $is_channels ) {
+		wp_enqueue_script(
+			'dctc-admin-script',
+			DCTC_PLUGIN_URL . 'admin/assets/js/admin-script.js',
+			array( 'jquery', 'wp-color-picker' ),
+			DCTC_VERSION,
+			true
+		);
 
-	// Localize script with AJAX data
-	wp_localize_script(
-		'dctc-admin-script',
-		'dctc_admin',
-		array(
-			'nonce'   => wp_create_nonce( 'dctc_nonce' ),
-			'ajaxurl' => admin_url( 'admin-ajax.php' ),
-		)
-	);
+		wp_localize_script(
+			'dctc-admin-script',
+			'dctc_admin',
+			array(
+				'nonce'   => wp_create_nonce( 'dctc_nonce' ),
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+			)
+		);
+	}
+
+	if ( $is_settings ) {
+		wp_enqueue_script(
+			'dctc-admin-settings',
+			DCTC_PLUGIN_URL . 'admin/assets/js/admin-settings.js',
+			array( 'jquery' ),
+			DCTC_VERSION,
+			true
+		);
+
+		wp_localize_script(
+			'dctc-admin-settings',
+			'dctc_admin',
+			array(
+				'nonce'   => wp_create_nonce( 'dctc_nonce' ),
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+			)
+		);
+	}
 }
 
-function dctc_settings_page_html() {
-	// Load the new admin template
+/**
+ * Render Channels Builder (3-step wizard).
+ *
+ * @return void
+ */
+function dctc_channels_page_html() {
 	include DCTC_PLUGIN_DIR . 'admin/admin-main.php';
 }
 
+/**
+ * Render Dedicated Settings Page (General & Import/Export tabs).
+ *
+ * @return void
+ */
+function dctc_settings_page_html() {
+	include DCTC_PLUGIN_DIR . 'admin/settings-page.php';
+}
+
+/**
+ * Handle AJAX saving for channels, widget customization, triggers, and module switches.
+ *
+ * @return void
+ */
 function dctc_save_settings() {
 	check_ajax_referer( 'dctc_nonce', 'nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( array( 'message' => __( 'Permission denied.', 'dragwyb-click-to-chat' ) ), 403 );
 		return;
 	}
 
-	$settings = array();
+	$settings = get_option( 'dctc_settings', array() );
+	if ( ! is_array( $settings ) ) {
+		$settings = array();
+	}
 
-	// Social channels list
+	// 1. Social channels list
 	$phase1_channels = array( 'whatsapp', 'facebook', 'phone', 'email', 'instagram', 'telegram', 'sms', 'twitter', 'linkedin' );
 
 	foreach ( $phase1_channels as $slug ) {
@@ -97,7 +202,7 @@ function dctc_save_settings() {
 		if ( isset( $_POST[ $value_key ] ) ) {
 			if ( $slug === 'email' ) {
 				$settings[ $slug . '_value' ] = sanitize_email( wp_unslash( $_POST[ $value_key ] ) );
-			} elseif ( in_array( $slug, array( 'linkedin', 'maps', 'waze', 'contact', 'poptin', 'slack', 'discord' ) ) ) {
+			} elseif ( in_array( $slug, array( 'linkedin', 'maps', 'waze', 'contact', 'poptin', 'slack', 'discord' ), true ) ) {
 				$settings[ $slug . '_value' ] = esc_url( sanitize_text_field( wp_unslash( $_POST[ $value_key ] ) ) );
 			} else {
 				$settings[ $slug . '_value' ] = sanitize_text_field( wp_unslash( $_POST[ $value_key ] ) );
@@ -128,8 +233,10 @@ function dctc_save_settings() {
 		}
 	}
 
-	// Widget Customization
-	$settings['show_widget'] = ( isset( $_POST['show_widget'] ) && $_POST['show_widget'] === '1' ) ? '1' : '0';
+	// 2. Widget Customization
+	if ( isset( $_POST['show_widget'] ) ) {
+		$settings['show_widget'] = ( '1' === $_POST['show_widget'] ) ? '1' : '0';
+	}
 	if ( isset( $_POST['widget_position'] ) ) {
 		$settings['widget_position'] = sanitize_text_field( wp_unslash( $_POST['widget_position'] ) );
 	}
@@ -210,22 +317,38 @@ function dctc_save_settings() {
 		$settings['display_post_types'] = array();
 	}
 
+	// 3. Module Master Toggles
+	// Channels Module Toggle
+	if ( isset( $_POST['channels_enabled'] ) ) {
+		$settings['channels_enabled'] = ( '1' === $_POST['channels_enabled'] ) ? '1' : '0';
+	}
+
+	// AI Assistant Module Toggle
+	if ( isset( $_POST['ai_assistant_enabled'] ) ) {
+		$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+		if ( ! is_array( $ai_settings ) ) {
+			$ai_settings = array();
+		}
+		if ( ! isset( $ai_settings['display'] ) || ! is_array( $ai_settings['display'] ) ) {
+			$ai_settings['display'] = array();
+		}
+		$ai_settings['display']['entire_site'] = ( '1' === $_POST['ai_assistant_enabled'] );
+		update_option( 'dctc_ai_chat_assistant_settings', $ai_settings );
+		$settings['ai_assistant_enabled'] = ( '1' === $_POST['ai_assistant_enabled'] ) ? '1' : '0';
+	}
+
 	// Support Center Module Toggle
 	if ( isset( $_POST['support_center_enabled'] ) ) {
 		$support_settings            = get_option( 'dctc_support_settings', array() );
+		if ( ! is_array( $support_settings ) ) {
+			$support_settings = array();
+		}
 		$support_settings['enabled'] = ( '1' === $_POST['support_center_enabled'] );
 		update_option( 'dctc_support_settings', $support_settings );
-	} else {
-		// When saving from general settings page, if checkbox is unchecked, set enabled to false
-		if ( isset( $_POST['action'] ) && 'dctc_save_settings' === $_POST['action'] ) {
-			$support_settings            = get_option( 'dctc_support_settings', array() );
-			$support_settings['enabled'] = false;
-			update_option( 'dctc_support_settings', $support_settings );
-		}
 	}
 
-	// Save all to single option
+	// Save all to main option
 	update_option( 'dctc_settings', $settings );
 
-	wp_send_json_success();
+	wp_send_json_success( array( 'message' => __( 'Settings saved successfully!', 'dragwyb-click-to-chat' ) ) );
 }
