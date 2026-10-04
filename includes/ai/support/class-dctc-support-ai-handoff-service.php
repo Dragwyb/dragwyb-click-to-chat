@@ -45,9 +45,8 @@ class DCTC_Support_AI_Handoff_Service {
 				DCTC_AI_DB::ensure_session_columns();
 			}
 
-			if ( ! empty( $session['control_mode'] ) && 'human' === $session['control_mode'] ) {
-				return true;
-			}
+			$control_mode = ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai';
+			$ticket       = null;
 
 			// If linked to a support ticket, check ticket control_mode & status
 			if ( ! empty( $session['support_ticket_id'] ) ) {
@@ -56,7 +55,25 @@ class DCTC_Support_AI_Handoff_Service {
 					$wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ),
 					ARRAY_A
 				);
-				if ( $ticket && ( ( ! empty( $ticket['control_mode'] ) && 'human' === $ticket['control_mode'] ) || in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) ) {
+				if ( $ticket ) {
+					if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
+						return true;
+					}
+					if ( ! empty( $ticket['control_mode'] ) ) {
+						$control_mode = $ticket['control_mode'];
+					}
+				}
+			}
+
+			// If in human mode, check if the human agent took action / replied recently (within 40 seconds)
+			if ( 'human' === $control_mode ) {
+				$last_activity = ! empty( $session['updated_at'] ) ? strtotime( $session['updated_at'] ) : 0;
+				$now           = current_time( 'timestamp' );
+				$elapsed       = $now - $last_activity;
+
+				// Give the live agent 40 seconds grace period to reply.
+				// If 40 seconds elapse without agent reply, fallback to AI response so visitor is never left stranded.
+				if ( $elapsed >= 0 && $elapsed < 40 ) {
 					return true;
 				}
 			}

@@ -1521,6 +1521,7 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
+
 				if (response.show_order_tracker) {
 					const loggedInEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
 					if (loggedInEmail && !orderLookupEmail) {

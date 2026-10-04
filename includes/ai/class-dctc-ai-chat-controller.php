@@ -234,7 +234,7 @@ class DCTC_AI_Chat_Controller {
 			}
 		}
 
-		// Intelligent Support Escalation & Ticket Logging
+		// Intelligent Support Escalation & Ticket Logging (Human Handoff / Bug Reports)
 		if ( ! empty( $prompt ) && ( ! isset( $bot['enable_support_escalation'] ) || (bool) $bot['enable_support_escalation'] ) && self::detect_human_handoff_intent( $prompt ) ) {
 			$classification = self::classify_user_intent( $prompt );
 			// Auto-create/link support ticket if Support Center is enabled
@@ -246,18 +246,11 @@ class DCTC_AI_Chat_Controller {
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
 					if ( ! $existing_ticket ) {
-						$prefix = '';
-						if ( 'lead_generation' === $classification['intent'] ) {
-							$prefix = '[Lead] ';
-						} elseif ( 'support_ticket' === $classification['intent'] ) {
-							$prefix = '[Support] ';
-						}
-
 						$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
 
 						DCTC_Support_Ticket_Service::create_ticket(
 							array(
-								'subject'          => $prefix . wp_trim_words( $prompt, 8, '...' ),
+								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
 								'session_id'       => $session_id,
 								'customer_email'   => $email,
 								'origin_type'      => 'chatbot',
@@ -456,6 +449,17 @@ class DCTC_AI_Chat_Controller {
 			 */
 			$ai_message = apply_filters( 'dctc_ai_chat_response', $ai_message, $prompt, $session_id );
 
+			// Dynamic AI Intent & Conversational Lead/Email Extraction
+			$intent_data     = self::parse_dynamic_ai_intent( $ai_message, $prompt );
+			$ai_message      = $intent_data['clean_message'];
+			$detected_intent = $intent_data['intent'];
+			$detected_email  = $intent_data['email'];
+			$detected_phone  = $intent_data['phone'];
+
+			if ( ! empty( $detected_email ) ) {
+				$email = $detected_email;
+			}
+
 			// Real-Time URL Verification & Broken Link Sanitization
 			if ( ! empty( $ai_message ) ) {
 				$ai_message = self::validate_and_sanitize_urls_in_content( $ai_message, $bot );
@@ -478,6 +482,88 @@ class DCTC_AI_Chat_Controller {
 					esc_html__( 'AI connection returned an empty response.', 'dragwyb-click-to-chat' ),
 					500
 				);
+			}
+
+			// Dynamic Integration: Auto-connect with Lead System if purchase/lead intent or email provided
+			if ( 'lead_generation' === $detected_intent || ! empty( $detected_email ) ) {
+				if ( ! empty( $email ) && class_exists( 'DCTC_AI_DB' ) ) {
+					$score = 75;
+					if ( ! empty( $detected_email ) ) $score += 15;
+					if ( ! empty( $detected_phone ) ) $score += 10;
+
+					$lead_id = DCTC_AI_DB::save_lead( array(
+						'session_id'   => $session_id,
+						'name'         => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
+						'email'        => $email,
+						'phone'        => $detected_phone,
+						'requirement'  => $prompt,
+						'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
+						'score'        => min( 100, $score ),
+						'intent_level' => 'high',
+						'status'       => 'qualified',
+					) );
+
+					if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
+						$leads_controller = new DCTC_AI_Leads_Controller();
+						$leads_controller->maybe_send_lead_email( array(
+							'id'          => $lead_id,
+							'name'        => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
+							'email'       => $email,
+							'phone'       => $detected_phone,
+							'requirement' => $prompt,
+							'score'       => min( 100, $score ),
+							'status'      => 'qualified',
+						) );
+					}
+				}
+
+				// Auto-create/sync connected Lead ticket in Support Center
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					$support_settings = get_option( 'dctc_support_settings', array() );
+					if ( ! empty( $support_settings['enabled'] ) ) {
+						global $wpdb;
+						$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+						$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
+						if ( ! $existing_ticket ) {
+							DCTC_Support_Ticket_Service::create_ticket( array(
+								'subject'          => '[Lead] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
+								'session_id'       => $session_id,
+								'customer_email'   => $email,
+								'origin_type'      => 'chatbot',
+								'reply_surface'    => 'chatbot_widget',
+								'interaction_type' => 'LEAD_GENERATION',
+								'control_mode'     => 'ai',
+								'initial_message'  => $prompt,
+							) );
+						}
+					}
+				}
+			} elseif ( in_array( $detected_intent, array( 'support_ticket', 'human_handoff' ), true ) ) {
+				// Auto-create/sync Support Ticket in Support Center
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					$support_settings = get_option( 'dctc_support_settings', array() );
+					if ( ! empty( $support_settings['enabled'] ) ) {
+						global $wpdb;
+						$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+						$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
+						if ( ! $existing_ticket ) {
+							$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
+
+							DCTC_Support_Ticket_Service::create_ticket( array(
+								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
+								'session_id'       => $session_id,
+								'customer_email'   => $email,
+								'origin_type'      => 'chatbot',
+								'reply_surface'    => 'chatbot_widget',
+								'interaction_type' => 'HYBRID_SUPPORT',
+								'control_mode'     => $auto_pause ? 'human' : 'ai',
+								'initial_message'  => $prompt,
+							) );
+						}
+					}
+				}
 			}
 		} catch ( \Throwable $e ) {
 			if ( class_exists( 'DCTC_Error_Logger' ) ) {
@@ -548,8 +634,6 @@ class DCTC_AI_Chat_Controller {
 		 * @param string $used_model
 		 * @param string $used_provider
 		 */
-		do_action( 'dctc_ai_chat_completed', $session_id, $prompt, $ai_message, $used_model, $used_provider );
-
 		return new \WP_REST_Response(
 			array(
 				'success'         => true,
@@ -559,6 +643,7 @@ class DCTC_AI_Chat_Controller {
 				'sources'         => $sources,
 				'reference_links' => $sources,
 				'products'        => $wc_products,
+				'show_lead_form'  => false,
 			),
 			200
 		);
@@ -946,6 +1031,13 @@ LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
+CONVERSATIONAL LEAD CAPTURE & DYNAMIC INTENT:
+- If the visitor expresses interest in buying, purchasing, ordering products, pricing, custom quotes, or hiring services:
+  1. Warmly and helpfully answer their inquiry with relevant store catalog/pricing details.
+  2. If the visitor has not yet provided their email address in this conversation, invite them naturally to share their email (e.g., \"Could you please share your email address so our team can send you the full details / follow up with you?\").
+- At the very end of your response, always append a hidden intent metadata tag in this exact format:
+<!--INTENT:{\"intent\":\"lead_generation|support_ticket|human_handoff|order_tracking|general_qa\",\"email\":\"extracted_email_or_empty\",\"phone\":\"extracted_phone_or_empty\"}-->
+
 CONVERSATION MEMORY:
 - Use conversation history to resolve pronouns and follow-up requests ('more details', 'tell me more', 'why', 'how', 'continue') seamlessly.
 ";
@@ -1129,6 +1221,69 @@ CONVERSATION MEMORY:
 	}
 
 	/**
+	 * Extract and parse dynamic AI intent metadata from the LLM output.
+	 *
+	 * @param string $content Raw AI output.
+	 * @param string $prompt User message.
+	 * @return array{clean_message: string, intent: string, email: string, phone: string, confidence: float}
+	 */
+	public static function parse_dynamic_ai_intent( $content, $prompt = '' ) {
+		$intent          = 'general_qa';
+		$extracted_email = '';
+		$extracted_phone = '';
+		$confidence      = 0.8;
+
+		// 1. Check for structured <!--INTENT:{...}--> tag in AI output
+		if ( preg_match( '/<!--INTENT:\s*({.*?})\s*-->/s', $content, $matches ) ) {
+			$json_str = trim( $matches[1] );
+			$parsed   = json_decode( $json_str, true );
+			if ( is_array( $parsed ) ) {
+				if ( ! empty( $parsed['intent'] ) ) {
+					$intent = sanitize_key( $parsed['intent'] );
+				}
+				if ( ! empty( $parsed['email'] ) && is_email( $parsed['email'] ) ) {
+					$extracted_email = sanitize_email( $parsed['email'] );
+				}
+				if ( ! empty( $parsed['phone'] ) ) {
+					$extracted_phone = sanitize_text_field( $parsed['phone'] );
+				}
+				if ( isset( $parsed['confidence'] ) ) {
+					$confidence = floatval( $parsed['confidence'] );
+				}
+			}
+			// Strip the hidden tag so visitor never sees it in chat
+			$content = str_replace( $matches[0], '', $content );
+		}
+
+		// 2. Extract email from user prompt if provided
+		if ( empty( $extracted_email ) && preg_match( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $prompt, $email_matches ) ) {
+			$extracted_email = sanitize_email( $email_matches[0] );
+		}
+
+		// 3. Extract phone from user prompt if provided
+		if ( empty( $extracted_phone ) && preg_match( '/(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/', $prompt, $phone_matches ) ) {
+			$extracted_phone = sanitize_text_field( $phone_matches[0] );
+		}
+
+		// 4. If intent is still general_qa, fallback to heuristic intent classifier
+		if ( 'general_qa' === $intent ) {
+			$rule_class = self::classify_user_intent( $prompt );
+			if ( 'general_qa' !== $rule_class['intent'] ) {
+				$intent     = $rule_class['intent'];
+				$confidence = $rule_class['confidence'];
+			}
+		}
+
+		return array(
+			'clean_message' => trim( $content ),
+			'intent'        => $intent,
+			'email'         => $extracted_email,
+			'phone'         => $extracted_phone,
+			'confidence'    => $confidence,
+		);
+	}
+
+	/**
 	 * Get optimized memory and conversation history
 	 */
 	private function get_optimized_memory( $session_id, $prompt, $system_message ) {
@@ -1289,9 +1444,14 @@ CONVERSATION MEMORY:
 			);
 		}
 
+		// High-confidence multi-word patterns for Human Handoff requests
 		$patterns_handoff = array(
-			'/\b(human|real person|live agent|support agent|human agent|representative|talk to someone|talk to a human|talk to an agent|connect with human|customer care|customer support|operator|live chat with human)\b/i',
-			'/\b(call me|call support|phone support|speak with someone|speak to someone|speak with an agent|whatsapp support|chat on whatsapp|escalate to manager|transfer me)\b/i',
+			'/\b(talk to a human|talk to a real person|talk to a human agent|talk to a live agent|talk to an agent|talk to customer support)\b/i',
+			'/\b(speak with a human|speak to a human|speak with a live agent|speak to an agent|speak to a support representative)\b/i',
+			'/\b(connect with a human|connect me with a live agent|connect to a human agent|connect with customer support)\b/i',
+			'/\b(transfer me to a human|transfer me to a live agent|transfer to an agent|escalate to a support manager)\b/i',
+			'/\b(live chat with human|live chat with an agent|chat with a human specialist|switch to a human agent)\b/i',
+			'/\b(call human support|phone support team|chat on whatsapp with support|connect to whatsapp support)\b/i',
 		);
 
 		foreach ( $patterns_handoff as $pattern ) {
@@ -1304,9 +1464,13 @@ CONVERSATION MEMORY:
 			}
 		}
 
+		// High-confidence multi-word patterns for Support Ticket & Technical Issues
 		$patterns_support = array(
-			'/\b(broken|damaged|defective|faulty|warranty|refund|return item|cancel order|billing issue|chargeback|not working|error code|bug in|failed transaction|invoice incorrect)\b/i',
-			'/\b(ticket number|my ticket|open a ticket|file a claim|technical support|troubleshoot problem)\b/i',
+			'/\b(open a support ticket|create a support ticket|submit a support ticket|file a support ticket|raise a support ticket)\b/i',
+			'/\b(need technical support|troubleshoot this problem|having a technical issue|system is not working)\b/i',
+			'/\b(item arrived damaged|received a broken item|product is defective|claim warranty for my item)\b/i',
+			'/\b(request a refund for order|want a refund for my order|return my ordered item|cancel my placed order)\b/i',
+			'/\b(billing charge issue|failed payment transaction|incorrect invoice amount|payment deduction error)\b/i',
 		);
 
 		foreach ( $patterns_support as $pattern ) {
@@ -1319,8 +1483,13 @@ CONVERSATION MEMORY:
 			}
 		}
 
+		// High-confidence multi-word patterns for Sales & Lead Inquiries
 		$patterns_lead = array(
-			'/\b(custom quote|request quote|price estimate|bulk pricing|enterprise plan|schedule demo|book a call|partnership inquiry|hire you|contact sales)\b/i',
+			'/\b(request a custom quote|get a price estimate|inquire about bulk pricing|enterprise plan inquiry)\b/i',
+			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project)\b/i',
+			'/\b(interested in purchasing this product|interested to purchase your product|interested in buying your products)\b/i',
+			'/\b(want to buy this product|looking to purchase a product|ready to purchase this product|want to place an order)\b/i',
+			'/\b(send me pricing details|need a custom price estimate|looking for enterprise pricing)\b/i',
 		);
 
 		foreach ( $patterns_lead as $pattern ) {
@@ -1333,10 +1502,12 @@ CONVERSATION MEMORY:
 			}
 		}
 
+		// High-confidence multi-word patterns for WooCommerce Order Tracking
 		$patterns_order = array(
-			'/\b(track order|track my order|tracking order|order status|where is my order|check my order|check order status|find my order|order tracking|track shipment|tracking number|order update|track product|track my product|delivery status|package tracking|track my package|shipping status)\b/i',
+			'/\b(track my order status|where is my order package|check my order status|find my order delivery)\b/i',
+			'/\b(track my shipment status|check package delivery status|tracking number for my order|status of my order)\b/i',
 			'/^\s*#?\d{2,8}\s*$/',
-			'/\b(order|order id|order #|order no|order number)\s*#?\d{2,8}\b/i',
+			'/\b(order|tracking)\s*(?:id|no|number|#)?\s*#?\d{2,8}\b/i',
 		);
 
 		foreach ( $patterns_order as $pattern ) {
@@ -1368,14 +1539,25 @@ CONVERSATION MEMORY:
 	}
 
 	/**
-	 * Detect if the message indicates a human handoff / escalation or lead request.
+	 * Detect if the message indicates a lead capture / purchase intent.
+	 *
+	 * @param string $prompt
+	 * @return bool
+	 */
+	public static function detect_lead_intent( $prompt ) {
+		$classification = self::classify_user_intent( $prompt );
+		return 'lead_generation' === $classification['intent'];
+	}
+
+	/**
+	 * Detect if the message indicates a human handoff / escalation request.
 	 *
 	 * @param string $prompt
 	 * @return bool
 	 */
 	public static function detect_human_handoff_intent( $prompt ) {
 		$classification = self::classify_user_intent( $prompt );
-		return in_array( $classification['intent'], array( 'human_handoff', 'support_ticket', 'lead_generation' ), true );
+		return in_array( $classification['intent'], array( 'human_handoff', 'support_ticket' ), true );
 	}
 
 	/**
