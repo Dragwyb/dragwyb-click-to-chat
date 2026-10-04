@@ -252,9 +252,10 @@ export default function AgentsView( { agents, onRefresh, userPermissions = {} } 
 								<td><code>{ ag.seniority }</code></td>
 								<td>
 									<span className={ `dctc-sc-avail-badge ${ ag.availability_status }` }>
-										{ ag.availability_status === 'available' && '🟢 Available' }
-										{ ag.availability_status === 'away' && '🟡 Away' }
-										{ ag.availability_status === 'offline' && '🔴 Offline' }
+										<span className="dctc-sc-avail-dot"></span>
+										{ ag.availability_status === 'available' && __( 'Available', 'dragwyb-click-to-chat' ) }
+										{ ag.availability_status === 'away' && __( 'Away', 'dragwyb-click-to-chat' ) }
+										{ ag.availability_status === 'offline' && __( 'Offline', 'dragwyb-click-to-chat' ) }
 									</span>
 								</td>
 								<td>
@@ -317,7 +318,7 @@ export default function AgentsView( { agents, onRefresh, userPermissions = {} } 
 								onClick={ () => setShowModal( false ) }
 								title={ __( 'Close', 'dragwyb-click-to-chat' ) }
 							>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 
@@ -374,11 +375,11 @@ export default function AgentsView( { agents, onRefresh, userPermissions = {} } 
 													value={ supportRole }
 													onChange={ ( e ) => setSupportRole( e.target.value ) }
 												>
-													<option value="support">🎧 { __( 'Support Agent (Standard)', 'dragwyb-click-to-chat' ) }</option>
-													<option value="senior">⚡ { __( 'Senior Specialist', 'dragwyb-click-to-chat' ) }</option>
-													<option value="manager">🛡️ { __( 'Support Manager', 'dragwyb-click-to-chat' ) }</option>
-													<option value="admin">👑 { __( 'Support Admin', 'dragwyb-click-to-chat' ) }</option>
-													<option value="fresher">🌱 { __( 'Junior / Fresher', 'dragwyb-click-to-chat' ) }</option>
+													<option value="support">{ __( 'Support Agent (Standard)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="senior">{ __( 'Senior Specialist', 'dragwyb-click-to-chat' ) }</option>
+													<option value="manager">{ __( 'Support Manager', 'dragwyb-click-to-chat' ) }</option>
+													<option value="admin">{ __( 'Support Administrator', 'dragwyb-click-to-chat' ) }</option>
+													<option value="fresher">{ __( 'Junior / Tier 1', 'dragwyb-click-to-chat' ) }</option>
 												</select>
 											</div>
 										</div>
@@ -394,9 +395,9 @@ export default function AgentsView( { agents, onRefresh, userPermissions = {} } 
 													value={ seniority }
 													onChange={ ( e ) => setSeniority( e.target.value ) }
 												>
-													<option value="support">🥉 { __( 'Support Tier 1 (Specialist)', 'dragwyb-click-to-chat' ) }</option>
-													<option value="senior">🥈 { __( 'Support Tier 2 (Senior)', 'dragwyb-click-to-chat' ) }</option>
-													<option value="manager">🥇 { __( 'Support Tier 3 (Lead)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="support">{ __( 'Tier 1 (Frontline Specialist)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="senior">{ __( 'Tier 2 (Senior Specialist)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="manager">{ __( 'Tier 3 (Team Lead / Escalation)', 'dragwyb-click-to-chat' ) }</option>
 												</select>
 											</div>
 										</div>
@@ -432,9 +433,9 @@ export default function AgentsView( { agents, onRefresh, userPermissions = {} } 
 													value={ availability }
 													onChange={ ( e ) => setAvailability( e.target.value ) }
 												>
-													<option value="available">🟢 { __( 'Available (Accepting)', 'dragwyb-click-to-chat' ) }</option>
-													<option value="away">🟡 { __( 'Away (Busy)', 'dragwyb-click-to-chat' ) }</option>
-													<option value="offline">🔴 { __( 'Offline', 'dragwyb-click-to-chat' ) }</option>
+													<option value="available">{ __( 'Available (Accepting Tickets)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="away">{ __( 'Away (Temporarily Busy)', 'dragwyb-click-to-chat' ) }</option>
+													<option value="offline">{ __( 'Offline (Not Accepting)', 'dragwyb-click-to-chat' ) }</option>
 												</select>
 											</div>
 											<span className="dctc-sc-field-hint">{ __( 'Can be changed anytime by agent', 'dragwyb-click-to-chat' ) }</span>

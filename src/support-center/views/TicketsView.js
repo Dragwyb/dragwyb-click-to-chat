@@ -296,19 +296,25 @@ export default function TicketsView( {
 								<div className="dctc-sc-ticket-card-subject">{ item.subject }</div>
 
 								<div className="dctc-sc-ticket-card-customer">
-									<span>👤 { item.customer_name || item.customer_email }</span>
+									<span>
+										<span className="dashicons dashicons-admin-users" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+										{ item.customer_name || item.customer_email }
+									</span>
 								</div>
 
 								{ /* Category, Agent, and Chat Count Badges */ }
 								<div className="dctc-sc-ticket-badges-bar">
 									<span className="dctc-sc-badge dctc-sc-badge-category" title={ __( 'Category', 'dragwyb-click-to-chat' ) }>
-										📁 { item.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-category" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ item.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-badge dctc-sc-badge-agent" title={ __( 'Assigned Agent', 'dragwyb-click-to-chat' ) }>
-										👤 { item.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-businesswoman" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ item.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-badge dctc-sc-badge-chats" title={ __( 'Number of Messages / Chats', 'dragwyb-click-to-chat' ) }>
-										💬 { item.chat_count !== undefined ? item.chat_count : ( item.message_count || 1 ) } { ( item.chat_count === 1 || item.message_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-format-chat" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ item.chat_count !== undefined ? item.chat_count : ( item.message_count || 1 ) } { ( item.chat_count === 1 || item.message_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
 									</span>
 								</div>
 
@@ -317,7 +323,8 @@ export default function TicketsView( {
 									<div className="dctc-sc-card-tags-wrap">
 										{ item.tags.map( ( tag, idx ) => (
 											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag" title={ __( 'Tag / Product', 'dragwyb-click-to-chat' ) }>
-												🏷️ { tag }
+												<span className="dashicons dashicons-tag" style={ { fontSize: '11px', width: '11px', height: '11px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+												{ tag }
 											</span>
 										) ) }
 									</div>
@@ -325,7 +332,8 @@ export default function TicketsView( {
 
 								<div className="dctc-sc-ticket-card-footer">
 									<span className="dctc-sc-control-indicator">
-										{ item.control_mode === 'human' ? '👤 Staff Assigned' : '🤖 AI Active' }
+										<span className={ `dashicons ${ item.control_mode === 'human' ? 'dashicons-admin-users' : 'dashicons-superhero' }` } style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+										{ item.control_mode === 'human' ? __( 'Staff Assigned', 'dragwyb-click-to-chat' ) : __( 'AI Active', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-card-time">{ item.created_at }</span>
 								</div>
@@ -384,16 +392,20 @@ export default function TicketsView( {
 										{ selectedTicket.priority }
 									</span>
 									<span className="dctc-sc-surface-tag">
-										{ selectedTicket.reply_surface === 'chatbot_widget' ? '💬 Chatbot Widget' : '🌐 Support Portal' }
+										<span className={ `dashicons ${ selectedTicket.reply_surface === 'chatbot_widget' ? 'dashicons-format-chat' : 'dashicons-admin-site' }` } style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+										{ selectedTicket.reply_surface === 'chatbot_widget' ? __( 'Chatbot Widget', 'dragwyb-click-to-chat' ) : __( 'Support Portal', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-badge dctc-sc-badge-category">
-										📁 { selectedTicket.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-category" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ selectedTicket.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-badge dctc-sc-badge-agent">
-										👤 { selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-businesswoman" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
 									</span>
 									<span className="dctc-sc-badge dctc-sc-badge-chats">
-										💬 { selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { ( selectedTicket.chat_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
+										<span className="dashicons dashicons-format-chat" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+										{ selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { ( selectedTicket.chat_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
 									</span>
 								</div>
 								<h2 className="dctc-sc-ticket-main-title">{ selectedTicket.subject }</h2>
@@ -401,7 +413,8 @@ export default function TicketsView( {
 									<div className="dctc-sc-header-tags-row">
 										{ selectedTicket.tags.map( ( tag, idx ) => (
 											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag">
-												🏷️ { tag }
+												<span className="dashicons dashicons-tag" style={ { fontSize: '11px', width: '11px', height: '11px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+												{ tag }
 											</span>
 										) ) }
 									</div>
@@ -501,9 +514,24 @@ export default function TicketsView( {
 									<div key={ msg.id } className={ `dctc-sc-msg-row ${ bubbleClass }` }>
 										<div className="dctc-sc-msg-meta-line">
 											<span className="dctc-sc-msg-author">
-												{ isCustomer && '👤 Customer' }
-												{ isAI && '🤖 AI Assistant' }
-												{ isHumanAgent && `👨‍💼 ${ msg.sender_name || 'Staff Agent' }` }
+												{ isCustomer && (
+													<>
+														<span className="dashicons dashicons-admin-users" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+														{ __( 'Customer', 'dragwyb-click-to-chat' ) }
+													</>
+												) }
+												{ isAI && (
+													<>
+														<span className="dashicons dashicons-superhero" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+														{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }
+													</>
+												) }
+												{ isHumanAgent && (
+													<>
+														<span className="dashicons dashicons-businesswoman" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+														{ msg.sender_name || __( 'Staff Agent', 'dragwyb-click-to-chat' ) }
+													</>
+												) }
 											</span>
 											<span className="dctc-sc-msg-time">{ msg.created_at }</span>
 										</div>
@@ -556,7 +584,7 @@ export default function TicketsView( {
 									style={ { marginLeft: 'auto' } }
 								>
 									<span className="dashicons dashicons-superhero"></span>
-									{ aiSuggestLoading ? __( 'Thinking...', 'dragwyb-click-to-chat' ) : __( '✨ Suggest AI Reply', 'dragwyb-click-to-chat' ) }
+									{ aiSuggestLoading ? __( 'Thinking...', 'dragwyb-click-to-chat' ) : __( 'Suggest AI Reply', 'dragwyb-click-to-chat' ) }
 								</button>
 							</div>
 
@@ -572,8 +600,8 @@ export default function TicketsView( {
 									<div className="dctc-sc-composer-actions">
 										<span className="dctc-sc-composer-hint">
 											{ selectedTicket.control_mode === 'ai'
-												? __( '⚠️ AI is currently active. Replying will pause AI automatically.', 'dragwyb-click-to-chat' )
-												: __( '✓ Message will be delivered directly to the customer session.', 'dragwyb-click-to-chat' ) }
+												? __( 'AI is currently active. Replying will pause AI automatically.', 'dragwyb-click-to-chat' )
+												: __( 'Message will be delivered directly to the customer session.', 'dragwyb-click-to-chat' ) }
 										</span>
 										<button
 											type="submit"
@@ -656,19 +684,22 @@ export default function TicketsView( {
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Category:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="dctc-sc-badge dctc-sc-badge-category">
-									📁 { selectedTicket.category_name || __( 'General Inquiry', 'dragwyb-click-to-chat' ) }
+									<span className="dashicons dashicons-category" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+									{ selectedTicket.category_name || __( 'General Inquiry', 'dragwyb-click-to-chat' ) }
 								</span>
 							</div>
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Assigned Agent:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="dctc-sc-badge dctc-sc-badge-agent">
-									👤 { selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+									<span className="dashicons dashicons-businesswoman" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+									{ selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
 								</span>
 							</div>
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Total Chats:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="dctc-sc-badge dctc-sc-badge-chats">
-									💬 { selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { __( 'messages', 'dragwyb-click-to-chat' ) }
+									<span className="dashicons dashicons-format-chat" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+									{ selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { __( 'messages', 'dragwyb-click-to-chat' ) }
 								</span>
 							</div>
 							<div className="dctc-sc-meta-tags-block">
@@ -679,7 +710,8 @@ export default function TicketsView( {
 									{ Array.isArray( selectedTicket.tags ) && selectedTicket.tags.length > 0 ? (
 										selectedTicket.tags.map( ( tag, idx ) => (
 											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag">
-												🏷️ { tag }
+												<span className="dashicons dashicons-tag" style={ { fontSize: '11px', width: '11px', height: '11px', verticalAlign: 'middle', marginRight: '3px' } }></span>
+												{ tag }
 											</span>
 										) )
 									) : (

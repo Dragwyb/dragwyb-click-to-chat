@@ -1,8 +1,8 @@
 /**
  * Support Center - Tags View (Taxonomy Hub forwarder)
  */
-import CategoriesView from './CategoriesView';
+import TaxonomiesView from './TaxonomiesView';
 
 export default function TagsView( props ) {
-	return <CategoriesView { ...props } initialSubTab="tags" />;
+	return <TaxonomiesView { ...props } initialSubTab="tags" />;
 }

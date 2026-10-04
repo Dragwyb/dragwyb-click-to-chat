@@ -9,7 +9,20 @@ import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 
 const COLOR_PRESETS = [ '#4F46E5', '#7C3AED', '#2563EB', '#059669', '#D97706', '#E11D48', '#0891B2', '#475569' ];
-const EMOJI_PRESETS = [ '📁', '🏷️', '📦', '🏢', '💻', '🌐', '⚙️', '🎯', '💡', '🔧', '👥', '⭐', '🛒', '💳', '🚀' ];
+const DASHICON_PRESETS = [
+	'dashicons-category',
+	'dashicons-tag',
+	'dashicons-products',
+	'dashicons-groups',
+	'dashicons-networking',
+	'dashicons-location-alt',
+	'dashicons-admin-settings',
+	'dashicons-shield',
+	'dashicons-portfolio',
+	'dashicons-flag',
+	'dashicons-clipboard',
+	'dashicons-chart-pie',
+];
 const PRESET_SKILLS = [ 'technical', 'billing', 'sales', 'returns', 'woocommerce', 'api', 'shipping', 'account' ];
 
 const generateSlug = ( text ) => {
@@ -33,9 +46,9 @@ export default function TaxonomiesView( {
 
 	// Registered Taxonomies List
 	const [ taxonomies, setTaxonomies] = useState( [
-		{ slug: 'category', name: __( 'Categories', 'dragwyb-click-to-chat' ), icon: '📁', color: '#4F46E5', is_system: true },
-		{ slug: 'tag', name: __( 'Tags', 'dragwyb-click-to-chat' ), icon: '🏷️', color: '#D97706', is_system: true },
-		{ slug: 'product', name: __( 'Products', 'dragwyb-click-to-chat' ), icon: '📦', color: '#059669', is_system: true },
+		{ slug: 'category', name: __( 'Categories', 'dragwyb-click-to-chat' ), icon_dashicon: 'dashicons-category', color: '#4F46E5', is_system: true },
+		{ slug: 'tag', name: __( 'Tags', 'dragwyb-click-to-chat' ), icon_dashicon: 'dashicons-tag', color: '#D97706', is_system: true },
+		{ slug: 'product', name: __( 'Products', 'dragwyb-click-to-chat' ), icon_dashicon: 'dashicons-products', color: '#059669', is_system: true },
 	] );
 
 	const [ activeTaxSlug, setActiveTaxSlug ] = useState( 'category' );
@@ -56,8 +69,10 @@ export default function TaxonomiesView( {
 	const [ taxForm, setTaxForm ] = useState( {
 		name: '',
 		slug: '',
-		icon: '📑',
-		color: '#6366F1',
+		icon_type: 'preset',
+		icon_dashicon: 'dashicons-category',
+		image_url: '',
+		color: '#4F46E5',
 		description: '',
 	} );
 
@@ -70,12 +85,12 @@ export default function TaxonomiesView( {
 		slug: '',
 		color: '#4F46E5',
 		default_priority: 'normal',
-		show_product: 1,
-		show_tags: 1,
-		ai_allowed: 1,
+		sub_taxonomies: [ 'product', 'tag' ],
 		required_skills: '',
 		description: '',
 	} );
+	const [ draggedSubTaxSlug, setDraggedSubTaxSlug ] = useState( null );
+	const [ dropTargetSubTaxSlug, setDropTargetSubTaxSlug ] = useState( null );
 
 	// 3. Tag Modal
 	const [ isTagModalOpen, setIsTagModalOpen ] = useState( false );
@@ -170,6 +185,30 @@ export default function TaxonomiesView( {
 
 	const activeTax = taxonomies.find( ( t ) => t.slug === activeTaxSlug ) || taxonomies[ 0 ];
 
+	// WordPress Media Uploader Trigger
+	const handleOpenMediaUploader = ( target = 'taxonomy' ) => {
+		if ( typeof window.wp === 'undefined' || ! window.wp.media ) {
+			const directUrl = window.prompt( __( 'Enter image or icon URL directly:', 'dragwyb-click-to-chat' ) );
+			if ( directUrl ) {
+				setTaxForm( ( prev ) => ( { ...prev, image_url: directUrl.trim(), icon_type: 'custom' } ) );
+			}
+			return;
+		}
+		const mediaFrame = window.wp.media( {
+			title: __( 'Select or Upload Taxonomy Icon / Image', 'dragwyb-click-to-chat' ),
+			button: { text: __( 'Use as Icon', 'dragwyb-click-to-chat' ) },
+			multiple: false,
+			library: { type: 'image' },
+		} );
+		mediaFrame.on( 'select', () => {
+			const attachment = mediaFrame.state().get( 'selection' ).first().toJSON();
+			if ( attachment && attachment.url ) {
+				setTaxForm( ( prev ) => ( { ...prev, image_url: attachment.url, icon_type: 'custom' } ) );
+			}
+		} );
+		mediaFrame.open();
+	};
+
 	// -------------------------------------------------------------
 	// TAXONOMY HANDLERS (ADD / EDIT / DELETE TAXONOMY)
 	// -------------------------------------------------------------
@@ -178,8 +217,10 @@ export default function TaxonomiesView( {
 		setTaxForm( {
 			name: '',
 			slug: '',
-			icon: '📑',
-			color: '#6366F1',
+			icon_type: 'preset',
+			icon_dashicon: 'dashicons-category',
+			image_url: '',
+			color: '#4F46E5',
 			description: '',
 		} );
 		setIsTaxModalOpen( true );
@@ -190,8 +231,10 @@ export default function TaxonomiesView( {
 		setTaxForm( {
 			name: tax.name || '',
 			slug: tax.slug || '',
-			icon: tax.icon || '📑',
-			color: tax.color || '#6366F1',
+			icon_type: tax.image_url ? 'custom' : ( tax.icon_dashicon ? 'preset' : 'none' ),
+			icon_dashicon: tax.icon_dashicon || 'dashicons-category',
+			image_url: tax.image_url || '',
+			color: tax.color || '#4F46E5',
 			description: tax.description || '',
 		} );
 		setIsTaxModalOpen( true );
@@ -265,9 +308,7 @@ export default function TaxonomiesView( {
 			slug: '',
 			color: '#4F46E5',
 			default_priority: 'normal',
-			show_product: 1,
-			show_tags: 1,
-			ai_allowed: 1,
+			sub_taxonomies: [ 'product', 'tag' ],
 			required_skills: '',
 			description: '',
 		} );
@@ -276,19 +317,80 @@ export default function TaxonomiesView( {
 
 	const handleOpenEditCat = ( cat ) => {
 		setEditingCat( cat );
+		let existingSub = [];
+		if ( Array.isArray( cat.sub_taxonomies ) && cat.sub_taxonomies.length > 0 ) {
+			existingSub = cat.sub_taxonomies;
+		} else {
+			if ( cat.show_product !== 0 && cat.show_product !== '0' ) existingSub.push( 'product' );
+			if ( cat.show_tags !== 0 && cat.show_tags !== '0' ) existingSub.push( 'tag' );
+		}
 		setCatForm( {
 			id: cat.id,
 			name: cat.name || '',
 			slug: cat.slug || '',
 			color: cat.color || '#4F46E5',
 			default_priority: cat.default_priority || 'normal',
-			show_product: cat.show_product !== undefined ? Number( cat.show_product ) : 1,
-			show_tags: cat.show_tags !== undefined ? Number( cat.show_tags ) : 1,
-			ai_allowed: cat.ai_allowed !== undefined ? Number( cat.ai_allowed ) : 1,
+			sub_taxonomies: existingSub,
 			required_skills: Array.isArray( cat.required_skills ) ? cat.required_skills.join( ', ' ) : '',
 			description: cat.description || '',
 		} );
 		setIsCatModalOpen( true );
+	};
+
+	const handleToggleSubTaxonomy = ( slug ) => {
+		const current = Array.isArray( catForm.sub_taxonomies ) ? [ ...catForm.sub_taxonomies ] : [];
+		if ( current.includes( slug ) ) {
+			setCatForm( ( prev ) => ( { ...prev, sub_taxonomies: current.filter( ( s ) => s !== slug ) } ) );
+		} else {
+			setCatForm( ( prev ) => ( { ...prev, sub_taxonomies: [ ...current, slug ] } ) );
+		}
+	};
+
+	const handleMoveSubTaxonomy = ( slug, direction ) => {
+		const current = Array.isArray( catForm.sub_taxonomies ) ? [ ...catForm.sub_taxonomies ] : [];
+		const index = current.indexOf( slug );
+		if ( index === -1 ) return;
+		const newIndex = direction === 'up' ? index - 1 : index + 1;
+		if ( newIndex < 0 || newIndex >= current.length ) return;
+		const updated = [ ...current ];
+		const [ moved ] = updated.splice( index, 1 );
+		updated.splice( newIndex, 0, moved );
+		setCatForm( ( prev ) => ( { ...prev, sub_taxonomies: updated } ) );
+	};
+
+	const handleSubTaxDragStart = ( e, slug ) => {
+		setDraggedSubTaxSlug( slug );
+		e.dataTransfer.effectAllowed = 'move';
+	};
+
+	const handleSubTaxDragOver = ( e, slug ) => {
+		e.preventDefault();
+		if ( slug !== dropTargetSubTaxSlug ) {
+			setDropTargetSubTaxSlug( slug );
+		}
+	};
+
+	const handleSubTaxDrop = ( e, targetSlug ) => {
+		e.preventDefault();
+		if ( ! draggedSubTaxSlug || draggedSubTaxSlug === targetSlug ) {
+			setDraggedSubTaxSlug( null );
+			setDropTargetSubTaxSlug( null );
+			return;
+		}
+		const current = Array.isArray( catForm.sub_taxonomies ) ? [ ...catForm.sub_taxonomies ] : [];
+		const fromIndex = current.indexOf( draggedSubTaxSlug );
+		const toIndex = current.indexOf( targetSlug );
+
+		let updated = [ ...current ];
+		if ( fromIndex !== -1 && toIndex !== -1 ) {
+			const [ moved ] = updated.splice( fromIndex, 1 );
+			updated.splice( toIndex, 0, moved );
+		} else if ( fromIndex === -1 && toIndex !== -1 ) {
+			updated.splice( toIndex, 0, draggedSubTaxSlug );
+		}
+		setCatForm( ( prev ) => ( { ...prev, sub_taxonomies: updated } ) );
+		setDraggedSubTaxSlug( null );
+		setDropTargetSubTaxSlug( null );
 	};
 
 	const handleSaveCategory = async ( e ) => {
@@ -544,7 +646,18 @@ export default function TaxonomiesView( {
 							className={ `dctc-sc-subtab-btn ${ activeTaxSlug === tax.slug ? 'active' : '' }` }
 							onClick={ () => setActiveTaxSlug( tax.slug ) }
 						>
-							<span>{ tax.icon || '📑' }</span>
+							{ tax.image_url ? (
+								<img
+									src={ tax.image_url }
+									alt=""
+									style={ { width: '16px', height: '16px', borderRadius: '3px', objectFit: 'cover', verticalAlign: 'middle', marginRight: '4px' } }
+								/>
+							) : (
+								<span
+									className={ `dashicons ${ tax.icon_dashicon || tax.icon || 'dashicons-category' }` }
+									style={ { fontSize: '15px', width: '15px', height: '15px', verticalAlign: 'middle', marginRight: '4px' } }
+								></span>
+							) }
 							<span>{ tax.name }</span>
 							{ tax.slug === 'category' && <span className="dctc-sc-pill-count">({ categories.length })</span> }
 							{ tax.slug === 'tag' && <span className="dctc-sc-pill-count">({ tags.length })</span> }
@@ -590,66 +703,79 @@ export default function TaxonomiesView( {
 					<table className="wp-list-table widefat fixed striped dctc-sc-table">
 						<thead>
 							<tr>
-								<th style={ { width: '22%' } }>{ __( 'Category Name', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '15%' } }>{ __( 'Slug', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '12%' } }>{ __( 'Priority', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '13%' } }>{ __( 'Show Product?', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '13%' } }>{ __( 'Show Tags?', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '12%' } }>{ __( 'AI Allowed', 'dragwyb-click-to-chat' ) }</th>
-								<th style={ { width: '13%', textAlign: 'right' } }>{ __( 'Actions', 'dragwyb-click-to-chat' ) }</th>
+								<th style={ { width: '24%' } }>{ __( 'Category Name', 'dragwyb-click-to-chat' ) }</th>
+								<th style={ { width: '18%' } }>{ __( 'Slug', 'dragwyb-click-to-chat' ) }</th>
+								<th style={ { width: '14%' } }>{ __( 'Default Priority', 'dragwyb-click-to-chat' ) }</th>
+								<th style={ { width: '30%' } }>{ __( 'Sub-Field Taxonomies (Ticket Form Order)', 'dragwyb-click-to-chat' ) }</th>
+								<th style={ { width: '14%', textAlign: 'right' } }>{ __( 'Actions', 'dragwyb-click-to-chat' ) }</th>
 							</tr>
 						</thead>
 						<tbody>
 							{ categories.length === 0 ? (
 								<tr>
-									<td colSpan="7" style={ { textAlign: 'center', padding: '30px' } }>
+									<td colSpan="5" style={ { textAlign: 'center', padding: '30px' } }>
 										{ __( 'No categories found.', 'dragwyb-click-to-chat' ) }
 									</td>
 								</tr>
 							) : (
-								categories.map( ( cat ) => (
-									<tr key={ cat.id }>
-										<td>
-											<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
-												<span className="dctc-sc-color-bullet" style={ { backgroundColor: cat.color || '#4F46E5' } }></span>
-												<strong>{ cat.name }</strong>
-											</div>
-										</td>
-										<td><code>{ cat.slug }</code></td>
-										<td>
-											<span className={ `dctc-sc-badge ${ getPriorityBadgeClass( cat.default_priority ) }` }>
-												{ cat.default_priority }
-											</span>
-										</td>
-										<td>
-											{ cat.show_product ? (
-												<span className="dctc-sc-badge" style={ { background: '#ECFDF5', color: '#047857' } }>✅ { __( 'Yes', 'dragwyb-click-to-chat' ) }</span>
-											) : (
-												<span className="dctc-sc-badge" style={ { background: '#F3F4F6', color: '#6B7280' } }>❌ { __( 'Hidden', 'dragwyb-click-to-chat' ) }</span>
-											) }
-										</td>
-										<td>
-											{ cat.show_tags ? (
-												<span className="dctc-sc-badge" style={ { background: '#EEF2FF', color: '#4338CA' } }>✅ { __( 'Yes', 'dragwyb-click-to-chat' ) }</span>
-											) : (
-												<span className="dctc-sc-badge" style={ { background: '#F3F4F6', color: '#6B7280' } }>❌ { __( 'Hidden', 'dragwyb-click-to-chat' ) }</span>
-											) }
-										</td>
-										<td>{ cat.ai_allowed ? __( '✅ AI Active', 'dragwyb-click-to-chat' ) : __( '🧑‍💼 Human Only', 'dragwyb-click-to-chat' ) }</td>
-										<td style={ { textAlign: 'right' } }>
-											{ canManage && (
-												<div style={ { display: 'inline-flex', gap: '6px' } }>
-													<button type="button" className="button button-small" onClick={ () => handleOpenEditCat( cat ) }>
-														{ __( 'Edit', 'dragwyb-click-to-chat' ) }
-													</button>
-													<button type="button" className="button button-small button-link-delete" onClick={ () => handleDeleteCategory( cat.id ) }>
-														{ __( 'Delete', 'dragwyb-click-to-chat' ) }
-													</button>
+								categories.map( ( cat ) => {
+									const catSubTax = Array.isArray( cat.sub_taxonomies ) && cat.sub_taxonomies.length > 0
+										? cat.sub_taxonomies
+										: [
+												...( Number( cat.show_product ?? 1 ) ? [ 'product' ] : [] ),
+												...( Number( cat.show_tags ?? 1 ) ? [ 'tag' ] : [] ),
+										  ];
+									return (
+										<tr key={ cat.id }>
+											<td>
+												<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
+													<span className="dctc-sc-color-bullet" style={ { backgroundColor: cat.color || '#4F46E5' } }></span>
+													<strong>{ cat.name }</strong>
 												</div>
-											) }
-										</td>
-									</tr>
-								) )
+											</td>
+											<td><code>{ cat.slug }</code></td>
+											<td>
+												<span className={ `dctc-sc-badge ${ getPriorityBadgeClass( cat.default_priority ) }` }>
+													{ cat.default_priority }
+												</span>
+											</td>
+											<td>
+												{ catSubTax.length === 0 ? (
+													<span style={ { color: '#94a3b8', fontSize: '12px' } }>{ __( 'None (Standard fields only)', 'dragwyb-click-to-chat' ) }</span>
+												) : (
+													<div style={ { display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' } }>
+														{ catSubTax.map( ( subSlug, sIdx ) => {
+															const taxDef = taxonomies.find( ( t ) => t.slug === subSlug );
+															const taxName = taxDef ? taxDef.name : subSlug;
+															return (
+																<span
+																	key={ subSlug }
+																	className="dctc-sc-badge-tag"
+																	style={ { display: 'inline-flex', alignItems: 'center', gap: '4px' } }
+																>
+																	<span style={ { fontSize: '10px', color: '#6366f1', fontWeight: 700 } }>#{ sIdx + 1 }</span>
+																	{ taxName }
+																</span>
+															);
+														} ) }
+													</div>
+												) }
+											</td>
+											<td style={ { textAlign: 'right' } }>
+												{ canManage && (
+													<div style={ { display: 'inline-flex', gap: '6px' } }>
+														<button type="button" className="button button-small" onClick={ () => handleOpenEditCat( cat ) }>
+															{ __( 'Edit', 'dragwyb-click-to-chat' ) }
+														</button>
+														<button type="button" className="button button-small button-link-delete" onClick={ () => handleDeleteCategory( cat.id ) }>
+															{ __( 'Delete', 'dragwyb-click-to-chat' ) }
+														</button>
+													</div>
+												) }
+											</td>
+										</tr>
+									);
+								} )
 							) }
 						</tbody>
 					</table>
@@ -695,7 +821,8 @@ export default function TaxonomiesView( {
 									<tr key={ tag.id }>
 										<td>
 											<span className="dctc-sc-badge dctc-sc-badge-tag" style={ { borderColor: tag.color, color: tag.color } }>
-												🏷️ { tag.name }
+												<span className="dashicons dashicons-tag" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+												{ tag.name }
 											</span>
 										</td>
 										<td><code>{ tag.slug }</code></td>
@@ -816,7 +943,19 @@ export default function TaxonomiesView( {
 					<div className="dctc-sc-taxonomy-banner">
 						<div className="dctc-sc-tax-banner-left">
 							<h4>
-								<span>{ activeTax?.icon || '📑' }</span> { activeTax?.name }{ ' ' }
+								{ activeTax?.image_url ? (
+									<img
+										src={ activeTax.image_url }
+										alt=""
+										style={ { width: '20px', height: '20px', borderRadius: '4px', objectFit: 'cover', verticalAlign: 'middle', marginRight: '6px' } }
+									/>
+								) : (
+									<span
+										className={ `dashicons ${ activeTax?.icon_dashicon || activeTax?.icon || 'dashicons-category' }` }
+										style={ { fontSize: '20px', width: '20px', height: '20px', verticalAlign: 'middle', marginRight: '6px' } }
+									></span>
+								) }
+								{ activeTax?.name }{ ' ' }
 								<code>({ activeTax?.slug })</code>
 							</h4>
 							<p>{ activeTax?.description || __( 'Custom support taxonomy.', 'dragwyb-click-to-chat' ) }</p>
@@ -913,7 +1052,11 @@ export default function TaxonomiesView( {
 						{ /* Header */ }
 						<div className="dctc-sc-modal-top-header">
 							<div className="dctc-sc-modal-icon-badge" style={ { background: `linear-gradient(135deg, ${ taxForm.color || '#4f46e5' } 0%, #6366f1 100%)` } }>
-								<span style={ { fontSize: '20px', lineHeight: 1 } }>{ taxForm.icon || '📑' }</span>
+								{ taxForm.image_url ? (
+									<img src={ taxForm.image_url } alt="" style={ { width: '22px', height: '22px', borderRadius: '4px', objectFit: 'cover' } } />
+								) : (
+									<span className={ `dashicons ${ taxForm.icon_dashicon || 'dashicons-category' }` }></span>
+								)}
 							</div>
 							<div className="dctc-sc-modal-title-wrap">
 								<h3 className="dctc-sc-modal-title">
@@ -929,7 +1072,7 @@ export default function TaxonomiesView( {
 								onClick={ () => setIsTaxModalOpen( false ) }
 								title={ __( 'Close', 'dragwyb-click-to-chat' ) }
 							>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 
@@ -937,33 +1080,31 @@ export default function TaxonomiesView( {
 						<form onSubmit={ handleSaveTaxonomy } className="dctc-sc-modal-form">
 							<div className="dctc-sc-modal-body-scroll">
 								
-								{ /* Taxonomy Name */ }
-								<div className="dctc-sc-form-group">
-									<label className="dctc-sc-field-label">
-										<span className="dashicons dashicons-tag"></span>
-										{ __( 'Taxonomy Name', 'dragwyb-click-to-chat' ) }
-										<span className="dctc-sc-required-star">*</span>
-									</label>
-									<input
-										type="text"
-										required
-										className="dctc-sc-custom-input"
-										placeholder="e.g. Departments, Hardware, Platforms"
-										value={ taxForm.name }
-										onChange={ ( e ) => {
-											const val = e.target.value;
-											setTaxForm( {
-												...taxForm,
-												name: val,
-												slug: ! editingTax && ( ! taxForm.slug || taxForm.slug === generateSlug( taxForm.name ) ) ? generateSlug( val ) : taxForm.slug,
-											} );
-										} }
-									/>
-									<span className="dctc-sc-field-hint">{ __( 'Plural name displayed as tab in the navigation bar.', 'dragwyb-click-to-chat' ) }</span>
-								</div>
-
-								{ /* Slug & Icon */ }
+								{ /* Taxonomy Name & Slug */ }
 								<div className="dctc-sc-form-grid-2">
+									<div className="dctc-sc-form-group">
+										<label className="dctc-sc-field-label">
+											<span className="dashicons dashicons-tag"></span>
+											{ __( 'Taxonomy Name', 'dragwyb-click-to-chat' ) }
+											<span className="dctc-sc-required-star">*</span>
+										</label>
+										<input
+											type="text"
+											required
+											className="dctc-sc-custom-input"
+											placeholder="e.g. Departments, Hardware, Platforms"
+											value={ taxForm.name }
+											onChange={ ( e ) => {
+												const val = e.target.value;
+												setTaxForm( {
+													...taxForm,
+													name: val,
+													slug: ! editingTax && ( ! taxForm.slug || taxForm.slug === generateSlug( taxForm.name ) ) ? generateSlug( val ) : taxForm.slug,
+												} );
+											} }
+										/>
+									</div>
+
 									<div className="dctc-sc-form-group">
 										<label className="dctc-sc-field-label">
 											<span className="dashicons dashicons-admin-links"></span>
@@ -977,44 +1118,108 @@ export default function TaxonomiesView( {
 											onChange={ ( e ) => setTaxForm( { ...taxForm, slug: generateSlug( e.target.value ) } ) }
 										/>
 									</div>
+								</div>
 
+								{ /* Icon Representation with Condition & Segmented Switcher */ }
+								<div className="dctc-sc-form-group">
+									<label className="dctc-sc-field-label">
+										<span className="dashicons dashicons-art"></span>
+										{ __( 'Taxonomy Icon Type', 'dragwyb-click-to-chat' ) }
+									</label>
+									<div className="dctc-sc-segmented-tabs">
+										<button
+											type="button"
+											className={ `dctc-sc-segment-tab ${ ( taxForm.icon_type || ( taxForm.image_url ? 'custom' : 'preset' ) ) === 'preset' ? 'is-active' : '' }` }
+											onClick={ () => setTaxForm( { ...taxForm, icon_type: 'preset', icon_dashicon: taxForm.icon_dashicon || 'dashicons-category' } ) }
+										>
+											<span className="dashicons dashicons-marker"></span>
+											{ __( 'Preset Icons', 'dragwyb-click-to-chat' ) }
+										</button>
+										<button
+											type="button"
+											className={ `dctc-sc-segment-tab ${ ( taxForm.icon_type || ( taxForm.image_url ? 'custom' : 'preset' ) ) === 'custom' ? 'is-active' : '' }` }
+											onClick={ () => setTaxForm( { ...taxForm, icon_type: 'custom' } ) }
+										>
+											<span className="dashicons dashicons-upload"></span>
+											{ __( 'Custom Icon / Upload', 'dragwyb-click-to-chat' ) }
+										</button>
+										<button
+											type="button"
+											className={ `dctc-sc-segment-tab ${ taxForm.icon_type === 'none' ? 'is-active' : '' }` }
+											onClick={ () => setTaxForm( { ...taxForm, icon_type: 'none', image_url: '', icon_dashicon: '' } ) }
+										>
+											<span className="dashicons dashicons-dismiss"></span>
+											{ __( 'No Icon', 'dragwyb-click-to-chat' ) }
+										</button>
+									</div>
+								</div>
+
+								{ /* Condition 1: Preset Dashicons */ }
+								{ ( taxForm.icon_type || ( taxForm.image_url ? 'custom' : 'preset' ) ) === 'preset' && (
 									<div className="dctc-sc-form-group">
 										<label className="dctc-sc-field-label">
-											<span className="dashicons dashicons-smiley"></span>
-											{ __( 'Icon / Emoji', 'dragwyb-click-to-chat' ) }
+											<span className="dashicons dashicons-admin-appearance"></span>
+											{ __( 'Select Preset Dashicon', 'dragwyb-click-to-chat' ) }
 										</label>
-										<input
-											type="text"
-											className="dctc-sc-custom-input"
-											placeholder="🏢"
-											value={ taxForm.icon }
-											onChange={ ( e ) => setTaxForm( { ...taxForm, icon: e.target.value } ) }
-										/>
+										<div className="dctc-sc-icon-grid">
+											{ DASHICON_PRESETS.map( ( iconClass ) => (
+												<button
+													key={ iconClass }
+													type="button"
+													className={ `dctc-sc-icon-tile ${ ( ! taxForm.image_url && taxForm.icon_dashicon === iconClass ) ? 'is-active' : '' }` }
+													onClick={ () => setTaxForm( { ...taxForm, icon_dashicon: iconClass, image_url: '', icon_type: 'preset' } ) }
+													title={ iconClass }
+												>
+													<span className={ `dashicons ${ iconClass }` }></span>
+												</button>
+											) ) }
+										</div>
 									</div>
-								</div>
+								) }
 
-								{ /* Quick Emoji Chips */ }
-								<div className="dctc-sc-form-group" style={ { marginTop: '-6px' } }>
-									<span className="dctc-sc-preset-label">{ __( 'Quick Emoji Selection:', 'dragwyb-click-to-chat' ) }</span>
-									<div className="dctc-sc-emoji-chips-list">
-										{ EMOJI_PRESETS.map( ( em ) => (
-											<button
-												key={ em }
-												type="button"
-												className={ `dctc-sc-emoji-chip-btn ${ taxForm.icon === em ? 'is-active' : '' }` }
-												onClick={ () => setTaxForm( { ...taxForm, icon: em } ) }
-											>
-												{ em }
-											</button>
-										) ) }
+								{ /* Condition 2: Custom Image / Icon Upload */ }
+								{ ( taxForm.icon_type || ( taxForm.image_url ? 'custom' : 'preset' ) ) === 'custom' && (
+									<div className="dctc-sc-form-group">
+										<label className="dctc-sc-field-label">
+											<span className="dashicons dashicons-upload"></span>
+											{ __( 'Upload Custom Icon or Image', 'dragwyb-click-to-chat' ) }
+										</label>
+										<div className="dctc-sc-media-upload-box">
+											<div className="dctc-sc-media-preview-wrap">
+												{ taxForm.image_url ? (
+													<img src={ taxForm.image_url } alt="Preview" className="dctc-sc-media-preview-img" />
+												) : (
+													<span className="dashicons dashicons-format-image" style={ { color: '#94a3b8', fontSize: '22px' } }></span>
+												) }
+											</div>
+											<div className="dctc-sc-media-upload-actions">
+												<button
+													type="button"
+													className="dctc-sc-upload-trigger-btn"
+													onClick={ () => handleOpenMediaUploader( 'taxonomy' ) }
+												>
+													<span className="dashicons dashicons-admin-media"></span>
+													{ taxForm.image_url ? __( 'Change Image / Icon', 'dragwyb-click-to-chat' ) : __( 'Choose from Media Library', 'dragwyb-click-to-chat' ) }
+												</button>
+												{ taxForm.image_url && (
+													<button
+														type="button"
+														className="dctc-sc-remove-media-link"
+														onClick={ () => setTaxForm( { ...taxForm, image_url: '' } ) }
+													>
+														{ __( 'Remove custom image', 'dragwyb-click-to-chat' ) }
+													</button>
+												) }
+											</div>
+										</div>
 									</div>
-								</div>
+								) }
 
 								{ /* Color Theme */ }
 								<div className="dctc-sc-form-group">
 									<label className="dctc-sc-field-label">
 										<span className="dashicons dashicons-art"></span>
-										{ __( 'Color Theme', 'dragwyb-click-to-chat' ) }
+										{ __( 'Accent Color Theme', 'dragwyb-click-to-chat' ) }
 									</label>
 									<div className="dctc-sc-color-picker-wrap">
 										<div className="dctc-sc-color-swatches-row">
@@ -1114,7 +1319,7 @@ export default function TaxonomiesView( {
 								onClick={ () => setIsCatModalOpen( false ) }
 								title={ __( 'Close', 'dragwyb-click-to-chat' ) }
 							>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 
@@ -1211,90 +1416,142 @@ export default function TaxonomiesView( {
 												value={ catForm.default_priority }
 												onChange={ ( e ) => setCatForm( { ...catForm, default_priority: e.target.value } ) }
 											>
-												<option value="low">🟢 { __( 'Low Priority', 'dragwyb-click-to-chat' ) }</option>
-												<option value="normal">🔵 { __( 'Normal Priority', 'dragwyb-click-to-chat' ) }</option>
-												<option value="high">🟠 { __( 'High Priority', 'dragwyb-click-to-chat' ) }</option>
-												<option value="urgent">🔴 { __( 'Urgent Priority', 'dragwyb-click-to-chat' ) }</option>
+												<option value="low">{ __( 'Low Priority', 'dragwyb-click-to-chat' ) }</option>
+												<option value="normal">{ __( 'Normal Priority', 'dragwyb-click-to-chat' ) }</option>
+												<option value="high">{ __( 'High Priority', 'dragwyb-click-to-chat' ) }</option>
+												<option value="urgent">{ __( 'Urgent Priority', 'dragwyb-click-to-chat' ) }</option>
 											</select>
 										</div>
 										<span className="dctc-sc-field-hint">{ __( 'Assigned automatically when a ticket is filed under this category.', 'dragwyb-click-to-chat' ) }</span>
 									</div>
 								</div>
 
-								{ /* Support Form Dynamic Visibility Card */ }
-								<div className="dctc-sc-visibility-container">
-									<div className="dctc-sc-visibility-header">
+								{ /* Support Form Dynamic Sub-Field Taxonomies Panel */ }
+								<div className="dctc-sc-condition-card">
+									<div className="dctc-sc-condition-card-header">
 										<h4>
-											<span className="dashicons dashicons-randomize" style={ { color: '#6366f1' } }></span>
-											{ __( 'Support Form Dynamic Condition Rules', 'dragwyb-click-to-chat' ) }
+											<span className="dashicons dashicons-randomize"></span>
+											{ __( 'Support Form Dynamic Sub-Field Taxonomies', 'dragwyb-click-to-chat' ) }
 										</h4>
-										<p>{ __( 'Toggle dynamic fields in the [dragwyb_support] ticket form whenever a user chooses this category.', 'dragwyb-click-to-chat' ) }</p>
+										<p>{ __( 'Select and drag or use arrows to reorder the classification sub-fields that appear in the ticket form when this category is selected.', 'dragwyb-click-to-chat' ) }</p>
 									</div>
 
-									{ /* Switch 1: Product Selector */ }
-									<div
-										className="dctc-sc-toggle-card"
-										onClick={ () => setCatForm( { ...catForm, show_product: catForm.show_product ? 0 : 1 } ) }
-									>
-										<div className="dctc-sc-toggle-info">
-											<span className="dctc-sc-toggle-icon">📦</span>
-											<div className="dctc-sc-toggle-text-wrap">
-												<span className="dctc-sc-toggle-main-title">{ __( 'Show Product Dropdown in Ticket Form', 'dragwyb-click-to-chat' ) }</span>
-												<span className="dctc-sc-toggle-sub-hint">{ __( 'Lets users select their purchased WooCommerce or custom product.', 'dragwyb-click-to-chat' ) }</span>
-											</div>
-										</div>
-										<label className="dctc-sc-switch-control" onClick={ ( e ) => e.stopPropagation() }>
-											<input
-												type="checkbox"
-												checked={ !! catForm.show_product }
-												onChange={ ( e ) => setCatForm( { ...catForm, show_product: e.target.checked ? 1 : 0 } ) }
-											/>
-											<span className="dctc-sc-switch-slider"></span>
-										</label>
-									</div>
+									<div className="dctc-sc-condition-group">
+										{ ( () => {
+											const defaultSubs = [
+												{ slug: 'product', name: __( 'Products', 'dragwyb-click-to-chat' ), icon_dashicon: 'dashicons-products', color: '#059669', is_system: true, description: __( 'WooCommerce / custom product catalog dropdown.', 'dragwyb-click-to-chat' ) },
+												{ slug: 'tag', name: __( 'Tags', 'dragwyb-click-to-chat' ), icon_dashicon: 'dashicons-tag', color: '#D97706', is_system: true, description: __( 'Tags classification dropdown and badge selector.', 'dragwyb-click-to-chat' ) },
+											];
+											const currentList = Array.isArray( taxonomies ) ? taxonomies.filter( ( t ) => t.slug !== 'category' ) : [];
+											const combined = [ ...currentList ];
+											defaultSubs.forEach( ( d ) => {
+												if ( ! combined.some( ( t ) => t.slug === d.slug ) ) {
+													combined.push( d );
+												}
+											} );
 
-									{ /* Switch 2: Tags Selector */ }
-									<div
-										className="dctc-sc-toggle-card"
-										onClick={ () => setCatForm( { ...catForm, show_tags: catForm.show_tags ? 0 : 1 } ) }
-									>
-										<div className="dctc-sc-toggle-info">
-											<span className="dctc-sc-toggle-icon">🏷️</span>
-											<div className="dctc-sc-toggle-text-wrap">
-												<span className="dctc-sc-toggle-main-title">{ __( 'Show Tags Option in Ticket Form', 'dragwyb-click-to-chat' ) }</span>
-												<span className="dctc-sc-toggle-sub-hint">{ __( 'Displays issue tags to help users classify their support topic.', 'dragwyb-click-to-chat' ) }</span>
-											</div>
-										</div>
-										<label className="dctc-sc-switch-control" onClick={ ( e ) => e.stopPropagation() }>
-											<input
-												type="checkbox"
-												checked={ !! catForm.show_tags }
-												onChange={ ( e ) => setCatForm( { ...catForm, show_tags: e.target.checked ? 1 : 0 } ) }
-											/>
-											<span className="dctc-sc-switch-slider"></span>
-										</label>
-									</div>
+											const availableSubTaxonomies = combined.sort( ( a, b ) => {
+												const aIdx = ( catForm.sub_taxonomies || [] ).indexOf( a.slug );
+												const bIdx = ( catForm.sub_taxonomies || [] ).indexOf( b.slug );
+												if ( aIdx !== -1 && bIdx !== -1 ) return aIdx - bIdx;
+												if ( aIdx !== -1 ) return -1;
+												if ( bIdx !== -1 ) return 1;
+												return 0;
+											} );
 
-									{ /* Switch 3: AI Assistant */ }
-									<div
-										className="dctc-sc-toggle-card"
-										onClick={ () => setCatForm( { ...catForm, ai_allowed: catForm.ai_allowed ? 0 : 1 } ) }
-									>
-										<div className="dctc-sc-toggle-info">
-											<span className="dctc-sc-toggle-icon">🤖</span>
-											<div className="dctc-sc-toggle-text-wrap">
-												<span className="dctc-sc-toggle-main-title">{ __( 'Allow AI Assistant Immediate Responses', 'dragwyb-click-to-chat' ) }</span>
-												<span className="dctc-sc-toggle-sub-hint">{ __( 'Enable AI Chatbot to draft solutions or answer questions in this category.', 'dragwyb-click-to-chat' ) }</span>
-											</div>
-										</div>
-										<label className="dctc-sc-switch-control" onClick={ ( e ) => e.stopPropagation() }>
-											<input
-												type="checkbox"
-												checked={ !! catForm.ai_allowed }
-												onChange={ ( e ) => setCatForm( { ...catForm, ai_allowed: e.target.checked ? 1 : 0 } ) }
-											/>
-											<span className="dctc-sc-switch-slider"></span>
-										</label>
+											return availableSubTaxonomies.map( ( tax ) => {
+												const isEnabled = ( catForm.sub_taxonomies || [] ).includes( tax.slug );
+												const activeIndex = ( catForm.sub_taxonomies || [] ).indexOf( tax.slug );
+												const canMoveUp = isEnabled && activeIndex > 0;
+												const canMoveDown = isEnabled && activeIndex < ( catForm.sub_taxonomies || [] ).length - 1;
+
+												return (
+													<div
+														key={ tax.slug }
+														draggable={ isEnabled }
+														onDragStart={ ( e ) => isEnabled && handleSubTaxDragStart( e, tax.slug ) }
+														onDragOver={ ( e ) => handleSubTaxDragOver( e, tax.slug ) }
+														onDragEnd={ () => {
+															setDraggedSubTaxSlug( null );
+															setDropTargetSubTaxSlug( null );
+														} }
+														onDrop={ ( e ) => handleSubTaxDrop( e, tax.slug ) }
+														className={ `dctc-sc-condition-row ${ isEnabled ? 'is-enabled' : '' } ${ draggedSubTaxSlug === tax.slug ? 'is-dragging' : '' } ${ dropTargetSubTaxSlug === tax.slug ? 'is-drop-target' : '' }` }
+														onClick={ () => handleToggleSubTaxonomy( tax.slug ) }
+													>
+														{ /* Drag Grip & Reorder Buttons */ }
+														<div style={ { display: 'flex', alignItems: 'center', gap: '5px' } } onClick={ ( e ) => e.stopPropagation() }>
+															<span
+																className="dctc-sc-drag-handle"
+																title={ isEnabled ? __( 'Drag to reorder position in form', 'dragwyb-click-to-chat' ) : '' }
+															>
+																<span className="dashicons dashicons-menu"></span>
+															</span>
+															<div className="dctc-sc-reorder-actions">
+																<button
+																	type="button"
+																	className="dctc-sc-reorder-btn"
+																	disabled={ ! canMoveUp }
+																	onClick={ () => handleMoveSubTaxonomy( tax.slug, 'up' ) }
+																	title={ __( 'Move Up', 'dragwyb-click-to-chat' ) }
+																>
+																	<span className="dashicons dashicons-arrow-up-alt2"></span>
+																</button>
+																<button
+																	type="button"
+																	className="dctc-sc-reorder-btn"
+																	disabled={ ! canMoveDown }
+																	onClick={ () => handleMoveSubTaxonomy( tax.slug, 'down' ) }
+																	title={ __( 'Move Down', 'dragwyb-click-to-chat' ) }
+																>
+																	<span className="dashicons dashicons-arrow-down-alt2"></span>
+																</button>
+															</div>
+															<span className={ `dctc-sc-order-badge ${ isEnabled ? 'is-active' : '' }` }>
+																{ isEnabled ? `#${ activeIndex + 1 }` : '—' }
+															</span>
+														</div>
+
+														{ /* Info */ }
+														<div className="dctc-sc-condition-info">
+															<div
+																className="dctc-sc-condition-icon-wrap"
+																style={ {
+																	background: `${ tax.color || '#4f46e5' }15`,
+																	color: tax.color || '#4f46e5',
+																} }
+															>
+																{ tax.image_url ? (
+																	<img src={ tax.image_url } alt="" style={ { width: '18px', height: '18px', objectFit: 'cover', borderRadius: '3px' } } />
+																) : (
+																	<span className={ `dashicons ${ tax.icon_dashicon || 'dashicons-tag' }` }></span>
+																) }
+															</div>
+															<div className="dctc-sc-condition-text-wrap">
+																<span className="dctc-sc-condition-main-title">
+																	{ tax.name }
+																	{ tax.slug === 'product' && ` (${ __( 'Product Catalog Dropdown', 'dragwyb-click-to-chat' ) })` }
+																	{ tax.slug === 'tag' && ` (${ __( 'Tags Classification', 'dragwyb-click-to-chat' ) })` }
+																</span>
+																<span className="dctc-sc-condition-sub-hint">
+																	{ tax.description || __( 'Dynamic sub-field in support ticket form.', 'dragwyb-click-to-chat' ) }
+																</span>
+															</div>
+														</div>
+
+														{ /* Toggle Switch */ }
+														<label className="dctc-sc-switch-control" onClick={ ( e ) => e.stopPropagation() }>
+															<input
+																type="checkbox"
+																checked={ isEnabled }
+																onChange={ () => handleToggleSubTaxonomy( tax.slug ) }
+															/>
+															<span className="dctc-sc-switch-slider"></span>
+														</label>
+													</div>
+												);
+											} );
+										} )() }
 									</div>
 								</div>
 
@@ -1402,7 +1659,7 @@ export default function TaxonomiesView( {
 								<p className="dctc-sc-modal-desc">{ __( 'Tags allow customers and agents to pinpoint precise sub-topics and issue badges.', 'dragwyb-click-to-chat' ) }</p>
 							</div>
 							<button type="button" className="dctc-sc-modal-close-btn" onClick={ () => setIsTagModalOpen( false ) } title={ __( 'Close', 'dragwyb-click-to-chat' ) }>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 
@@ -1519,7 +1776,7 @@ export default function TaxonomiesView( {
 								<p className="dctc-sc-modal-desc">{ __( 'Products can be selected by customers during ticket creation for issue context.', 'dragwyb-click-to-chat' ) }</p>
 							</div>
 							<button type="button" className="dctc-sc-modal-close-btn" onClick={ () => setIsProdModalOpen( false ) } title={ __( 'Close', 'dragwyb-click-to-chat' ) }>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 
@@ -1629,7 +1886,11 @@ export default function TaxonomiesView( {
 						{ /* Header */ }
 						<div className="dctc-sc-modal-top-header">
 							<div className="dctc-sc-modal-icon-badge" style={ { background: `linear-gradient(135deg, ${ termForm.color || activeTax?.color || '#4f46e5' } 0%, #6366f1 100%)` } }>
-								<span style={ { fontSize: '20px', lineHeight: 1 } }>{ activeTax?.icon || '📑' }</span>
+								{ activeTax?.image_url ? (
+									<img src={ activeTax.image_url } alt="" style={ { width: '22px', height: '22px', borderRadius: '4px', objectFit: 'cover' } } />
+								) : (
+									<span className={ `dashicons ${ activeTax?.icon_dashicon || activeTax?.icon || 'dashicons-category' }` }></span>
+								) }
 							</div>
 							<div className="dctc-sc-modal-title-wrap">
 								<h3 className="dctc-sc-modal-title">
@@ -1642,7 +1903,7 @@ export default function TaxonomiesView( {
 								</p>
 							</div>
 							<button type="button" className="dctc-sc-modal-close-btn" onClick={ () => setIsTermModalOpen( false ) } title={ __( 'Close', 'dragwyb-click-to-chat' ) }>
-								✕
+								<span className="dashicons dashicons-no-alt"></span>
 							</button>
 						</div>
 

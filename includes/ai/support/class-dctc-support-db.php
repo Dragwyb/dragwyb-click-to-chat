@@ -110,6 +110,7 @@ class DCTC_Support_DB {
 			auto_assign tinyint(1) DEFAULT 1 NOT NULL,
 			show_product tinyint(1) DEFAULT 1 NOT NULL,
 			show_tags tinyint(1) DEFAULT 1 NOT NULL,
+			sub_taxonomies text,
 			status varchar(20) DEFAULT 'active' NOT NULL,
 			display_order int(11) DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -120,6 +121,13 @@ class DCTC_Support_DB {
 			KEY status (status)
 		) $charset_collate;";
 		dbDelta( $sql_categories );
+
+		// Ensure sub_taxonomies column exists if table was created in an earlier version
+		$col_check = $wpdb->get_results( "SHOW COLUMNS FROM `$table_categories` LIKE 'sub_taxonomies'" );
+		if ( empty( $col_check ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN `sub_taxonomies` text DEFAULT NULL AFTER `show_tags`" );
+		}
 
 		// 2b. Support Products Table
 		$table_products = $wpdb->prefix . 'dctc_support_products';

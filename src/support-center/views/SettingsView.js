@@ -86,11 +86,11 @@ const PERMISSION_DEFINITIONS = [
 ];
 
 const ROLES = [
-	{ key: 'admin', label: __( 'Administrator', 'dragwyb-click-to-chat' ), icon: '👑', badge: 'Full Admin' },
-	{ key: 'manager', label: __( 'Support Manager', 'dragwyb-click-to-chat' ), icon: '🛡️', badge: 'Manager' },
-	{ key: 'senior', label: __( 'Senior Specialist', 'dragwyb-click-to-chat' ), icon: '⚡', badge: 'Tier 2' },
-	{ key: 'support', label: __( 'Support Agent', 'dragwyb-click-to-chat' ), icon: '🎧', badge: 'Standard' },
-	{ key: 'fresher', label: __( 'Fresher / Junior', 'dragwyb-click-to-chat' ), icon: '🌱', badge: 'Tier 1' },
+	{ key: 'admin', label: __( 'Administrator', 'dragwyb-click-to-chat' ), icon: 'dashicons-shield', badge: 'Full Admin' },
+	{ key: 'manager', label: __( 'Support Manager', 'dragwyb-click-to-chat' ), icon: 'dashicons-admin-generic', badge: 'Manager' },
+	{ key: 'senior', label: __( 'Senior Specialist', 'dragwyb-click-to-chat' ), icon: 'dashicons-star-filled', badge: 'Tier 2' },
+	{ key: 'support', label: __( 'Support Agent', 'dragwyb-click-to-chat' ), icon: 'dashicons-businesswoman', badge: 'Standard' },
+	{ key: 'fresher', label: __( 'Fresher / Junior', 'dragwyb-click-to-chat' ), icon: 'dashicons-welcome-learn-more', badge: 'Tier 1' },
 ];
 
 export default function SettingsView( {
@@ -379,7 +379,9 @@ export default function SettingsView( {
 								</th>
 								{ ROLES.map( ( r ) => (
 									<th key={ r.key } style={ { textAlign: 'center', padding: '12px 8px', width: '12%' } }>
-										<div style={ { fontSize: '15px', marginBottom: '2px' } }>{ r.icon }</div>
+										<div style={ { display: 'flex', justifyContent: 'center', marginBottom: '4px' } }>
+											<span className={ `dashicons ${ r.icon }` } style={ { fontSize: '18px', width: '18px', height: '18px', color: '#4f46e5' } }></span>
+										</div>
 										<div style={ { fontWeight: 700, fontSize: '12px', color: '#0f172a' } }>{ r.label }</div>
 										<span style={ { fontSize: '10.5px', color: '#64748b', fontWeight: 500 } }>{ r.badge }</span>
 									</th>

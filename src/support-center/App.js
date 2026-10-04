@@ -272,8 +272,9 @@ export default function App() {
 						<span className="dctc-sc-app-tagline">
 							{ __( 'Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat' ) }
 							{ userPermissions.support_role && (
-								<span style={ { marginLeft: '8px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px' } }>
-									{ userPermissions.is_admin ? '👑 Admin' : `🎧 ${ userPermissions.support_role.toUpperCase() }` }
+								<span style={ { marginLeft: '8px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' } }>
+									<span className={ `dashicons ${ userPermissions.is_admin ? 'dashicons-shield' : 'dashicons-businesswoman' }` } style={ { fontSize: '12px', width: '12px', height: '12px' } }></span>
+									{ userPermissions.is_admin ? __( 'Admin', 'dragwyb-click-to-chat' ) : userPermissions.support_role.toUpperCase() }
 								</span>
 							) }
 						</span>

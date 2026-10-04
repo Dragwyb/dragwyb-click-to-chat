@@ -27,28 +27,31 @@ class DCTC_Support_Taxonomy_Service {
 	public static function get_taxonomies() {
 		$default_taxonomies = array(
 			array(
-				'slug'        => 'category',
-				'name'        => __( 'Categories', 'dragwyb-click-to-chat' ),
-				'description' => __( 'Main routing taxonomy with priority and staff assignment rules.', 'dragwyb-click-to-chat' ),
-				'is_system'   => true,
-				'icon'        => '📁',
-				'color'       => '#4F46E5',
+				'slug'          => 'category',
+				'name'          => __( 'Categories', 'dragwyb-click-to-chat' ),
+				'description'   => __( 'Main routing taxonomy with priority and staff assignment rules.', 'dragwyb-click-to-chat' ),
+				'is_system'     => true,
+				'icon_dashicon' => 'dashicons-category',
+				'image_url'     => '',
+				'color'         => '#4F46E5',
 			),
 			array(
-				'slug'        => 'tag',
-				'name'        => __( 'Tags', 'dragwyb-click-to-chat' ),
-				'description' => __( 'Visual classification tags for fast identification and badge design.', 'dragwyb-click-to-chat' ),
-				'is_system'   => true,
-				'icon'        => '🏷️',
-				'color'       => '#D97706',
+				'slug'          => 'tag',
+				'name'          => __( 'Tags', 'dragwyb-click-to-chat' ),
+				'description'   => __( 'Visual classification tags for fast identification and badge design.', 'dragwyb-click-to-chat' ),
+				'is_system'     => true,
+				'icon_dashicon' => 'dashicons-tag',
+				'image_url'     => '',
+				'color'         => '#D97706',
 			),
 			array(
-				'slug'        => 'product',
-				'name'        => __( 'Products', 'dragwyb-click-to-chat' ),
-				'description' => __( 'WooCommerce and custom products for support catalog item routing.', 'dragwyb-click-to-chat' ),
-				'is_system'   => true,
-				'icon'        => '📦',
-				'color'       => '#059669',
+				'slug'          => 'product',
+				'name'          => __( 'Products', 'dragwyb-click-to-chat' ),
+				'description'   => __( 'WooCommerce and custom products for support catalog item routing.', 'dragwyb-click-to-chat' ),
+				'is_system'     => true,
+				'icon_dashicon' => 'dashicons-products',
+				'image_url'     => '',
+				'color'         => '#059669',
 			),
 		);
 
@@ -61,7 +64,7 @@ class DCTC_Support_Taxonomy_Service {
 	/**
 	 * Save / Add / Update a custom taxonomy.
 	 *
-	 * @param array $data Taxonomy payload (name, slug, description, color, icon).
+	 * @param array $data Taxonomy payload (name, slug, description, color, icon_dashicon, image_url, icon_type).
 	 * @return array<string, mixed>|false
 	 */
 	public static function save_taxonomy( $data ) {
@@ -69,11 +72,13 @@ class DCTC_Support_Taxonomy_Service {
 			return false;
 		}
 
-		$name  = ! empty( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
-		$slug  = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $name );
-		$desc  = isset( $data['description'] ) ? sanitize_textarea_field( $data['description'] ) : '';
-		$color = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '#6366F1';
-		$icon  = ! empty( $data['icon'] ) ? sanitize_text_field( $data['icon'] ) : '📑';
+		$name          = ! empty( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
+		$slug          = ! empty( $data['slug'] ) ? sanitize_title( $data['slug'] ) : sanitize_title( $name );
+		$desc          = isset( $data['description'] ) ? sanitize_textarea_field( $data['description'] ) : '';
+		$color         = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '#6366F1';
+		$icon_dashicon = ! empty( $data['icon_dashicon'] ) ? sanitize_text_field( $data['icon_dashicon'] ) : 'dashicons-category';
+		$image_url     = ! empty( $data['image_url'] ) ? esc_url_raw( $data['image_url'] ) : '';
+		$icon_type     = ! empty( $data['icon_type'] ) ? sanitize_key( $data['icon_type'] ) : ( ! empty( $image_url ) ? 'custom' : 'preset' );
 
 		if ( empty( $name ) || empty( $slug ) ) {
 			return false;
@@ -96,12 +101,14 @@ class DCTC_Support_Taxonomy_Service {
 		}
 
 		$tax_item = array(
-			'slug'        => $slug,
-			'name'        => $name,
-			'description' => $desc,
-			'color'       => $color ? $color : '#6366F1',
-			'icon'        => $icon,
-			'is_system'   => false,
+			'slug'          => $slug,
+			'name'          => $name,
+			'description'   => $desc,
+			'color'         => $color ? $color : '#6366F1',
+			'icon_dashicon' => $icon_dashicon,
+			'image_url'     => $image_url,
+			'icon_type'     => $icon_type,
+			'is_system'     => false,
 		);
 
 		if ( $found_index >= 0 ) {

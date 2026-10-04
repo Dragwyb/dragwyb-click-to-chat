@@ -64,9 +64,9 @@ export default function DashboardView( {
 					<div className="dctc-sc-presence-pill-group">
 						<span className="dctc-sc-presence-label">{ __( 'Availability:', 'dragwyb-click-to-chat' ) }</span>
 						{ [
-							{ id: 'available', label: __( 'Available', 'dragwyb-click-to-chat' ), icon: '🟢' },
-							{ id: 'away', label: __( 'Away', 'dragwyb-click-to-chat' ), icon: '🟡' },
-							{ id: 'offline', label: __( 'Offline', 'dragwyb-click-to-chat' ), icon: '🔴' },
+							{ id: 'available', label: __( 'Available', 'dragwyb-click-to-chat' ), status: 'available' },
+							{ id: 'away', label: __( 'Away', 'dragwyb-click-to-chat' ), status: 'away' },
+							{ id: 'offline', label: __( 'Offline', 'dragwyb-click-to-chat' ), status: 'offline' },
 						].map( ( item ) => (
 							<button
 								key={ item.id }
@@ -75,7 +75,8 @@ export default function DashboardView( {
 								className={ `dctc-sc-presence-btn ${ ( agent?.availability_status || 'available' ) === item.id ? 'active ' + item.id : '' }` }
 								onClick={ () => onUpdateStatus( item.id ) }
 							>
-								<span>{ item.icon }</span> { item.label }
+								<span className={ `dctc-sc-avail-dot ${ item.status }` }></span>
+								<span>{ item.label }</span>
 							</button>
 						) ) }
 					</div>
@@ -157,12 +158,18 @@ export default function DashboardView( {
 					<div className="dctc-sc-kpi-split-value">
 						<div className="dctc-sc-split-item">
 							<span className="dctc-sc-split-num">{ dashboardStats?.ai_controlled_tickets ?? 0 }</span>
-							<span className="dctc-sc-split-tag">🤖 { __( 'AI Bot', 'dragwyb-click-to-chat' ) }</span>
+							<span className="dctc-sc-split-tag">
+								<span className="dashicons dashicons-superhero" style={ { fontSize: '13px', width: '13px', height: '13px', marginRight: '3px' } }></span>
+								{ __( 'AI Bot', 'dragwyb-click-to-chat' ) }
+							</span>
 						</div>
 						<div className="dctc-sc-split-divider">/</div>
 						<div className="dctc-sc-split-item">
 							<span className="dctc-sc-split-num">{ dashboardStats?.human_controlled_tickets ?? 0 }</span>
-							<span className="dctc-sc-split-tag">👤 { __( 'Human Staff', 'dragwyb-click-to-chat' ) }</span>
+							<span className="dctc-sc-split-tag">
+								<span className="dashicons dashicons-businesswoman" style={ { fontSize: '13px', width: '13px', height: '13px', marginRight: '3px' } }></span>
+								{ __( 'Human Staff', 'dragwyb-click-to-chat' ) }
+							</span>
 						</div>
 					</div>
 					<div className="dctc-sc-kpi-footer">
@@ -235,15 +242,15 @@ export default function DashboardView( {
 								title={ __( 'Click to view ticket', 'dragwyb-click-to-chat' ) }
 							>
 								<div className="dctc-sc-activity-icon">
-									{ ev.event_type === 'created' && '➕' }
-									{ ev.event_type === 'customer_reply' && '💬' }
-									{ ev.event_type === 'agent_reply' && '👤' }
-									{ ev.event_type === 'control_mode_changed' && '🔄' }
-									{ ev.event_type === 'status_changed' && '🏷️' }
-									{ ev.event_type === 'priority_changed' && '⚡' }
-									{ ev.event_type === 'assigned' && '🎯' }
-									{ ev.event_type === 'note_added' && '📝' }
-									{ ! [ 'created', 'customer_reply', 'agent_reply', 'control_mode_changed', 'status_changed', 'priority_changed', 'assigned', 'note_added' ].includes( ev.event_type ) && '📌' }
+									{ ev.event_type === 'created' && <span className="dashicons dashicons-plus-alt"></span> }
+									{ ev.event_type === 'customer_reply' && <span className="dashicons dashicons-format-chat"></span> }
+									{ ev.event_type === 'agent_reply' && <span className="dashicons dashicons-businesswoman"></span> }
+									{ ev.event_type === 'control_mode_changed' && <span className="dashicons dashicons-randomize"></span> }
+									{ ev.event_type === 'status_changed' && <span className="dashicons dashicons-tag"></span> }
+									{ ev.event_type === 'priority_changed' && <span className="dashicons dashicons-warning"></span> }
+									{ ev.event_type === 'assigned' && <span className="dashicons dashicons-admin-users"></span> }
+									{ ev.event_type === 'note_added' && <span className="dashicons dashicons-edit"></span> }
+									{ ! [ 'created', 'customer_reply', 'agent_reply', 'control_mode_changed', 'status_changed', 'priority_changed', 'assigned', 'note_added' ].includes( ev.event_type ) && <span className="dashicons dashicons-marker"></span> }
 								</div>
 								<div className="dctc-sc-activity-content">
 									<div className="dctc-sc-activity-top-line">
