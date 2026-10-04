@@ -156,8 +156,9 @@ class DCTC_AI_Chat_Controller
 			return new \WP_REST_Response($human_response, 200);
 		}
 
-		// Feature 10: Human Handoff Intent Detection
+		// Feature 10: Intelligent Intent & Human Handoff Intent Detection
 		if (!empty($prompt) && (!isset($bot['enable_human_handoff']) || (bool) $bot['enable_human_handoff']) && self::detect_human_handoff_intent($prompt)) {
+			$classification = self::classify_user_intent($prompt);
 			// Auto-create/link support ticket if Support Center is enabled
 			if (class_exists('DCTC_Support_Ticket_Service')) {
 				$support_settings = get_option('dctc_support_settings', []);
@@ -167,8 +168,15 @@ class DCTC_AI_Chat_Controller
 					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$existing_ticket = $wpdb->get_row($wpdb->prepare("SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id), ARRAY_A);
 					if (!$existing_ticket) {
+						$prefix = '';
+						if ('lead_generation' === $classification['intent']) {
+							$prefix = '[Lead] ';
+						} elseif ('support_ticket' === $classification['intent']) {
+							$prefix = '[Support] ';
+						}
+
 						DCTC_Support_Ticket_Service::create_ticket([
-							'subject'          => wp_trim_words($prompt, 10, '...'),
+							'subject'          => $prefix . wp_trim_words($prompt, 8, '...'),
 							'session_id'       => $session_id,
 							'customer_email'   => $email,
 							'origin_type'      => 'chatbot',
@@ -183,8 +191,8 @@ class DCTC_AI_Chat_Controller
 
 			$is_online = self::is_within_business_hours($bot);
 			$handoff_text = $is_online
-				? esc_html__('I can connect you directly with our team! Choose your preferred channel below to continue with a human specialist.', 'dragwyb-click-to-chat')
-				: (!empty($bot['offline_handoff_message']) ? $bot['offline_handoff_message'] : esc_html__('Our live human team is currently offline. Please leave an inquiry or reach us via email.', 'dragwyb-click-to-chat'));
+				? esc_html__('I have logged your request with our support team and an agent has been notified. You can also connect directly via your preferred channel below:', 'dragwyb-click-to-chat')
+				: (!empty($bot['offline_handoff_message']) ? $bot['offline_handoff_message'] : esc_html__('Our live human team is currently offline. We have received your inquiry and will follow up shortly.', 'dragwyb-click-to-chat'));
 
 			$action_buttons = self::build_handoff_action_buttons($bot, $prompt, $is_online);
 
@@ -253,7 +261,7 @@ class DCTC_AI_Chat_Controller
 			}
 
 			if (!empty($rag_data['context'])) {
-				$system_message .= "\n\nCRITICAL INSTRUCTION: Answer the user's question concisely based ONLY on the facts provided in the 'Knowledge Base Information' below. Do not hallucinate, over-explain, or add external general knowledge that is not explicitly stated in the context.\n\nKnowledge Base Information:\n" . $rag_data['context'];
+				$system_message .= "\n\nCRITICAL INSTRUCTION: Answer the user's question concisely based ONLY on the facts provided in the 'Knowledge Base Information' below. Do not hallucinate, over-explain, or add external general knowledge that is not explicitly stated in the context. If the user asks for customizations, code tweaks, or topics not covered in our data, guide them to contact our support team.\n\nKnowledge Base Information:\n" . $rag_data['context'];
 			}
 
 			$rag_links = $rag_data['links'];
@@ -810,82 +818,51 @@ class DCTC_AI_Chat_Controller
 	}
 
 	/**
-	 * Build comprehensive system prompt
+	 * Build comprehensive system prompt with strict domain grounding and custom support referral.
 	 */
 	private function build_system_prompt($bot, $settings)
 	{
+		$site_name   = get_bloginfo('name');
+		$support_url = !empty($bot['support_url']) ? esc_url_raw($bot['support_url']) : home_url();
+		$bot_name    = !empty($bot['bot_name']) ? sanitize_text_field($bot['bot_name']) : 'AI Assistant';
+
 		$system_message = '';
 
-		// Admin custom prompt
+		// Admin custom prompt if set
 		if (!empty($bot['system_prompt'])) {
-			$system_message .= trim(wp_kses_post($bot['system_prompt']));
+			$system_message .= trim(wp_kses_post($bot['system_prompt'])) . "\n\n";
 		}
 
-		// Manual knowledge base
+		// Manual knowledge base if set
 		if (!empty($bot['knowledge_text'])) {
-			$system_message .= "\n\nKNOWLEDGE:\n";
-			$system_message .= wp_kses_post($bot['knowledge_text']);
+			$system_message .= "KNOWLEDGE BASE:\n" . wp_kses_post($bot['knowledge_text']) . "\n\n";
 		}
 
-		$system_message .= '
+		$system_message .= "
+CORE IDENTITY & DOMAIN RESTRICTIONS:
+- You are the official, specialized AI Assistant ({$bot_name}) representing {$site_name}.
+- Your primary purpose is to assist visitors with information regarding {$site_name}, including our products, services, store catalog, order tracking, policies, documentation, and customer support.
+- You are NOT a generic open-ended AI (like raw ChatGPT or Gemini). You must NEVER generate generic programming tutorials, general code solutions (e.g. how to style unrelated HTML/CSS, generic JavaScript, generic Python), homework answers, or off-topic general knowledge.
 
-You are a helpful, professional AI assistant.
+OFF-TOPIC, UNRELATED, OR CUSTOMIZATION REQUESTS:
+- If a user asks a question that is outside the scope of {$site_name}'s official products, documentation, and knowledge base (such as generic CSS/design modifications, custom coding, external tutorials, or unrelated topics):
+  1. Do NOT generate generic web tutorials or open-ended external code.
+  2. Politely and professionally inform the user that you are the dedicated assistant for {$site_name} and specialize in our official products, features, and documentation.
+  3. If they need custom development, specialized CSS styling, or custom assistance, provide a helpful and warm response encouraging them to reach out directly to our human support team: [Contact Support]({$support_url}) or submit a request on our Support page so our specialists can assist them with custom requirements.
 
-LANGUAGE
-- Always reply in the same language as the user.
-- Match the user tone naturally.
+ACCURACY & KNOWLEDGE BASE GROUNDING:
+- Answer based strictly on the provided Knowledge Base, Products, and Page context.
+- Never invent facts, prices, policies, or technical claims.
+- If information is not in our data, acknowledge it honestly and direct the user to our support team.
+- Never say robotic phrases like 'Based on the context provided' or 'According to the knowledge base'—speak naturally as {$site_name}'s representative.
 
-CONVERSATION MEMORY
-- Use previous messages in the current session.
-- Follow-up questions refer to the last discussed topic.
-- Questions like:
-  "more details"
-  "tell me more"
-  "continue"
-  "explain more"
-  "why?"
-  "how?"
-  "what about that?"
-  should automatically continue the previous topic.
-- Never ask "What topic do you mean?" if conversation context exists.
+LANGUAGE & TONE:
+- Always respond in the same language used by the user.
+- Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-KNOWLEDGE BASE
-- Use available knowledge base information whenever relevant.
-- Never say:
-  "According to the knowledge base"
-  "Based on the provided content"
-  "The information shows"
-
-ANSWER STYLE
-- Simple question → short answer.
-- Technical question → detailed answer with examples.
-- Use headings and bullet points when useful.
-- Give practical examples whenever possible.
-- Complete every answer fully.
-
-ACCURACY
-- Never invent facts, links, products, statistics, or company information.
-- If unsure, clearly state uncertainty.
-- If information is unavailable, say so honestly.
-
-LINKS
-- Include relevant links when available.
-- If article links exist, include them naturally.
-
-CLARIFICATION
-- Ask a clarifying question only when the request is genuinely ambiguous.
-- Do NOT ask clarification questions for:
-  more details
-  tell me more
-  continue
-  elaborate
-  explain more
-
-IMPORTANT
-If conversation history exists, use it before asking questions.
-Always expand on the previous answer when the user asks for more information.
-
-';
+CONVERSATION MEMORY:
+- Use conversation history to resolve pronouns and follow-up requests ('more details', 'tell me more', 'why', 'how', 'continue') seamlessly.
+";
 
 		return trim($system_message);
 	}
@@ -1042,28 +1019,63 @@ Always expand on the previous answer when the user asks for more information.
 
 	/**
 	 * Detect if visitor prompt expresses intent to speak with a human agent.
+	/**
+	 * Classify user intent: 'human_handoff', 'support_ticket', 'lead_generation', or 'general_qa'.
+	 *
+	 * @param string $prompt User message.
+	 * @return array<string, mixed>
+	 */
+	public static function classify_user_intent($prompt)
+	{
+		if (empty($prompt)) {
+			return ['intent' => 'general_qa', 'category' => 'general', 'confidence' => 0.0];
+		}
+
+		$patterns_handoff = [
+			'/\b(human|real person|live agent|support agent|human agent|representative|talk to someone|talk to a human|talk to an agent|connect with human|customer care|customer support|operator|live chat with human)\b/i',
+			'/\b(call me|call support|phone support|speak with someone|speak to someone|speak with an agent|whatsapp support|chat on whatsapp|escalate to manager|transfer me)\b/i',
+		];
+
+		foreach ($patterns_handoff as $pattern) {
+			if (preg_match($pattern, $prompt)) {
+				return ['intent' => 'human_handoff', 'category' => 'support', 'confidence' => 0.95];
+			}
+		}
+
+		$patterns_support = [
+			'/\b(broken|damaged|defective|faulty|warranty|refund|return item|cancel order|billing issue|chargeback|not working|error code|bug in|failed transaction|invoice incorrect)\b/i',
+			'/\b(ticket number|my ticket|open a ticket|file a claim|technical support|troubleshoot problem)\b/i',
+		];
+
+		foreach ($patterns_support as $pattern) {
+			if (preg_match($pattern, $prompt)) {
+				return ['intent' => 'support_ticket', 'category' => 'troubleshooting', 'confidence' => 0.88];
+			}
+		}
+
+		$patterns_lead = [
+			'/\b(custom quote|request quote|price estimate|bulk pricing|enterprise plan|schedule demo|book a call|partnership inquiry|hire you|contact sales)\b/i',
+		];
+
+		foreach ($patterns_lead as $pattern) {
+			if (preg_match($pattern, $prompt)) {
+				return ['intent' => 'lead_generation', 'category' => 'sales', 'confidence' => 0.85];
+			}
+		}
+
+		return ['intent' => 'general_qa', 'category' => 'general', 'confidence' => 0.5];
+	}
+
+	/**
+	 * Detect if the message indicates a human handoff / escalation or lead request.
 	 *
 	 * @param string $prompt
 	 * @return bool
 	 */
 	public static function detect_human_handoff_intent($prompt)
 	{
-		if (empty($prompt)) {
-			return false;
-		}
-
-		$patterns = [
-			'/\b(human|real person|live agent|support agent|human agent|representative|talk to someone|talk to a human|talk to an agent|connect with human|customer care|customer support|operator|live chat with human)\b/i',
-			'/\b(call me|call support|phone support|speak with someone|speak to someone|speak with an agent|whatsapp support|chat on whatsapp)\b/i',
-		];
-
-		foreach ($patterns as $pattern) {
-			if (preg_match($pattern, $prompt)) {
-				return true;
-			}
-		}
-
-		return false;
+		$classification = self::classify_user_intent($prompt);
+		return in_array($classification['intent'], ['human_handoff', 'support_ticket', 'lead_generation'], true);
 	}
 
 	/**
@@ -1271,5 +1283,82 @@ Always expand on the previous answer when the user asks for more information.
 		}
 
 		return trim($history);
+	}
+
+	/**
+	 * Sync session state and messages for real-time live support.
+	 *
+	 * @param \WP_REST_Request $request The REST request.
+	 * @return \WP_REST_Response
+	 */
+	public function sync_session($request)
+	{
+		global $wpdb;
+		$session_id = sanitize_text_field($request->get_param('session_id'));
+		if (empty($session_id)) {
+			return new \WP_REST_Response(['success' => false, 'message' => 'session_id required'], 400);
+		}
+
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
+		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$session = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id), ARRAY_A);
+
+		if (!$session) {
+			return new \WP_REST_Response([
+				'success' => true,
+				'session_id' => $session_id,
+				'control_mode' => 'ai',
+				'messages' => [],
+				'has_ticket' => false,
+			], 200);
+		}
+
+		$messages = !empty($session['content']) ? json_decode($session['content'], true) : [];
+		$messages = is_array($messages) ? $messages : [];
+
+		$control_mode = !empty($session['control_mode']) ? $session['control_mode'] : 'ai';
+		$ticket_info = null;
+
+		if (!empty($session['support_ticket_id'])) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ticket = $wpdb->get_row($wpdb->prepare("SELECT * FROM `$table_tickets` WHERE id = %d", absint($session['support_ticket_id'])), ARRAY_A);
+			if ($ticket) {
+				$agent_name = '';
+				if (!empty($ticket['assigned_agent_id'])) {
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$agent = $wpdb->get_row($wpdb->prepare("SELECT wp_user_id FROM `$table_agents` WHERE id = %d", absint($ticket['assigned_agent_id'])), ARRAY_A);
+					if ($agent && !empty($agent['wp_user_id'])) {
+						$user = get_userdata($agent['wp_user_id']);
+						if ($user) {
+							$agent_name = $user->display_name;
+						}
+					}
+				}
+
+				if (!empty($ticket['control_mode'])) {
+					$control_mode = $ticket['control_mode'];
+				}
+
+				$ticket_info = [
+					'id'            => (int) $ticket['id'],
+					'ticket_number' => (int) $ticket['ticket_number'],
+					'status'        => $ticket['status'],
+					'control_mode'  => $control_mode,
+					'agent_name'    => $agent_name,
+				];
+			}
+		}
+
+		return new \WP_REST_Response([
+			'success'      => true,
+			'session_id'   => $session_id,
+			'control_mode' => $control_mode,
+			'messages'     => $messages,
+			'ticket'       => $ticket_info,
+			'updated_at'   => $session['updated_at'] ?? current_time('mysql'),
+		], 200);
 	}
 }

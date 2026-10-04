@@ -298,7 +298,7 @@ export default function TicketsView( {
 								<div className="dctc-sc-ticket-card-customer">
 									<span>
 										<span className="dashicons dashicons-admin-users" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
-										{ item.customer_name || item.customer_email }
+										{ item.customer_name || item.customer_email || ( item.session_id ? `Guest (${ item.session_id.substring( 0, 10 ) }...)` : __( 'Anonymous Visitor', 'dragwyb-click-to-chat' ) ) }
 									</span>
 								</div>
 
@@ -657,14 +657,26 @@ export default function TicketsView( {
 							</h4>
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Name:', 'dragwyb-click-to-chat' ) }</span>
-								<span className="meta-val">{ selectedTicket.customer_name || 'Guest' }</span>
+								<span className="meta-val">{ selectedTicket.customer_name || __( 'Guest Visitor', 'dragwyb-click-to-chat' ) }</span>
 							</div>
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Email:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="meta-val">
-									<a href={ `mailto:${ selectedTicket.customer_email }` }>{ selectedTicket.customer_email }</a>
+									{ selectedTicket.customer_email ? (
+										<a href={ `mailto:${ selectedTicket.customer_email }` }>{ selectedTicket.customer_email }</a>
+									) : (
+										<span style={ { color: '#9CA3AF' } }>{ __( 'Not provided (Live Chat)', 'dragwyb-click-to-chat' ) }</span>
+									) }
 								</span>
 							</div>
+							{ selectedTicket.session_id && (
+								<div className="dctc-sc-meta-row">
+									<span className="meta-label">{ __( 'Session ID:', 'dragwyb-click-to-chat' ) }</span>
+									<span className="meta-val" style={ { fontFamily: 'monospace', fontSize: '11px', background: '#F3F4F6', padding: '2px 6px', borderRadius: '4px', wordBreak: 'break-all' } } title={ selectedTicket.session_id }>
+										{ selectedTicket.session_id }
+									</span>
+								</div>
+							) }
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Surface:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="meta-val">{ selectedTicket.reply_surface || 'web' }</span>

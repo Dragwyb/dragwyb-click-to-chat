@@ -163,6 +163,16 @@ class DCTC_AI_Settings_Handler
 
 		register_rest_route(
 			'dctc-ai/v1',
+			'/chat/sync',
+			[
+				'methods' => \WP_REST_Server::READABLE,
+				'callback' => [$this->chat_controller, 'sync_session'],
+				'permission_callback' => [$this->chat_controller, 'permission_check'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
 			'/delete-session',
 			[
 				'methods' => \WP_REST_Server::CREATABLE,

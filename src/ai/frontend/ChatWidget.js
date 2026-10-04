@@ -440,6 +440,11 @@ export default function ChatWidget({ settings, inline }) {
 	const [emailError, setEmailError] = useState('');
 	const [pendingPrompt, setPendingPrompt] = useState('');
 
+	// Live Support & Session Control State
+	const [activeControlMode, setActiveControlMode] = useState('ai');
+	const [assignedAgentName, setAssignedAgentName] = useState('');
+	const [activeTicketInfo, setActiveTicketInfo] = useState(null);
+
 	// AI Lead Capture State
 	const [showLeadForm, setShowLeadForm] = useState(false);
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
@@ -531,6 +536,66 @@ export default function ChatWidget({ settings, inline }) {
 			});
 		};
 	}, []);
+
+	// Real-time Session Sync Polling for Live Agent Replies
+	useEffect(() => {
+		if (!isOpen || !sessionId) {
+			return;
+		}
+
+		let isCancelled = false;
+
+		const pollSession = async () => {
+			if (typeof document !== 'undefined' && document.hidden) {
+				return;
+			}
+			try {
+				const res = await apiFetch({
+					path: `/dctc-ai/v1/chat/sync?session_id=${encodeURIComponent(sessionId)}`,
+					method: 'GET',
+				});
+
+				if (isCancelled || !res || !res.success) {
+					return;
+				}
+
+				if (res.control_mode) {
+					setActiveControlMode(res.control_mode);
+				}
+				if (res.ticket) {
+					setActiveTicketInfo(res.ticket);
+					if (res.ticket.agent_name) {
+						setAssignedAgentName(res.ticket.agent_name);
+					}
+				}
+
+				if (Array.isArray(res.messages) && res.messages.length > 0) {
+					setMessages((prev) => {
+						if (res.messages.length > prev.length) {
+							return res.messages.map((m, idx) => ({
+								id: m.id || `srv_${idx}_${m.created_at || idx}`,
+								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : m.role)),
+								content: m.content || '',
+								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+								is_agent: m.sender_type === 'agent',
+								created_at: m.created_at || '',
+							}));
+						}
+						return prev;
+					});
+				}
+			} catch (err) {
+				// Silently catch background poll errors
+			}
+		};
+
+		const interval = setInterval(pollSession, 4000);
+		return () => {
+			isCancelled = true;
+			clearInterval(interval);
+		};
+	}, [isOpen, sessionId]);
 
 	// Click outside to close attachment menu
 	useEffect(() => {
@@ -1523,8 +1588,13 @@ export default function ChatWidget({ settings, inline }) {
 					createElement(
 						'span',
 						{ className: 'dctc-ai-status-indicator' },
-						createElement('span', { className: 'dctc-ai-status-dot' }),
-						__('Online', 'dragwyb-click-to-chat')
+						createElement('span', {
+							className: 'dctc-ai-status-dot',
+							style: activeControlMode === 'human' ? { background: '#10B981' } : {},
+						}),
+						activeControlMode === 'human'
+							? (assignedAgentName ? `${assignedAgentName} (Live)` : __('Live Agent', 'dragwyb-click-to-chat'))
+							: __('Online', 'dragwyb-click-to-chat')
 					)
 				),
 				clearAllowed &&
@@ -1735,6 +1805,23 @@ export default function ChatWidget({ settings, inline }) {
 									: 'dctc-ai-message-body--user'
 									}`,
 							},
+							message.is_agent &&
+							createElement(
+								'div',
+								{
+									className: 'dctc-ai-agent-sender-tag',
+									style: {
+										fontSize: '11px',
+										fontWeight: 600,
+										color: '#4F46E5',
+										marginBottom: '4px',
+										display: 'flex',
+										alignItems: 'center',
+										gap: '4px',
+									},
+								},
+								`👤 ${message.sender_name || assignedAgentName || __('Support Agent', 'dragwyb-click-to-chat')}`
+							),
 							// 1. Attachments rendered as clean standalone cards above text
 							message.attachments &&
 							message.attachments.length > 0 &&
