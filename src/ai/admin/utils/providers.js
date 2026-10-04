@@ -16,7 +16,7 @@ export const PROVIDERS = {
 		link: 'https://aistudio.google.com/api-keys',
 		icon: 'star-filled',
 		badge: __( 'High Speed & Context', 'dragwyb-click-to-chat' ),
-		desc: __( 'Gemini 2.5 Flash, Gemini 2.5 Pro & embeddings.', 'dragwyb-click-to-chat' ),
+		desc: __( 'Gemini 3.5 Flash Lite, Gemini 2.0 Flash, Gemini 2.5 Flash & embeddings.', 'dragwyb-click-to-chat' ),
 	},
 	anthropic: {
 		name: __( 'Anthropic Claude', 'dragwyb-click-to-chat' ),

@@ -154,7 +154,10 @@ class DCTC_AI_Provider_OpenRouter extends DCTC_AI_Provider_Base
 			'deepseek/deepseek-chat'             => 'DeepSeek: DeepSeek V3',
 			'deepseek/deepseek-r1'               => 'DeepSeek: DeepSeek R1',
 			'meta-llama/llama-3.3-70b-instruct'   => 'Meta: Llama 3.3 70B Instruct',
+			'google/gemini-2.0-flash-lite-001'   => 'Google: Gemini 2.0 Flash Lite',
+			'google/gemini-2.0-flash-001'        => 'Google: Gemini 2.0 Flash',
 			'google/gemini-2.5-flash'            => 'Google: Gemini 2.5 Flash',
+			'google/gemini-flash-1.5'            => 'Google: Gemini 1.5 Flash',
 			'mistralai/mistral-large-2407'       => 'Mistral: Mistral Large',
 		];
 	}

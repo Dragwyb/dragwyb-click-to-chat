@@ -858,7 +858,7 @@ class DCTC_AI_Settings_Handler
 		$defaults = [
 			'models' => [
 				'openai'     => 'gpt-4o-mini',
-				'google'     => 'gemini-2.5-flash',
+				'google'     => 'gemini-3.5-flash-lite',
 				'anthropic'  => 'claude-3-5-sonnet-20241022',
 				'openrouter' => 'anthropic/claude-3.5-sonnet',
 				'groq'       => 'llama-3.3-70b-versatile',

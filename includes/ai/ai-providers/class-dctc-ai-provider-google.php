@@ -32,10 +32,19 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base
 			throw new \Exception(esc_html__('Google Gemini API key is missing.', 'dragwyb-click-to-chat'));
 		}
 
-		$model = !empty($model) ? $model : 'gemini-2.5-flash';
+		$model = !empty($model) ? $model : 'gemini-3.5-flash-lite';
 		// Normalize model id if needed
 		if (strpos($model, 'models/') === 0) {
 			$model = substr($model, 7);
+		}
+
+		// Remap legacy discontinued model IDs if necessary
+		$deprecated_map = [
+			'gemini-pro'     => 'gemini-3.5-flash-lite',
+			'gemini-1.0-pro' => 'gemini-3.5-flash-lite',
+		];
+		if (isset($deprecated_map[$model])) {
+			$model = $deprecated_map[$model];
 		}
 
 		$temperature = isset($options['temperature']) ? floatval($options['temperature']) : 0.7;
@@ -265,10 +274,13 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base
 	private function get_static_models()
 	{
 		return [
-			'gemini-2.5-flash' => 'Gemini 2.5 Flash (Ultra Fast & Smart)',
-			'gemini-2.5-pro'   => 'Gemini 2.5 Pro (Deep Reasoning)',
-			'gemini-1.5-flash' => 'Gemini 1.5 Flash',
-			'gemini-1.5-pro'   => 'Gemini 1.5 Pro',
+			'gemini-3.5-flash-lite' => 'Gemini 3.5 Flash Lite (Recommended - Ultra Fast & Cost-Efficient)',
+			'gemini-2.0-flash-lite' => 'Gemini 2.0 Flash Lite (Fast & Lightweight)',
+			'gemini-2.0-flash'      => 'Gemini 2.0 Flash (Next-Gen Multimodal)',
+			'gemini-2.5-flash'      => 'Gemini 2.5 Flash',
+			'gemini-2.5-pro'        => 'Gemini 2.5 Pro',
+			'gemini-1.5-flash'      => 'Gemini 1.5 Flash (Legacy / Preview)',
+			'gemini-1.5-pro'        => 'Gemini 1.5 Pro (Deep Reasoning & Large Context)',
 		];
 	}
 }
