@@ -14,8 +14,19 @@ import AdminCopilot from './sections/AdminCopilot';
 import UnifiedInbox from './sections/UnifiedInbox';
 import ChatPreview from './sections/ChatPreview';
 import ErrorLogs from './sections/ErrorLogs';
+import SupportCenter from './sections/SupportCenter';
 
 const TABS = [
+	{
+		id: 'support-center',
+		label: __( 'Support Center', 'dragwyb-click-to-chat' ),
+		icon: 'dashicons-tickets-alt',
+		desc: __(
+			'Manage hybrid support tickets, live agent handoffs, category routing, staff assignments & internal notes.',
+			'dragwyb-click-to-chat'
+		),
+		component: SupportCenter,
+	},
 	{
 		id: 'unified-inbox',
 		label: __( 'Unified Inbox', 'dragwyb-click-to-chat' ),
@@ -110,8 +121,8 @@ const TABS = [
 
 const NAV_GROUPS = [
 	{
-		label: __( 'Inbox & Intelligence', 'dragwyb-click-to-chat' ),
-		items: [ 'unified-inbox', 'ai-copilot', 'leads', 'chat-sessions' ],
+		label: __( 'Inbox & Support', 'dragwyb-click-to-chat' ),
+		items: [ 'support-center', 'unified-inbox', 'ai-copilot', 'leads', 'chat-sessions' ],
 	},
 	{
 		label: __( 'Setup', 'dragwyb-click-to-chat' ),
