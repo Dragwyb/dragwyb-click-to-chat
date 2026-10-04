@@ -258,6 +258,99 @@ class DCTC_Support_REST_Controller {
 			)
 		);
 
+		// Staff: Products Catalog
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/products',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_products' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_product' ),
+					'permission_callback' => array( $this, 'permission_staff_categories' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/products/(?P<id>\d+)',
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => array( $this, 'delete_product' ),
+				'permission_callback' => array( $this, 'permission_staff_categories' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/products/sync-wc',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'sync_wc_products' ),
+				'permission_callback' => array( $this, 'permission_staff_categories' ),
+			)
+		);
+
+		// Staff: Dynamic Taxonomies & Terms
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/taxonomies',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_taxonomies' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_taxonomy' ),
+					'permission_callback' => array( $this, 'permission_staff_categories' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/taxonomies/(?P<slug>[a-zA-Z0-9_\-]+)',
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => array( $this, 'delete_taxonomy' ),
+				'permission_callback' => array( $this, 'permission_staff_categories' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/taxonomies/(?P<slug>[a-zA-Z0-9_\-]+)/terms',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_taxonomy_terms' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_taxonomy_term' ),
+					'permission_callback' => array( $this, 'permission_staff_categories' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/taxonomies/(?P<slug>[a-zA-Z0-9_\-]+)/terms/(?P<id>\d+)',
+			array(
+				'methods'             => WP_REST_Server::DELETABLE,
+				'callback'            => array( $this, 'delete_taxonomy_term' ),
+				'permission_callback' => array( $this, 'permission_staff_categories' ),
+			)
+		);
+
 		register_rest_route(
 			self::REST_NAMESPACE,
 			'/support/agents',
@@ -745,6 +838,78 @@ class DCTC_Support_REST_Controller {
 	public function delete_tag( $request ) {
 		$id      = $request->get_param( 'id' );
 		$deleted = DCTC_Support_Tag_Service::delete_tag( $id );
+		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
+	}
+
+	// Products Catalog
+	public function get_products( $request ) {
+		$params   = $request->get_params();
+		$products = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::get_products( $params ) : array();
+		return new WP_REST_Response( array( 'success' => true, 'products' => $products ), 200 );
+	}
+
+	public function save_product( $request ) {
+		$data = $request->get_json_params();
+		$id   = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::save_product( $data ) : false;
+		if ( ! $id ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save product.', 'dragwyb-click-to-chat' ) ), 400 );
+		}
+		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+	}
+
+	public function delete_product( $request ) {
+		$id      = $request->get_param( 'id' );
+		$deleted = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::delete_product( $id ) : false;
+		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
+	}
+
+	public function sync_wc_products() {
+		$count = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::sync_woocommerce_products() : 0;
+		$products = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::get_products() : array();
+		return new WP_REST_Response( array( 'success' => true, 'synced_count' => $count, 'products' => $products ), 200 );
+	}
+
+	// Dynamic Taxonomies & Terms
+	public function get_taxonomies() {
+		$taxonomies = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_taxonomies() : array();
+		return new WP_REST_Response( array( 'success' => true, 'taxonomies' => $taxonomies ), 200 );
+	}
+
+	public function save_taxonomy( $request ) {
+		$data = $request->get_json_params();
+		$tax  = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::save_taxonomy( $data ) : false;
+		if ( ! $tax ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save taxonomy.', 'dragwyb-click-to-chat' ) ), 400 );
+		}
+		return new WP_REST_Response( array( 'success' => true, 'taxonomy' => $tax ), 200 );
+	}
+
+	public function delete_taxonomy( $request ) {
+		$slug    = $request->get_param( 'slug' );
+		$deleted = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::delete_taxonomy( $slug ) : false;
+		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
+	}
+
+	public function get_taxonomy_terms( $request ) {
+		$slug  = $request->get_param( 'slug' );
+		$terms = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_terms( $slug ) : array();
+		return new WP_REST_Response( array( 'success' => true, 'terms' => $terms ), 200 );
+	}
+
+	public function save_taxonomy_term( $request ) {
+		$slug = $request->get_param( 'slug' );
+		$data = $request->get_json_params();
+		$id   = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::save_term( $slug, $data ) : false;
+		if ( ! $id ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save taxonomy term.', 'dragwyb-click-to-chat' ) ), 400 );
+		}
+		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+	}
+
+	public function delete_taxonomy_term( $request ) {
+		$slug    = $request->get_param( 'slug' );
+		$id      = $request->get_param( 'id' );
+		$deleted = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::delete_term( $slug, $id ) : false;
 		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
 	}
 

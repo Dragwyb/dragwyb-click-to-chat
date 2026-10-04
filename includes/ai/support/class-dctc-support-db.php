@@ -100,6 +100,7 @@ class DCTC_Support_DB {
 			parent_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			name varchar(150) NOT NULL,
 			slug varchar(150) NOT NULL,
+			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
 			description text,
 			default_priority varchar(20) DEFAULT 'normal' NOT NULL,
 			default_team_id bigint(20) unsigned DEFAULT 0 NOT NULL,
@@ -107,6 +108,8 @@ class DCTC_Support_DB {
 			requires_human tinyint(1) DEFAULT 0 NOT NULL,
 			ai_allowed tinyint(1) DEFAULT 1 NOT NULL,
 			auto_assign tinyint(1) DEFAULT 1 NOT NULL,
+			show_product tinyint(1) DEFAULT 1 NOT NULL,
+			show_tags tinyint(1) DEFAULT 1 NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
 			display_order int(11) DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -117,6 +120,26 @@ class DCTC_Support_DB {
 			KEY status (status)
 		) $charset_collate;";
 		dbDelta( $sql_categories );
+
+		// 2b. Support Products Table
+		$table_products = $wpdb->prefix . 'dctc_support_products';
+		$sql_products   = "CREATE TABLE `$table_products` (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			name varchar(255) NOT NULL,
+			slug varchar(255) NOT NULL,
+			category_id bigint(20) unsigned DEFAULT 0 NOT NULL,
+			wc_product_id bigint(20) unsigned DEFAULT 0 NOT NULL,
+			sku varchar(100) DEFAULT '' NOT NULL,
+			price decimal(10,2) DEFAULT 0.00 NOT NULL,
+			status varchar(20) DEFAULT 'active' NOT NULL,
+			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+			PRIMARY KEY  (id),
+			KEY category_id (category_id),
+			KEY wc_product_id (wc_product_id),
+			KEY status (status)
+		) $charset_collate;";
+		dbDelta( $sql_products );
 
 		// 3. Support Tags Table
 		$table_tags = $wpdb->prefix . 'dctc_support_tags';
@@ -132,6 +155,23 @@ class DCTC_Support_DB {
 			KEY status (status)
 		) $charset_collate;";
 		dbDelta( $sql_tags );
+
+		// 3b. Custom Taxonomy Terms Table
+		$table_tax_terms = $wpdb->prefix . 'dctc_support_taxonomy_terms';
+		$sql_tax_terms   = "CREATE TABLE `$table_tax_terms` (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			taxonomy_slug varchar(100) NOT NULL,
+			name varchar(150) NOT NULL,
+			slug varchar(150) NOT NULL,
+			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
+			description text,
+			status varchar(20) DEFAULT 'active' NOT NULL,
+			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+			PRIMARY KEY  (id),
+			KEY taxonomy_slug (taxonomy_slug),
+			KEY slug (slug)
+		) $charset_collate;";
+		dbDelta( $sql_tax_terms );
 
 		// 4. Ticket Tags Pivot Table
 		$table_ticket_tags = $wpdb->prefix . 'dctc_support_ticket_tags';
@@ -256,6 +296,22 @@ class DCTC_Support_DB {
 			KEY created_at (created_at)
 		) $charset_collate;";
 		dbDelta( $sql_notif_log );
+
+		// Ensure dynamic schema columns exist
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$cat_cols = (array) $wpdb->get_col( "DESCRIBE `$table_categories`", 0 );
+		if ( ! in_array( 'show_product', $cat_cols, true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN show_product tinyint(1) DEFAULT 1 NOT NULL" );
+		}
+		if ( ! in_array( 'show_tags', $cat_cols, true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN show_tags tinyint(1) DEFAULT 1 NOT NULL" );
+		}
+		if ( ! in_array( 'color', $cat_cols, true ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN color varchar(30) DEFAULT '#4F46E5' NOT NULL" );
+		}
 
 		// Seed initial default categories, tags, and settings if not already present.
 		self::seed_default_data();

@@ -119,35 +119,77 @@ class DCTC_Support_Tag_Service {
 	}
 
 	/**
-	 * Assign a list of tag IDs to a ticket.
+	 * Assign a list of tag IDs or names to a ticket.
 	 *
 	 * @param int   $ticket_id Ticket ID.
-	 * @param array $tag_ids   Array of tag IDs.
+	 * @param array $tags_input Array of tag IDs or tag name strings.
 	 * @return bool
 	 */
-	public static function set_ticket_tags( $ticket_id, $tag_ids = array() ) {
+	public static function set_ticket_tags( $ticket_id, $tags_input = array() ) {
 		global $wpdb;
+		$table_tags  = $wpdb->prefix . 'dctc_support_tags';
 		$table_pivot = $wpdb->prefix . 'dctc_support_ticket_tags';
 		$ticket_id   = absint( $ticket_id );
-		$tag_ids     = is_array( $tag_ids ) ? array_filter( array_map( 'absint', $tag_ids ) ) : array();
+		$tags_input  = is_array( $tags_input ) ? $tags_input : array();
 
-		// Delete existing
+		// Delete existing associations
 		$wpdb->delete( $table_pivot, array( 'ticket_id' => $ticket_id ), array( '%d' ) );
 
-		if ( ! empty( $tag_ids ) ) {
-			foreach ( $tag_ids as $tag_id ) {
-				$wpdb->insert(
-					$table_pivot,
-					array(
-						'ticket_id'  => $ticket_id,
-						'tag_id'     => $tag_id,
-						'created_at' => current_time( 'mysql' ),
-					),
-					array( '%d', '%d', '%s' )
+		if ( empty( $tags_input ) ) {
+			return true;
+		}
+
+		$tag_ids = array();
+		foreach ( $tags_input as $item ) {
+			if ( is_numeric( $item ) && (int) $item > 0 ) {
+				$tag_ids[] = absint( $item );
+			} elseif ( is_string( $item ) && '' !== trim( $item ) ) {
+				$tag_name = sanitize_text_field( trim( $item ) );
+				$tag_slug = sanitize_title( $tag_name );
+				if ( empty( $tag_slug ) ) {
+					continue;
+				}
+
+				// Find or create
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$existing_id = $wpdb->get_var(
+					$wpdb->prepare( "SELECT id FROM `$table_tags` WHERE slug = %s OR name = %s", $tag_slug, $tag_name )
 				);
+
+				if ( $existing_id ) {
+					$tag_ids[] = (int) $existing_id;
+				} else {
+					$wpdb->insert(
+						$table_tags,
+						array(
+							'name'       => $tag_name,
+							'slug'       => $tag_slug,
+							'color'      => '#4F46E5',
+							'status'     => 'active',
+							'created_at' => current_time( 'mysql' ),
+						)
+					);
+					if ( $wpdb->insert_id ) {
+						$tag_ids[] = (int) $wpdb->insert_id;
+					}
+				}
 			}
+		}
+
+		$tag_ids = array_unique( array_filter( $tag_ids ) );
+		foreach ( $tag_ids as $tag_id ) {
+			$wpdb->insert(
+				$table_pivot,
+				array(
+					'ticket_id'  => $ticket_id,
+					'tag_id'     => $tag_id,
+					'created_at' => current_time( 'mysql' ),
+				),
+				array( '%d', '%d', '%s' )
+			);
 		}
 
 		return true;
 	}
 }
+

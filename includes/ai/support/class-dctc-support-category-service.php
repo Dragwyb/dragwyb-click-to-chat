@@ -46,6 +46,9 @@ class DCTC_Support_Category_Service {
 		foreach ( $rows as &$row ) {
 			$row['required_skills'] = ! empty( $row['required_skills'] ) ? json_decode( $row['required_skills'], true ) : array();
 			$row['required_skills'] = is_array( $row['required_skills'] ) ? $row['required_skills'] : array();
+			$row['show_product']    = isset( $row['show_product'] ) ? (int) $row['show_product'] : 1;
+			$row['show_tags']       = isset( $row['show_tags'] ) ? (int) $row['show_tags'] : 1;
+			$row['color']           = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
 		}
 
 		return $rows;
@@ -70,6 +73,9 @@ class DCTC_Support_Category_Service {
 		if ( $row ) {
 			$row['required_skills'] = ! empty( $row['required_skills'] ) ? json_decode( $row['required_skills'], true ) : array();
 			$row['required_skills'] = is_array( $row['required_skills'] ) ? $row['required_skills'] : array();
+			$row['show_product']    = isset( $row['show_product'] ) ? (int) $row['show_product'] : 1;
+			$row['show_tags']       = isset( $row['show_tags'] ) ? (int) $row['show_tags'] : 1;
+			$row['color']           = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
 		}
 
 		return $row;
@@ -96,9 +102,12 @@ class DCTC_Support_Category_Service {
 		$description      = isset( $data['description'] ) ? sanitize_textarea_field( $data['description'] ) : '';
 		$default_priority = ! empty( $data['default_priority'] ) ? sanitize_key( $data['default_priority'] ) : 'normal';
 		$default_team_id  = ! empty( $data['default_team_id'] ) ? absint( $data['default_team_id'] ) : 0;
+		$color            = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '#4F46E5';
 		$requires_human   = ! empty( $data['requires_human'] ) ? 1 : 0;
 		$ai_allowed       = isset( $data['ai_allowed'] ) ? ( $data['ai_allowed'] ? 1 : 0 ) : 1;
 		$auto_assign      = isset( $data['auto_assign'] ) ? ( $data['auto_assign'] ? 1 : 0 ) : 1;
+		$show_product     = isset( $data['show_product'] ) ? ( $data['show_product'] ? 1 : 0 ) : 1;
+		$show_tags        = isset( $data['show_tags'] ) ? ( $data['show_tags'] ? 1 : 0 ) : 1;
 		$status           = ! empty( $data['status'] ) ? sanitize_key( $data['status'] ) : 'active';
 		$display_order    = isset( $data['display_order'] ) ? intval( $data['display_order'] ) : 0;
 
@@ -114,6 +123,7 @@ class DCTC_Support_Category_Service {
 			'parent_id'        => $parent_id,
 			'name'             => $name,
 			'slug'             => $slug,
+			'color'            => $color ? $color : '#4F46E5',
 			'description'      => $description,
 			'default_priority' => $default_priority,
 			'default_team_id'  => $default_team_id,
@@ -121,6 +131,8 @@ class DCTC_Support_Category_Service {
 			'requires_human'   => $requires_human,
 			'ai_allowed'       => $ai_allowed,
 			'auto_assign'      => $auto_assign,
+			'show_product'     => $show_product,
+			'show_tags'        => $show_tags,
 			'status'           => $status,
 			'display_order'    => $display_order,
 		);

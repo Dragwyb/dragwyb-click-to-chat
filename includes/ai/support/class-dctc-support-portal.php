@@ -45,24 +45,8 @@ class DCTC_Support_Portal {
 		$email     = $user ? $user->user_email : '';
 
 		$categories = DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) );
-		$products   = array();
-		if ( post_type_exists( 'product' ) ) {
-			$wc_products = get_posts( array(
-				'post_type'      => 'product',
-				'post_status'    => 'publish',
-				'posts_per_page' => 100,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-			) );
-			if ( ! empty( $wc_products ) && is_array( $wc_products ) ) {
-				foreach ( $wc_products as $prod ) {
-					$products[] = array(
-						'id'    => $prod->ID,
-						'title' => $prod->post_title,
-					);
-				}
-			}
-		}
+		$products   = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::get_products( array( 'status' => 'active' ) ) : array();
+		$tags       = class_exists( 'DCTC_Support_Tag_Service' ) ? DCTC_Support_Tag_Service::get_tags() : array();
 
 		$rest_url   = esc_url_raw( rest_url( 'dctc-ai/v1/support/portal' ) );
 		$nonce      = wp_create_nonce( 'wp_rest' );
@@ -99,7 +83,7 @@ class DCTC_Support_Portal {
 				</div>
 			</div>
 
-			<!-- View 2: New Ticket Form -->
+			<!-- View 2: New Ticket Form (Dynamic Condition-Based) -->
 			<div id="dctc-portal-view-new" class="dctc-portal-view">
 				<form id="dctc-portal-new-ticket-form" class="dctc-portal-form">
 					<h3><?php esc_html_e( 'Create a New Support Request', 'dragwyb-click-to-chat' ); ?></h3>
@@ -117,40 +101,46 @@ class DCTC_Support_Portal {
 						</div>
 					<?php endif; ?>
 
-					<div class="dctc-form-grid-2">
-						<div class="dctc-form-group">
-							<label for="dctc-new-category"><?php esc_html_e( 'Category', 'dragwyb-click-to-chat' ); ?></label>
-							<select id="dctc-new-category" class="dctc-portal-select">
-								<option value="0"><?php esc_html_e( 'General Inquiry', 'dragwyb-click-to-chat' ); ?></option>
-								<?php foreach ( $categories as $cat ) : ?>
-									<option value="<?php echo esc_attr( $cat['id'] ); ?>"><?php echo esc_html( $cat['name'] ); ?></option>
-								<?php endforeach; ?>
-							</select>
-						</div>
+					<div class="dctc-form-group">
+						<label for="dctc-new-category"><?php esc_html_e( 'Category *', 'dragwyb-click-to-chat' ); ?></label>
+						<select id="dctc-new-category" class="dctc-portal-select">
+							<option value="0" data-show-product="1" data-show-tags="1"><?php esc_html_e( 'General Inquiry', 'dragwyb-click-to-chat' ); ?></option>
+							<?php foreach ( $categories as $cat ) : ?>
+								<option value="<?php echo esc_attr( $cat['id'] ); ?>" data-show-product="<?php echo esc_attr( isset( $cat['show_product'] ) ? $cat['show_product'] : 1 ); ?>" data-show-tags="<?php echo esc_attr( isset( $cat['show_tags'] ) ? $cat['show_tags'] : 1 ); ?>">
+									<?php echo esc_html( $cat['name'] ); ?>
+								</option>
+							<?php endforeach; ?>
+						</select>
+					</div>
 
-						<div class="dctc-form-group">
-							<label for="dctc-new-product"><?php esc_html_e( 'Related Product / Tag', 'dragwyb-click-to-chat' ); ?></label>
+					<div class="dctc-form-grid-2">
+						<!-- Condition 1: Product Selector (Shown only if category has show_product enabled) -->
+						<div id="dctc-form-group-product" class="dctc-form-group">
+							<label for="dctc-new-product"><?php esc_html_e( 'Related Product', 'dragwyb-click-to-chat' ); ?></label>
 							<?php if ( ! empty( $products ) ) : ?>
 								<select id="dctc-new-product" class="dctc-portal-select">
 									<option value=""><?php esc_html_e( 'Select Product (Optional)', 'dragwyb-click-to-chat' ); ?></option>
 									<?php foreach ( $products as $prod ) : ?>
-										<option value="<?php echo esc_attr( $prod['title'] ); ?>"><?php echo esc_html( $prod['title'] ); ?></option>
+										<option value="<?php echo esc_attr( $prod['name'] ); ?>">
+											<?php echo esc_html( $prod['name'] . ( ! empty( $prod['sku'] ) ? ' (' . $prod['sku'] . ')' : '' ) ); ?>
+										</option>
 									<?php endforeach; ?>
 								</select>
 							<?php else : ?>
-								<input type="text" id="dctc-new-product" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Product Name or Topic', 'dragwyb-click-to-chat' ); ?>" />
+								<input type="text" id="dctc-new-product" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Product Name or Item', 'dragwyb-click-to-chat' ); ?>" />
 							<?php endif; ?>
+						</div>
+
+						<!-- Condition 2: Tags Selector (Shown only if category has show_tags enabled) -->
+						<div id="dctc-form-group-tags" class="dctc-form-group">
+							<label for="dctc-new-tags"><?php esc_html_e( 'Tags / Topic (Comma separated)', 'dragwyb-click-to-chat' ); ?></label>
+							<input type="text" id="dctc-new-tags" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Refund, Billing, Urgent', 'dragwyb-click-to-chat' ); ?>" />
 						</div>
 					</div>
 
 					<div class="dctc-form-group">
 						<label for="dctc-new-subject"><?php esc_html_e( 'Subject *', 'dragwyb-click-to-chat' ); ?></label>
 						<input type="text" id="dctc-new-subject" required class="dctc-portal-input" placeholder="<?php esc_attr_e( 'Brief summary of what you need help with', 'dragwyb-click-to-chat' ); ?>" />
-					</div>
-
-					<div class="dctc-form-group">
-						<label for="dctc-new-tags"><?php esc_html_e( 'Additional Tags (Comma separated)', 'dragwyb-click-to-chat' ); ?></label>
-						<input type="text" id="dctc-new-tags" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Refund, Billing, Urgent', 'dragwyb-click-to-chat' ); ?>" />
 					</div>
 
 					<div class="dctc-form-group">
@@ -540,8 +530,37 @@ class DCTC_Support_Portal {
 				}
 			}
 
+			function syncFieldVisibility() {
+				const catSelect = document.getElementById('dctc-new-category');
+				const prodGroup = document.getElementById('dctc-form-group-product');
+				const tagsGroup = document.getElementById('dctc-form-group-tags');
+				if (!catSelect || !prodGroup || !tagsGroup) return;
+
+				const opt = catSelect.options[catSelect.selectedIndex];
+				const showProd = opt ? (opt.getAttribute('data-show-product') !== '0') : true;
+				const showTags = opt ? (opt.getAttribute('data-show-tags') !== '0') : true;
+
+				prodGroup.style.display = showProd ? 'block' : 'none';
+				if (!showProd) {
+					const pInput = document.getElementById('dctc-new-product');
+					if (pInput) pInput.value = '';
+				}
+
+				tagsGroup.style.display = showTags ? 'block' : 'none';
+				if (!showTags) {
+					const tInput = document.getElementById('dctc-new-tags');
+					if (tInput) tInput.value = '';
+				}
+			}
+
+			const catDropdown = document.getElementById('dctc-new-category');
+			if (catDropdown) {
+				catDropdown.addEventListener('change', syncFieldVisibility);
+			}
+
 			btnNew.addEventListener('click', function() {
 				showView(viewNew);
+				syncFieldVisibility();
 			});
 
 			btnMyTickets.addEventListener('click', function() {

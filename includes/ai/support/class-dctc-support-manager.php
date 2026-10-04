@@ -56,6 +56,8 @@ class DCTC_Support_Manager {
 		require_once $dir . 'class-dctc-support-note-service.php';
 		require_once $dir . 'class-dctc-support-category-service.php';
 		require_once $dir . 'class-dctc-support-tag-service.php';
+		require_once $dir . 'class-dctc-support-product-service.php';
+		require_once $dir . 'class-dctc-support-taxonomy-service.php';
 		require_once $dir . 'class-dctc-support-agent-service.php';
 		require_once $dir . 'class-dctc-support-ticket-service.php';
 		require_once $dir . 'class-dctc-support-assignment-engine.php';
@@ -143,14 +145,14 @@ class DCTC_Support_Manager {
 			);
 		}
 
-		// Submenu 4: Categories & Tags (Requires manage_categories or manage_tags permission)
+		// Submenu 4: Taxonomies (Categories, Tags, Products & Custom Taxonomies)
 		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) || DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
 			add_submenu_page(
 				'dragwyb-support-center',
-				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
-				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Taxonomies', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Taxonomies', 'dragwyb-click-to-chat' ),
 				$support_cap,
-				'dragwyb-support-categories',
+				'dragwyb-support-taxonomies',
 				array( $this, 'render_support_admin_page' )
 			);
 		}

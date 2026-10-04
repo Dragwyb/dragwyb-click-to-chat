@@ -10,8 +10,7 @@ import apiFetch from '@wordpress/api-fetch';
 import DashboardView from './views/DashboardView';
 import TicketsView from './views/TicketsView';
 import AgentsView from './views/AgentsView';
-import CategoriesView from './views/CategoriesView';
-import TagsView from './views/TagsView';
+import TaxonomiesView from './views/TaxonomiesView';
 import SettingsView from './views/SettingsView';
 
 export default function App() {
@@ -32,10 +31,11 @@ export default function App() {
 		const searchParams = new URLSearchParams( window.location.search );
 		const page = searchParams.get( 'page' ) || '';
 		const subtab = searchParams.get( 'subtab' ) || '';
+		if ( subtab === 'categories' || subtab === 'tags' || subtab === 'taxonomies' ) return 'taxonomies';
 		if ( subtab ) return subtab;
 		if ( page === 'dragwyb-support-tickets' ) return 'tickets';
 		if ( page === 'dragwyb-support-agents' ) return 'agents';
-		if ( page === 'dragwyb-support-categories' ) return 'categories';
+		if ( page === 'dragwyb-support-categories' || page === 'dragwyb-support-tags' || page === 'dragwyb-support-taxonomies' ) return 'taxonomies';
 		if ( page === 'dragwyb-support-settings' ) return 'settings';
 		return 'dashboard';
 	} );
@@ -76,22 +76,19 @@ export default function App() {
 	const [ wcLoading, setWcLoading ] = useState( false );
 
 	const canManageAgents = !! ( userPermissions.is_admin || userPermissions.manage_agents );
-	const canManageCategories = !! ( userPermissions.is_admin || userPermissions.manage_categories );
-	const canManageTags = !! ( userPermissions.is_admin || userPermissions.manage_tags );
+	const canManageTaxonomies = !! ( userPermissions.is_admin || userPermissions.manage_categories || userPermissions.manage_tags );
 	const canManageSettings = !! ( userPermissions.is_admin || userPermissions.manage_settings );
 
 	// Auto guard tabs against direct URL access if not authorized
 	useEffect( () => {
 		if ( activeTab === 'agents' && ! canManageAgents ) {
 			setActiveTab( 'dashboard' );
-		} else if ( activeTab === 'categories' && ! canManageCategories ) {
-			setActiveTab( 'dashboard' );
-		} else if ( activeTab === 'tags' && ! canManageTags ) {
+		} else if ( activeTab === 'taxonomies' && ! canManageTaxonomies ) {
 			setActiveTab( 'dashboard' );
 		} else if ( activeTab === 'settings' && ! canManageSettings ) {
 			setActiveTab( 'dashboard' );
 		}
-	}, [ activeTab, canManageAgents, canManageCategories, canManageTags, canManageSettings ] );
+	}, [ activeTab, canManageAgents, canManageTaxonomies, canManageSettings ] );
 
 	const showNotice = ( message, type = 'success' ) => {
 		setNotice( { message, type } );
@@ -314,25 +311,14 @@ export default function App() {
 						</button>
 					) }
 
-					{ canManageCategories && (
+					{ canManageTaxonomies && (
 						<button
 							type="button"
-							className={ `dctc-sc-nav-link ${ activeTab === 'categories' ? 'active' : '' }` }
-							onClick={ () => setActiveTab( 'categories' ) }
+							className={ `dctc-sc-nav-link ${ activeTab === 'taxonomies' ? 'active' : '' }` }
+							onClick={ () => setActiveTab( 'taxonomies' ) }
 						>
 							<span className="dashicons dashicons-category"></span>
-							{ __( 'Categories', 'dragwyb-click-to-chat' ) }
-						</button>
-					) }
-
-					{ canManageTags && (
-						<button
-							type="button"
-							className={ `dctc-sc-nav-link ${ activeTab === 'tags' ? 'active' : '' }` }
-							onClick={ () => setActiveTab( 'tags' ) }
-						>
-							<span className="dashicons dashicons-tag"></span>
-							{ __( 'Tags', 'dragwyb-click-to-chat' ) }
+							{ __( 'Taxonomies', 'dragwyb-click-to-chat' ) }
 						</button>
 					) }
 
@@ -412,16 +398,12 @@ export default function App() {
 					/>
 				) }
 
-				{ activeTab === 'categories' && canManageCategories && (
-					<CategoriesView
+				{ activeTab === 'taxonomies' && canManageTaxonomies && (
+					<TaxonomiesView
 						categories={ categories }
-						userPermissions={ userPermissions }
-					/>
-				) }
-
-				{ activeTab === 'tags' && canManageTags && (
-					<TagsView
 						tags={ tags }
+						onRefresh={ fetchMetaData }
+						onShowNotice={ showNotice }
 						userPermissions={ userPermissions }
 					/>
 				) }

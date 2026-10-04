@@ -203,9 +203,9 @@ export default function DashboardView( {
 						<span className="dashicons dashicons-groups"></span>
 						{ __( 'Agents & Staff Roster', 'dragwyb-click-to-chat' ) }
 					</button>
-					<button type="button" className="dctc-sc-quick-jump-btn btn-outline" onClick={ () => onSwitchTab( 'categories' ) }>
+					<button type="button" className="dctc-sc-quick-jump-btn btn-outline" onClick={ () => onSwitchTab( 'taxonomies' ) }>
 						<span className="dashicons dashicons-category"></span>
-						{ __( 'Categories & Routing', 'dragwyb-click-to-chat' ) }
+						{ __( 'Taxonomies & Routing', 'dragwyb-click-to-chat' ) }
 					</button>
 				</div>
 			</div>
