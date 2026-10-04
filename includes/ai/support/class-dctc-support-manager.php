@@ -60,6 +60,7 @@ class DCTC_Support_Manager {
 		require_once $dir . 'class-dctc-support-ticket-service.php';
 		require_once $dir . 'class-dctc-support-assignment-engine.php';
 		require_once $dir . 'class-dctc-support-ai-handoff-service.php';
+		require_once $dir . 'class-dctc-support-notification-service.php';
 		require_once $dir . 'class-dctc-support-rest-controller.php';
 
 		$rest_controller = new DCTC_Support_REST_Controller();

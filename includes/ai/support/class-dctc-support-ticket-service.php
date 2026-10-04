@@ -414,6 +414,11 @@ class DCTC_Support_Ticket_Service {
 			DCTC_Support_Agent_Service::update_workload( $ticket['assigned_agent_id'] );
 		}
 
+		// Trigger resolved email notification
+		if ( 'resolved' === $new_status && class_exists( 'DCTC_Support_Notification_Service' ) ) {
+			DCTC_Support_Notification_Service::notify_ticket_resolved( $ticket_id );
+		}
+
 		return true;
 	}
 
@@ -591,6 +596,9 @@ class DCTC_Support_Ticket_Service {
 		}
 		if ( $agent_id ) {
 			DCTC_Support_Agent_Service::update_workload( $agent_id );
+			if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+				DCTC_Support_Notification_Service::notify_ticket_assigned( $ticket_id, $agent_id );
+			}
 		}
 
 		return true;
@@ -708,6 +716,15 @@ class DCTC_Support_Ticket_Service {
 			$user_id,
 			$display_name
 		);
+
+		// Trigger reply email notification
+		if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+			if ( 'agent' === $sender_type ) {
+				DCTC_Support_Notification_Service::notify_agent_reply( $ticket_id, $message );
+			} elseif ( 'customer' === $sender_type ) {
+				DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $message );
+			}
+		}
 
 		return true;
 	}
