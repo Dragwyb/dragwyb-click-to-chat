@@ -134,10 +134,53 @@ class DCTC_AI_Leads_Controller
 
 		$lead_data['id'] = $lead_id;
 
-		// 1. Dispatch Email Notification
+		// 1. Link lead to session in wp_dctc_ai_sessions table
+		if ( ! empty( $session_id ) ) {
+			global $wpdb;
+			$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+			$wpdb->update(
+				$table_sessions,
+				[
+					'lead_id' => $lead_id,
+					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ),
+				],
+				[ 'session_id' => $session_id ]
+			);
+		}
+
+		// 2. Connect with Support Center if Support Center is enabled
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			$support_settings = get_option( 'dctc_support_settings', [] );
+			if ( ! empty( $support_settings['enabled'] ) ) {
+				$summary_parts = [];
+				if ( ! empty( $name ) ) $summary_parts[] = 'Name: ' . $name;
+				if ( ! empty( $email ) ) $summary_parts[] = 'Email: ' . $email;
+				if ( ! empty( $phone ) ) $summary_parts[] = 'Phone: ' . $phone;
+				if ( ! empty( $company ) ) $summary_parts[] = 'Company: ' . $company;
+				if ( ! empty( $budget ) ) $summary_parts[] = 'Budget: ' . $budget;
+				if ( ! empty( $timeline ) ) $summary_parts[] = 'Timeline: ' . $timeline;
+				if ( ! empty( $requirement ) ) $summary_parts[] = 'Requirement: ' . $requirement;
+
+				$lead_summary = implode( "\n", $summary_parts );
+
+				DCTC_Support_Ticket_Service::create_ticket( [
+					'subject'          => '[Lead] ' . ( ! empty( $name ) ? $name : ( ! empty( $email ) ? $email : 'Website Lead Inquiry' ) ),
+					'session_id'       => $session_id,
+					'customer_email'   => $email,
+					'customer_name'    => $name,
+					'origin_type'      => 'chatbot',
+					'reply_surface'    => 'chatbot_widget',
+					'interaction_type' => 'LEAD_GENERATION',
+					'control_mode'     => 'human',
+					'initial_message'  => $lead_summary,
+				] );
+			}
+		}
+
+		// 3. Dispatch Email Notification
 		$this->maybe_send_lead_email($lead_data);
 
-		// 2. Dispatch Webhook
+		// 4. Dispatch Webhook
 		$this->maybe_dispatch_webhook($lead_data);
 
 		return new \WP_REST_Response([
