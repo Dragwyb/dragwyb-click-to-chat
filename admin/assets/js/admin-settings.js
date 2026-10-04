@@ -1,6 +1,6 @@
 /**
  * Dragwyb Click To Chat - Settings Page JavaScript
- * Handles 2-tab navigation, dynamic drawer expand/collapse, badge switches, and AJAX saving.
+ * Handles 3-tab navigation, dynamic drawer expand/collapse, badge switches, privacy/uninstall controls, and AJAX saving.
  */
 
 (function ($) {
@@ -10,6 +10,7 @@
         init: function () {
             this.bindEvents();
             this.initTabFromUrl();
+            this.updatePrivacyCardStyles();
         },
 
         bindEvents: function () {
@@ -70,8 +71,41 @@
                 }
             });
 
-            // Save Settings via AJAX
+            // Save General Settings via AJAX
             $('#dctc-general-save-btn').on('click', this.saveGeneralSettings.bind(this));
+
+            // Save Privacy & Uninstall Settings via AJAX
+            $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').on('click', this.savePrivacySettings.bind(this));
+
+            // Privacy Bulk Selection
+            $('#dctc-privacy-recommended').on('click', function (e) {
+                e.preventDefault();
+                $('#dctc_un_delete_options').prop('checked', false);
+                $('#dctc_un_delete_ai_data').prop('checked', false);
+                $('#dctc_un_delete_rag_data').prop('checked', false);
+                $('#dctc_un_delete_support_data').prop('checked', false);
+                $('#dctc_un_delete_user_meta').prop('checked', false);
+                $('#dctc_un_delete_error_logs').prop('checked', true);
+                $('#dctc_un_delete_transients').prop('checked', true);
+                DCTC_Settings_App.updatePrivacyCardStyles();
+            });
+
+            $('#dctc-privacy-select-all').on('click', function (e) {
+                e.preventDefault();
+                $('.dctc-uninstall-options-list input[type="checkbox"]').prop('checked', true);
+                DCTC_Settings_App.updatePrivacyCardStyles();
+            });
+
+            $('#dctc-privacy-deselect-all').on('click', function (e) {
+                e.preventDefault();
+                $('.dctc-uninstall-options-list input[type="checkbox"]').prop('checked', false);
+                DCTC_Settings_App.updatePrivacyCardStyles();
+            });
+
+            // Privacy option card click toggles style
+            $('.dctc-uninstall-options-list input[type="checkbox"]').on('change', function () {
+                DCTC_Settings_App.updatePrivacyCardStyles();
+            });
 
             // Copy Shortcode Button
             $(document).on('click', '.dctc-copy-btn', function (e) {
@@ -106,6 +140,24 @@
             });
         },
 
+        updatePrivacyCardStyles: function () {
+            $('.dctc-privacy-option-card').each(function () {
+                const $card = $(this);
+                const isChecked = $card.find('input[type="checkbox"]').is(':checked');
+                if (isChecked) {
+                    $card.css({
+                        'border-color': '#cbd5e1',
+                        'background': '#ffffff'
+                    });
+                } else {
+                    $card.css({
+                        'border-color': '#e2e8f0',
+                        'background': '#f8fafc'
+                    });
+                }
+            });
+        },
+
         handleTabSwitch: function (e) {
             e.preventDefault();
             const tab = $(e.currentTarget).data('tab');
@@ -131,6 +183,8 @@
             const tab = urlParams.get('tab') || (window.location.hash ? window.location.hash.replace('#', '') : 'general');
             if (tab === 'import-export') {
                 this.switchTab('import-export');
+            } else if (tab === 'privacy') {
+                this.switchTab('privacy');
             } else {
                 this.switchTab('general');
             }
@@ -167,6 +221,46 @@
                 },
                 complete: function () {
                     $btn.prop('disabled', false).removeClass('loading').html(originalHtml);
+                }
+            });
+        },
+
+        savePrivacySettings: function (e) {
+            e.preventDefault();
+            const $btn = $(e.currentTarget);
+            const originalHtml = $btn.html();
+
+            $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').prop('disabled', true).addClass('loading');
+
+            const formData = {
+                action: 'dctc_save_settings',
+                nonce: dctc_admin ? dctc_admin.nonce : '',
+                is_uninstall_settings: '1',
+                delete_options: $('#dctc_un_delete_options').is(':checked') ? '1' : '0',
+                delete_ai_data: $('#dctc_un_delete_ai_data').is(':checked') ? '1' : '0',
+                delete_rag_data: $('#dctc_un_delete_rag_data').is(':checked') ? '1' : '0',
+                delete_support_data: $('#dctc_un_delete_support_data').is(':checked') ? '1' : '0',
+                delete_error_logs: $('#dctc_un_delete_error_logs').is(':checked') ? '1' : '0',
+                delete_user_meta: $('#dctc_un_delete_user_meta').is(':checked') ? '1' : '0',
+                delete_transients: $('#dctc_un_delete_transients').is(':checked') ? '1' : '0'
+            };
+
+            $.ajax({
+                url: dctc_admin ? dctc_admin.ajaxurl : ajaxurl,
+                type: 'POST',
+                data: formData,
+                success: function (response) {
+                    if (response.success) {
+                        DCTC_Settings_App.showToast('Privacy & uninstall cleanup settings saved successfully!');
+                    } else {
+                        alert(response.data && response.data.message ? response.data.message : 'Error saving privacy settings.');
+                    }
+                },
+                error: function () {
+                    alert('Error saving privacy settings. Please try again.');
+                },
+                complete: function () {
+                    $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').prop('disabled', false).removeClass('loading').html(originalHtml);
                 }
             });
         },

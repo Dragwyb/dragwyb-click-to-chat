@@ -386,6 +386,21 @@ function dctc_save_settings() {
 		update_option( 'dctc_support_settings', $support_settings );
 	}
 
+	// 4. Privacy & Uninstall Cleanup Settings
+	if ( isset( $_POST['is_uninstall_settings'] ) ) {
+		$uninstall_settings = array(
+			'delete_options'      => isset( $_POST['delete_options'] ) && '1' === $_POST['delete_options'] ? 1 : 0,
+			'delete_ai_data'      => isset( $_POST['delete_ai_data'] ) && '1' === $_POST['delete_ai_data'] ? 1 : 0,
+			'delete_rag_data'     => isset( $_POST['delete_rag_data'] ) && '1' === $_POST['delete_rag_data'] ? 1 : 0,
+			'delete_support_data' => isset( $_POST['delete_support_data'] ) && '1' === $_POST['delete_support_data'] ? 1 : 0,
+			'delete_error_logs'   => isset( $_POST['delete_error_logs'] ) && '1' === $_POST['delete_error_logs'] ? 1 : 0,
+			'delete_user_meta'    => isset( $_POST['delete_user_meta'] ) && '1' === $_POST['delete_user_meta'] ? 1 : 0,
+			'delete_transients'   => isset( $_POST['delete_transients'] ) && '1' === $_POST['delete_transients'] ? 1 : 0,
+		);
+		update_option( 'dctc_uninstall_settings', $uninstall_settings );
+		$settings['uninstall'] = $uninstall_settings;
+	}
+
 	// Save all to main option
 	update_option( 'dctc_settings', $settings );
 

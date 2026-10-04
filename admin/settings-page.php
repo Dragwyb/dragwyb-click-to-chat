@@ -26,9 +26,24 @@ $dctc_ai_enabled  = ! empty( $dctc_ai_settings['display']['entire_site'] );
 $dctc_support_settings = get_option( 'dctc_support_settings', array() );
 $dctc_support_enabled  = ! empty( $dctc_support_settings['enabled'] );
 
+// 4. Privacy & Uninstall cleanup settings
+$dctc_uninstall_settings = get_option( 'dctc_uninstall_settings', null );
+if ( ! is_array( $dctc_uninstall_settings ) ) {
+	$dctc_uninstall_settings = array(
+		'delete_options'      => 0, // Unselected by default (Preserve on reinstall)
+		'delete_ai_data'      => 0, // Unselected by default (Preserve on reinstall)
+		'delete_rag_data'     => 0, // Unselected by default (Preserve on reinstall)
+		'delete_support_data' => 0, // Unselected by default (Preserve on reinstall)
+		'delete_error_logs'   => 1, // Selected by default (Clean temporary error logs)
+		'delete_user_meta'    => 0, // Unselected by default (Preserve on reinstall)
+		'delete_transients'   => 1, // Selected by default (Clean temporary transients)
+	);
+}
+
 // Default active tab (from URL or default to 'general')
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$dctc_active_tab = isset( $_GET['tab'] ) && 'import-export' === $_GET['tab'] ? 'import-export' : 'general';
+$valid_tabs      = array( 'general', 'import-export', 'privacy' );
+$dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs, true ) ? sanitize_key( $_GET['tab'] ) : 'general';
 ?>
 
 <div class="dctc-admin-wrap dctc-settings-wrap">
@@ -36,7 +51,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && 'import-export' === $_GET['tab'] ? '
 	<!-- Success / Notice Toast -->
 	<div class="dctc-success-message"></div>
 
-	<!-- Header with ONLY Two Tabs -->
+	<!-- Header with 3 Tabs -->
 	<div class="dctc-header dctc-settings-header">
 		<div class="dctc-settings-tabs-wrapper">
 			<ul class="dctc-tabs dctc-settings-two-tabs">
@@ -52,6 +67,13 @@ $dctc_active_tab = isset( $_GET['tab'] ) && 'import-export' === $_GET['tab'] ? '
 						class="dctc-tab dctc-settings-tab-btn <?php echo 'import-export' === $dctc_active_tab ? 'active' : ''; ?>"
 						data-tab="import-export">
 						<span>📦 <?php esc_html_e( '2. Import / Export', 'dragwyb-click-to-chat' ); ?></span>
+					</a>
+				</li>
+				<li>
+					<a href="#privacy"
+						class="dctc-tab dctc-settings-tab-btn <?php echo 'privacy' === $dctc_active_tab ? 'active' : ''; ?>"
+						data-tab="privacy">
+						<span>🔒 <?php esc_html_e( '3. Privacy & Uninstall', 'dragwyb-click-to-chat' ); ?></span>
 					</a>
 				</li>
 			</ul>
@@ -458,6 +480,207 @@ $dctc_active_tab = isset( $_GET['tab'] ) && 'import-export' === $_GET['tab'] ? '
 
 		</div>
 
+		<!-- ========================================== -->
+		<!-- TAB 3: PRIVACY & UNINSTALL DATA CLEANUP   -->
+		<!-- ========================================== -->
+		<div id="dctc-tab-privacy" class="dctc-settings-tab-content <?php echo 'privacy' === $dctc_active_tab ? 'active' : ''; ?>" style="<?php echo 'privacy' === $dctc_active_tab ? 'display: block;' : 'display: none;'; ?>">
+
+			<div class="dctc-settings-card-box">
+				<div class="dctc-settings-card-header">
+					<div>
+						<div style="display: flex; align-items: center; gap: 8px;">
+							<span style="font-size: 20px;">🔒</span>
+							<h2 class="dctc-settings-card-title"><?php esc_html_e( 'Privacy & Uninstall Data Management', 'dragwyb-click-to-chat' ); ?></h2>
+						</div>
+						<p class="dctc-settings-card-sub"><?php esc_html_e( 'Configure which plugin database tables, options, and live customer records are permanently deleted when uninstalling the plugin.', 'dragwyb-click-to-chat' ); ?></p>
+					</div>
+					<button type="button" id="dctc-privacy-save-btn" class="dctc-btn dctc-btn-primary">
+						<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+							<path d="M15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H13.3333L17.5 6.66667V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5Z" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+							<path d="M14.1666 17.5V10.8334H5.83331V17.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+							<path d="M5.83331 2.5V6.66667H12.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						<?php esc_html_e( 'Save Privacy Settings', 'dragwyb-click-to-chat' ); ?>
+					</button>
+				</div>
+
+				<!-- Info Notice Box -->
+				<div class="dctc-notice-info-box" style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 14px 18px; margin-bottom: 24px;">
+					<div style="display: flex; gap: 12px; align-items: flex-start;">
+						<span style="font-size: 20px; line-height: 1;">ℹ️</span>
+						<div style="font-size: 13px; color: #475569; line-height: 1.5;">
+							<strong style="color: #1e293b;"><?php esc_html_e( 'How Uninstall Cleanup Works:', 'dragwyb-click-to-chat' ); ?></strong><br>
+							<?php esc_html_e( 'Simply deactivating this plugin does NOT remove your data. The selections below are only executed if an administrator clicks "Delete" on the Plugins screen.', 'dragwyb-click-to-chat' ); ?>
+						</div>
+					</div>
+				</div>
+
+				<!-- Quick Bulk Selection Actions -->
+				<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+					<span style="font-size: 14px; font-weight: 600; color: #1e293b;">
+						<?php esc_html_e( 'Select Data to Delete Upon Plugin Uninstallation:', 'dragwyb-click-to-chat' ); ?>
+					</span>
+					<div style="display: flex; gap: 8px;">
+						<button type="button" class="button button-small" id="dctc-privacy-recommended"><?php esc_html_e( '🛡️ Recommended Defaults', 'dragwyb-click-to-chat' ); ?></button>
+						<button type="button" class="button button-small" id="dctc-privacy-select-all"><?php esc_html_e( 'Select All (Full Wipe)', 'dragwyb-click-to-chat' ); ?></button>
+						<button type="button" class="button button-small" id="dctc-privacy-deselect-all"><?php esc_html_e( 'Deselect All', 'dragwyb-click-to-chat' ); ?></button>
+					</div>
+				</div>
+
+				<!-- Granular Uninstall Options List -->
+				<div class="dctc-uninstall-options-list" style="display: flex; flex-direction: column; gap: 12px;">
+
+					<!-- Option 1: Plugin Settings & API Keys (Critical) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_options" name="delete_options" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_options'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">⚙️</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Plugin Options, Configurations & API Keys', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+									<?php esc_html_e( 'Critical — Kept on reinstall', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'If checked, deletes all plugin configuration options, channel settings, custom colors, trigger rules, AI model prompts, and stored provider API keys (OpenAI, Gemini, Anthropic, etc.).', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 2: AI Chat History & Leads (Critical) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_ai_data" name="delete_ai_data" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_ai_data'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">💬</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'AI Chat Sessions & Captured Visitor Leads', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+									<?php esc_html_e( 'Critical — Kept on reinstall', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'If checked, permanently drops the chat conversations and captured visitor leads database tables (wp_dctc_ai_sessions, wp_dctc_ai_leads).', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 3: Knowledge Base RAG & Embeddings (Critical) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_rag_data" name="delete_rag_data" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_rag_data'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">🧠</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Knowledge Base Documents, Chunks & Vector Embeddings', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+									<?php esc_html_e( 'Critical — Kept on reinstall', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'If checked, permanently drops all vector RAG tables (wp_dctc_ai_rag_documents, wp_dctc_ai_rag_chunks, wp_dctc_ai_rag_metadata, wp_dctc_ai_embeddings).', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 4: Support Center & Helpdesk Ticketing (Critical) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_support_data" name="delete_support_data" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_support_data'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">🎫</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Support Center Helpdesk Tickets & Staff Roster', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+									<?php esc_html_e( 'Critical — Kept on reinstall', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'If checked, permanently drops all 9 support workspace database tables (tickets, categories, tags, agents, audit events, internal staff notes, assignments, notification logs).', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 5: Error & Diagnostics Logs (Temporary) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_error_logs" name="delete_error_logs" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_error_logs'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">📋</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Error & Diagnostic System Logs', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">
+									<?php esc_html_e( 'Temporary / Cache', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'Drops the error logging table (wp_dctc_error_logs) and clears recorded diagnostic trace events.', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 6: User Metadata (Critical) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_user_meta" name="delete_user_meta" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_user_meta'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">👤</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'User Preferences & Metadata', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
+									<?php esc_html_e( 'Critical — Kept on reinstall', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'If checked, deletes saved user meta rows associated with admin dashboard preferences, dismissals, and filter states.', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+					<!-- Option 7: Crons & Transients (Temporary) -->
+					<label class="dctc-privacy-option-card" style="display: flex; align-items: flex-start; gap: 14px; padding: 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #fff; cursor: pointer; transition: all 0.2s;">
+						<input type="checkbox" id="dctc_un_delete_transients" name="delete_transients" value="1" <?php checked( ! empty( $dctc_uninstall_settings['delete_transients'] ), true ); ?> style="margin-top: 3px;" />
+						<div style="flex: 1;">
+							<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 3px;">
+								<div style="display: flex; align-items: center; gap: 6px;">
+									<span style="font-size: 16px;">⚡</span>
+									<strong style="font-size: 14px; color: #1e293b;"><?php esc_html_e( 'Scheduled Cron Jobs & Cached Transients', 'dragwyb-click-to-chat' ); ?></strong>
+								</div>
+								<span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;">
+									<?php esc_html_e( 'Temporary / Cache', 'dragwyb-click-to-chat' ); ?>
+								</span>
+							</div>
+							<p style="margin: 0; font-size: 13px; color: #64748b;">
+								<?php esc_html_e( 'De-registers background WordPress cron schedules and purges temporary cache transients.', 'dragwyb-click-to-chat' ); ?>
+							</p>
+						</div>
+					</label>
+
+				</div>
+
+				<div style="margin-top: 24px; padding-top: 18px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
+					<button type="button" id="dctc-privacy-save-btn-bottom" class="dctc-btn dctc-btn-primary">
+						<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
+							<path d="M15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H13.3333L17.5 6.66667V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5Z" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+							<path d="M14.1666 17.5V10.8334H5.83331V17.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+							<path d="M5.83331 2.5V6.66667H12.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
+						</svg>
+						<?php esc_html_e( 'Save Privacy Settings', 'dragwyb-click-to-chat' ); ?>
+					</button>
+				</div>
+
+			</div>
+
+		</div>
+
 	</div>
 
 </div>
+
