@@ -246,44 +246,76 @@ export default function UnifiedInbox( { showNotice } ) {
 		<div className="dctc-ai-inbox-container">
 			{ /* Left Pane: Channel Tabs, Filters & Conversation List */ }
 			<aside className="dctc-ai-inbox-sidebar">
-				{ /* Channel Selector Tabs */ }
-				<div className="dctc-ai-inbox-channel-tabs">
-					{ CHANNELS.map( ( ch ) => (
+				{ /* Top Header */ }
+				<div className="dctc-ai-inbox-sidebar-top">
+					<div className="dctc-ai-inbox-sidebar-header">
+						<div className="dctc-ai-inbox-sidebar-title">
+							<h3>{ __( 'Conversations', 'dragwyb-click-to-chat' ) }</h3>
+							<span className="dctc-ai-inbox-count-badge">
+								{ conversations.length }
+							</span>
+						</div>
 						<button
-							key={ ch.id }
 							type="button"
-							className={ `dctc-ai-inbox-channel-btn ${ channelFilter === ch.id ? 'is-active' : '' }` }
-							onClick={ () => { setChannelFilter( ch.id ); setPage( 1 ); } }
-							title={ ch.label }
+							className="dctc-ai-inbox-refresh-btn"
+							onClick={ fetchConversations }
+							title={ __( 'Refresh conversations', 'dragwyb-click-to-chat' ) }
 						>
-							<span className="dashicons { ch.icon }"></span>
-							<span>{ ch.label }</span>
+							<span className="dashicons dashicons-update"></span>
 						</button>
-					) ) }
-				</div>
+					</div>
 
-				{ /* Search and Status Filter */ }
-				<div className="dctc-ai-inbox-search-row">
-					<input
-						type="search"
-						className="dctc-ai-inbox-search-input"
-						placeholder={ __( 'Search sessions, emails, questions…', 'dragwyb-click-to-chat' ) }
-						value={ searchQuery }
-						onChange={ ( e ) => { setSearchQuery( e.target.value ); setPage( 1 ); } }
-					/>
-				</div>
+					{ /* Channel Filter Pills (Wrap neatly without ugly horizontal scrollbars) */ }
+					<div className="dctc-ai-inbox-channel-tabs">
+						{ CHANNELS.map( ( ch ) => (
+							<button
+								key={ ch.id }
+								type="button"
+								className={ `dctc-ai-inbox-channel-btn ${ channelFilter === ch.id ? 'is-active' : '' }` }
+								onClick={ () => { setChannelFilter( ch.id ); setPage( 1 ); } }
+								title={ ch.label }
+							>
+								<span>{ ch.label }</span>
+							</button>
+						) ) }
+					</div>
 
-				<div className="dctc-ai-inbox-status-pills">
-					{ STATUSES.map( ( st ) => (
-						<button
-							key={ st.id }
-							type="button"
-							className={ `dctc-ai-inbox-status-pill ${ statusFilter === st.id ? 'is-active' : '' }` }
-							onClick={ () => { setStatusFilter( st.id ); setPage( 1 ); } }
-						>
-							{ st.label }
-						</button>
-					) ) }
+					{ /* Search Row */ }
+					<div className="dctc-ai-inbox-search-row">
+						<div className="dctc-ai-inbox-search-wrap">
+							<span className="dashicons dashicons-search dctc-ai-inbox-search-icon"></span>
+							<input
+								type="search"
+								className="dctc-ai-inbox-search-input"
+								placeholder={ __( 'Search by email, session, or text…', 'dragwyb-click-to-chat' ) }
+								value={ searchQuery }
+								onChange={ ( e ) => { setSearchQuery( e.target.value ); setPage( 1 ); } }
+							/>
+							{ searchQuery && (
+								<button
+									type="button"
+									className="dctc-ai-inbox-search-clear"
+									onClick={ () => setSearchQuery( '' ) }
+								>
+									×
+								</button>
+							) }
+						</div>
+					</div>
+
+					{ /* Status Filters Bar */ }
+					<div className="dctc-ai-inbox-status-bar">
+						{ STATUSES.map( ( st ) => (
+							<button
+								key={ st.id }
+								type="button"
+								className={ `dctc-ai-inbox-status-pill ${ statusFilter === st.id ? 'is-active' : '' }` }
+								onClick={ () => { setStatusFilter( st.id ); setPage( 1 ); } }
+							>
+								{ st.label }
+							</button>
+						) ) }
+					</div>
 				</div>
 
 				{ /* Conversations List */ }
@@ -295,8 +327,22 @@ export default function UnifiedInbox( { showNotice } ) {
 						</div>
 					) : conversations.length === 0 ? (
 						<div className="dctc-ai-inbox-empty">
-							<span className="dashicons dashicons-email-alt" style={ { fontSize: '32px', color: '#94a3b8' } }></span>
-							<p>{ __( 'No conversations found matching filters.', 'dragwyb-click-to-chat' ) }</p>
+							<div className="dctc-ai-inbox-empty-icon">💬</div>
+							<h4>{ __( 'No conversations found', 'dragwyb-click-to-chat' ) }</h4>
+							<p>{ __( 'Try changing your search query or channel filter to view more sessions.', 'dragwyb-click-to-chat' ) }</p>
+							{ ( channelFilter !== 'all' || statusFilter !== 'all' || searchQuery ) && (
+								<button
+									type="button"
+									className="dctc-ai-btn-secondary dctc-ai-btn--sm"
+									onClick={ () => {
+										setChannelFilter( 'all' );
+										setStatusFilter( 'all' );
+										setSearchQuery( '' );
+									} }
+								>
+									{ __( 'Reset Filters', 'dragwyb-click-to-chat' ) }
+								</button>
+							) }
 						</div>
 					) : (
 						conversations.map( ( item ) => {
@@ -373,9 +419,11 @@ export default function UnifiedInbox( { showNotice } ) {
 					</div>
 				) : ! activeConv ? (
 					<div className="dctc-ai-inbox-main-empty">
-						<span className="dashicons dashicons-format-chat" style={ { fontSize: '48px', color: '#cbd5e1' } }></span>
+						<div className="dctc-ai-inbox-main-empty-illustration">
+							<span className="dctc-ai-inbox-empty-bubble">💬</span>
+						</div>
 						<h3>{ __( 'Select a conversation to begin', 'dragwyb-click-to-chat' ) }</h3>
-						<p>{ __( 'Choose an active visitor session from the list on the left to read messages, intervene as human agent, and write notes.', 'dragwyb-click-to-chat' ) }</p>
+						<p>{ __( 'Choose an active visitor session from the conversation list to review customer messages, intervene live as a human agent, and log private staff notes.', 'dragwyb-click-to-chat' ) }</p>
 					</div>
 				) : (
 					<>
