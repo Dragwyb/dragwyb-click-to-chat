@@ -212,6 +212,29 @@ class DCTC_AI_Tool_Registry
 			'execute_callback'      => [__CLASS__, 'tool_search_content'],
 			'requires_confirmation' => false,
 		]);
+
+		// 6. Validate URL or Find Real Page
+		self::register_tool('validate_url_or_find_page', [
+			'label'                 => __('Validate URL or Find Page', 'dragwyb-click-to-chat'),
+			'description'           => __('Check if a specific website URL or path exists on this site. If it does not exist, searches and returns the matching valid page URL or Support desk URL.', 'dragwyb-click-to-chat'),
+			'parameters'            => [
+				'type'       => 'object',
+				'properties' => [
+					'url_or_path' => [
+						'type'        => 'string',
+						'description' => __('The URL or relative path to check (e.g. "/pricing" or "https://example.com/docs")', 'dragwyb-click-to-chat'),
+					],
+					'topic_hint'  => [
+						'type'        => 'string',
+						'description' => __('Optional topic, keyword, or page title to find if the URL does not exist (e.g. "support", "refund policy")', 'dragwyb-click-to-chat'),
+					],
+				],
+				'required'   => ['url_or_path'],
+			],
+			'permission_callback'   => '__return_true',
+			'execute_callback'      => [__CLASS__, 'tool_validate_url_or_find_page'],
+			'requires_confirmation' => false,
+		]);
 	}
 
 	/**
@@ -476,6 +499,108 @@ class DCTC_AI_Tool_Registry
 		return [
 			'count'   => count($results),
 			'results' => $results,
+		];
+	}
+
+	/**
+	 * Tool Callback: Validate URL or Find Real Page.
+	 *
+	 * @param array $args
+	 * @param array $context
+	 * @return array
+	 */
+	public static function tool_validate_url_or_find_page($args, $context = [])
+	{
+		$url = sanitize_text_field($args['url_or_path'] ?? '');
+		$topic = sanitize_text_field($args['topic_hint'] ?? '');
+
+		$home_url = untrailingslashit(home_url());
+		$settings = class_exists('DCTC_AI_Settings_Handler') ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : [];
+		$support_url = !empty($settings['chatbot']['support_url']) ? $settings['chatbot']['support_url'] : home_url('/support');
+
+		if (empty($url)) {
+			return ['valid' => false, 'exists' => false, 'url' => '', 'message' => 'No URL provided'];
+		}
+
+		$full_url = strpos($url, 'http') === 0 ? $url : home_url('/' . ltrim($url, '/'));
+		$clean_url = untrailingslashit(strtok($full_url, '?#'));
+
+		// Home check
+		if ($clean_url === $home_url || $url === '/' || $url === '') {
+			return ['valid' => true, 'exists' => true, 'url' => home_url('/'), 'title' => 'Home'];
+		}
+
+		// Support desk check
+		if (untrailingslashit($full_url) === untrailingslashit($support_url)) {
+			return ['valid' => true, 'exists' => true, 'url' => $support_url, 'title' => 'Support Desk'];
+		}
+
+		// WooCommerce check
+		if (class_exists('WooCommerce') && function_exists('wc_get_page_permalink')) {
+			$wc_map = [
+				'shop'      => wc_get_page_permalink('shop'),
+				'cart'      => function_exists('wc_get_cart_url') ? wc_get_cart_url() : '',
+				'checkout'  => function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : '',
+				'myaccount' => wc_get_page_permalink('myaccount'),
+			];
+			foreach ($wc_map as $wc_key => $wc_url) {
+				if (!empty($wc_url) && untrailingslashit($clean_url) === untrailingslashit($wc_url)) {
+					return ['valid' => true, 'exists' => true, 'url' => $wc_url, 'title' => ucfirst($wc_key)];
+				}
+			}
+		}
+
+		// Direct post ID / slug check
+		$post_id = url_to_postid($full_url);
+		if ($post_id > 0 && get_post_status($post_id) === 'publish') {
+			return ['valid' => true, 'exists' => true, 'url' => get_permalink($post_id), 'title' => get_the_title($post_id)];
+		}
+
+		$parsed = wp_parse_url($full_url);
+		$path = isset($parsed['path']) ? trim($parsed['path'], '/') : '';
+		if (!empty($path)) {
+			$page_obj = get_page_by_path($path, OBJECT, ['page', 'post', 'product']);
+			if ($page_obj && $page_obj->post_status === 'publish') {
+				return ['valid' => true, 'exists' => true, 'url' => get_permalink($page_obj->ID), 'title' => get_the_title($page_obj->ID)];
+			}
+		}
+
+		// URL does NOT exist -> Search for closest matching page or support
+		$search_keyword = !empty($topic) ? $topic : str_replace(['-', '_', '/'], ' ', $path);
+		if (preg_match('/\b(support|contact|help|ticket|inquiry|agent)\b/i', $search_keyword)) {
+			return [
+				'valid'        => false,
+				'exists'       => false,
+				'fallback_url' => $support_url,
+				'title'        => 'Support Desk',
+				'message'      => sprintf('Path "%s" does not exist. Redirecting to Support Desk.', $url),
+			];
+		}
+
+		if (strlen($search_keyword) >= 3) {
+			$found = get_posts([
+				'post_type'      => ['page', 'post', 'product'],
+				'post_status'    => 'publish',
+				's'              => $search_keyword,
+				'posts_per_page' => 1,
+			]);
+			if (!empty($found) && $found[0] instanceof \WP_Post) {
+				return [
+					'valid'        => false,
+					'exists'       => false,
+					'fallback_url' => get_permalink($found[0]->ID),
+					'title'        => get_the_title($found[0]->ID),
+					'message'      => sprintf('Path "%s" does not exist. Closest matching page found: %s', $url, get_the_title($found[0]->ID)),
+				];
+			}
+		}
+
+		return [
+			'valid'        => false,
+			'exists'       => false,
+			'fallback_url' => $support_url,
+			'title'        => 'Support Desk',
+			'message'      => sprintf('Path "%s" does not exist on this site.', $url),
 		];
 	}
 
