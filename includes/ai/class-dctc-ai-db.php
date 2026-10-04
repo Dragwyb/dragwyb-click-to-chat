@@ -198,6 +198,9 @@ class DCTC_AI_DB {
 				'tags'           => "ADD COLUMN `tags` text DEFAULT NULL AFTER `unread_count`",
 				'internal_notes' => "ADD COLUMN `internal_notes` longtext DEFAULT NULL AFTER `tags`",
 				'lead_id'        => "ADD COLUMN `lead_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `internal_notes`",
+				'control_mode'   => "ADD COLUMN `control_mode` varchar(20) DEFAULT 'ai' NOT NULL AFTER `lead_id`",
+				'reply_surface'  => "ADD COLUMN `reply_surface` varchar(30) DEFAULT 'chatbot_widget' NOT NULL AFTER `control_mode`",
+				'support_ticket_id' => "ADD COLUMN `support_ticket_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `reply_surface`",
 			];
 			foreach ( $sess_defs as $col => $sql_part ) {
 				if ( ! in_array( $col, $session_cols, true ) ) {
@@ -226,6 +229,12 @@ class DCTC_AI_DB {
 		// Ensure Error Logs table is created
 		if ( class_exists( 'DCTC_Error_Logger' ) ) {
 			DCTC_Error_Logger::create_table();
+		}
+
+		// Initialize Support Center Custom Tables & Seed Defaults
+		if ( file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
+			DCTC_Support_DB::create_tables();
 		}
 
 		// Ensure RAG settings are initialized

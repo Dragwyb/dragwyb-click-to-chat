@@ -52,6 +52,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		private function __construct() {
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-settings-handler.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-db.php';
+			if ( file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
+			}
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-site-analyzer.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-memory-optimizer.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
