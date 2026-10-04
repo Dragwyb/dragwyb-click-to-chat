@@ -45,6 +45,19 @@ class DCTC_Support_Ticket_Service {
 		$ai_summary  = isset( $data['ai_summary'] ) ? sanitize_textarea_field( $data['ai_summary'] ) : '';
 		$confidence  = isset( $data['ai_classification_confidence'] ) ? floatval( $data['ai_classification_confidence'] ) : 0.0;
 
+		// Intelligent Auto-Classification for Category & Product Tags if not explicitly provided
+		$query_content = $subject . ' ' . ( ! empty( $data['initial_message'] ) ? $data['initial_message'] : '' );
+		if ( ( empty( $category_id ) || empty( $data['tags'] ) ) && ! empty( $query_content ) ) {
+			$classification = self::auto_classify_query( $query_content );
+			if ( empty( $category_id ) && ! empty( $classification['category_id'] ) ) {
+				$category_id = $classification['category_id'];
+				$confidence  = $classification['confidence'];
+			}
+			if ( empty( $data['tags'] ) && ! empty( $classification['tags'] ) ) {
+				$data['tags'] = $classification['tags'];
+			}
+		}
+
 		// Populate name/email from WP user if logged in and not provided
 		if ( $user_id && ( empty( $email ) || empty( $name ) ) ) {
 			$wp_user = get_userdata( $user_id );
@@ -252,11 +265,14 @@ class DCTC_Support_Ticket_Service {
 		// Query rows with join for category and agent names
 		$sql = "SELECT t.*, 
 				c.name as category_name, 
+				c.color as category_color,
 				a.wp_user_id as agent_wp_user_id,
-				a.support_role as agent_role
+				a.support_role as agent_role,
+				s.content as session_content
 				FROM `$table_tickets` t 
 				LEFT JOIN `$table_cats` c ON t.category_id = c.id
 				LEFT JOIN `$table_agents` a ON t.assigned_agent_id = a.id
+				LEFT JOIN `" . $wpdb->prefix . "dctc_ai_sessions` s ON t.session_id = s.session_id
 				WHERE $where 
 				ORDER BY t.`$orderby` $order 
 				LIMIT %d OFFSET %d";
@@ -275,6 +291,12 @@ class DCTC_Support_Ticket_Service {
 					$row['agent_avatar'] = '';
 				}
 				$row['tags'] = DCTC_Support_Tag_Service::get_ticket_tags( $row['id'] );
+
+				// Calculate chat / message count
+				$session_messages     = ! empty( $row['session_content'] ) ? json_decode( $row['session_content'], true ) : array();
+				$row['chat_count']    = is_array( $session_messages ) ? count( $session_messages ) : 0;
+				$row['message_count'] = $row['chat_count'];
+				unset( $row['session_content'] );
 			}
 		} else {
 			$rows = array();
@@ -310,6 +332,7 @@ class DCTC_Support_Ticket_Service {
 
 		$sql = "SELECT t.*, 
 				c.name as category_name, 
+				c.color as category_color,
 				a.wp_user_id as agent_wp_user_id,
 				a.support_role as agent_role
 				FROM `$table_tickets` t 
@@ -343,8 +366,10 @@ class DCTC_Support_Ticket_Service {
 			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] )
 		);
 
-		$ticket['messages'] = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
-		$ticket['messages'] = is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
+		$ticket['messages']      = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
+		$ticket['messages']      = is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
+		$ticket['chat_count']    = count( $ticket['messages'] );
+		$ticket['message_count'] = $ticket['chat_count'];
 
 		return $ticket;
 	}
@@ -821,4 +846,130 @@ class DCTC_Support_Ticket_Service {
 			'recent_activity'          => is_array( $recent_events ) ? $recent_events : array(),
 		);
 	}
+
+	/**
+	 * Automatically classify a user support query by category and tags (including WooCommerce product detection).
+	 *
+	 * @param string $text Query content (subject and message).
+	 * @return array<string, mixed> Array containing category_id, confidence, and tags.
+	 */
+	public static function auto_classify_query( $text ) {
+		if ( empty( $text ) || ! is_string( $text ) ) {
+			return array(
+				'category_id' => 0,
+				'confidence'  => 0.0,
+				'tags'        => array(),
+			);
+		}
+
+		$text_lower = mb_strtolower( $text );
+		$tags       = array();
+		$matched_id = 0;
+		$confidence = 0.5;
+
+		// 1. Detect WooCommerce Products if present
+		$matched_product_name = '';
+		if ( post_type_exists( 'product' ) ) {
+			$products = get_posts( array(
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
+				'posts_per_page' => 100,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			) );
+
+			if ( ! empty( $products ) && is_array( $products ) ) {
+				foreach ( $products as $product ) {
+					$title_lower = mb_strtolower( $product->post_title );
+					if ( strlen( $title_lower ) >= 3 && false !== mb_strpos( $text_lower, $title_lower ) ) {
+						$matched_product_name = $product->post_title;
+						$tags[] = $product->post_title;
+						$confidence = 0.90;
+						break;
+					}
+				}
+			}
+		}
+
+		// 2. Fetch categories from DB
+		$db_categories = class_exists( 'DCTC_Support_Category_Service' )
+			? DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) )
+			: array();
+
+		// Check for specific category keywords
+		$category_keywords = array(
+			'billing'     => array( 'bill', 'invoice', 'receipt', 'charge', 'payment', 'paid', 'credit card', 'subscription', 'price', 'pricing', 'checkout', 'cost' ),
+			'returns'     => array( 'return', 'refund', 'money back', 'cancel order', 'exchange', 'replace', 'damaged', 'broken item', 'wrong item' ),
+			'technical'   => array( 'bug', 'error', 'not working', 'crash', 'broken', 'issue', 'fail', 'failed', 'glitch', 'exception', 'login error', 'technical', 'blank page' ),
+			'woocommerce' => array( 'order', 'shipping', 'delivery', 'tracking', 'package', 'cart', 'product', 'item', 'stock', 'inventory', 'store' ),
+			'account'     => array( 'password', 'login', 'account', 'profile', 'reset password', 'register', 'sign in', 'email change' ),
+		);
+
+		foreach ( $category_keywords as $cat_slug => $keywords ) {
+			foreach ( $keywords as $kw ) {
+				if ( false !== mb_strpos( $text_lower, $kw ) ) {
+					// Add intent tags
+					if ( in_array( $kw, array( 'refund', 'return', 'cancel order' ), true ) && ! in_array( 'Refund', $tags, true ) ) {
+						$tags[] = 'Refund';
+					}
+					if ( in_array( $kw, array( 'shipping', 'delivery', 'tracking', 'package' ), true ) && ! in_array( 'Shipping', $tags, true ) ) {
+						$tags[] = 'Shipping';
+					}
+					if ( in_array( $kw, array( 'bug', 'error', 'crash', 'glitch' ), true ) && ! in_array( 'Bug', $tags, true ) ) {
+						$tags[] = 'Bug';
+					}
+					if ( in_array( $kw, array( 'billing', 'invoice', 'payment', 'charge' ), true ) && ! in_array( 'Billing', $tags, true ) ) {
+						$tags[] = 'Billing';
+					}
+
+					// Find matching DB category
+					if ( ! $matched_id && ! empty( $db_categories ) ) {
+						foreach ( $db_categories as $cat ) {
+							$slug = mb_strtolower( $cat['slug'] );
+							$name = mb_strtolower( $cat['name'] );
+							if ( false !== mb_strpos( $slug, $cat_slug ) || false !== mb_strpos( $name, $cat_slug ) || false !== mb_strpos( $text_lower, $name ) ) {
+								$matched_id = (int) $cat['id'];
+								$confidence = max( $confidence, 0.85 );
+								break;
+							}
+						}
+					}
+					break;
+				}
+			}
+		}
+
+		// Fallback category matching against DB category names directly
+		if ( ! $matched_id && ! empty( $db_categories ) ) {
+			foreach ( $db_categories as $cat ) {
+				$name = mb_strtolower( $cat['name'] );
+				if ( strlen( $name ) >= 3 && false !== mb_strpos( $text_lower, $name ) ) {
+					$matched_id = (int) $cat['id'];
+					$confidence = 0.80;
+					break;
+				}
+			}
+		}
+
+		// If matched a product but no category found, pick first WooCommerce or Store category if available
+		if ( $matched_product_name && ! $matched_id && ! empty( $db_categories ) ) {
+			foreach ( $db_categories as $cat ) {
+				$slug = mb_strtolower( $cat['slug'] );
+				if ( false !== mb_strpos( $slug, 'woo' ) || false !== mb_strpos( $slug, 'order' ) || false !== mb_strpos( $slug, 'product' ) ) {
+					$matched_id = (int) $cat['id'];
+					break;
+				}
+			}
+		}
+
+		// Ensure tags are unique
+		$tags = array_values( array_unique( array_filter( $tags ) ) );
+
+		return array(
+			'category_id' => $matched_id,
+			'confidence'  => $confidence,
+			'tags'        => $tags,
+		);
+	}
 }
+

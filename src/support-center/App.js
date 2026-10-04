@@ -15,6 +15,18 @@ import TagsView from './views/TagsView';
 import SettingsView from './views/SettingsView';
 
 export default function App() {
+	// User Permissions State
+	const [ userPermissions, setUserPermissions ] = useState( () => {
+		return window.dctc_support_data?.permissions || {
+			view_tickets: true,
+			manage_agents: true,
+			manage_categories: true,
+			manage_tags: true,
+			manage_settings: true,
+			is_admin: true,
+		};
+	} );
+
 	// Subtab router
 	const [ activeTab, setActiveTab ] = useState( () => {
 		const searchParams = new URLSearchParams( window.location.search );
@@ -57,30 +69,55 @@ export default function App() {
 	const [ tags, setTags ] = useState( [] );
 	const [ agents, setAgents ] = useState( [] );
 	const [ supportSettings, setSupportSettings ] = useState( {} );
+	const [ permissionsMatrix, setPermissionsMatrix ] = useState( null );
 
 	// WooCommerce context
 	const [ wcData, setWcData ] = useState( null );
 	const [ wcLoading, setWcLoading ] = useState( false );
+
+	const canManageAgents = !! ( userPermissions.is_admin || userPermissions.manage_agents );
+	const canManageCategories = !! ( userPermissions.is_admin || userPermissions.manage_categories );
+	const canManageTags = !! ( userPermissions.is_admin || userPermissions.manage_tags );
+	const canManageSettings = !! ( userPermissions.is_admin || userPermissions.manage_settings );
+
+	// Auto guard tabs against direct URL access if not authorized
+	useEffect( () => {
+		if ( activeTab === 'agents' && ! canManageAgents ) {
+			setActiveTab( 'dashboard' );
+		} else if ( activeTab === 'categories' && ! canManageCategories ) {
+			setActiveTab( 'dashboard' );
+		} else if ( activeTab === 'tags' && ! canManageTags ) {
+			setActiveTab( 'dashboard' );
+		} else if ( activeTab === 'settings' && ! canManageSettings ) {
+			setActiveTab( 'dashboard' );
+		}
+	}, [ activeTab, canManageAgents, canManageCategories, canManageTags, canManageSettings ] );
 
 	const showNotice = ( message, type = 'success' ) => {
 		setNotice( { message, type } );
 		setTimeout( () => setNotice( null ), 6000 );
 	};
 
-	// Fetch Metadata
+	// Fetch Metadata & Permissions
 	const fetchMetaData = useCallback( async () => {
 		try {
-			const [ catData, tagData, agentData, setData ] = await Promise.all( [
+			const promises = [
 				apiFetch( { path: '/dctc-ai/v1/support/categories' } ),
 				apiFetch( { path: '/dctc-ai/v1/support/tags' } ),
 				apiFetch( { path: '/dctc-ai/v1/support/agents' } ),
 				apiFetch( { path: '/dctc-ai/v1/support/settings' } ),
-			] );
+				apiFetch( { path: '/dctc-ai/v1/support/permissions' } ),
+			];
+			const [ catRes, tagRes, agentRes, setRes, permRes ] = await Promise.allSettled( promises );
 
-			if ( catData?.success ) setCategories( catData.categories || [] );
-			if ( tagData?.success ) setTags( tagData.tags || [] );
-			if ( agentData?.success ) setAgents( agentData.agents || [] );
-			if ( setData?.success ) setSupportSettings( setData.settings || {} );
+			if ( catRes.status === 'fulfilled' && catRes.value?.success ) setCategories( catRes.value.categories || [] );
+			if ( tagRes.status === 'fulfilled' && tagRes.value?.success ) setTags( tagRes.value.tags || [] );
+			if ( agentRes.status === 'fulfilled' && agentRes.value?.success ) setAgents( agentRes.value.agents || [] );
+			if ( setRes.status === 'fulfilled' && setRes.value?.success ) setSupportSettings( setRes.value.settings || {} );
+			if ( permRes.status === 'fulfilled' && permRes.value?.success ) {
+				if ( permRes.value.permissions_matrix ) setPermissionsMatrix( permRes.value.permissions_matrix );
+				if ( permRes.value.user_permissions ) setUserPermissions( permRes.value.user_permissions );
+			}
 		} catch ( err ) {
 			console.error( 'Error fetching support metadata:', err );
 		}
@@ -235,7 +272,14 @@ export default function App() {
 					</div>
 					<div>
 						<h1 className="dctc-sc-app-title">{ __( 'Support Center', 'dragwyb-click-to-chat' ) }</h1>
-						<span className="dctc-sc-app-tagline">{ __( 'Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat' ) }</span>
+						<span className="dctc-sc-app-tagline">
+							{ __( 'Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat' ) }
+							{ userPermissions.support_role && (
+								<span style={ { marginLeft: '8px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px' } }>
+									{ userPermissions.is_admin ? '👑 Admin' : `🎧 ${ userPermissions.support_role.toUpperCase() }` }
+								</span>
+							) }
+						</span>
 					</div>
 				</div>
 
@@ -259,41 +303,49 @@ export default function App() {
 						{ totalTickets > 0 && <span className="dctc-sc-nav-badge">{ totalTickets }</span> }
 					</button>
 
-					<button
-						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'agents' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'agents' ) }
-					>
-						<span className="dashicons dashicons-groups"></span>
-						{ __( 'Agents & Staff', 'dragwyb-click-to-chat' ) }
-					</button>
+					{ canManageAgents && (
+						<button
+							type="button"
+							className={ `dctc-sc-nav-link ${ activeTab === 'agents' ? 'active' : '' }` }
+							onClick={ () => setActiveTab( 'agents' ) }
+						>
+							<span className="dashicons dashicons-groups"></span>
+							{ __( 'Agents & Staff', 'dragwyb-click-to-chat' ) }
+						</button>
+					) }
 
-					<button
-						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'categories' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'categories' ) }
-					>
-						<span className="dashicons dashicons-category"></span>
-						{ __( 'Categories', 'dragwyb-click-to-chat' ) }
-					</button>
+					{ canManageCategories && (
+						<button
+							type="button"
+							className={ `dctc-sc-nav-link ${ activeTab === 'categories' ? 'active' : '' }` }
+							onClick={ () => setActiveTab( 'categories' ) }
+						>
+							<span className="dashicons dashicons-category"></span>
+							{ __( 'Categories', 'dragwyb-click-to-chat' ) }
+						</button>
+					) }
 
-					<button
-						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'tags' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'tags' ) }
-					>
-						<span className="dashicons dashicons-tag"></span>
-						{ __( 'Tags', 'dragwyb-click-to-chat' ) }
-					</button>
+					{ canManageTags && (
+						<button
+							type="button"
+							className={ `dctc-sc-nav-link ${ activeTab === 'tags' ? 'active' : '' }` }
+							onClick={ () => setActiveTab( 'tags' ) }
+						>
+							<span className="dashicons dashicons-tag"></span>
+							{ __( 'Tags', 'dragwyb-click-to-chat' ) }
+						</button>
+					) }
 
-					<button
-						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'settings' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'settings' ) }
-					>
-						<span className="dashicons dashicons-admin-generic"></span>
-						{ __( 'Settings', 'dragwyb-click-to-chat' ) }
-					</button>
+					{ canManageSettings && (
+						<button
+							type="button"
+							className={ `dctc-sc-nav-link ${ activeTab === 'settings' ? 'active' : '' }` }
+							onClick={ () => setActiveTab( 'settings' ) }
+						>
+							<span className="dashicons dashicons-admin-generic"></span>
+							{ __( 'Settings & Permissions', 'dragwyb-click-to-chat' ) }
+						</button>
+					) }
 				</nav>
 			</header>
 
@@ -316,6 +368,7 @@ export default function App() {
 						onRefresh={ () => { fetchDashboardStats(); fetchTickets(); } }
 						onJumpToTickets={ handleJumpToTickets }
 						onSwitchTab={ setActiveTab }
+						userPermissions={ userPermissions }
 					/>
 				) }
 
@@ -347,33 +400,40 @@ export default function App() {
 						onRefreshTickets={ fetchTickets }
 						onRefreshTicketDetails={ fetchTicketDetails }
 						onShowNotice={ showNotice }
+						userPermissions={ userPermissions }
 					/>
 				) }
 
-				{ activeTab === 'agents' && (
+				{ activeTab === 'agents' && canManageAgents && (
 					<AgentsView
 						agents={ agents }
 						onRefresh={ fetchMetaData }
+						userPermissions={ userPermissions }
 					/>
 				) }
 
-				{ activeTab === 'categories' && (
+				{ activeTab === 'categories' && canManageCategories && (
 					<CategoriesView
 						categories={ categories }
+						userPermissions={ userPermissions }
 					/>
 				) }
 
-				{ activeTab === 'tags' && (
+				{ activeTab === 'tags' && canManageTags && (
 					<TagsView
 						tags={ tags }
+						userPermissions={ userPermissions }
 					/>
 				) }
 
-				{ activeTab === 'settings' && (
+				{ activeTab === 'settings' && canManageSettings && (
 					<SettingsView
 						supportSettings={ supportSettings }
 						setSupportSettings={ setSupportSettings }
+						permissionsMatrix={ permissionsMatrix }
+						setPermissionsMatrix={ setPermissionsMatrix }
 						onShowNotice={ showNotice }
+						userPermissions={ userPermissions }
 					/>
 				) }
 			</main>

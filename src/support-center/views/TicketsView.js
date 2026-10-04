@@ -32,7 +32,14 @@ export default function TicketsView( {
 	onRefreshTickets,
 	onRefreshTicketDetails,
 	onShowNotice,
+	userPermissions = {},
 } ) {
+	const canAssign = !! ( userPermissions.is_admin || userPermissions.assign_ticket || userPermissions.reassign_ticket );
+	const canChangePriority = !! ( userPermissions.is_admin || userPermissions.change_priority );
+	const canChangeStatus = !! ( userPermissions.is_admin || userPermissions.change_status !== false );
+	const canTakeControl = !! ( userPermissions.is_admin || userPermissions.take_ai_control || userPermissions.release_ai_control );
+	const canInternalNote = !! ( userPermissions.is_admin || userPermissions.internal_note !== false );
+
 	const [ composerMode, setComposerMode ] = useState( 'reply' );
 	const [ replyText, setReplyText ] = useState( '' );
 	const [ noteText, setNoteText ] = useState( '' );
@@ -292,6 +299,30 @@ export default function TicketsView( {
 									<span>👤 { item.customer_name || item.customer_email }</span>
 								</div>
 
+								{ /* Category, Agent, and Chat Count Badges */ }
+								<div className="dctc-sc-ticket-badges-bar">
+									<span className="dctc-sc-badge dctc-sc-badge-category" title={ __( 'Category', 'dragwyb-click-to-chat' ) }>
+										📁 { item.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
+									</span>
+									<span className="dctc-sc-badge dctc-sc-badge-agent" title={ __( 'Assigned Agent', 'dragwyb-click-to-chat' ) }>
+										👤 { item.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+									</span>
+									<span className="dctc-sc-badge dctc-sc-badge-chats" title={ __( 'Number of Messages / Chats', 'dragwyb-click-to-chat' ) }>
+										💬 { item.chat_count !== undefined ? item.chat_count : ( item.message_count || 1 ) } { ( item.chat_count === 1 || item.message_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
+									</span>
+								</div>
+
+								{ /* Tags & Product Badges */ }
+								{ Array.isArray( item.tags ) && item.tags.length > 0 && (
+									<div className="dctc-sc-card-tags-wrap">
+										{ item.tags.map( ( tag, idx ) => (
+											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag" title={ __( 'Tag / Product', 'dragwyb-click-to-chat' ) }>
+												🏷️ { tag }
+											</span>
+										) ) }
+									</div>
+								) }
+
 								<div className="dctc-sc-ticket-card-footer">
 									<span className="dctc-sc-control-indicator">
 										{ item.control_mode === 'human' ? '👤 Staff Assigned' : '🤖 AI Active' }
@@ -355,8 +386,26 @@ export default function TicketsView( {
 									<span className="dctc-sc-surface-tag">
 										{ selectedTicket.reply_surface === 'chatbot_widget' ? '💬 Chatbot Widget' : '🌐 Support Portal' }
 									</span>
+									<span className="dctc-sc-badge dctc-sc-badge-category">
+										📁 { selectedTicket.category_name || __( 'General', 'dragwyb-click-to-chat' ) }
+									</span>
+									<span className="dctc-sc-badge dctc-sc-badge-agent">
+										👤 { selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+									</span>
+									<span className="dctc-sc-badge dctc-sc-badge-chats">
+										💬 { selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { ( selectedTicket.chat_count === 1 ) ? __( 'msg', 'dragwyb-click-to-chat' ) : __( 'chats', 'dragwyb-click-to-chat' ) }
+									</span>
 								</div>
 								<h2 className="dctc-sc-ticket-main-title">{ selectedTicket.subject }</h2>
+								{ Array.isArray( selectedTicket.tags ) && selectedTicket.tags.length > 0 && (
+									<div className="dctc-sc-header-tags-row">
+										{ selectedTicket.tags.map( ( tag, idx ) => (
+											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag">
+												🏷️ { tag }
+											</span>
+										) ) }
+									</div>
+								) }
 							</div>
 
 							<div className="dctc-sc-header-actions">
@@ -595,6 +644,48 @@ export default function TicketsView( {
 							<div className="dctc-sc-meta-row">
 								<span className="meta-label">{ __( 'Created:', 'dragwyb-click-to-chat' ) }</span>
 								<span className="meta-val">{ selectedTicket.created_at }</span>
+							</div>
+						</div>
+
+						{ /* Ticket Classification & Badges Card */ }
+						<div className="dctc-sc-meta-card">
+							<h4 className="dctc-sc-meta-card-title">
+								<span className="dashicons dashicons-tag"></span>
+								{ __( 'Classification & Badges', 'dragwyb-click-to-chat' ) }
+							</h4>
+							<div className="dctc-sc-meta-row">
+								<span className="meta-label">{ __( 'Category:', 'dragwyb-click-to-chat' ) }</span>
+								<span className="dctc-sc-badge dctc-sc-badge-category">
+									📁 { selectedTicket.category_name || __( 'General Inquiry', 'dragwyb-click-to-chat' ) }
+								</span>
+							</div>
+							<div className="dctc-sc-meta-row">
+								<span className="meta-label">{ __( 'Assigned Agent:', 'dragwyb-click-to-chat' ) }</span>
+								<span className="dctc-sc-badge dctc-sc-badge-agent">
+									👤 { selectedTicket.agent_name || __( 'Unassigned', 'dragwyb-click-to-chat' ) }
+								</span>
+							</div>
+							<div className="dctc-sc-meta-row">
+								<span className="meta-label">{ __( 'Total Chats:', 'dragwyb-click-to-chat' ) }</span>
+								<span className="dctc-sc-badge dctc-sc-badge-chats">
+									💬 { selectedTicket.chat_count !== undefined ? selectedTicket.chat_count : ( selectedTicket.messages ? selectedTicket.messages.length : 0 ) } { __( 'messages', 'dragwyb-click-to-chat' ) }
+								</span>
+							</div>
+							<div className="dctc-sc-meta-tags-block">
+								<span className="meta-label" style={ { display: 'block', marginBottom: '6px', fontWeight: 600, fontSize: '11px', color: '#6B7280' } }>
+									{ __( 'Tags & Products:', 'dragwyb-click-to-chat' ) }
+								</span>
+								<div className="dctc-sc-card-tags-wrap">
+									{ Array.isArray( selectedTicket.tags ) && selectedTicket.tags.length > 0 ? (
+										selectedTicket.tags.map( ( tag, idx ) => (
+											<span key={ idx } className="dctc-sc-badge dctc-sc-badge-tag">
+												🏷️ { tag }
+											</span>
+										) )
+									) : (
+										<span style={ { fontSize: '12px', color: '#9CA3AF' } }>{ __( 'No tags assigned', 'dragwyb-click-to-chat' ) }</span>
+									) }
+								</div>
 							</div>
 						</div>
 

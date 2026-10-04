@@ -15,12 +15,14 @@ const PRESET_SKILLS = [
 	'orders',
 ];
 
-export default function AgentsView( { agents, onRefresh } ) {
+export default function AgentsView( { agents, onRefresh, userPermissions = {} } ) {
 	const [ showModal, setShowModal ] = useState( false );
 	const [ wpUsers, setWpUsers ] = useState( [] );
 	const [ loadingUsers, setLoadingUsers ] = useState( false );
 	const [ saving, setSaving ] = useState( false );
 	const [ notice, setNotice ] = useState( null );
+
+	const canManageAgents = !! ( userPermissions.is_admin || userPermissions.manage_agents );
 
 	// Form state
 	const [ selectedUserId, setSelectedUserId ] = useState( '' );
@@ -67,6 +69,26 @@ export default function AgentsView( { agents, onRefresh } ) {
 				setSkills( existingAgent.skills );
 			}
 		}
+	};
+
+	const handleOpenAddModal = () => {
+		setSelectedUserId( '' );
+		setSupportRole( 'support' );
+		setSeniority( 'support' );
+		setMaxTickets( 10 );
+		setAvailability( 'available' );
+		setSkills( [ 'technical', 'woocommerce', 'billing' ] );
+		setShowModal( true );
+	};
+
+	const handleOpenEditModal = ( agentObj ) => {
+		setSelectedUserId( agentObj.wp_user_id );
+		setSupportRole( agentObj.support_role || 'support' );
+		setSeniority( agentObj.seniority || 'support' );
+		setMaxTickets( agentObj.max_active_tickets || 10 );
+		setAvailability( agentObj.availability_status || 'available' );
+		setSkills( Array.isArray( agentObj.skills ) ? agentObj.skills : [] );
+		setShowModal( true );
 	};
 
 	const toggleSkillPreset = ( skill ) => {
@@ -174,15 +196,17 @@ export default function AgentsView( { agents, onRefresh } ) {
 					<p className="dctc-sc-panel-sub">{ __( 'Manage support specialist availability, routing skills, and active ticket capacities.', 'dragwyb-click-to-chat' ) }</p>
 				</div>
 				<div style={ { marginLeft: 'auto', display: 'flex', gap: '8px' } }>
-					<button
-						type="button"
-						className="button button-primary"
-						onClick={ () => setShowModal( true ) }
-						style={ { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '7px', fontWeight: 600 } }
-					>
-						<span className="dashicons dashicons-plus-alt2" style={ { fontSize: '16px', lineHeight: '1.2' } }></span>
-						{ __( 'Add Staff Agent', 'dragwyb-click-to-chat' ) }
-					</button>
+					{ canManageAgents && (
+						<button
+							type="button"
+							className="button button-primary"
+							onClick={ handleOpenAddModal }
+							style={ { display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '7px', fontWeight: 600 } }
+						>
+							<span className="dashicons dashicons-plus-alt2" style={ { fontSize: '16px', lineHeight: '1.2' } }></span>
+							{ __( 'Add Staff Agent', 'dragwyb-click-to-chat' ) }
+						</button>
+					) }
 					<button
 						type="button"
 						className="dctc-sc-panel-header-btn"
@@ -204,13 +228,13 @@ export default function AgentsView( { agents, onRefresh } ) {
 						<th>{ __( 'Availability', 'dragwyb-click-to-chat' ) }</th>
 						<th>{ __( 'Active Load', 'dragwyb-click-to-chat' ) }</th>
 						<th>{ __( 'Assigned Skills', 'dragwyb-click-to-chat' ) }</th>
-						<th style={ { width: '80px', textAlign: 'center' } }>{ __( 'Action', 'dragwyb-click-to-chat' ) }</th>
+						{ canManageAgents && <th style={ { width: '130px', textAlign: 'center' } }>{ __( 'Action', 'dragwyb-click-to-chat' ) }</th> }
 					</tr>
 				</thead>
 				<tbody>
 					{ agents.length === 0 ? (
 						<tr>
-							<td colSpan="8" style={ { textAlign: 'center', padding: '30px' } }>
+							<td colSpan={ canManageAgents ? 8 : 7 } style={ { textAlign: 'center', padding: '30px' } }>
 								{ __( 'No active staff agents found.', 'dragwyb-click-to-chat' ) }
 							</td>
 						</tr>
@@ -243,16 +267,28 @@ export default function AgentsView( { agents, onRefresh } ) {
 										) ) }
 									</div>
 								</td>
-								<td style={ { textAlign: 'center' } }>
-									<button
-										type="button"
-										className="button button-small button-link-delete"
-										title={ __( 'Remove agent from roster', 'dragwyb-click-to-chat' ) }
-										onClick={ () => handleDeleteAgent( ag.id, ag.display_name ) }
-									>
-										{ __( 'Remove', 'dragwyb-click-to-chat' ) }
-									</button>
-								</td>
+								{ canManageAgents && (
+									<td style={ { textAlign: 'center' } }>
+										<div style={ { display: 'flex', gap: '4px', justifyContent: 'center' } }>
+											<button
+												type="button"
+												className="button button-small"
+												title={ __( 'Edit agent permissions', 'dragwyb-click-to-chat' ) }
+												onClick={ () => handleOpenEditModal( ag ) }
+											>
+												{ __( 'Edit', 'dragwyb-click-to-chat' ) }
+											</button>
+											<button
+												type="button"
+												className="button button-small button-link-delete"
+												title={ __( 'Remove agent from roster', 'dragwyb-click-to-chat' ) }
+												onClick={ () => handleDeleteAgent( ag.id, ag.display_name ) }
+											>
+												{ __( 'Remove', 'dragwyb-click-to-chat' ) }
+											</button>
+										</div>
+									</td>
+								) }
 							</tr>
 						) )
 					) }

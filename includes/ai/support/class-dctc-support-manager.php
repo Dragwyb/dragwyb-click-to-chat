@@ -89,12 +89,16 @@ class DCTC_Support_Manager {
 			return;
 		}
 
-		$support_cap = 'edit_posts';
-		if ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) {
-			$support_cap = 'read';
-		} elseif ( current_user_can( 'manage_options' ) ) {
-			$support_cap = 'manage_options';
+		if ( ! class_exists( 'DCTC_Support_Permission_Service' ) ) {
+			return;
 		}
+
+		// Only show menu if user can view tickets or is WP admin
+		if ( ! DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) {
+			return;
+		}
+
+		$support_cap = 'read';
 
 		// Top-level main menu (Positioned at 21, right after core Pages menu at 20)
 		add_menu_page(
@@ -127,35 +131,41 @@ class DCTC_Support_Manager {
 			array( $this, 'render_support_admin_page' )
 		);
 
-		// Submenu 3: Agents & Staff
-		add_submenu_page(
-			'dragwyb-support-center',
-			esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
-			esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
-			$support_cap,
-			'dragwyb-support-agents',
-			array( $this, 'render_support_admin_page' )
-		);
+		// Submenu 3: Agents & Staff (Requires manage_agents permission)
+		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_agents' ) ) {
+			add_submenu_page(
+				'dragwyb-support-center',
+				esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
+				$support_cap,
+				'dragwyb-support-agents',
+				array( $this, 'render_support_admin_page' )
+			);
+		}
 
-		// Submenu 4: Categories & Skills
-		add_submenu_page(
-			'dragwyb-support-center',
-			esc_html__( 'Categories', 'dragwyb-click-to-chat' ),
-			esc_html__( 'Categories', 'dragwyb-click-to-chat' ),
-			$support_cap,
-			'dragwyb-support-categories',
-			array( $this, 'render_support_admin_page' )
-		);
+		// Submenu 4: Categories & Tags (Requires manage_categories or manage_tags permission)
+		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) || DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
+			add_submenu_page(
+				'dragwyb-support-center',
+				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
+				$support_cap,
+				'dragwyb-support-categories',
+				array( $this, 'render_support_admin_page' )
+			);
+		}
 
-		// Submenu 5: Support Settings
-		add_submenu_page(
-			'dragwyb-support-center',
-			esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
-			esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
-			$support_cap,
-			'dragwyb-support-settings',
-			array( $this, 'render_support_admin_page' )
-		);
+		// Submenu 5: Support Settings (Requires manage_settings permission)
+		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+			add_submenu_page(
+				'dragwyb-support-center',
+				esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
+				$support_cap,
+				'dragwyb-support-settings',
+				array( $this, 'render_support_admin_page' )
+			);
+		}
 	}
 
 	/**
@@ -215,13 +225,19 @@ class DCTC_Support_Manager {
 			true
 		);
 
+		$user_id     = get_current_user_id();
+		$permissions = class_exists( 'DCTC_Support_Permission_Service' )
+			? DCTC_Support_Permission_Service::get_user_permissions( $user_id )
+			: array( 'view_tickets' => true, 'is_admin' => current_user_can( 'manage_options' ) );
+
 		wp_localize_script(
 			'dctc-support-center-script',
 			'dctc_support_data',
 			array(
-				'rest_url' => esc_url_raw( rest_url() ),
-				'nonce'    => wp_create_nonce( 'wp_rest' ),
-				'user_id'  => get_current_user_id(),
+				'rest_url'    => esc_url_raw( rest_url() ),
+				'nonce'       => wp_create_nonce( 'wp_rest' ),
+				'user_id'     => $user_id,
+				'permissions' => $permissions,
 			)
 		);
 	}

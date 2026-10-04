@@ -312,6 +312,33 @@ class DCTC_Support_REST_Controller {
 			)
 		);
 
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/permissions',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_permissions' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_permissions' ),
+					'permission_callback' => array( $this, 'permission_staff_settings' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/me',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_current_user_profile' ),
+				'permission_callback' => array( $this, 'permission_staff_view' ),
+			)
+		);
+
 		// Customer Portal Routes
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -418,7 +445,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function permission_staff_settings() {
-		return current_user_can( 'manage_options' );
+		return DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) || current_user_can( 'manage_options' );
 	}
 
 	public function permission_portal_access( $request ) {
@@ -775,6 +802,61 @@ class DCTC_Support_REST_Controller {
 		$data = $request->get_json_params();
 		update_option( 'dctc_support_settings', $data );
 		return new WP_REST_Response( array( 'success' => true, 'settings' => $data ), 200 );
+	}
+
+	public function get_permissions() {
+		$matrix           = DCTC_Support_Permission_Service::get_role_permissions();
+		$user_permissions = DCTC_Support_Permission_Service::get_user_permissions();
+		return new WP_REST_Response(
+			array(
+				'success'            => true,
+				'permissions_matrix' => $matrix,
+				'user_permissions'   => $user_permissions,
+				'roles'              => array(
+					'admin'   => __( 'Administrator', 'dragwyb-click-to-chat' ),
+					'manager' => __( 'Support Manager', 'dragwyb-click-to-chat' ),
+					'senior'  => __( 'Senior Specialist', 'dragwyb-click-to-chat' ),
+					'support' => __( 'Support Agent', 'dragwyb-click-to-chat' ),
+					'fresher' => __( 'Fresher / Junior', 'dragwyb-click-to-chat' ),
+				),
+			),
+			200
+		);
+	}
+
+	public function save_permissions( $request ) {
+		$matrix  = $request->get_json_params();
+		$success = DCTC_Support_Permission_Service::save_role_permissions( $matrix );
+		return new WP_REST_Response(
+			array(
+				'success'            => (bool) $success,
+				'permissions_matrix' => DCTC_Support_Permission_Service::get_role_permissions(),
+			),
+			$success ? 200 : 400
+		);
+	}
+
+	public function get_current_user_profile() {
+		$user_id = get_current_user_id();
+		$user    = get_userdata( $user_id );
+		if ( ! $user ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Not authenticated.', 'dragwyb-click-to-chat' ) ), 401 );
+		}
+
+		$perms = DCTC_Support_Permission_Service::get_user_permissions( $user_id );
+		return new WP_REST_Response(
+			array(
+				'success'     => true,
+				'user'        => array(
+					'id'           => $user_id,
+					'display_name' => $user->display_name,
+					'email'        => $user->user_email,
+					'avatar'       => get_avatar_url( $user_id, array( 'size' => 64 ) ),
+				),
+				'permissions' => $perms,
+			),
+			200
+		);
 	}
 
 	// -------------------------------------------------------------

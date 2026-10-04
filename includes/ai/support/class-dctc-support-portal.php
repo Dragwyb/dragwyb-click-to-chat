@@ -45,6 +45,25 @@ class DCTC_Support_Portal {
 		$email     = $user ? $user->user_email : '';
 
 		$categories = DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) );
+		$products   = array();
+		if ( post_type_exists( 'product' ) ) {
+			$wc_products = get_posts( array(
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
+				'posts_per_page' => 100,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			) );
+			if ( ! empty( $wc_products ) && is_array( $wc_products ) ) {
+				foreach ( $wc_products as $prod ) {
+					$products[] = array(
+						'id'    => $prod->ID,
+						'title' => $prod->post_title,
+					);
+				}
+			}
+		}
+
 		$rest_url   = esc_url_raw( rest_url( 'dctc-ai/v1/support/portal' ) );
 		$nonce      = wp_create_nonce( 'wp_rest' );
 
@@ -98,19 +117,40 @@ class DCTC_Support_Portal {
 						</div>
 					<?php endif; ?>
 
-					<div class="dctc-form-group">
-						<label for="dctc-new-category"><?php esc_html_e( 'Category', 'dragwyb-click-to-chat' ); ?></label>
-						<select id="dctc-new-category" class="dctc-portal-select">
-							<option value="0"><?php esc_html_e( 'General Inquiry', 'dragwyb-click-to-chat' ); ?></option>
-							<?php foreach ( $categories as $cat ) : ?>
-								<option value="<?php echo esc_attr( $cat['id'] ); ?>"><?php echo esc_html( $cat['name'] ); ?></option>
-							<?php endforeach; ?>
-						</select>
+					<div class="dctc-form-grid-2">
+						<div class="dctc-form-group">
+							<label for="dctc-new-category"><?php esc_html_e( 'Category', 'dragwyb-click-to-chat' ); ?></label>
+							<select id="dctc-new-category" class="dctc-portal-select">
+								<option value="0"><?php esc_html_e( 'General Inquiry', 'dragwyb-click-to-chat' ); ?></option>
+								<?php foreach ( $categories as $cat ) : ?>
+									<option value="<?php echo esc_attr( $cat['id'] ); ?>"><?php echo esc_html( $cat['name'] ); ?></option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+
+						<div class="dctc-form-group">
+							<label for="dctc-new-product"><?php esc_html_e( 'Related Product / Tag', 'dragwyb-click-to-chat' ); ?></label>
+							<?php if ( ! empty( $products ) ) : ?>
+								<select id="dctc-new-product" class="dctc-portal-select">
+									<option value=""><?php esc_html_e( 'Select Product (Optional)', 'dragwyb-click-to-chat' ); ?></option>
+									<?php foreach ( $products as $prod ) : ?>
+										<option value="<?php echo esc_attr( $prod['title'] ); ?>"><?php echo esc_html( $prod['title'] ); ?></option>
+									<?php endforeach; ?>
+								</select>
+							<?php else : ?>
+								<input type="text" id="dctc-new-product" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Product Name or Topic', 'dragwyb-click-to-chat' ); ?>" />
+							<?php endif; ?>
+						</div>
 					</div>
 
 					<div class="dctc-form-group">
 						<label for="dctc-new-subject"><?php esc_html_e( 'Subject *', 'dragwyb-click-to-chat' ); ?></label>
 						<input type="text" id="dctc-new-subject" required class="dctc-portal-input" placeholder="<?php esc_attr_e( 'Brief summary of what you need help with', 'dragwyb-click-to-chat' ); ?>" />
+					</div>
+
+					<div class="dctc-form-group">
+						<label for="dctc-new-tags"><?php esc_html_e( 'Additional Tags (Comma separated)', 'dragwyb-click-to-chat' ); ?></label>
+						<input type="text" id="dctc-new-tags" class="dctc-portal-input" placeholder="<?php esc_attr_e( 'e.g. Refund, Billing, Urgent', 'dragwyb-click-to-chat' ); ?>" />
 					</div>
 
 					<div class="dctc-form-group">
@@ -134,7 +174,11 @@ class DCTC_Support_Portal {
 							<span id="dctc-detail-num" class="dctc-detail-ticket-num">#0000</span>
 							<span id="dctc-detail-status" class="dctc-badge">Open</span>
 							<span id="dctc-detail-priority" class="dctc-badge">Normal</span>
+							<span id="dctc-detail-category" class="dctc-portal-badge-cat">📁 Category</span>
+							<span id="dctc-detail-agent" class="dctc-portal-badge-agent">👤 Agent</span>
+							<span id="dctc-detail-chats" class="dctc-portal-badge-chats">💬 0 chats</span>
 						</div>
+						<div id="dctc-detail-tags-row" class="dctc-portal-tags-row" style="margin-top: 6px;"></div>
 						<h3 id="dctc-detail-subject" class="dctc-detail-subject">Ticket Subject</h3>
 					</div>
 					<div class="dctc-detail-header-right">
@@ -407,6 +451,55 @@ class DCTC_Support_Portal {
 			.dctc-badge-open { background: #ECFDF5; color: #047857; }
 			.dctc-badge-resolved { background: #EFF6FF; color: #1D4ED8; }
 			.dctc-badge-closed { background: #F3F4F6; color: #6B7280; }
+			.dctc-portal-badge-cat {
+				background: #EEF2FF;
+				border: 1px solid #C7D2FE;
+				border-radius: 6px;
+				color: #4338CA;
+				font-size: 11.5px;
+				font-weight: 600;
+				padding: 3px 8px;
+			}
+			.dctc-portal-badge-tag {
+				background: #F3F4F6;
+				border: 1px solid #E5E7EB;
+				border-radius: 6px;
+				color: #374151;
+				font-size: 11px;
+				font-weight: 500;
+				padding: 2px 7px;
+			}
+			.dctc-portal-badge-agent {
+				background: #ECFDF5;
+				border: 1px solid #A7F3D0;
+				border-radius: 6px;
+				color: #047857;
+				font-size: 11.5px;
+				font-weight: 600;
+				padding: 3px 8px;
+			}
+			.dctc-portal-badge-chats {
+				background: #FEF3C7;
+				border: 1px solid #FDE68A;
+				border-radius: 6px;
+				color: #B45309;
+				font-size: 11.5px;
+				font-weight: 600;
+				padding: 3px 8px;
+			}
+			.dctc-portal-tags-row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+				margin-top: 6px;
+			}
+			.dctc-portal-card-badges-row {
+				align-items: center;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 6px;
+				margin-top: 6px;
+			}
 		</style>
 
 		<script>
@@ -472,13 +565,28 @@ class DCTC_Support_Portal {
 						let html = '';
 						data.tickets.forEach(function(t) {
 							const statusBadge = t.status === 'open' ? 'dctc-badge-open' : (t.status === 'resolved' ? 'dctc-badge-resolved' : 'dctc-badge-closed');
+							const categoryName = t.category_name || 'General';
+							const chatCount = t.chat_count !== undefined ? t.chat_count : (t.message_count || 1);
+							const agentName = t.agent_name || 'Assigned Agent';
+							const tags = Array.isArray(t.tags) ? t.tags : [];
+
 							html += '<div class="dctc-portal-ticket-card" data-uuid="' + t.uuid + '">';
-							html += '  <div class="dctc-portal-card-left">';
+							html += '  <div class="dctc-portal-card-left" style="flex:1;">';
 							html += '    <div class="dctc-portal-card-top">';
 							html += '      <span class="dctc-portal-card-num">#' + t.ticket_number + '</span>';
 							html += '      <span class="dctc-badge ' + statusBadge + '">' + t.status + '</span>';
+							html += '      <span class="dctc-portal-badge-cat">📁 ' + categoryName + '</span>';
+							html += '      <span class="dctc-portal-badge-agent">👤 ' + agentName + '</span>';
+							html += '      <span class="dctc-portal-badge-chats">💬 ' + chatCount + ' ' + (chatCount === 1 ? 'chat' : 'chats') + '</span>';
 							html += '    </div>';
 							html += '    <h4 class="dctc-portal-card-title">' + (t.subject || 'Support Ticket') + '</h4>';
+							if (tags.length > 0) {
+								html += '    <div class="dctc-portal-card-badges-row">';
+								tags.forEach(function(tag) {
+									html += '      <span class="dctc-portal-badge-tag">🏷️ ' + tag + '</span>';
+								});
+								html += '    </div>';
+							}
 							html += '  </div>';
 							html += '  <span class="dctc-portal-card-date">' + (t.created_at ? t.created_at.split(' ')[0] : '') + '</span>';
 							html += '</div>';
@@ -520,6 +628,24 @@ class DCTC_Support_Portal {
 						document.getElementById('dctc-detail-subject').textContent = t.subject;
 						document.getElementById('dctc-detail-status').textContent = t.status;
 						document.getElementById('dctc-detail-priority').textContent = t.priority;
+						
+						const catElem = document.getElementById('dctc-detail-category');
+						if (catElem) catElem.textContent = '📁 ' + (t.category_name || 'General');
+						
+						const agentElem = document.getElementById('dctc-detail-agent');
+						if (agentElem) agentElem.textContent = '👤 ' + (t.agent_name || 'Support Staff');
+
+						const chatsElem = document.getElementById('dctc-detail-chats');
+						const count = t.chat_count !== undefined ? t.chat_count : (t.messages ? t.messages.length : 0);
+						if (chatsElem) chatsElem.textContent = '💬 ' + count + ' ' + (count === 1 ? 'chat' : 'chats');
+
+						const tagsRow = document.getElementById('dctc-detail-tags-row');
+						if (tagsRow) {
+							const tags = Array.isArray(t.tags) ? t.tags : [];
+							tagsRow.innerHTML = tags.map(function(tag) {
+								return '<span class="dctc-portal-badge-tag">🏷️ ' + tag + '</span>';
+							}).join('');
+						}
 
 						let msgHtml = '';
 						(t.messages || []).forEach(function(m) {
@@ -552,12 +678,29 @@ class DCTC_Support_Portal {
 				const nameInput = document.getElementById('dctc-new-name');
 				const emailInput = document.getElementById('dctc-new-email');
 				const catInput = document.getElementById('dctc-new-category');
+				const prodInput = document.getElementById('dctc-new-product');
+				const tagsInput = document.getElementById('dctc-new-tags');
 				const subjectInput = document.getElementById('dctc-new-subject');
 				const msgInput = document.getElementById('dctc-new-message');
+
+				// Collect tags
+				const tagsList = [];
+				if (prodInput && prodInput.value.trim()) {
+					tagsList.push(prodInput.value.trim());
+				}
+				if (tagsInput && tagsInput.value.trim()) {
+					tagsInput.value.split(',').forEach(function(item) {
+						const cleaned = item.trim();
+						if (cleaned && !tagsList.includes(cleaned)) {
+							tagsList.push(cleaned);
+						}
+					});
+				}
 
 				const payload = {
 					subject: subjectInput.value,
 					category_id: catInput ? Number(catInput.value) : 0,
+					tags: tagsList,
 					initial_message: msgInput.value,
 					customer_name: nameInput ? nameInput.value : root.getAttribute('data-user-name'),
 					customer_email: emailInput ? emailInput.value : root.getAttribute('data-user-email'),
