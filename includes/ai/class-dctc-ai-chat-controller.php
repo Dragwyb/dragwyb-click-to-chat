@@ -150,8 +150,37 @@ class DCTC_AI_Chat_Controller
 			$prompt = esc_html__('Please analyze the attached file(s).', 'dragwyb-click-to-chat');
 		}
 
+		// Hybrid Support Check: Block automatic AI generation if HUMAN_CONTROL is active
+		if (class_exists('DCTC_Support_AI_Handoff_Service') && DCTC_Support_AI_Handoff_Service::should_block_ai_response($session_id)) {
+			$human_response = DCTC_Support_AI_Handoff_Service::handle_customer_message_in_human_mode($session_id, $prompt, $email);
+			return new \WP_REST_Response($human_response, 200);
+		}
+
 		// Feature 10: Human Handoff Intent Detection
 		if (!empty($prompt) && (!isset($bot['enable_human_handoff']) || (bool) $bot['enable_human_handoff']) && self::detect_human_handoff_intent($prompt)) {
+			// Auto-create/link support ticket if Support Center is enabled
+			if (class_exists('DCTC_Support_Ticket_Service')) {
+				$support_settings = get_option('dctc_support_settings', []);
+				if (!empty($support_settings['enabled'])) {
+					global $wpdb;
+					$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+					$existing_ticket = $wpdb->get_row($wpdb->prepare("SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id), ARRAY_A);
+					if (!$existing_ticket) {
+						DCTC_Support_Ticket_Service::create_ticket([
+							'subject'          => wp_trim_words($prompt, 10, '...'),
+							'session_id'       => $session_id,
+							'customer_email'   => $email,
+							'origin_type'      => 'chatbot',
+							'reply_surface'    => 'chatbot_widget',
+							'interaction_type' => 'HYBRID_SUPPORT',
+							'control_mode'     => !empty($support_settings['auto_pause_ai']) ? 'human' : 'ai',
+							'initial_message'  => $prompt,
+						]);
+					}
+				}
+			}
+
 			$is_online = self::is_within_business_hours($bot);
 			$handoff_text = $is_online
 				? esc_html__('I can connect you directly with our team! Choose your preferred channel below to continue with a human specialist.', 'dragwyb-click-to-chat')
@@ -375,6 +404,12 @@ class DCTC_AI_Chat_Controller
 			self::log_debug('Dragwyb AI AI Chat API/Processing Error: ' . $e->getMessage());
 			$error_message = current_user_can('manage_options') ? $e->getMessage() : esc_html__('An error occurred while processing your request.', 'dragwyb-click-to-chat');
 			return $this->error_response($error_message, 500);
+		}
+
+		// Race Condition Guard: If an agent took control while LLM API was running, discard the AI output
+		if (class_exists('DCTC_Support_AI_Handoff_Service') && DCTC_Support_AI_Handoff_Service::should_block_ai_response($session_id)) {
+			$human_response = DCTC_Support_AI_Handoff_Service::handle_customer_message_in_human_mode($session_id, $prompt, $email);
+			return new \WP_REST_Response($human_response, 200);
 		}
 
 		$show_sources = ! isset( $bot['show_sources'] ) || (bool) $bot['show_sources'];
