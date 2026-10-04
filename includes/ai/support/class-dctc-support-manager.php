@@ -96,7 +96,7 @@ class DCTC_Support_Manager {
 			$support_cap = 'manage_options';
 		}
 
-		// Top-level main menu
+		// Top-level main menu (Positioned at 21, right after core Pages menu at 20)
 		add_menu_page(
 			esc_html__( 'Support Center', 'dragwyb-click-to-chat' ),
 			esc_html__( 'Support Center', 'dragwyb-click-to-chat' ),
@@ -104,7 +104,7 @@ class DCTC_Support_Manager {
 			'dragwyb-support-center',
 			array( $this, 'render_support_admin_page' ),
 			'dashicons-tickets-alt',
-			92
+			21
 		);
 
 		// Submenu 1: Dashboard (Default)

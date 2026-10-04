@@ -1,6 +1,6 @@
 /**
  * Dragwyb Click To Chat - Settings Page JavaScript
- * Handles 2-tab navigation (General vs Import/Export), dynamic badge switches, and AJAX saving.
+ * Handles 2-tab navigation, dynamic drawer expand/collapse, badge switches, and AJAX saving.
  */
 
 (function ($) {
@@ -16,53 +16,92 @@
             // Tab switching
             $('.dctc-settings-tab-btn').on('click', this.handleTabSwitch.bind(this));
 
-            // Module dynamic badges
+            // Module 1: Channels switch & drawer
             $('#dctc_gen_channels_enabled').on('change', function () {
                 const checked = $(this).is(':checked');
-                $('#dctc-badge-channels')
-                    .text(checked ? 'Active' : 'Disabled')
-                    .css({
-                        background: checked ? '#ecfdf5' : '#f3f4f6',
-                        color: checked ? '#065f46' : '#6b7280',
-                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
-                    });
+                const $card = $('#dctc-card-channels');
+                const $badge = $('#dctc-badge-channels');
+                const $drawer = $('#dctc-drawer-channels');
+
+                if (checked) {
+                    $card.removeClass('is-disabled').addClass('is-enabled');
+                    $badge.text('Active').removeClass('is-inactive').addClass('is-active');
+                    $drawer.slideDown(250);
+                } else {
+                    $card.removeClass('is-enabled').addClass('is-disabled');
+                    $badge.text('Disabled').removeClass('is-active').addClass('is-inactive');
+                    $drawer.slideUp(250);
+                }
             });
 
+            // Module 2: AI Assistant switch & drawer
             $('#dctc_gen_ai_enabled').on('change', function () {
                 const checked = $(this).is(':checked');
-                $('#dctc-badge-ai')
-                    .text(checked ? 'Active' : 'Disabled')
-                    .css({
-                        background: checked ? '#ecfdf5' : '#f3f4f6',
-                        color: checked ? '#065f46' : '#6b7280',
-                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
-                    });
+                const $card = $('#dctc-card-ai');
+                const $badge = $('#dctc-badge-ai');
+                const $drawer = $('#dctc-drawer-ai');
+
+                if (checked) {
+                    $card.removeClass('is-disabled').addClass('is-enabled');
+                    $badge.text('Active').removeClass('is-inactive').addClass('is-active');
+                    $drawer.slideDown(250);
+                } else {
+                    $card.removeClass('is-enabled').addClass('is-disabled');
+                    $badge.text('Disabled').removeClass('is-active').addClass('is-inactive');
+                    $drawer.slideUp(250);
+                }
             });
 
+            // Module 3: Support Center switch & drawer
             $('#dctc_gen_support_enabled').on('change', function () {
                 const checked = $(this).is(':checked');
-                $('#dctc-badge-support')
-                    .text(checked ? 'Active' : 'Disabled')
-                    .css({
-                        background: checked ? '#ecfdf5' : '#f3f4f6',
-                        color: checked ? '#065f46' : '#6b7280',
-                        border: checked ? '1px solid #a7f3d0' : '1px solid #e5e7eb'
-                    });
+                const $card = $('#dctc-card-support');
+                const $badge = $('#dctc-badge-support');
+                const $drawer = $('#dctc-drawer-support');
+
+                if (checked) {
+                    $card.removeClass('is-disabled').addClass('is-enabled');
+                    $badge.text('Active').removeClass('is-inactive').addClass('is-active');
+                    $drawer.slideDown(250);
+                } else {
+                    $card.removeClass('is-enabled').addClass('is-disabled');
+                    $badge.text('Disabled').removeClass('is-active').addClass('is-inactive');
+                    $drawer.slideUp(250);
+                }
             });
 
             // Save Settings via AJAX
             $('#dctc-general-save-btn').on('click', this.saveGeneralSettings.bind(this));
 
             // Copy Shortcode Button
-            $('.dctc-copy-btn').on('click', function (e) {
+            $(document).on('click', '.dctc-copy-btn', function (e) {
                 e.preventDefault();
                 const text = $(this).data('clipboard-text') || '[dctc-widget]';
-                if (navigator.clipboard) {
+                const $btn = $(this);
+                const $span = $btn.find('.dctc-copy-text');
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(text).then(() => {
-                        const $span = $(this).find('.dctc-copy-text');
-                        $span.text('Copied!');
-                        setTimeout(() => $span.text('Copy'), 2000);
+                        $span.text('✓ Copied!');
+                        $btn.addClass('is-copied');
+                        setTimeout(() => {
+                            $span.text('Copy');
+                            $btn.removeClass('is-copied');
+                        }, 2000);
                     });
+                } else {
+                    // Fallback
+                    const temp = $('<input>');
+                    $('body').append(temp);
+                    temp.val(text).select();
+                    document.execCommand('copy');
+                    temp.remove();
+                    $span.text('✓ Copied!');
+                    $btn.addClass('is-copied');
+                    setTimeout(() => {
+                        $span.text('Copy');
+                        $btn.removeClass('is-copied');
+                    }, 2000);
                 }
             });
         },
