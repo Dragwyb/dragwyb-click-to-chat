@@ -406,6 +406,7 @@ export default function ChatWidget({ settings, inline }) {
 	const [activeControlMode, setActiveControlMode] = useState('ai');
 	const [assignedAgentName, setAssignedAgentName] = useState('');
 	const [activeTicketInfo, setActiveTicketInfo] = useState(null);
+	const [hasActiveTicket, setHasActiveTicket] = useState(false);
 
 	// AI Lead Capture State
 	const [showLeadForm, setShowLeadForm] = useState(false);
@@ -723,9 +724,69 @@ export default function ChatWidget({ settings, inline }) {
 		};
 	}, []);
 
-	// Real-time Session Sync Polling for Live Agent Replies
+	// Initial Session & Ticket Verification (Checks once on widget open/load without repeating)
 	useEffect(() => {
 		if (!isOpen || !sessionId) {
+			return;
+		}
+
+		let isCancelled = false;
+
+		const checkInitialSessionTicket = async () => {
+			try {
+				const res = await apiFetch({
+					path: `/dctc-ai/v1/chat/sync?session_id=${encodeURIComponent(sessionId)}`,
+					method: 'GET',
+				});
+
+				if (isCancelled || !res || !res.success) {
+					return;
+				}
+
+				if (res.has_ticket && res.ticket) {
+					const isClosed = ['resolved', 'closed'].includes(res.ticket.status);
+					setHasActiveTicket(!isClosed);
+					setActiveTicketInfo(res.ticket);
+					if (res.ticket.agent_name) {
+						setAssignedAgentName(res.ticket.agent_name);
+					}
+					if (res.control_mode) {
+						setActiveControlMode(res.control_mode);
+					}
+				} else {
+					setHasActiveTicket(false);
+				}
+
+				if (Array.isArray(res.messages) && res.messages.length > 0) {
+					setMessages((prev) => {
+						if (prev.length === 0 || res.messages.length > prev.length) {
+							return res.messages.map((m, idx) => ({
+								id: m.id || `srv_${idx}_${m.created_at || idx}`,
+								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : m.role)),
+								content: m.content || '',
+								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+								is_agent: m.sender_type === 'agent',
+								created_at: m.created_at || '',
+							}));
+						}
+						return prev;
+					});
+				}
+			} catch (err) {
+				// Silently ignore initial check errors
+			}
+		};
+
+		checkInitialSessionTicket();
+		return () => {
+			isCancelled = true;
+		};
+	}, [isOpen, sessionId]);
+
+	// Real-time Session Sync Polling for Live Agent Replies (Runs ONLY when ticket is active)
+	useEffect(() => {
+		if (!isOpen || !sessionId || !hasActiveTicket) {
 			return;
 		}
 
@@ -743,6 +804,10 @@ export default function ChatWidget({ settings, inline }) {
 
 				if (isCancelled || !res || !res.success) {
 					return;
+				}
+
+				if (!res.has_ticket || (res.ticket && ['resolved', 'closed'].includes(res.ticket.status))) {
+					setHasActiveTicket(false);
 				}
 
 				if (res.control_mode) {
@@ -781,7 +846,7 @@ export default function ChatWidget({ settings, inline }) {
 			isCancelled = true;
 			clearInterval(interval);
 		};
-	}, [isOpen, sessionId]);
+	}, [isOpen, sessionId, hasActiveTicket]);
 
 	// Click outside to close attachment menu
 	useEffect(() => {
@@ -1521,6 +1586,18 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
+
+				if (response.has_ticket && response.ticket) {
+					const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
+					setHasActiveTicket(!isClosed);
+					setActiveTicketInfo(response.ticket);
+					if (response.ticket.agent_name) {
+						setAssignedAgentName(response.ticket.agent_name);
+					}
+					if (response.control_mode) {
+						setActiveControlMode(response.control_mode);
+					}
+				}
 
 				if (response.show_order_tracker) {
 					const loggedInEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';

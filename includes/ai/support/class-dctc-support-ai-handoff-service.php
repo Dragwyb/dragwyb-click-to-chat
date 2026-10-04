@@ -246,6 +246,14 @@ class DCTC_Support_AI_Handoff_Service {
 			$agent_name
 		);
 
+		$ticket_info = array(
+			'id'            => (int) $ticket_id,
+			'ticket_number' => $ticket ? (int) $ticket['ticket_number'] : 0,
+			'status'        => $ticket ? $ticket['status'] : 'waiting_agent',
+			'control_mode'  => 'human',
+			'agent_name'    => $agent_name,
+		);
+
 		return array(
 			'success'            => true,
 			'message'            => $human_reply_notice,
@@ -254,6 +262,8 @@ class DCTC_Support_AI_Handoff_Service {
 			'session_id'         => $session_id,
 			'messages'           => $messages,
 			'is_human_handled'   => true,
+			'has_ticket'         => true,
+			'ticket'             => $ticket_info,
 		);
 	}
 }

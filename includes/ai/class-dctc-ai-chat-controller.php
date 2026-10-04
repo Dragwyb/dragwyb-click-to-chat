@@ -488,32 +488,40 @@ class DCTC_AI_Chat_Controller {
 			if ( 'lead_generation' === $detected_intent || ! empty( $detected_email ) ) {
 				if ( ! empty( $email ) && class_exists( 'DCTC_AI_DB' ) ) {
 					$score = 75;
-					if ( ! empty( $detected_email ) ) $score += 15;
-					if ( ! empty( $detected_phone ) ) $score += 10;
+					if ( ! empty( $detected_email ) ) {
+						$score += 15;
+					}
+					if ( ! empty( $detected_phone ) ) {
+						$score += 10;
+					}
 
-					$lead_id = DCTC_AI_DB::save_lead( array(
-						'session_id'   => $session_id,
-						'name'         => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
-						'email'        => $email,
-						'phone'        => $detected_phone,
-						'requirement'  => $prompt,
-						'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
-						'score'        => min( 100, $score ),
-						'intent_level' => 'high',
-						'status'       => 'qualified',
-					) );
+					$lead_id = DCTC_AI_DB::save_lead(
+						array(
+							'session_id'   => $session_id,
+							'name'         => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
+							'email'        => $email,
+							'phone'        => $detected_phone,
+							'requirement'  => $prompt,
+							'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
+							'score'        => min( 100, $score ),
+							'intent_level' => 'high',
+							'status'       => 'qualified',
+						)
+					);
 
 					if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
 						$leads_controller = new DCTC_AI_Leads_Controller();
-						$leads_controller->maybe_send_lead_email( array(
-							'id'          => $lead_id,
-							'name'        => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
-							'email'       => $email,
-							'phone'       => $detected_phone,
-							'requirement' => $prompt,
-							'score'       => min( 100, $score ),
-							'status'      => 'qualified',
-						) );
+						$leads_controller->maybe_send_lead_email(
+							array(
+								'id'          => $lead_id,
+								'name'        => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
+								'email'       => $email,
+								'phone'       => $detected_phone,
+								'requirement' => $prompt,
+								'score'       => min( 100, $score ),
+								'status'      => 'qualified',
+							)
+						);
 					}
 				}
 
@@ -526,16 +534,18 @@ class DCTC_AI_Chat_Controller {
 						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 						$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
 						if ( ! $existing_ticket ) {
-							DCTC_Support_Ticket_Service::create_ticket( array(
-								'subject'          => '[Lead] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
-								'session_id'       => $session_id,
-								'customer_email'   => $email,
-								'origin_type'      => 'chatbot',
-								'reply_surface'    => 'chatbot_widget',
-								'interaction_type' => 'LEAD_GENERATION',
-								'control_mode'     => 'ai',
-								'initial_message'  => $prompt,
-							) );
+							DCTC_Support_Ticket_Service::create_ticket(
+								array(
+									'subject'          => '[Lead] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
+									'session_id'       => $session_id,
+									'customer_email'   => $email,
+									'origin_type'      => 'chatbot',
+									'reply_surface'    => 'chatbot_widget',
+									'interaction_type' => 'LEAD_GENERATION',
+									'control_mode'     => 'ai',
+									'initial_message'  => $prompt,
+								)
+							);
 						}
 					}
 				}
@@ -551,16 +561,18 @@ class DCTC_AI_Chat_Controller {
 						if ( ! $existing_ticket ) {
 							$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
 
-							DCTC_Support_Ticket_Service::create_ticket( array(
-								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
-								'session_id'       => $session_id,
-								'customer_email'   => $email,
-								'origin_type'      => 'chatbot',
-								'reply_surface'    => 'chatbot_widget',
-								'interaction_type' => 'HYBRID_SUPPORT',
-								'control_mode'     => $auto_pause ? 'human' : 'ai',
-								'initial_message'  => $prompt,
-							) );
+							DCTC_Support_Ticket_Service::create_ticket(
+								array(
+									'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
+									'session_id'       => $session_id,
+									'customer_email'   => $email,
+									'origin_type'      => 'chatbot',
+									'reply_surface'    => 'chatbot_widget',
+									'interaction_type' => 'HYBRID_SUPPORT',
+									'control_mode'     => $auto_pause ? 'human' : 'ai',
+									'initial_message'  => $prompt,
+								)
+							);
 						}
 					}
 				}
@@ -634,6 +646,10 @@ class DCTC_AI_Chat_Controller {
 		 * @param string $used_model
 		 * @param string $used_provider
 		 */
+		$ticket_info  = $this->get_session_ticket_info( $session_id );
+		$has_ticket   = ! empty( $ticket_info );
+		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
+
 		return new \WP_REST_Response(
 			array(
 				'success'         => true,
@@ -644,6 +660,9 @@ class DCTC_AI_Chat_Controller {
 				'reference_links' => $sources,
 				'products'        => $wc_products,
 				'show_lead_form'  => false,
+				'has_ticket'      => $has_ticket,
+				'ticket'          => $ticket_info,
+				'control_mode'    => $control_mode,
 			),
 			200
 		);
@@ -1681,6 +1700,10 @@ CONVERSATION MEMORY:
 			}
 		}
 
+		$ticket_info  = $this->get_session_ticket_info( $session_id );
+		$has_ticket   = ! empty( $ticket_info );
+		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
+
 		return new \WP_REST_Response(
 			array(
 				'success'        => true,
@@ -1689,6 +1712,9 @@ CONVERSATION MEMORY:
 				'from_kb'        => false,
 				'is_handoff'     => $is_handoff,
 				'action_buttons' => $action_buttons,
+				'has_ticket'     => $has_ticket,
+				'ticket'         => $ticket_info,
+				'control_mode'   => $control_mode,
 			),
 			200
 		);
@@ -1769,34 +1795,99 @@ CONVERSATION MEMORY:
 	 * @param \WP_REST_Request $request The REST request.
 	 * @return \WP_REST_Response
 	 */
+	/**
+	 * Get ticket info for a session.
+	 *
+	 * @param string $session_id Session ID.
+	 * @return array|null Ticket array or null
+	 */
+	public function get_session_ticket_info( $session_id ) {
+		global $wpdb;
+		if ( empty( $session_id ) ) {
+			return null;
+		}
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
+		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
+
+		// First check session row for linked support_ticket_id
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$session = $wpdb->get_row( $wpdb->prepare( "SELECT support_ticket_id, control_mode FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
+
+		$ticket = null;
+		if ( ! empty( $session['support_ticket_id'] ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ), ARRAY_A );
+		}
+
+		// Fallback: check tickets table directly by session_id
+		if ( ! $ticket ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE session_id = %s ORDER BY id DESC LIMIT 1", $session_id ), ARRAY_A );
+		}
+
+		if ( ! $ticket ) {
+			return null;
+		}
+
+		$agent_name = '';
+		if ( ! empty( $ticket['assigned_agent_id'] ) ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$agent = $wpdb->get_row( $wpdb->prepare( "SELECT wp_user_id FROM `$table_agents` WHERE id = %d", absint( $ticket['assigned_agent_id'] ) ), ARRAY_A );
+			if ( $agent && ! empty( $agent['wp_user_id'] ) ) {
+				$user = get_userdata( $agent['wp_user_id'] );
+				if ( $user ) {
+					$agent_name = $user->display_name;
+				}
+			}
+		}
+
+		return array(
+			'id'            => (int) $ticket['id'],
+			'ticket_number' => (int) $ticket['ticket_number'],
+			'status'        => $ticket['status'],
+			'control_mode'  => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : ( $session['control_mode'] ?? 'ai' ),
+			'agent_name'    => $agent_name,
+		);
+	}
+
+	/**
+	 * Sync session state and messages for real-time live support.
+	 *
+	 * @param \WP_REST_Request $request The REST request.
+	 * @return \WP_REST_Response
+	 */
 	public function sync_session( $request ) {
 		global $wpdb;
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
 		if ( empty( $session_id ) ) {
 			return new \WP_REST_Response(
 				array(
-					'success' => false,
-					'message' => 'session_id required',
+					'success'    => false,
+					'message'    => 'session_id required',
+					'has_ticket' => false,
 				),
 				400
 			);
 		}
 
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$session = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
+
+		$ticket_info = $this->get_session_ticket_info( $session_id );
+		$has_ticket  = ! empty( $ticket_info );
 
 		if ( ! $session ) {
 			return new \WP_REST_Response(
 				array(
 					'success'      => true,
 					'session_id'   => $session_id,
-					'control_mode' => 'ai',
+					'control_mode' => ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai',
 					'messages'     => array(),
-					'has_ticket'   => false,
+					'has_ticket'   => $has_ticket,
+					'ticket'       => $ticket_info,
 				),
 				200
 			);
@@ -1805,38 +1896,7 @@ CONVERSATION MEMORY:
 		$messages = ! empty( $session['content'] ) ? json_decode( $session['content'], true ) : array();
 		$messages = is_array( $messages ) ? $messages : array();
 
-		$control_mode = ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai';
-		$ticket_info  = null;
-
-		if ( ! empty( $session['support_ticket_id'] ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ), ARRAY_A );
-			if ( $ticket ) {
-				$agent_name = '';
-				if ( ! empty( $ticket['assigned_agent_id'] ) ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-					$agent = $wpdb->get_row( $wpdb->prepare( "SELECT wp_user_id FROM `$table_agents` WHERE id = %d", absint( $ticket['assigned_agent_id'] ) ), ARRAY_A );
-					if ( $agent && ! empty( $agent['wp_user_id'] ) ) {
-						$user = get_userdata( $agent['wp_user_id'] );
-						if ( $user ) {
-							$agent_name = $user->display_name;
-						}
-					}
-				}
-
-				if ( ! empty( $ticket['control_mode'] ) ) {
-					$control_mode = $ticket['control_mode'];
-				}
-
-				$ticket_info = array(
-					'id'            => (int) $ticket['id'],
-					'ticket_number' => (int) $ticket['ticket_number'],
-					'status'        => $ticket['status'],
-					'control_mode'  => $control_mode,
-					'agent_name'    => $agent_name,
-				);
-			}
-		}
+		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : ( ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai' );
 
 		return new \WP_REST_Response(
 			array(
@@ -1844,6 +1904,7 @@ CONVERSATION MEMORY:
 				'session_id'   => $session_id,
 				'control_mode' => $control_mode,
 				'messages'     => $messages,
+				'has_ticket'   => $has_ticket,
 				'ticket'       => $ticket_info,
 				'updated_at'   => $session['updated_at'] ?? current_time( 'mysql' ),
 			),
