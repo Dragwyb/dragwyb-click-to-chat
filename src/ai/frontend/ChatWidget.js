@@ -336,44 +336,6 @@ export default function ChatWidget({ settings, inline }) {
 		return template.replace('{support_url}', supportUrl);
 	};
 
-	const getHandoffMessage = () => {
-		let lastUserQuestion = '';
-		for (let i = messages.length - 1; i >= 0; i--) {
-			if (messages[i].role === 'user' && messages[i].content) {
-				lastUserQuestion = messages[i].content.replace(/\[Attached Files\]/g, '').trim();
-				break;
-			}
-		}
-		if (!lastUserQuestion && input.trim()) {
-			lastUserQuestion = input.trim();
-		}
-		const template =
-			chatbot.handoff_template ||
-			'Hi! I was chatting with your AI assistant on {page_url} regarding: "{summary}". My question: "{question}".';
-		const visitorName =
-			chatbot.handoff_privacy_include_name !== false && leadFormData.name
-				? leadFormData.name
-				: __('Visitor', 'dragwyb-click-to-chat');
-		const summaryText =
-			chatbot.handoff_privacy_include_summary !== false && lastUserQuestion
-				? lastUserQuestion.slice(0, 120)
-				: __('General Inquiry', 'dragwyb-click-to-chat');
-		const questionText =
-			chatbot.handoff_privacy_include_question !== false && lastUserQuestion
-				? lastUserQuestion.slice(0, 150)
-				: __('Support Assistance', 'dragwyb-click-to-chat');
-		const pageUrlText =
-			chatbot.handoff_privacy_include_page !== false
-				? window.location.href
-				: '';
-
-		return template
-			.replace('{visitor_name}', visitorName)
-			.replace('{summary}', summaryText)
-			.replace('{question}', questionText)
-			.replace('{page_url}', pageUrlText);
-	};
-
 	const suggestedQuestions = chatbot.enable_pre_questions
 		? [
 			chatbot.pre_question_1,
@@ -461,9 +423,6 @@ export default function ChatWidget({ settings, inline }) {
 		interest: '',
 		requirement: '',
 	});
-
-	// Feature 10: Human Handoff State
-	const [showHandoffCard, setShowHandoffCard] = useState(false);
 
 	// Feature 11: WooCommerce Sales & Order Tracker State
 	const [showOrderTracker, setShowOrderTracker] = useState(false);
@@ -1635,24 +1594,6 @@ export default function ChatWidget({ settings, inline }) {
 						'aria-hidden': 'true',
 					})
 				),
-				chatbot.enable_human_handoff !== false &&
-				createElement(
-					'button',
-					{
-						className: 'dctc-ai-chat-clear',
-						onClick: () => setShowHandoffCard((prev) => !prev),
-						title: __('Talk to Human Specialist', 'dragwyb-click-to-chat'),
-						'aria-label': __('Talk to Human Specialist', 'dragwyb-click-to-chat'),
-						style: {
-							background: showHandoffCard ? 'rgba(255,255,255,0.2)' : 'none',
-							borderRadius: '6px',
-						},
-					},
-					createElement('span', {
-						className: 'dashicons dashicons-groups',
-						'aria-hidden': 'true',
-					})
-				),
 				isWcActive &&
 				createElement(
 					'button',
@@ -2652,199 +2593,6 @@ export default function ChatWidget({ settings, inline }) {
 									? __('Sending...', 'dragwyb-click-to-chat')
 									: __('Submit Info', 'dragwyb-click-to-chat')
 							)
-						)
-					)
-				),
-				// Interactive Human Handoff Card
-				showHandoffCard &&
-				createElement(
-					'div',
-					{
-						className: 'dctc-ai-handoff-card',
-						style: {
-							background: '#ffffff',
-							border: '1px solid #e2e8f0',
-							borderRadius: '12px',
-							padding: '1.25rem',
-							margin: '0.75rem 0',
-							boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-						},
-					},
-					createElement(
-						'div',
-						{
-							style: {
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'flex-start',
-								marginBottom: '0.75rem',
-							},
-						},
-						createElement(
-							'div',
-							null,
-							createElement(
-								'strong',
-								{
-									style: {
-										display: 'block',
-										fontSize: '0.95rem',
-										color: '#0f172a',
-									},
-								},
-								__('Connect with Human Team', 'dragwyb-click-to-chat')
-							),
-							createElement(
-								'span',
-								{
-									style: {
-										fontSize: '0.8rem',
-										color: chatbot.is_within_business_hours !== false ? '#16a34a' : '#ea580c',
-										fontWeight: 500,
-										display: 'inline-flex',
-										alignItems: 'center',
-										gap: '4px',
-										marginTop: '2px',
-									},
-								},
-								chatbot.is_within_business_hours !== false
-									? `🟢 ${__('Specialists are Online Now', 'dragwyb-click-to-chat')}`
-									: `🌙 ${__('Outside Operating Hours', 'dragwyb-click-to-chat')}`
-							)
-						),
-						createElement(
-							'button',
-							{
-								type: 'button',
-								onClick: () => setShowHandoffCard(false),
-								style: {
-									background: 'none',
-									border: 'none',
-									cursor: 'pointer',
-									color: '#94a3b8',
-									fontSize: '1rem',
-									padding: '2px 6px',
-								},
-								title: __('Close', 'dragwyb-click-to-chat'),
-							},
-							'✕'
-						)
-					),
-					// Context Preview Box
-					createElement(
-						'div',
-						{
-							style: {
-								background: '#f8fafc',
-								border: '1px solid #e2e8f0',
-								borderRadius: '8px',
-								padding: '0.65rem 0.85rem',
-								marginBottom: '0.85rem',
-								fontSize: '0.8rem',
-								color: '#475569',
-							},
-						},
-						createElement(
-							'span',
-							{
-								style: {
-									display: 'block',
-									fontWeight: 600,
-									color: '#334155',
-									marginBottom: '3px',
-									fontSize: '0.75rem',
-									textTransform: 'uppercase',
-									letterSpacing: '0.03em',
-								},
-							},
-							__('Prefilled Message for WhatsApp / Email:', 'dragwyb-click-to-chat')
-						),
-						getHandoffMessage()
-					),
-					// Channel Action Buttons
-					createElement(
-						'div',
-						{
-							style: {
-								display: 'flex',
-								flexDirection: 'column',
-								gap: '0.5rem',
-							},
-						},
-						(!chatbot.handoff_channels || chatbot.handoff_channels.includes('whatsapp')) &&
-						(chatbot.handoff_whatsapp_number || '') &&
-						createElement(
-							'a',
-							{
-								href: `https://wa.me/${(chatbot.handoff_whatsapp_number || '').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(getHandoffMessage())}`,
-								target: '_blank',
-								rel: 'noopener noreferrer',
-								style: {
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									gap: '0.5rem',
-									padding: '0.6rem 1rem',
-									background: '#25D366',
-									color: '#ffffff',
-									borderRadius: '8px',
-									fontWeight: 600,
-									fontSize: '0.85rem',
-									textDecoration: 'none',
-								},
-							},
-							renderLauncherIcon('whatsapp'),
-							__('Continue on WhatsApp', 'dragwyb-click-to-chat')
-						),
-						(!chatbot.handoff_channels || chatbot.handoff_channels.includes('phone')) &&
-						(chatbot.handoff_phone_number || '') &&
-						chatbot.is_within_business_hours !== false &&
-						createElement(
-							'a',
-							{
-								href: `tel:${(chatbot.handoff_phone_number || '').replace(/[^0-9+]/g, '')}`,
-								style: {
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									gap: '0.5rem',
-									padding: '0.55rem 1rem',
-									background: '#0284c7',
-									color: '#ffffff',
-									borderRadius: '8px',
-									fontWeight: 600,
-									fontSize: '0.85rem',
-									textDecoration: 'none',
-								},
-							},
-							createElement('span', { className: 'dashicons dashicons-phone' }),
-							sprintf(__('Call Agent (%s)', 'dragwyb-click-to-chat'), chatbot.handoff_phone_number)
-						),
-						(!chatbot.handoff_channels || chatbot.handoff_channels.includes('email')) &&
-						(chatbot.handoff_email_address || '') &&
-						createElement(
-							'a',
-							{
-								href: `mailto:${chatbot.handoff_email_address}?subject=${encodeURIComponent(__('AI Chat Handoff Inquiry', 'dragwyb-click-to-chat'))}&body=${encodeURIComponent(getHandoffMessage())}`,
-								target: '_blank',
-								rel: 'noopener noreferrer',
-								style: {
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									gap: '0.5rem',
-									padding: '0.55rem 1rem',
-									background: '#f1f5f9',
-									color: '#334155',
-									border: '1px solid #cbd5e1',
-									borderRadius: '8px',
-									fontWeight: 600,
-									fontSize: '0.85rem',
-									textDecoration: 'none',
-								},
-							},
-							createElement('span', { className: 'dashicons dashicons-email' }),
-							__('Send Email / Ticket', 'dragwyb-click-to-chat')
 						)
 					)
 				),

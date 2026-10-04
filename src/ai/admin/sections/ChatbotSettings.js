@@ -223,32 +223,10 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		lead_notification_email: chatbot.lead_notification_email || '',
 		lead_webhook_url: chatbot.lead_webhook_url || '',
 
-		// Advance / Human Handoff & WhatsApp Context Transfer
-		enable_human_handoff: chatbot.enable_human_handoff !== false,
-		handoff_channels: Array.isArray(chatbot.handoff_channels) ? chatbot.handoff_channels : ['whatsapp', 'phone', 'email'],
-		handoff_whatsapp_number: chatbot.handoff_whatsapp_number || '',
-		handoff_phone_number: chatbot.handoff_phone_number || '',
-		handoff_email_address: chatbot.handoff_email_address || '',
-		handoff_template:
-			chatbot.handoff_template ||
-			'Hi! I was chatting with your AI assistant on {page_url} regarding: "{summary}". My question: "{question}".',
-		enable_business_hours: !!chatbot.enable_business_hours,
-		business_hours_start: chatbot.business_hours_start || '09:00',
-		business_hours_end: chatbot.business_hours_end || '18:00',
-		business_hours_days: Array.isArray(chatbot.business_hours_days)
-			? chatbot.business_hours_days
-			: ['mon', 'tue', 'wed', 'thu', 'fri'],
-		business_hours_timezone: chatbot.business_hours_timezone || 'UTC',
-		offline_handoff_message:
-			chatbot.offline_handoff_message ||
-			__(
-				'Our live human team is currently offline (Operating hours: Monday-Friday, 9:00 AM - 6:00 PM). Please leave an inquiry or send an email and we will get back to you shortly.',
-				'dragwyb-click-to-chat'
-			),
-		handoff_privacy_include_name: chatbot.handoff_privacy_include_name !== false,
-		handoff_privacy_include_summary: chatbot.handoff_privacy_include_summary !== false,
-		handoff_privacy_include_question: chatbot.handoff_privacy_include_question !== false,
-		handoff_privacy_include_page: chatbot.handoff_privacy_include_page !== false,
+		// Advance / Connect Chatbot with Support Tickets
+		enable_support_escalation: chatbot.enable_support_escalation !== false,
+		auto_assign_support_tickets: chatbot.auto_assign_support_tickets !== false,
+		auto_pause_ai_on_ticket: chatbot.auto_pause_ai_on_ticket !== false,
 
 		// Advance / AI Agents, Tools & Automation Workflows
 		enable_ai_tools: chatbot.enable_ai_tools !== false,
@@ -563,22 +541,9 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			enable_lead_email_alerts: form.enable_lead_email_alerts,
 			lead_notification_email: form.lead_notification_email,
 			lead_webhook_url: form.lead_webhook_url,
-			enable_human_handoff: form.enable_human_handoff,
-			handoff_channels: form.handoff_channels,
-			handoff_whatsapp_number: form.handoff_whatsapp_number,
-			handoff_phone_number: form.handoff_phone_number,
-			handoff_email_address: form.handoff_email_address,
-			handoff_template: form.handoff_template,
-			enable_business_hours: form.enable_business_hours,
-			business_hours_start: form.business_hours_start,
-			business_hours_end: form.business_hours_end,
-			business_hours_days: form.business_hours_days,
-			business_hours_timezone: form.business_hours_timezone,
-			offline_handoff_message: form.offline_handoff_message,
-			handoff_privacy_include_name: form.handoff_privacy_include_name,
-			handoff_privacy_include_summary: form.handoff_privacy_include_summary,
-			handoff_privacy_include_question: form.handoff_privacy_include_question,
-			handoff_privacy_include_page: form.handoff_privacy_include_page,
+			enable_support_escalation: form.enable_support_escalation,
+			auto_assign_support_tickets: form.auto_assign_support_tickets,
+			auto_pause_ai_on_ticket: form.auto_pause_ai_on_ticket,
 			enable_ai_tools: form.enable_ai_tools,
 			enabled_tools: form.enabled_tools,
 			workflow_webhook_url: form.workflow_webhook_url,
@@ -1605,283 +1570,104 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							</div>
 						</SwitcherCard>
 
-						{ /* 5. Human Handoff & WhatsApp Context Transfer (Conditional Switcher Card) */}
-						<SwitcherCard
-							id="enable_human_handoff"
-							title={__('Human Handoff & WhatsApp Context Transfer', 'dragwyb-click-to-chat')}
-							desc={__('Seamlessly transfer live AI conversations to human specialists via WhatsApp, Phone, or Email with zero context loss.', 'dragwyb-click-to-chat')}
-							icon="dashicons-groups"
-							badge={__('Omni-Channel', 'dragwyb-click-to-chat')}
-							checked={form.enable_human_handoff}
-							onChange={(v) => setField('enable_human_handoff', v)}
-							disabledNotice={__('Turn on to let visitors transfer to WhatsApp or call human agents when AI cannot answer or when requested.', 'dragwyb-click-to-chat')}
-						>
-							<div style={{ marginBottom: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-								<strong style={{ display: 'block', marginBottom: '0.5rem', color: '#1e293b', fontSize: '0.9rem' }}>
-									{__('Active Support Escalation Channels', 'dragwyb-click-to-chat')}
-								</strong>
-								<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.5rem' }}>
-									{[
-										{ id: 'whatsapp', label: __('💬 WhatsApp Chat (Deep Context)', 'dragwyb-click-to-chat') },
-										{ id: 'phone', label: __('📞 Phone Call', 'dragwyb-click-to-chat') },
-										{ id: 'email', label: __('✉️ Email / Support Ticket', 'dragwyb-click-to-chat') },
-									].map((ch) => {
-										const isChecked = Array.isArray(form.handoff_channels) && form.handoff_channels.includes(ch.id);
-										return (
-											<label key={ch.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.875rem', cursor: 'pointer', color: '#334155' }}>
-												<input
-													type="checkbox"
-													checked={isChecked}
-													onChange={(e) => {
-														const current = Array.isArray(form.handoff_channels) ? [...form.handoff_channels] : [];
-														const next = e.target.checked
-															? [...current, ch.id]
-															: current.filter((x) => x !== ch.id);
-														setField('handoff_channels', next);
-													}}
-												/>
-												{ch.label}
-											</label>
-										);
-									})}
-								</div>
-							</div>
+						{ /* 5. Connect Chatbot with Support Tickets */}
+						{ (window.dctc_ai_data?.is_support_enabled || window.dctc_support_data) ? (
+							<SwitcherCard
+								id="enable_support_escalation"
+								title={__('Connect Chatbot with Support Tickets', 'dragwyb-click-to-chat')}
+								desc={__('Seamlessly connect live AI chatbot conversations with Support Center tickets for automatic inquiry escalation and agent takeover.', 'dragwyb-click-to-chat')}
+								icon="dashicons-tickets-alt"
+								badge={__('Support Center', 'dragwyb-click-to-chat')}
+								checked={form.enable_support_escalation}
+								onChange={(v) => setField('enable_support_escalation', v)}
+								disabledNotice={__('Turn on to automatically escalate unresolved customer queries and support issues from chatbot conversations into tracked support tickets.', 'dragwyb-click-to-chat')}
+							>
+								<div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+									<div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+										<div style={{ paddingRight: '1rem' }}>
+											<strong style={{ display: 'block', color: '#1e293b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+												{__('Smart AI Ticket Routing & Auto-Assignment', 'dragwyb-click-to-chat')}
+											</strong>
+											<span style={{ fontSize: '0.825rem', color: '#64748b' }}>
+												{__('Automatically classify customer query intent (technical support, billing, sales) and assign newly generated tickets to the most qualified agent.', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
+										<Toggle
+											id="auto_assign_support_tickets"
+											checked={form.auto_assign_support_tickets}
+											onChange={(v) => setField('auto_assign_support_tickets', v)}
+										/>
+									</div>
 
-							<div className="dctc-ai-grid-3col">
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="handoff_whatsapp_number">
-										{__('WhatsApp Number (with Country Code)', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="text"
-										id="handoff_whatsapp_number"
-										className="dctc-ai-bot-input"
-										value={form.handoff_whatsapp_number}
-										onChange={(e) => setField('handoff_whatsapp_number', e.target.value)}
-										placeholder="+1234567890"
-									/>
-									<p className="dctc-ai-bot-hint">
-										{__('Falls back to main Click to Chat WhatsApp number if left blank.', 'dragwyb-click-to-chat')}
-									</p>
+									<div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+										<div style={{ paddingRight: '1rem' }}>
+											<strong style={{ display: 'block', color: '#1e293b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+												{__('Pause AI when Human Agent Takes Control', 'dragwyb-click-to-chat')}
+											</strong>
+											<span style={{ fontSize: '0.825rem', color: '#64748b' }}>
+												{__('When an agent claims the ticket or sends a live reply from the Support Center, automatically silence bot responses so the human conversation stays smooth.', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
+										<Toggle
+											id="auto_pause_ai_on_ticket"
+											checked={form.auto_pause_ai_on_ticket}
+											onChange={(v) => setField('auto_pause_ai_on_ticket', v)}
+										/>
+									</div>
 								</div>
-
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="handoff_phone_number">
-										{__('Direct Phone Number', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="tel"
-										id="handoff_phone_number"
-										className="dctc-ai-bot-input"
-										value={form.handoff_phone_number}
-										onChange={(e) => setField('handoff_phone_number', e.target.value)}
-										placeholder="+1 (555) 000-0000"
-									/>
-									<p className="dctc-ai-bot-hint">
-										{__('Direct click-to-call number for immediate human assistance.', 'dragwyb-click-to-chat')}
-									</p>
-								</div>
-
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="handoff_email_address">
-										{__('Support Email Address', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="email"
-										id="handoff_email_address"
-										className="dctc-ai-bot-input"
-										value={form.handoff_email_address}
-										onChange={(e) => setField('handoff_email_address', e.target.value)}
-										placeholder={__('support@example.com', 'dragwyb-click-to-chat')}
-									/>
-									<p className="dctc-ai-bot-hint">
-										{__('Destination email for support inquiries and ticket routing.', 'dragwyb-click-to-chat')}
-									</p>
-								</div>
-							</div>
-
-							<div className="dctc-ai-bot-field" style={{ marginTop: '1.25rem' }}>
-								<label htmlFor="handoff_template">
-									{__('WhatsApp Context Transfer Message Template', 'dragwyb-click-to-chat')}
-								</label>
-								<textarea
-									id="handoff_template"
-									className="dctc-ai-bot-textarea"
-									rows="3"
-									value={form.handoff_template}
-									onChange={(e) => setField('handoff_template', e.target.value)}
-									placeholder='Hi! I was chatting with your AI assistant on {page_url} regarding: "{summary}". My question: "{question}".'
-								/>
-								<div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem', alignItems: 'center' }}>
-									<span style={{ fontSize: '0.8rem', color: '#64748b' }}>{__('Insert dynamic tag:', 'dragwyb-click-to-chat')}</span>
-									{[
-										{ tag: '{visitor_name}', label: '{visitor_name}' },
-										{ tag: '{summary}', label: '{summary}' },
-										{ tag: '{question}', label: '{question}' },
-										{ tag: '{page_url}', label: '{page_url}' },
-									].map((t) => (
-										<button
-											key={t.tag}
-											type="button"
-											className="dctc-ai-tag-chip"
-											style={{
-												padding: '2px 8px',
-												background: '#eff6ff',
-												border: '1px solid #bfdbfe',
-												color: '#1d4ed8',
-												borderRadius: '4px',
-												fontSize: '0.75rem',
-												cursor: 'pointer',
-											}}
-											onClick={() => {
-												setField('handoff_template', (form.handoff_template || '') + ' ' + t.tag);
-											}}
-										>
-											+ {t.label}
-										</button>
-									))}
-								</div>
-								<p className="dctc-ai-bot-hint" style={{ marginTop: '0.4rem' }}>
-									{__('Prefilled message safely formatted when the visitor clicks through to WhatsApp.', 'dragwyb-click-to-chat')}
-								</p>
-							</div>
-
-							<div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-								<strong style={{ display: 'block', marginBottom: '0.5rem', color: '#1e293b', fontSize: '0.9rem' }}>
-									{__('Privacy-Aware Context Inclusion Controls', 'dragwyb-click-to-chat')}
-								</strong>
-								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.85rem' }}>
-									{[
-										{ key: 'handoff_privacy_include_name', label: __('Include Visitor Name', 'dragwyb-click-to-chat') },
-										{ key: 'handoff_privacy_include_summary', label: __('Include AI Summary', 'dragwyb-click-to-chat') },
-										{ key: 'handoff_privacy_include_question', label: __('Include Last Question', 'dragwyb-click-to-chat') },
-										{ key: 'handoff_privacy_include_page', label: __('Include Source Page URL', 'dragwyb-click-to-chat') },
-									].map((f) => (
-										<label key={f.key} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', cursor: 'pointer', color: '#334155' }}>
-											<input
-												type="checkbox"
-												checked={form[f.key] !== false}
-												onChange={(e) => setField(f.key, e.target.checked)}
-											/>
-											{f.label}
-										</label>
-									))}
-								</div>
-							</div>
-
-							<div style={{ marginTop: '1.25rem', padding: '1.25rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-								<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-									<div>
-										<strong style={{ display: 'block', color: '#1e293b', fontSize: '0.95rem' }}>
-											{__('Business Hours & Availability Schedule', 'dragwyb-click-to-chat')}
+							</SwitcherCard>
+						) : (
+							<section className="dctc-ai-card dctc-ai-conditional-card is-disabled" style={{ borderLeft: '4px solid #f59e0b' }}>
+								<header className="dctc-ai-card__header dctc-ai-conditional-card__header">
+									<div className="dctc-ai-card__header-left">
+										<div className="dctc-ai-card-icon" style={{ background: '#fef3c7', color: '#d97706' }} aria-hidden="true">
+											<span className="dashicons dashicons-tickets-alt" />
+										</div>
+										<div>
+											<div className="dctc-ai-header-with-badge">
+												<h2 className="dctc-ai-card__title">
+													{__('Connect Chatbot with Support Tickets', 'dragwyb-click-to-chat')}
+												</h2>
+												<span className="dctc-ai-mini-badge" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fde68a' }}>
+													{__('Requires Support Center', 'dragwyb-click-to-chat')}
+												</span>
+											</div>
+											<p className="dctc-ai-card__desc">
+												{__('Connect your AI chatbot directly to Support Center tickets, enable intelligent agent routing, and allow live human takeover.', 'dragwyb-click-to-chat')}
+											</p>
+										</div>
+									</div>
+								</header>
+								<div className="dctc-ai-card__body dctc-ai-conditional-card__body" style={{ background: '#fffbeb', borderTop: '1px solid #fef3c7', padding: '1.25rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+									<div style={{ maxWidth: '650px' }}>
+										<strong style={{ display: 'block', color: '#92400e', fontSize: '0.925rem', marginBottom: '0.35rem' }}>
+											{__('Support Center is currently disabled or not configured.', 'dragwyb-click-to-chat')}
 										</strong>
-										<span style={{ fontSize: '0.8rem', color: '#64748b' }}>
-											{__('Control when live human agents are shown as available vs offline email fallback.', 'dragwyb-click-to-chat')}
-										</span>
+										<p style={{ margin: 0, color: '#78350f', fontSize: '0.85rem', lineHeight: 1.5 }}>
+											{__('To route chatbot conversations into support tickets and assign them to staff agents, enable the Support Center module first.', 'dragwyb-click-to-chat')}
+										</p>
 									</div>
-									<Toggle
-										id="enable_business_hours"
-										checked={form.enable_business_hours}
-										onChange={(v) => setField('enable_business_hours', v)}
-									/>
+									<a
+										href="#support-center"
+										onClick={(e) => {
+											e.preventDefault();
+											const supportTabBtn = document.querySelector('[data-tab="support-center"], button[id*="support-center"]');
+											if (supportTabBtn) {
+												supportTabBtn.click();
+											} else {
+												window.location.hash = 'support-center';
+												window.location.reload();
+											}
+										}}
+										className="dctc-ai-btn dctc-ai-btn-primary"
+										style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+									>
+										<span className="dashicons dashicons-admin-generic" style={{ fontSize: '16px', width: '16px', height: '16px', lineHeight: '16px' }} />
+										{__('Enable Support Center', 'dragwyb-click-to-chat')}
+									</a>
 								</div>
-
-								{form.enable_business_hours && (
-									<div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
-										<div className="dctc-ai-grid-3col">
-											<div className="dctc-ai-bot-field">
-												<label htmlFor="business_hours_start">
-													{__('Opening Time', 'dragwyb-click-to-chat')}
-												</label>
-												<input
-													type="time"
-													id="business_hours_start"
-													className="dctc-ai-bot-input"
-													value={form.business_hours_start}
-													onChange={(e) => setField('business_hours_start', e.target.value)}
-												/>
-											</div>
-
-											<div className="dctc-ai-bot-field">
-												<label htmlFor="business_hours_end">
-													{__('Closing Time', 'dragwyb-click-to-chat')}
-												</label>
-												<input
-													type="time"
-													id="business_hours_end"
-													className="dctc-ai-bot-input"
-													value={form.business_hours_end}
-													onChange={(e) => setField('business_hours_end', e.target.value)}
-												/>
-											</div>
-
-											<div className="dctc-ai-bot-field">
-												<label htmlFor="business_hours_timezone">
-													{__('Timezone', 'dragwyb-click-to-chat')}
-												</label>
-												<input
-													type="text"
-													id="business_hours_timezone"
-													className="dctc-ai-bot-input"
-													value={form.business_hours_timezone}
-													onChange={(e) => setField('business_hours_timezone', e.target.value)}
-													placeholder="UTC or America/New_York"
-												/>
-											</div>
-										</div>
-
-										<div style={{ marginTop: '1rem' }}>
-											<label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
-												{__('Operating Days', 'dragwyb-click-to-chat')}
-											</label>
-											<div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-												{[
-													{ id: 'mon', label: __('Monday', 'dragwyb-click-to-chat') },
-													{ id: 'tue', label: __('Tuesday', 'dragwyb-click-to-chat') },
-													{ id: 'wed', label: __('Wednesday', 'dragwyb-click-to-chat') },
-													{ id: 'thu', label: __('Thursday', 'dragwyb-click-to-chat') },
-													{ id: 'fri', label: __('Friday', 'dragwyb-click-to-chat') },
-													{ id: 'sat', label: __('Saturday', 'dragwyb-click-to-chat') },
-													{ id: 'sun', label: __('Sunday', 'dragwyb-click-to-chat') },
-												].map((d) => {
-													const isDayActive = Array.isArray(form.business_hours_days) && form.business_hours_days.includes(d.id);
-													return (
-														<label key={d.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem', cursor: 'pointer', color: '#475569' }}>
-															<input
-																type="checkbox"
-																checked={isDayActive}
-																onChange={(e) => {
-																	const currentDays = Array.isArray(form.business_hours_days) ? [...form.business_hours_days] : [];
-																	const nextDays = e.target.checked
-																		? [...currentDays, d.id]
-																		: currentDays.filter((x) => x !== d.id);
-																	setField('business_hours_days', nextDays);
-																}}
-															/>
-															{d.label}
-														</label>
-													);
-												})}
-											</div>
-										</div>
-
-										<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>
-											<label htmlFor="offline_handoff_message">
-												{__('Outside Business Hours Notice Message', 'dragwyb-click-to-chat')}
-											</label>
-											<textarea
-												id="offline_handoff_message"
-												className="dctc-ai-bot-textarea"
-												rows="2"
-												value={form.offline_handoff_message}
-												onChange={(e) => setField('offline_handoff_message', e.target.value)}
-												placeholder={__('Our live human team is currently offline...', 'dragwyb-click-to-chat')}
-											/>
-										</div>
-									</div>
-								)}
-							</div>
-						</SwitcherCard>
+							</section>
+						)}
 
 						{ /* 6. AI Business Tools & Workflow Automation (Conditional Switcher Card) */}
 						<SwitcherCard

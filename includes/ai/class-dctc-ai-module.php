@@ -294,6 +294,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'sort_order'        => get_user_meta( get_current_user_id(), 'dctc_ai_sessions_sort_order', true ) ?: 'desc',
 					// phpcs:ignore WordPress.Security.NonceVerification.Recommended
 					'show_setup_wizard' => get_option( 'dctc_ai_setup_wizard_status' ) === 'pending' || ( isset( $_GET['dctc_ai_open_wizard'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_ai_open_wizard'] ) ) ),
+					'is_support_enabled' => class_exists( 'DCTC_Support_Manager' ) && ! empty( get_option( 'dctc_support_settings', array() )['enabled'] ),
 				)
 			);
 		}

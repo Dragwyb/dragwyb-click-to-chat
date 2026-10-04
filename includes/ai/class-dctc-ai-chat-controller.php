@@ -156,8 +156,8 @@ class DCTC_AI_Chat_Controller
 			return new \WP_REST_Response($human_response, 200);
 		}
 
-		// Feature 10: Intelligent Intent & Human Handoff Intent Detection
-		if (!empty($prompt) && (!isset($bot['enable_human_handoff']) || (bool) $bot['enable_human_handoff']) && self::detect_human_handoff_intent($prompt)) {
+		// Intelligent Support Escalation & Ticket Logging
+		if (!empty($prompt) && (!isset($bot['enable_support_escalation']) || (bool) $bot['enable_support_escalation']) && self::detect_human_handoff_intent($prompt)) {
 			$classification = self::classify_user_intent($prompt);
 			// Auto-create/link support ticket if Support Center is enabled
 			if (class_exists('DCTC_Support_Ticket_Service')) {
@@ -175,6 +175,8 @@ class DCTC_AI_Chat_Controller
 							$prefix = '[Support] ';
 						}
 
+						$auto_pause = isset($bot['auto_pause_ai_on_ticket']) ? (bool) $bot['auto_pause_ai_on_ticket'] : (!empty($support_settings['auto_pause_ai']));
+
 						DCTC_Support_Ticket_Service::create_ticket([
 							'subject'          => $prefix . wp_trim_words($prompt, 8, '...'),
 							'session_id'       => $session_id,
@@ -182,27 +184,22 @@ class DCTC_AI_Chat_Controller
 							'origin_type'      => 'chatbot',
 							'reply_surface'    => 'chatbot_widget',
 							'interaction_type' => 'HYBRID_SUPPORT',
-							'control_mode'     => !empty($support_settings['auto_pause_ai']) ? 'human' : 'ai',
+							'control_mode'     => $auto_pause ? 'human' : 'ai',
 							'initial_message'  => $prompt,
 						]);
 					}
 				}
 			}
 
-			$is_online = self::is_within_business_hours($bot);
-			$handoff_text = $is_online
-				? esc_html__('I have logged your request with our support team and an agent has been notified. You can also connect directly via your preferred channel below:', 'dragwyb-click-to-chat')
-				: (!empty($bot['offline_handoff_message']) ? $bot['offline_handoff_message'] : esc_html__('Our live human team is currently offline. We have received your inquiry and will follow up shortly.', 'dragwyb-click-to-chat'));
-
-			$action_buttons = self::build_handoff_action_buttons($bot, $prompt, $is_online);
+			$escalation_text = esc_html__('I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.', 'dragwyb-click-to-chat');
 
 			return $this->save_and_respond(
-				$handoff_text,
+				$escalation_text,
 				$session_id,
 				$bot,
 				$email,
 				$prompt,
-				$action_buttons,
+				[],
 				true
 			);
 		}
