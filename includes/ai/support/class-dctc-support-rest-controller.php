@@ -27,6 +27,27 @@ class DCTC_Support_REST_Controller {
 	 * @return void
 	 */
 	public function register_routes() {
+		// Staff: Dashboard & Metrics
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/dashboard',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'get_dashboard' ),
+				'permission_callback' => array( $this, 'permission_staff_view' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/agents/me/status',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'update_my_status' ),
+				'permission_callback' => array( $this, 'permission_staff_view' ),
+			)
+		);
+
 		// Staff: Tickets
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -401,6 +422,36 @@ class DCTC_Support_REST_Controller {
 	// -------------------------------------------------------------
 	// Staff Endpoint Handlers
 	// -------------------------------------------------------------
+
+	public function get_dashboard() {
+		$user_id = get_current_user_id();
+		$stats   = DCTC_Support_Ticket_Service::get_dashboard_stats( $user_id );
+		return new WP_REST_Response( array_merge( array( 'success' => true ), $stats ), 200 );
+	}
+
+	public function update_my_status( $request ) {
+		$user_id = get_current_user_id();
+		$params  = $request->get_json_params();
+		$status  = isset( $params['availability_status'] ) ? sanitize_key( $params['availability_status'] ) : 'available';
+
+		$allowed = array( 'available', 'away', 'offline' );
+		if ( ! in_array( $status, $allowed, true ) ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Invalid status.', 'dragwyb-click-to-chat' ) ), 400 );
+		}
+
+		global $wpdb;
+		$table_agents = $wpdb->prefix . 'dctc_support_agents';
+		$updated      = $wpdb->update(
+			$table_agents,
+			array(
+				'availability_status' => $status,
+				'updated_at'          => current_time( 'mysql' ),
+			),
+			array( 'wp_user_id' => $user_id )
+		);
+
+		return new WP_REST_Response( array( 'success' => true, 'availability_status' => $status ), 200 );
+	}
 
 	public function get_tickets( $request ) {
 		$params = $request->get_params();

@@ -210,6 +210,20 @@ function dctc_save_settings() {
 		$settings['display_post_types'] = array();
 	}
 
+	// Support Center Module Toggle
+	if ( isset( $_POST['support_center_enabled'] ) ) {
+		$support_settings            = get_option( 'dctc_support_settings', array() );
+		$support_settings['enabled'] = ( '1' === $_POST['support_center_enabled'] );
+		update_option( 'dctc_support_settings', $support_settings );
+	} else {
+		// When saving from general settings page, if checkbox is unchecked, set enabled to false
+		if ( isset( $_POST['action'] ) && 'dctc_save_settings' === $_POST['action'] ) {
+			$support_settings            = get_option( 'dctc_support_settings', array() );
+			$support_settings['enabled'] = false;
+			update_option( 'dctc_support_settings', $support_settings );
+		}
+	}
+
 	// Save all to single option
 	update_option( 'dctc_settings', $settings );
 

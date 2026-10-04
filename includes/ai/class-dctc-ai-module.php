@@ -28,7 +28,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		private static $instance = null;
 
 		/**
-		 * Cached hook suffix returned by add_submenu_page.
+		 * Cached hook suffix returned by add_submenu_page for AI Assistant.
 		 *
 		 * @var string|null
 		 */

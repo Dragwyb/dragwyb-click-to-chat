@@ -92,13 +92,45 @@ if (! defined('ABSPATH')) exit;
     </div>
 </div>
 
-<!-- Additional Settings -->
+<?php
+$dctc_support_settings = get_option( 'dctc_support_settings', array() );
+$dctc_support_enabled  = ! empty( $dctc_support_settings['enabled'] );
+?>
+
+<!-- Support Center Helpdesk Module Option -->
 <div style="margin-top: 30px;">
     <h3 style="font-size: 18px; font-weight: 600; color: #374151; margin-bottom: 20px;">
-        Additional Options
+        Modules & Features
     </h3>
 
-    <div class="dctc-info-box">
-        <p>🚀 More settings and advanced options will be available in future updates!</p>
+    <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 22px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;">
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <span style="font-size: 20px;">🛡️</span>
+                    <strong style="font-size: 16px; color: #111827;">Support Center & Ticketing Helpdesk</strong>
+                    <?php if ( $dctc_support_enabled ) : ?>
+                        <span style="background: #ecfdf5; color: #065f46; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid #a7f3d0;">Active</span>
+                    <?php else : ?>
+                        <span style="background: #f3f4f6; color: #6b7280; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px;">Disabled</span>
+                    <?php endif; ?>
+                </div>
+                <p style="color: #6b7280; font-size: 13.5px; margin: 0 0 12px; line-height: 1.5;">
+                    Enable a dedicated standalone ticketing helpdesk with hybrid AI & human agent takeover, WooCommerce customer profiles, agent workload assignments, and real-time dashboard.
+                </p>
+                <?php if ( $dctc_support_enabled ) : ?>
+                    <a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-support-center' ) ); ?>" class="button button-secondary" style="font-size: 12px; font-weight: 600;">
+                        Open Support Center &rarr;
+                    </a>
+                <?php endif; ?>
+            </div>
+
+            <div>
+                <label style="display: flex; align-items: center; cursor: pointer; gap: 8px;">
+                    <input type="checkbox" name="support_center_enabled" value="1" <?php checked( $dctc_support_enabled, true ); ?> style="width: 20px; height: 20px; accent-color: #4f46e5;" />
+                    <span style="font-weight: 600; color: #374151; font-size: 14px;">Enable Module</span>
+                </label>
+            </div>
+        </div>
     </div>
-</div>
+</div>

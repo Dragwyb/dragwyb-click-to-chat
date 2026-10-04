@@ -12,6 +12,10 @@ module.exports = {
 			__dirname,
 			'src/ai/frontend/index.js'
 		),
+		'support/dctc-support-center': path.resolve(
+			__dirname,
+			'src/support-center/index.js'
+		),
 	},
 	output: {
 		...defaultConfig.output,

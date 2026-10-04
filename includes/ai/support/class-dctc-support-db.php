@@ -372,7 +372,7 @@ class DCTC_Support_DB {
 
 		// Seed Default Support Settings
 		$default_support_settings = array(
-			'enabled'               => true,
+			'enabled'               => false,
 			'ticket_prefix'         => 'TCK-',
 			'allow_guest_tickets'   => true,
 			'default_status'        => 'open',

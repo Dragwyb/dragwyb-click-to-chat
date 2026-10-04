@@ -728,4 +728,97 @@ class DCTC_Support_Ticket_Service {
 
 		return true;
 	}
+
+	/**
+	 * Get live dashboard KPI metrics and agent summary for the logged in user.
+	 *
+	 * @param int|null $user_id Optional WP User ID.
+	 * @return array<string, mixed>
+	 */
+	public static function get_dashboard_stats( $user_id = null ) {
+		global $wpdb;
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$table_agents  = $wpdb->prefix . 'dctc_support_agents';
+		$table_events  = $wpdb->prefix . 'dctc_support_events';
+
+		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
+		$wp_user = get_userdata( $user_id );
+
+		// Find agent record
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$agent = $wpdb->get_row(
+			$wpdb->prepare( "SELECT * FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ),
+			ARRAY_A
+		);
+
+		$agent_id = $agent ? (int) $agent['id'] : 0;
+		$is_admin = user_can( $user_id, 'manage_options' );
+
+		$today = current_time( 'Y-m-d' );
+
+		// Metrics
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_tickets = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status != 'trash'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_open = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'open'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_pending = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer')" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_resolved = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('resolved', 'closed')" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$today_created = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today ) );
+
+		// Assigned to me today
+		if ( $agent_id ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$my_today_assigned = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE assigned_agent_id = %d AND DATE(created_at) = %s AND status != 'trash'", $agent_id, $today ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$my_active = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE assigned_agent_id = %d AND status IN ('open', 'pending', 'waiting_customer')", $agent_id ) );
+		} else {
+			$my_today_assigned = $today_created;
+			$my_active = $total_open + $total_pending;
+		}
+
+		// Control mode breakdown
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$ai_controlled = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE control_mode = 'ai' AND status IN ('open', 'pending', 'waiting_customer')" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$human_controlled = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE control_mode = 'human' AND status IN ('open', 'pending', 'waiting_customer')" );
+
+		// Agent info
+		$agent_profile = array(
+			'id'                  => $agent_id,
+			'wp_user_id'          => $user_id,
+			'display_name'        => $wp_user ? $wp_user->display_name : 'Staff Member',
+			'user_email'          => $wp_user ? $wp_user->user_email : '',
+			'avatar'              => get_avatar_url( $user_id, array( 'size' => 64 ) ),
+			'support_role'        => $agent ? $agent['support_role'] : ( $is_admin ? 'Administrator' : 'Agent' ),
+			'availability_status' => $agent ? $agent['availability_status'] : 'available',
+			'current_active'      => $agent ? (int) $agent['current_active_tickets'] : $my_active,
+			'max_active'          => $agent ? (int) $agent['max_active_tickets'] : 10,
+			'is_admin'            => $is_admin,
+		);
+
+		// Recent events
+		$recent_sql = "SELECT e.*, t.ticket_number, t.subject as ticket_subject 
+			FROM `$table_events` e 
+			LEFT JOIN `$table_tickets` t ON e.ticket_id = t.id 
+			ORDER BY e.created_at DESC LIMIT 6";
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$recent_events = $wpdb->get_results( $recent_sql, ARRAY_A );
+
+		return array(
+			'total_tickets'            => $total_tickets,
+			'total_open'               => $total_open,
+			'total_pending'            => $total_pending,
+			'total_resolved'           => $total_resolved,
+			'today_created'            => $today_created,
+			'today_assigned_tickets'   => $my_today_assigned,
+			'my_active_tickets'        => $my_active,
+			'ai_controlled_tickets'    => $ai_controlled,
+			'human_controlled_tickets' => $human_controlled,
+			'agent'                    => $agent_profile,
+			'recent_activity'          => is_array( $recent_events ) ? $recent_events : array(),
+		);
+	}
 }
