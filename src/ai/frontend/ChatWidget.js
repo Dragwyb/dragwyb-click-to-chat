@@ -470,6 +470,233 @@ export default function ChatWidget({ settings, inline }) {
 		}
 	};
 
+	const renderOrderTrackerCard = (message, msgIndex) => {
+		return createElement(
+			'div',
+			{
+				key: `order_tracker_${msgIndex}`,
+				className: 'dctc-ai-order-tracker-card',
+				style: {
+					background: '#ffffff',
+					border: '1px solid #e2e8f0',
+					borderRadius: '12px',
+					padding: '1.25rem',
+					margin: '0.75rem 0 0.25rem 0',
+					boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.07)',
+				},
+			},
+			createElement(
+				'div',
+				{
+					style: {
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'flex-start',
+						marginBottom: '0.75rem',
+					},
+				},
+				createElement(
+					'div',
+					null,
+					createElement(
+						'strong',
+						{
+							style: {
+								display: 'block',
+								fontSize: '0.95rem',
+								color: '#0f172a',
+							},
+						},
+						__('📦 Track Your Order Status', 'dragwyb-click-to-chat')
+					),
+					createElement(
+						'span',
+						{
+							style: {
+								fontSize: '0.8rem',
+								color: '#64748b',
+							},
+						},
+						__('Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat')
+					)
+				),
+				createElement(
+					'button',
+					{
+						type: 'button',
+						onClick: () => {
+							setMessages((prev) =>
+								prev.map((m, i) =>
+									i === msgIndex ? { ...m, show_order_tracker: false } : m
+								)
+							);
+							setOrderLookupResult(null);
+							setOrderLookupError('');
+						},
+						style: {
+							background: 'none',
+							border: 'none',
+							cursor: 'pointer',
+							color: '#94a3b8',
+							fontSize: '1rem',
+							padding: '2px 6px',
+						},
+						title: __('Close', 'dragwyb-click-to-chat'),
+					},
+					'✕'
+				)
+			),
+			createElement(
+				'form',
+				{
+					onSubmit: handleOrderLookup,
+					style: {
+						display: 'flex',
+						flexDirection: 'column',
+						gap: '0.6rem',
+					},
+				},
+				createElement('input', {
+					type: 'number',
+					placeholder: __('Order ID (e.g. 1042)', 'dragwyb-click-to-chat'),
+					value: orderLookupId,
+					onChange: (e) => setOrderLookupId(e.target.value),
+					required: true,
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				createElement('input', {
+					type: 'email',
+					placeholder: __('Billing Email Address', 'dragwyb-click-to-chat'),
+					value: orderLookupEmail,
+					onChange: (e) => setOrderLookupEmail(e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				orderLookupError &&
+				createElement(
+					'span',
+					{
+						style: {
+							color: '#ef4444',
+							fontSize: '0.8rem',
+						},
+					},
+					orderLookupError
+				),
+				createElement(
+					'button',
+					{
+						type: 'submit',
+						disabled: orderLookupLoading,
+						style: {
+							padding: '0.45rem 0.9rem',
+							borderRadius: '6px',
+							border: 'none',
+							background: primaryColor,
+							color: '#ffffff',
+							fontSize: '0.85rem',
+							fontWeight: 600,
+							cursor: orderLookupLoading ? 'not-allowed' : 'pointer',
+							opacity: orderLookupLoading ? 0.7 : 1,
+						},
+					},
+					orderLookupLoading
+						? __('Verifying Order...', 'dragwyb-click-to-chat')
+						: __('Look Up Order Status', 'dragwyb-click-to-chat')
+				)
+			),
+			// Order Lookup Result Card
+			orderLookupResult &&
+			createElement(
+				'div',
+				{
+					style: {
+						marginTop: '0.85rem',
+						padding: '0.85rem',
+						background: '#f8fafc',
+						borderRadius: '8px',
+						border: '1px solid #e2e8f0',
+					},
+				},
+				createElement(
+					'div',
+					{
+						style: {
+							display: 'flex',
+							justifyContent: 'space-between',
+							alignItems: 'center',
+							marginBottom: '0.5rem',
+						},
+					},
+					createElement(
+						'strong',
+						{ style: { color: '#0f172a', fontSize: '0.9rem' } },
+						`Order #${orderLookupResult.order_number}`
+					),
+					createElement(
+						'span',
+						{
+							style: {
+								padding: '2px 8px',
+								borderRadius: '999px',
+								fontSize: '0.75rem',
+								fontWeight: 600,
+								textTransform: 'uppercase',
+								background:
+									orderLookupResult.status === 'completed'
+										? '#dcfce7'
+										: orderLookupResult.status === 'processing'
+											? '#e0f2fe'
+											: '#fef3c7',
+								color:
+									orderLookupResult.status === 'completed'
+										? '#15803d'
+										: orderLookupResult.status === 'processing'
+											? '#0369a1'
+											: '#b45309',
+							},
+						},
+						orderLookupResult.status_label || orderLookupResult.status
+					)
+				),
+				createElement(
+					'div',
+					{ style: { fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' } },
+					`📅 ${orderLookupResult.date_created} • 💰 ${orderLookupResult.formatted_total}`
+				),
+				orderLookupResult.items &&
+				orderLookupResult.items.length > 0 &&
+				createElement(
+					'ul',
+					{
+						style: {
+							margin: '0.4rem 0 0 0',
+							paddingLeft: '1.1rem',
+							fontSize: '0.8rem',
+							color: '#334155',
+						},
+					},
+					orderLookupResult.items.map((it, itIdx) =>
+						createElement(
+							'li',
+							{ key: itIdx },
+							`${it.name} × ${it.quantity} (${it.subtotal})`
+						)
+					)
+				)
+			)
+		);
+	};
+
 	const messagesEndRef = useRef(null);
 	const inputRef = useRef(null);
 	const fileInputRef = useRef(null);
@@ -1290,14 +1517,20 @@ export default function ChatWidget({ settings, inline }) {
 						sources: responseSources,
 						action_buttons: responseActionButtons,
 						products: responseProducts,
+						show_order_tracker: !!response.show_order_tracker,
 					},
 				]);
 
 				if (response.show_order_tracker) {
-					setShowOrderTracker(true);
 					const loggedInEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
 					if (loggedInEmail && !orderLookupEmail) {
 						setOrderLookupEmail(loggedInEmail);
+					}
+					if (response.order_lookup_data) {
+						setOrderLookupResult(response.order_lookup_data);
+						if (response.order_lookup_data.order_id) {
+							setOrderLookupId(response.order_lookup_data.order_id);
+						}
 					}
 				}
 			} else {
@@ -2113,7 +2346,9 @@ export default function ChatWidget({ settings, inline }) {
 											message.content
 										)
 									)
-									: null
+									: null,
+							message.show_order_tracker &&
+							renderOrderTrackerCard(message, index)
 						),
 						!isBot && showUserAvatarInChat &&
 						createElement(
@@ -2582,227 +2817,6 @@ export default function ChatWidget({ settings, inline }) {
 								leadFormSubmitting
 									? __('Sending...', 'dragwyb-click-to-chat')
 									: __('Submit Info', 'dragwyb-click-to-chat')
-							)
-						)
-					)
-				),
-				// Interactive Secure Order Status Tracker Card
-				showOrderTracker &&
-				createElement(
-					'div',
-					{
-						className: 'dctc-ai-order-tracker-card',
-						style: {
-							background: '#ffffff',
-							border: '1px solid #e2e8f0',
-							borderRadius: '12px',
-							padding: '1.25rem',
-							margin: '0.75rem 0',
-							boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-						},
-					},
-					createElement(
-						'div',
-						{
-							style: {
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'flex-start',
-								marginBottom: '0.75rem',
-							},
-						},
-						createElement(
-							'div',
-							null,
-							createElement(
-								'strong',
-								{
-									style: {
-										display: 'block',
-										fontSize: '0.95rem',
-										color: '#0f172a',
-									},
-								},
-								__('📦 Track Your Order Status', 'dragwyb-click-to-chat')
-							),
-							createElement(
-								'span',
-								{
-									style: {
-										fontSize: '0.8rem',
-										color: '#64748b',
-									},
-								},
-								__('Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat')
-							)
-						),
-						createElement(
-							'button',
-							{
-								type: 'button',
-								onClick: () => {
-									setShowOrderTracker(false);
-									setOrderLookupResult(null);
-									setOrderLookupError('');
-								},
-								style: {
-									background: 'none',
-									border: 'none',
-									cursor: 'pointer',
-									color: '#94a3b8',
-									fontSize: '1rem',
-									padding: '2px 6px',
-								},
-								title: __('Close', 'dragwyb-click-to-chat'),
-							},
-							'✕'
-						)
-					),
-					createElement(
-						'form',
-						{
-							onSubmit: handleOrderLookup,
-							style: {
-								display: 'flex',
-								flexDirection: 'column',
-								gap: '0.6rem',
-							},
-						},
-						createElement('input', {
-							type: 'number',
-							placeholder: __('Order ID (e.g. 1042)', 'dragwyb-click-to-chat'),
-							value: orderLookupId,
-							onChange: (e) => setOrderLookupId(e.target.value),
-							required: true,
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						createElement('input', {
-							type: 'email',
-							placeholder: __('Billing Email Address', 'dragwyb-click-to-chat'),
-							value: orderLookupEmail,
-							onChange: (e) => setOrderLookupEmail(e.target.value),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						orderLookupError &&
-						createElement(
-							'span',
-							{
-								style: {
-									color: '#ef4444',
-									fontSize: '0.8rem',
-								},
-							},
-							orderLookupError
-						),
-						createElement(
-							'button',
-							{
-								type: 'submit',
-								disabled: orderLookupLoading,
-								style: {
-									padding: '0.45rem 0.9rem',
-									borderRadius: '6px',
-									border: 'none',
-									background: primaryColor,
-									color: '#ffffff',
-									fontSize: '0.85rem',
-									fontWeight: 600,
-									cursor: orderLookupLoading ? 'not-allowed' : 'pointer',
-									opacity: orderLookupLoading ? 0.7 : 1,
-								},
-							},
-							orderLookupLoading
-								? __('Verifying Order...', 'dragwyb-click-to-chat')
-								: __('Look Up Order Status', 'dragwyb-click-to-chat')
-						)
-					),
-					// Order Lookup Result Card
-					orderLookupResult &&
-					createElement(
-						'div',
-						{
-							style: {
-								marginTop: '0.85rem',
-								padding: '0.85rem',
-								background: '#f8fafc',
-								borderRadius: '8px',
-								border: '1px solid #e2e8f0',
-							},
-						},
-						createElement(
-							'div',
-							{
-								style: {
-									display: 'flex',
-									justifyContent: 'space-between',
-									alignItems: 'center',
-									marginBottom: '0.5rem',
-								},
-							},
-							createElement(
-								'strong',
-								{ style: { color: '#0f172a', fontSize: '0.9rem' } },
-								`Order #${orderLookupResult.order_number}`
-							),
-							createElement(
-								'span',
-								{
-									style: {
-										padding: '2px 8px',
-										borderRadius: '999px',
-										fontSize: '0.75rem',
-										fontWeight: 600,
-										textTransform: 'uppercase',
-										background:
-											orderLookupResult.status === 'completed'
-												? '#dcfce7'
-												: orderLookupResult.status === 'processing'
-													? '#e0f2fe'
-													: '#fef3c7',
-										color:
-											orderLookupResult.status === 'completed'
-												? '#15803d'
-												: orderLookupResult.status === 'processing'
-													? '#0369a1'
-													: '#b45309',
-									},
-								},
-								orderLookupResult.status_label || orderLookupResult.status
-							)
-						),
-						createElement(
-							'div',
-							{ style: { fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' } },
-							`📅 ${orderLookupResult.date_created} • 💰 ${orderLookupResult.formatted_total}`
-						),
-						orderLookupResult.items &&
-						orderLookupResult.items.length > 0 &&
-						createElement(
-							'ul',
-							{
-								style: {
-									margin: '0.4rem 0 0 0',
-									paddingLeft: '1.1rem',
-									fontSize: '0.8rem',
-									color: '#334155',
-								},
-							},
-							orderLookupResult.items.map((it, itIdx) =>
-								createElement(
-									'li',
-									{ key: itIdx },
-									`${it.name} × ${it.quantity} (${it.subtotal})`
-								)
 							)
 						)
 					)

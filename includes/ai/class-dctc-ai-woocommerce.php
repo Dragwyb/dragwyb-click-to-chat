@@ -241,14 +241,39 @@ class DCTC_AI_WooCommerce
 			return new \WP_Error('order_not_found', __('Order not found. Please verify your Order ID.', 'dragwyb-click-to-chat'), ['status' => 404]);
 		}
 
+		// Non-logged-in visitors cannot access order status
+		if ($user_id <= 0 && !is_user_logged_in()) {
+			$settings = class_exists('DCTC_AI_Settings_Handler') ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : [];
+			$login_msg = !empty($settings['chatbot']['order_tracking_login_msg'])
+				? $settings['chatbot']['order_tracking_login_msg']
+				: __('You must be logged in to your account to view or track orders.', 'dragwyb-click-to-chat');
+			return new \WP_Error('login_required', $login_msg, ['status' => 401]);
+		}
+
+		if ($user_id <= 0) {
+			$user_id = get_current_user_id();
+		}
+
 		// Security Ownership Verification:
-		// 1. If user is logged in, check user ID or billing email matches logged in account.
-		// 2. If guest, require matching billing email.
+		// 1. If administrator/shop manager -> allow access.
+		// 2. If order belongs to this user ID -> allow access.
+		// 3. If order billing email matches user's registered account email or verified provided email -> allow access.
 		$is_verified = false;
 		$order_user_id = (int) $order->get_user_id();
 		$order_billing_email = strtolower(trim($order->get_billing_email()));
 
-		if ($user_id > 0 && ($order_user_id === $user_id || current_user_can('manage_woocommerce'))) {
+		$current_user_data = $user_id > 0 ? get_userdata($user_id) : null;
+		$current_user_email = $current_user_data ? strtolower(trim($current_user_data->user_email)) : '';
+
+		if ($user_id > 0 && (current_user_can('manage_woocommerce') || current_user_can('manage_options'))) {
+			$is_verified = true;
+		}
+
+		if (!$is_verified && $user_id > 0 && $order_user_id > 0 && $order_user_id === $user_id) {
+			$is_verified = true;
+		}
+
+		if (!$is_verified && !empty($current_user_email) && hash_equals($order_billing_email, $current_user_email)) {
 			$is_verified = true;
 		}
 
@@ -260,9 +285,14 @@ class DCTC_AI_WooCommerce
 		}
 
 		if (!$is_verified) {
+			$settings = class_exists('DCTC_AI_Settings_Handler') ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : [];
+			$mismatch_msg = !empty($settings['chatbot']['order_mismatch_msg'])
+				? $settings['chatbot']['order_mismatch_msg']
+				: __('This order was purchased with a different email address. For privacy and security reasons, order details cannot be displayed.', 'dragwyb-click-to-chat');
+
 			return new \WP_Error(
-				'unauthorized_order_access',
-				__('For your privacy and security, please provide the matching billing email address for this order.', 'dragwyb-click-to-chat'),
+				'order_email_mismatch',
+				$mismatch_msg,
 				['status' => 403]
 			);
 		}
@@ -388,6 +418,15 @@ class DCTC_AI_WooCommerce
 	 */
 	public function rest_lookup_order($request)
 	{
+		if (!is_user_logged_in()) {
+			$settings = class_exists('DCTC_AI_Settings_Handler') ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : [];
+			$login_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : wp_login_url();
+			$login_msg = !empty($settings['chatbot']['order_tracking_login_msg'])
+				? str_replace('{login_url}', $login_url, $settings['chatbot']['order_tracking_login_msg'])
+				: sprintf(__('Please <a href="%s">log in to your account</a> to track your orders.', 'dragwyb-click-to-chat'), esc_url($login_url));
+			return $this->error_response($login_msg, 401);
+		}
+
 		$params = $request->get_json_params();
 		$order_id = absint($params['order_id'] ?? $request->get_param('order_id'));
 		$email = sanitize_email($params['email'] ?? $request->get_param('email'));

@@ -13,7 +13,13 @@ const SUBTABS = [
 		id: 'general',
 		label: __('General', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-admin-generic',
-		desc: __('Identity, greeting & site visibility', 'dragwyb-click-to-chat'),
+		desc: __('Identity & site visibility', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'messages',
+		label: __('Messages', 'dragwyb-click-to-chat'),
+		icon: 'dashicons-format-chat',
+		desc: __('Greetings, notices, fallbacks & tracking texts', 'dragwyb-click-to-chat'),
 	},
 	{
 		id: 'advanced',
@@ -227,6 +233,39 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		enable_support_escalation: chatbot.enable_support_escalation !== false,
 		auto_assign_support_tickets: chatbot.auto_assign_support_tickets !== false,
 		auto_pause_ai_on_ticket: chatbot.auto_pause_ai_on_ticket !== false,
+
+		// Messages & Notifications (Centralized Messages Tab)
+		order_tracking_prompt_msg:
+			chatbot.order_tracking_prompt_msg ||
+			__(
+				'Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.',
+				'dragwyb-click-to-chat'
+			),
+		order_tracking_login_msg:
+			chatbot.order_tracking_login_msg ||
+			__(
+				'To securely track your order status, please [log in to your account]({login_url}) first.',
+				'dragwyb-click-to-chat'
+			),
+		order_mismatch_msg:
+			chatbot.order_mismatch_msg ||
+			__(
+				'This order was purchased with a different email address. For privacy and security reasons, order details cannot be displayed.',
+				'dragwyb-click-to-chat'
+			),
+		support_ticket_msg:
+			chatbot.support_ticket_msg ||
+			__(
+				'I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.',
+				'dragwyb-click-to-chat'
+			),
+		no_data_message:
+			chatbot.no_data_message ||
+			settings?.rag?.no_data_message ||
+			__(
+				"I don't have information about your question in my knowledge base. Please rephrase or ask about topics I have knowledge of.",
+				'dragwyb-click-to-chat'
+			),
 
 		// Advance / AI Agents, Tools & Automation Workflows
 		enable_ai_tools: chatbot.enable_ai_tools !== false,
@@ -559,6 +598,11 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			enable_vision_understanding: form.enable_vision_understanding,
 			enable_error_log: form.enable_error_log,
 			error_log_retention_days: form.error_log_retention_days,
+			order_tracking_prompt_msg: form.order_tracking_prompt_msg,
+			order_tracking_login_msg: form.order_tracking_login_msg,
+			order_mismatch_msg: form.order_mismatch_msg,
+			support_ticket_msg: form.support_ticket_msg,
+			no_data_message: form.no_data_message,
 		};
 
 		const displayPayload = {
@@ -935,7 +979,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							</div>
 						</SwitcherCard>
 
-						{ /* 2. Bot Identity & Welcome Greeting */}
+						{ /* 2. Bot Identity & Support Desk Integration */}
 						<section className="dctc-ai-card">
 							<header className="dctc-ai-card__header">
 								<div className="dctc-ai-card__header-left">
@@ -944,10 +988,98 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 									</div>
 									<div>
 										<h2 className="dctc-ai-card__title">
-											{__('AI Persona & Welcome Message', 'dragwyb-click-to-chat')}
+											{__('AI Persona & Helpdesk Integration', 'dragwyb-click-to-chat')}
 										</h2>
 										<p className="dctc-ai-card__desc">
-											{__('Define the assistant persona, public name, and initial conversation opener.', 'dragwyb-click-to-chat')}
+											{__('Define the public assistant name and target support URL for handoffs and inquiries.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</header>
+
+							<div className="dctc-ai-card__body">
+								<div className="dctc-ai-form-stack">
+									<div className="dctc-ai-grid-2col">
+										<div className="dctc-ai-bot-field">
+											<label htmlFor="bot_name">
+												{__('AI Assistant Public Name', 'dragwyb-click-to-chat')}
+											</label>
+											<div className="dctc-ai-input-with-icon">
+												<span className="dashicons dashicons-admin-users" />
+												<input
+													type="text"
+													id="bot_name"
+													className="dctc-ai-bot-input"
+													value={form.bot_name}
+													onChange={(e) => setField('bot_name', e.target.value)}
+													placeholder={__('AI Assistant', 'dragwyb-click-to-chat')}
+												/>
+											</div>
+											<p className="dctc-ai-bot-hint">
+												{__('Shown at the top of the chat window and alongside assistant replies.', 'dragwyb-click-to-chat')}
+											</p>
+										</div>
+
+										<div className="dctc-ai-bot-field">
+											<label htmlFor="support_url">
+												{__('Support Helpdesk URL', 'dragwyb-click-to-chat')}
+											</label>
+											<div className="dctc-ai-input-with-icon">
+												<span className="dashicons dashicons-admin-links" />
+												<input
+													type="url"
+													id="support_url"
+													className="dctc-ai-bot-input"
+													value={form.support_url}
+													onChange={(e) => setField('support_url', e.target.value)}
+													placeholder={__('https://example.com/support', 'dragwyb-click-to-chat')}
+												/>
+											</div>
+											<p className="dctc-ai-bot-hint">
+												{__('Destination URL for support links in notifications and error fallback responses.', 'dragwyb-click-to-chat')}
+											</p>
+										</div>
+									</div>
+
+									<div style={{ padding: '0.85rem 1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', marginTop: '0.5rem' }}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+											<span className="dashicons dashicons-format-chat" style={{ color: '#6366f1', fontSize: '1.25rem' }} />
+											<span style={{ fontSize: '0.875rem', color: '#475569' }}>
+												{__('Looking to customize Greeting, API Errors, Order Tracking, or Support notices?', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
+										<button
+											type="button"
+											className="dctc-ai-btn dctc-ai-btn-sm dctc-ai-btn-secondary"
+											onClick={() => setSubtab('messages')}
+										>
+											{__('Open Messages Tab →', 'dragwyb-click-to-chat')}
+										</button>
+									</div>
+								</div>
+							</div>
+						</section>
+					</div>
+				)}
+
+				{ /* =========================================================================
+				     MESSAGES SUBTAB: All Static AI Chatbot Messages & Fallback Text Management
+				   ========================================================================= */ }
+				{subtab === 'messages' && (
+					<div className="dctc-ai-tab-panel-section">
+						{ /* 1. Welcome Greeting & Proactive Teaser */}
+						<section className="dctc-ai-card">
+							<header className="dctc-ai-card__header">
+								<div className="dctc-ai-card__header-left">
+									<div className="dctc-ai-card-icon">
+										<span className="dashicons dashicons-format-chat" />
+									</div>
+									<div>
+										<h2 className="dctc-ai-card__title">
+											{__('Conversational Greetings & Proactive Prompts', 'dragwyb-click-to-chat')}
+										</h2>
+										<p className="dctc-ai-card__desc">
+											{__('Customize the welcome message and floating proactive bubble teaser.', 'dragwyb-click-to-chat')}
 										</p>
 									</div>
 								</div>
@@ -956,28 +1088,8 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							<div className="dctc-ai-card__body">
 								<div className="dctc-ai-form-stack">
 									<div className="dctc-ai-bot-field">
-										<label htmlFor="bot_name">
-											{__('AI Assistant Public Name', 'dragwyb-click-to-chat')}
-										</label>
-										<div className="dctc-ai-input-with-icon">
-											<span className="dashicons dashicons-admin-users" />
-											<input
-												type="text"
-												id="bot_name"
-												className="dctc-ai-bot-input"
-												value={form.bot_name}
-												onChange={(e) => setField('bot_name', e.target.value)}
-												placeholder={__('AI Assistant', 'dragwyb-click-to-chat')}
-											/>
-										</div>
-										<p className="dctc-ai-bot-hint">
-											{__('Shown at the top of the chat window and next to assistant replies.', 'dragwyb-click-to-chat')}
-										</p>
-									</div>
-
-									<div className="dctc-ai-bot-field">
 										<label htmlFor="greeting_msg">
-											{__('Initial Greeting Message', 'dragwyb-click-to-chat')}
+											{__('Initial Welcome Greeting Message', 'dragwyb-click-to-chat')}
 										</label>
 										<textarea
 											id="greeting_msg"
@@ -988,26 +1100,43 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 											placeholder={__('Hello! I am your AI assistant. How can I help you today?', 'dragwyb-click-to-chat')}
 										/>
 										<p className="dctc-ai-bot-hint">
-											{__('Sent automatically to welcome visitors when they open the chat panel.', 'dragwyb-click-to-chat')}
+											{__('Sent automatically to greet visitors when they open the chat widget.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="proactive_bubble_message">
+											{__('Proactive Teaser Bubble Message', 'dragwyb-click-to-chat')}
+										</label>
+										<input
+											type="text"
+											id="proactive_bubble_message"
+											className="dctc-ai-bot-input"
+											value={form.proactive_bubble_message}
+											onChange={(e) => setField('proactive_bubble_message', e.target.value)}
+											placeholder="👋 Hi there! Have a question about this page? Let me know if I can help!"
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Displayed inside the floating popup preview bubble above the launcher button.', 'dragwyb-click-to-chat')}
 										</p>
 									</div>
 								</div>
 							</div>
 						</section>
 
-						{ /* 3. Support Redirect & Fallback Handling */}
+						{ /* 2. WooCommerce Order Tracking Messages */}
 						<section className="dctc-ai-card">
 							<header className="dctc-ai-card__header">
 								<div className="dctc-ai-card__header-left">
-									<div className="dctc-ai-card-icon dctc-ai-card-icon--warning">
-										<span className="dashicons dashicons-sos" />
+									<div className="dctc-ai-card-icon dctc-ai-card-icon--active">
+										<span className="dashicons dashicons-cart" />
 									</div>
 									<div>
 										<h2 className="dctc-ai-card__title">
-											{__('Support Redirect & API Fallback', 'dragwyb-click-to-chat')}
+											{__('WooCommerce Order Tracking Notices', 'dragwyb-click-to-chat')}
 										</h2>
 										<p className="dctc-ai-card__desc">
-											{__('Provide human agent handover if API failures occur.', 'dragwyb-click-to-chat')}
+											{__('Set prompts, guest login requirement notices, and email verification mismatch messages.', 'dragwyb-click-to-chat')}
 										</p>
 									</div>
 								</div>
@@ -1016,28 +1145,123 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 							<div className="dctc-ai-card__body">
 								<div className="dctc-ai-form-stack">
 									<div className="dctc-ai-bot-field">
-										<label htmlFor="support_url">
-											{__('Support Helpdesk URL', 'dragwyb-click-to-chat')}
+										<label htmlFor="order_tracking_prompt_msg">
+											{__('Order Tracking Form Header Prompt (Logged-in Users)', 'dragwyb-click-to-chat')}
 										</label>
-										<div className="dctc-ai-input-with-icon">
-											<span className="dashicons dashicons-admin-links" />
-											<input
-												type="url"
-												id="support_url"
-												className="dctc-ai-bot-input"
-												value={form.support_url}
-												onChange={(e) => setField('support_url', e.target.value)}
-												placeholder={__('https://example.com/support', 'dragwyb-click-to-chat')}
-											/>
-										</div>
+										<textarea
+											id="order_tracking_prompt_msg"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="2"
+											value={form.order_tracking_prompt_msg}
+											onChange={(e) => setField('order_tracking_prompt_msg', e.target.value)}
+											placeholder={__('Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat')}
+										/>
 										<p className="dctc-ai-bot-hint">
-											{__('Target URL when visitors click the support link in error responses.', 'dragwyb-click-to-chat')}
+											{__('Displayed in chat when a logged-in user asks about tracking their order status.', 'dragwyb-click-to-chat')}
 										</p>
 									</div>
 
 									<div className="dctc-ai-bot-field">
+										<label htmlFor="order_tracking_login_msg">
+											{__('Guest Login Required Notice', 'dragwyb-click-to-chat')}
+											<span className="dctc-ai-var-badge">{'{login_url}'}</span>
+										</label>
+										<textarea
+											id="order_tracking_login_msg"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="2"
+											value={form.order_tracking_login_msg}
+											onChange={(e) => setField('order_tracking_login_msg', e.target.value)}
+											placeholder={__('To securely track your order status, please [log in to your account]({login_url}) first.', 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Returned when a guest/non-logged-in visitor attempts to track an order. {login_url} is replaced with your login/my-account link.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="order_mismatch_msg">
+											{__('Order Email Mismatch Privacy Notice', 'dragwyb-click-to-chat')}
+										</label>
+										<textarea
+											id="order_mismatch_msg"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="2"
+											value={form.order_mismatch_msg}
+											onChange={(e) => setField('order_mismatch_msg', e.target.value)}
+											placeholder={__('This order was purchased with a different email address. For privacy and security reasons, order details cannot be displayed.', 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Displayed when the tracked order belongs to a different email address or purchaser account.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						{ /* 3. Support Escalation & Ticket Logging */}
+						<section className="dctc-ai-card">
+							<header className="dctc-ai-card__header">
+								<div className="dctc-ai-card__header-left">
+									<div className="dctc-ai-card-icon dctc-ai-card-icon--active">
+										<span className="dashicons dashicons-sos" />
+									</div>
+									<div>
+										<h2 className="dctc-ai-card__title">
+											{__('Support Ticket Escalation Notice', 'dragwyb-click-to-chat')}
+										</h2>
+										<p className="dctc-ai-card__desc">
+											{__('Message shown when the AI escalates complex queries directly into a Support Ticket.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</header>
+
+							<div className="dctc-ai-card__body">
+								<div className="dctc-ai-form-stack">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="support_ticket_msg">
+											{__('Automatic Ticket Creation Notice', 'dragwyb-click-to-chat')}
+										</label>
+										<textarea
+											id="support_ticket_msg"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="3"
+											value={form.support_ticket_msg}
+											onChange={(e) => setField('support_ticket_msg', e.target.value)}
+											placeholder={__('I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.', 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Sent to the visitor in chat when a support ticket is created for their active session.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						{ /* 4. Fallbacks, Server Errors & Daily Limits */}
+						<section className="dctc-ai-card">
+							<header className="dctc-ai-card__header">
+								<div className="dctc-ai-card__header-left">
+									<div className="dctc-ai-card-icon dctc-ai-card-icon--warning">
+										<span className="dashicons dashicons-warning" />
+									</div>
+									<div>
+										<h2 className="dctc-ai-card__title">
+											{__('Fallbacks, Server Errors & Daily Limits', 'dragwyb-click-to-chat')}
+										</h2>
+										<p className="dctc-ai-card__desc">
+											{__('Configure fallback responses for server issues, empty knowledge results, and quota caps.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</header>
+
+							<div className="dctc-ai-card__body">
+								<div className="dctc-ai-form-stack">
+									<div className="dctc-ai-bot-field">
 										<label htmlFor="api_error_msg">
-											{__('API Error Fallback Message', 'dragwyb-click-to-chat')}
+											{__('API / Server Error Fallback Message', 'dragwyb-click-to-chat')}
 											<span className="dctc-ai-var-badge">{'{support_url}'}</span>
 										</label>
 										<textarea
@@ -1049,8 +1273,95 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 											placeholder={__('There is some error on server, please contact our [support agent]({support_url}).', 'dragwyb-click-to-chat')}
 										/>
 										<p className="dctc-ai-bot-hint">
-											{__('Markdown supported. Use [support agent]({support_url}) to auto-insert the link.', 'dragwyb-click-to-chat')}
+											{__('Markdown supported. Use [support agent]({support_url}) to link to your Support Helpdesk URL.', 'dragwyb-click-to-chat')}
 										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="no_data_message">
+											{__('Knowledge Base / No Relevant Data Fallback Message', 'dragwyb-click-to-chat')}
+										</label>
+										<textarea
+											id="no_data_message"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="3"
+											value={form.no_data_message}
+											onChange={(e) => setField('no_data_message', e.target.value)}
+											placeholder={__("I don't have information about your question in my knowledge base. Please rephrase or ask about topics I have knowledge of.", 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Returned when the query cannot be answered by your indexed site content or trained knowledge base.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="budget_limit_message">
+											{__('Daily Chat Limit Reached Notice', 'dragwyb-click-to-chat')}
+										</label>
+										<textarea
+											id="budget_limit_message"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="2"
+											value={form.budget_limit_message}
+											onChange={(e) => setField('budget_limit_message', e.target.value)}
+											placeholder={__('You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.', 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Displayed when a visitor exceeds the maximum permitted messages per day.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						{ /* 5. Lead Generation Form Texts */}
+						<section className="dctc-ai-card">
+							<header className="dctc-ai-card__header">
+								<div className="dctc-ai-card__header-left">
+									<div className="dctc-ai-card-icon">
+										<span className="dashicons dashicons-businessman" />
+									</div>
+									<div>
+										<h2 className="dctc-ai-card__title">
+											{__('Lead Capture Form Headings', 'dragwyb-click-to-chat')}
+										</h2>
+										<p className="dctc-ai-card__desc">
+											{__('Configure headings displayed on interactive lead capture cards in chat.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+								</div>
+							</header>
+
+							<div className="dctc-ai-card__body">
+								<div className="dctc-ai-form-stack">
+									<div className="dctc-ai-grid-2col">
+										<div className="dctc-ai-bot-field">
+											<label htmlFor="lead_form_title">
+												{__('Lead Card Heading', 'dragwyb-click-to-chat')}
+											</label>
+											<input
+												type="text"
+												id="lead_form_title"
+												className="dctc-ai-bot-input"
+												value={form.lead_form_title}
+												onChange={(e) => setField('lead_form_title', e.target.value)}
+												placeholder={__('Contact Our Team', 'dragwyb-click-to-chat')}
+											/>
+										</div>
+
+										<div className="dctc-ai-bot-field">
+											<label htmlFor="lead_form_subtitle">
+												{__('Lead Card Subtitle / Description', 'dragwyb-click-to-chat')}
+											</label>
+											<input
+												type="text"
+												id="lead_form_subtitle"
+												className="dctc-ai-bot-input"
+												value={form.lead_form_subtitle}
+												onChange={(e) => setField('lead_form_subtitle', e.target.value)}
+												placeholder={__('Leave your details and our team will get back to you shortly.', 'dragwyb-click-to-chat')}
+											/>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -1297,23 +1608,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 								</div>
 							</div>
 
-							<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>
-								<label htmlFor="budget_limit_message">
-									{__('Budget / Limit Reached Fallback Message', 'dragwyb-click-to-chat')}
-								</label>
-								<textarea
-									id="budget_limit_message"
-									className="dctc-ai-bot-input dctc-ai-bot-textarea"
-									rows="2"
-									value={form.budget_limit_message}
-									onChange={(e) => setField('budget_limit_message', e.target.value)}
-									placeholder={__('You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.', 'dragwyb-click-to-chat')}
-								/>
-								<p className="dctc-ai-bot-hint">
-									{__('Polite message displayed to the visitor alongside your Contact Support / WhatsApp buttons when limit is reached.', 'dragwyb-click-to-chat')}
-								</p>
-							</div>
-
 							<div className="dctc-ai-features-grid" style={{ marginTop: '1.25rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9' }}>
 								<SettingCard
 									id="enable_budget_email_alerts"
@@ -1420,35 +1714,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 								)}
 							</div>
 
-							<div className="dctc-ai-grid-2col" style={{ marginTop: '1rem' }}>
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="lead_form_title">
-										{__('Lead Card Heading', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="text"
-										id="lead_form_title"
-										className="dctc-ai-bot-input"
-										value={form.lead_form_title}
-										onChange={(e) => setField('lead_form_title', e.target.value)}
-										placeholder={__('Contact Our Team', 'dragwyb-click-to-chat')}
-									/>
-								</div>
-
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="lead_form_subtitle">
-										{__('Lead Card Subtitle / Description', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="text"
-										id="lead_form_subtitle"
-										className="dctc-ai-bot-input"
-										value={form.lead_form_subtitle}
-										onChange={(e) => setField('lead_form_subtitle', e.target.value)}
-										placeholder={__('Leave your details and our team will get back to you shortly.', 'dragwyb-click-to-chat')}
-									/>
-								</div>
-							</div>
 
 							<div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
 								<strong style={{ display: 'block', marginBottom: '0.5rem', color: '#1e293b', fontSize: '0.9rem' }}>
@@ -1889,36 +2154,20 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 								</div>
 							</div>
 
-							<div className="dctc-ai-grid-2col" style={{ marginTop: '1rem' }}>
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="target_users">
-										{__('Visitor Audience Targeting', 'dragwyb-click-to-chat')}
-									</label>
-									<select
-										id="target_users"
-										className="dctc-ai-bot-select"
-										value={form.target_users}
-										onChange={(e) => setField('target_users', e.target.value)}
-									>
-										<option value="all">{__('All Visitors (Logged-in & Guests)', 'dragwyb-click-to-chat')}</option>
-										<option value="guests">{__('Guest Visitors Only', 'dragwyb-click-to-chat')}</option>
-										<option value="logged_in">{__('Logged-in Users Only', 'dragwyb-click-to-chat')}</option>
-									</select>
-								</div>
-
-								<div className="dctc-ai-bot-field">
-									<label htmlFor="proactive_bubble_message">
-										{__('Proactive Teaser Greeting Message', 'dragwyb-click-to-chat')}
-									</label>
-									<input
-										type="text"
-										id="proactive_bubble_message"
-										className="dctc-ai-bot-input"
-										value={form.proactive_bubble_message}
-										onChange={(e) => setField('proactive_bubble_message', e.target.value)}
-										placeholder="👋 Hi there! Have questions about this page? Let me know!"
-									/>
-								</div>
+							<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>
+								<label htmlFor="target_users">
+									{__('Visitor Audience Targeting', 'dragwyb-click-to-chat')}
+								</label>
+								<select
+									id="target_users"
+									className="dctc-ai-bot-select"
+									value={form.target_users}
+									onChange={(e) => setField('target_users', e.target.value)}
+								>
+									<option value="all">{__('All Visitors (Logged-in & Guests)', 'dragwyb-click-to-chat')}</option>
+									<option value="guests">{__('Guest Visitors Only', 'dragwyb-click-to-chat')}</option>
+									<option value="logged_in">{__('Logged-in Users Only', 'dragwyb-click-to-chat')}</option>
+								</select>
 							</div>
 
 							<div className="dctc-ai-bot-field" style={{ marginTop: '1rem' }}>

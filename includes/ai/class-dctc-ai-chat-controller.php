@@ -160,7 +160,40 @@ class DCTC_AI_Chat_Controller
 		if (!empty($prompt) && class_exists('WooCommerce') && self::detect_order_tracking_intent($prompt)) {
 			$is_logged_in = is_user_logged_in() || (!empty($page_context) && !empty($page_context['is_logged_in']));
 			if ($is_logged_in) {
-				$tracker_msg = esc_html__('Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat');
+				// Check if user provided an order number directly
+				$order_id = 0;
+				if (preg_match('/(?:^|\s|#)(\d{2,8})(?:\s|$|\.)/', $prompt, $matches)) {
+					$order_id = absint($matches[1]);
+				}
+
+				if ($order_id > 0) {
+					$user_id = get_current_user_id();
+					$billing_email = $email ?: (!empty($page_context['user_email']) ? $page_context['user_email'] : '');
+					$lookup = class_exists('DCTC_AI_WooCommerce') ? DCTC_AI_WooCommerce::lookup_order_status($order_id, $billing_email, $user_id) : null;
+
+					if ($lookup && !is_wp_error($lookup) && !empty($lookup['success'])) {
+						$msg = sprintf(
+							/* translators: 1: Order number, 2: Status label, 3: Order Total, 4: Date */
+							esc_html__('Here are the live details for Order #%1$s: Status is %2$s. Total: %3$s placed on %4$s.', 'dragwyb-click-to-chat'),
+							$lookup['order_number'],
+							$lookup['status_label'],
+							$lookup['formatted_total'],
+							$lookup['date_created']
+						);
+						return new \WP_REST_Response([
+							'success'            => true,
+							'message'            => $msg,
+							'show_order_tracker' => true,
+							'order_lookup_data'  => $lookup,
+							'session_id'         => $session_id,
+						], 200);
+					}
+				}
+
+				$tracker_msg = !empty($bot['order_tracking_prompt_msg'])
+					? $bot['order_tracking_prompt_msg']
+					: esc_html__('Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat');
+
 				return new \WP_REST_Response([
 					'success'            => true,
 					'message'            => $tracker_msg,
@@ -169,11 +202,16 @@ class DCTC_AI_Chat_Controller
 				], 200);
 			} else {
 				$login_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : wp_login_url();
-				$not_logged_in_msg = sprintf(
-					/* translators: %s: Login URL */
-					esc_html__('To securely track your order status, please [log in to your account](%s) first.', 'dragwyb-click-to-chat'),
-					esc_url($login_url)
-				);
+				if (!empty($bot['order_tracking_login_msg'])) {
+					$not_logged_in_msg = str_replace('{login_url}', esc_url($login_url), $bot['order_tracking_login_msg']);
+				} else {
+					$not_logged_in_msg = sprintf(
+						/* translators: %s: Login URL */
+						esc_html__('To securely track your order status, please [log in to your account](%s) first.', 'dragwyb-click-to-chat'),
+						esc_url($login_url)
+					);
+				}
+
 				return new \WP_REST_Response([
 					'success'            => true,
 					'message'            => $not_logged_in_msg,
@@ -218,7 +256,9 @@ class DCTC_AI_Chat_Controller
 				}
 			}
 
-			$escalation_text = esc_html__('I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.', 'dragwyb-click-to-chat');
+			$escalation_text = !empty($bot['support_ticket_msg'])
+				? $bot['support_ticket_msg']
+				: esc_html__('I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.', 'dragwyb-click-to-chat');
 
 			return $this->save_and_respond(
 				$escalation_text,
@@ -1089,6 +1129,8 @@ CONVERSATION MEMORY:
 
 		$patterns_order = [
 			'/\b(track order|track my order|tracking order|order status|where is my order|check my order|check order status|find my order|order tracking|track shipment|tracking number|order update|track product|track my product|delivery status|package tracking|track my package|shipping status)\b/i',
+			'/^\s*#?\d{2,8}\s*$/',
+			'/\b(order|order id|order #|order no|order number)\s*#?\d{2,8}\b/i',
 		];
 
 		foreach ($patterns_order as $pattern) {
