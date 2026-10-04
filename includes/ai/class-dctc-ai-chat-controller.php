@@ -156,6 +156,33 @@ class DCTC_AI_Chat_Controller
 			return new \WP_REST_Response($human_response, 200);
 		}
 
+		// Intelligent WooCommerce Order Tracker Intent
+		if (!empty($prompt) && class_exists('WooCommerce') && self::detect_order_tracking_intent($prompt)) {
+			$is_logged_in = is_user_logged_in() || (!empty($page_context) && !empty($page_context['is_logged_in']));
+			if ($is_logged_in) {
+				$tracker_msg = esc_html__('Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat');
+				return new \WP_REST_Response([
+					'success'            => true,
+					'message'            => $tracker_msg,
+					'show_order_tracker' => true,
+					'session_id'         => $session_id,
+				], 200);
+			} else {
+				$login_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('myaccount') : wp_login_url();
+				$not_logged_in_msg = sprintf(
+					/* translators: %s: Login URL */
+					esc_html__('To securely track your order status, please [log in to your account](%s) first.', 'dragwyb-click-to-chat'),
+					esc_url($login_url)
+				);
+				return new \WP_REST_Response([
+					'success'            => true,
+					'message'            => $not_logged_in_msg,
+					'show_order_tracker' => false,
+					'session_id'         => $session_id,
+				], 200);
+			}
+		}
+
 		// Intelligent Support Escalation & Ticket Logging
 		if (!empty($prompt) && (!isset($bot['enable_support_escalation']) || (bool) $bot['enable_support_escalation']) && self::detect_human_handoff_intent($prompt)) {
 			$classification = self::classify_user_intent($prompt);
@@ -1060,7 +1087,29 @@ CONVERSATION MEMORY:
 			}
 		}
 
+		$patterns_order = [
+			'/\b(track order|track my order|tracking order|order status|where is my order|check my order|check order status|find my order|order tracking|track shipment|tracking number|order update|track product|track my product|delivery status|package tracking|track my package|shipping status)\b/i',
+		];
+
+		foreach ($patterns_order as $pattern) {
+			if (preg_match($pattern, $prompt)) {
+				return ['intent' => 'order_tracking', 'category' => 'order', 'confidence' => 0.92];
+			}
+		}
+
 		return ['intent' => 'general_qa', 'category' => 'general', 'confidence' => 0.5];
+	}
+
+	/**
+	 * Detect if the message is requesting WooCommerce order tracking or status lookup.
+	 *
+	 * @param string $prompt
+	 * @return bool
+	 */
+	public static function detect_order_tracking_intent($prompt)
+	{
+		$classification = self::classify_user_intent($prompt);
+		return 'order_tracking' === $classification['intent'];
 	}
 
 	/**

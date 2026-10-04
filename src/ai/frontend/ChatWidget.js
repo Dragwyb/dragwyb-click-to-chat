@@ -873,7 +873,7 @@ export default function ChatWidget({ settings, inline }) {
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
 		}
-	}, [messages, isLoading, attachments, showLeadForm]);
+	}, [messages, isLoading, attachments, showLeadForm, showOrderTracker]);
 
 	// Auto-prompt Lead Form based on configured triggers
 	useEffect(() => {
@@ -1292,6 +1292,14 @@ export default function ChatWidget({ settings, inline }) {
 						products: responseProducts,
 					},
 				]);
+
+				if (response.show_order_tracker) {
+					setShowOrderTracker(true);
+					const loggedInEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
+					if (loggedInEmail && !orderLookupEmail) {
+						setOrderLookupEmail(loggedInEmail);
+					}
+				}
 			} else {
 				setMessages((prev) => [
 					...prev,
@@ -1591,24 +1599,6 @@ export default function ChatWidget({ settings, inline }) {
 					},
 					createElement('span', {
 						className: 'dashicons dashicons-id',
-						'aria-hidden': 'true',
-					})
-				),
-				isWcActive &&
-				createElement(
-					'button',
-					{
-						className: 'dctc-ai-chat-clear',
-						onClick: () => setShowOrderTracker((prev) => !prev),
-						title: __('Track WooCommerce Order', 'dragwyb-click-to-chat'),
-						'aria-label': __('Track WooCommerce Order', 'dragwyb-click-to-chat'),
-						style: {
-							background: showOrderTracker ? 'rgba(255,255,255,0.2)' : 'none',
-							borderRadius: '6px',
-						},
-					},
-					createElement('span', {
-						className: 'dashicons dashicons-cart',
 						'aria-hidden': 'true',
 					})
 				),
