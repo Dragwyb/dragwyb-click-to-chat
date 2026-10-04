@@ -55,7 +55,13 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-site-analyzer.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-memory-optimizer.php';
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
-			DCTC_AI_Abilities::init();
+
+			add_action(
+				'plugins_loaded',
+				function () {
+					DCTC_AI_Abilities::init();
+				}
+			);
 
 			// Initialize REST Handlers.
 			new DCTC_AI_Settings_Handler();
@@ -478,8 +484,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			// URL path rules
 			if ( ! empty( $settings['display']['url_rules'] ) ) {
 				$current_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
-				$rules = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $settings['display']['url_rules'] ) ) ) );
-				$matched = false;
+				$rules       = array_filter( array_map( 'trim', explode( "\n", str_replace( "\r", '', $settings['display']['url_rules'] ) ) ) );
+				$matched     = false;
 				foreach ( $rules as $rule ) {
 					if ( false !== strpos( $current_uri, $rule ) || fnmatch( $rule, $current_uri ) ) {
 						$matched = true;
@@ -831,7 +837,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				return;
 			}
 
-			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$settings         = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 			$configured_types = ! empty( $settings['rag']['post_types'] ) && is_array( $settings['rag']['post_types'] )
 				? $settings['rag']['post_types']
 				: array( 'post', 'page' );
@@ -861,7 +867,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_run_daily_cleanups() {
-			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$settings            = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 			$chat_retention_days = isset( $settings['chatbot']['chat_retention_days'] ) ? absint( $settings['chatbot']['chat_retention_days'] ) : 0;
 
 			if ( $chat_retention_days > 0 && class_exists( 'DCTC_AI_DB' ) ) {
@@ -889,10 +895,12 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				global $wpdb;
 				$cutoff = time() - DAY_IN_SECONDS;
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$temp_attachments = $wpdb->get_col( $wpdb->prepare(
-					"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_dctc_ai_temporary' AND meta_value < %d LIMIT 50",
-					$cutoff
-				) );
+				$temp_attachments = $wpdb->get_col(
+					$wpdb->prepare(
+						"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_dctc_ai_temporary' AND meta_value < %d LIMIT 50",
+						$cutoff
+					)
+				);
 				if ( ! empty( $temp_attachments ) ) {
 					foreach ( $temp_attachments as $att_id ) {
 						wp_delete_attachment( (int) $att_id, true );
