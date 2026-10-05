@@ -1526,7 +1526,16 @@ class DCTC_AI_Settings_Handler
 			return false;
 		}
 
-		return true;
+		$nonce = $request->get_header('X-WP-Nonce');
+		if (empty($nonce)) {
+			$nonce = $request->get_param('_wpnonce');
+		}
+
+		if (!empty($nonce) && wp_verify_nonce($nonce, 'wp_rest')) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

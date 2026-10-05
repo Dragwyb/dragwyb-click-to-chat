@@ -254,6 +254,10 @@ class DCTC_Support_Permission_Service {
 	 * @return bool
 	 */
 	public static function current_user_can_support( $capability, $user_id = null ) {
+		if ( current_user_can( 'manage_options' ) ) {
+			return true;
+		}
+
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
 		if ( ! $user_id ) {
 			return false;

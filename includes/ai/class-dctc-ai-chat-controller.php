@@ -55,19 +55,24 @@ class DCTC_AI_Chat_Controller {
 	 * @return bool True if authorized.
 	 */
 	public function permission_check( $request ) {
-		// Logged in users
+		// 1. Logged in WordPress users with read capability
 		if ( current_user_can( 'read' ) ) {
 			return true;
 		}
-		// Valid REST nonce
-		$nonce = $request->get_header( 'X-WP-Nonce' );
 
-		if ( $nonce && wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+		// 2. Extract standard WordPress REST nonce from header or query param
+		$nonce = $request->get_header( 'X-WP-Nonce' );
+		if ( empty( $nonce ) ) {
+			$nonce = $request->get_param( '_wpnonce' );
+		}
+
+		// 3. Verify nonce using standard WordPress REST nonce validation
+		if ( ! empty( $nonce ) && wp_verify_nonce( $nonce, 'wp_rest' ) ) {
 			return true;
 		}
 
-		// Public frontend visitors are allowed to chat with the AI assistant
-		return true;
+		// Deny request if nonce verification fails
+		return false;
 	}
 
 	/**

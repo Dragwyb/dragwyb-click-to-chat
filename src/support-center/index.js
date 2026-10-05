@@ -3,9 +3,9 @@ import { createRoot, render } from '@wordpress/element';
 import App from './App';
 import './style.css';
 
-const supportNonce = window.dctc_support_data?.nonce || window.wpApiSettings?.nonce;
-if ( supportNonce ) {
-	apiFetch.use( apiFetch.createNonceMiddleware( supportNonce ) );
+// Only attach nonce middleware if not already configured by WordPress admin
+if ( ! window.wpApiSettings?.nonce && window.dctc_support_data?.nonce ) {
+	apiFetch.use( apiFetch.createNonceMiddleware( window.dctc_support_data.nonce ) );
 }
 
 document.addEventListener( 'DOMContentLoaded', () => {

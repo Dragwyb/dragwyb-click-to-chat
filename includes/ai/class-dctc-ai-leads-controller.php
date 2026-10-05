@@ -26,7 +26,20 @@ class DCTC_AI_Leads_Controller
 	 */
 	public function permission_check_capture($request)
 	{
-		return true;
+		if (current_user_can('read')) {
+			return true;
+		}
+
+		$nonce = $request->get_header('X-WP-Nonce');
+		if (empty($nonce)) {
+			$nonce = $request->get_param('_wpnonce');
+		}
+
+		if (!empty($nonce) && wp_verify_nonce($nonce, 'wp_rest')) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**

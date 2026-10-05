@@ -5,7 +5,8 @@ import App from './App';
 
 const data = window.dctc_ai_data || {};
 
-if ( data.nonce ) {
+// Only attach nonce middleware if not already configured by WordPress admin
+if ( ! window.wpApiSettings?.nonce && data.nonce ) {
 	apiFetch.use( apiFetch.createNonceMiddleware( data.nonce ) );
 }
 
