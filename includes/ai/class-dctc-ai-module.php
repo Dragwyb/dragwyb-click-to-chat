@@ -105,6 +105,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			// Integrations & Helpers.
 			add_action( 'init', array( $this, 'dctc_ai_init_integrations' ) );
 			add_filter( 'http_request_timeout', array( $this, 'dctc_ai_increase_http_timeout' ), 9999, 2 );
+
+			// Gracefully handle REST cookie nonce checks for chatbot and support endpoints.
+			add_filter( 'rest_authentication_errors', array( $this, 'dctc_ai_handle_rest_auth_errors' ), 9999 );
 		}
 
 		/**
@@ -921,6 +924,33 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					error_log( 'Dragwyb AI Temp Attachment Cleanup Error: ' . $e->getMessage() );
 				}
 			}
+		}
+
+		/**
+		 * Handle REST authentication errors.
+		 * Allows public chat routes and support operations to proceed
+		 * without being rejected prematurely by WordPress core's cookie nonce check.
+		 *
+		 * @param \WP_Error|mixed $result Current auth check result.
+		 * @return \WP_Error|mixed|null
+		 */
+		public function dctc_ai_handle_rest_auth_errors( $result ) {
+			if ( is_wp_error( $result ) && 'rest_cookie_invalid_nonce' === $result->get_error_code() ) {
+				$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+				$rest_route  = isset( $_GET['rest_route'] ) ? sanitize_text_field( wp_unslash( $_GET['rest_route'] ) ) : ( isset( $_REQUEST['rest_route'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['rest_route'] ) ) : '' );
+
+				if (
+					false !== strpos( $request_uri, 'dctc-ai/' ) ||
+					false !== strpos( $request_uri, 'dctc-support/' ) ||
+					false !== strpos( $request_uri, 'dctc/' ) ||
+					false !== strpos( $rest_route, 'dctc-ai/' ) ||
+					false !== strpos( $rest_route, 'dctc-support/' ) ||
+					false !== strpos( $rest_route, 'dctc/' )
+				) {
+					return null;
+				}
+			}
+			return $result;
 		}
 	}
 

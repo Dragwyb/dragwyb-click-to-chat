@@ -268,6 +268,7 @@ class DCTC_Support_Ticket_Service {
 				c.color as category_color,
 				a.wp_user_id as agent_wp_user_id,
 				a.support_role as agent_role,
+				s.id as session_exists_id,
 				s.content as session_content
 				FROM `$table_tickets` t 
 				LEFT JOIN `$table_cats` c ON t.category_id = c.id
@@ -292,11 +293,12 @@ class DCTC_Support_Ticket_Service {
 				}
 				$row['tags'] = DCTC_Support_Tag_Service::get_ticket_tags( $row['id'] );
 
-				// Calculate chat / message count
+				// Calculate chat / message count and session existence
+				$row['has_session']   = ! empty( $row['session_exists_id'] );
 				$session_messages     = ! empty( $row['session_content'] ) ? json_decode( $row['session_content'], true ) : array();
 				$row['chat_count']    = is_array( $session_messages ) ? count( $session_messages ) : 0;
 				$row['message_count'] = $row['chat_count'];
-				unset( $row['session_content'] );
+				unset( $row['session_content'], $row['session_exists_id'] );
 			}
 		} else {
 			$rows = array();
@@ -360,12 +362,15 @@ class DCTC_Support_Ticket_Service {
 		$ticket['events'] = DCTC_Support_Event_Service::get_events( $ticket['id'], 'ASC', 50 );
 		$ticket['notes']  = DCTC_Support_Note_Service::get_notes( $ticket['id'] );
 
-		// Retrieve conversation messages from session
+		// Retrieve conversation messages and check session existence
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$session_content = $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] )
-		);
+		$session_row = ! empty( $ticket['session_id'] ) ? $wpdb->get_row(
+			$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] ),
+			ARRAY_A
+		) : null;
 
+		$ticket['has_session']   = ! empty( $session_row );
+		$session_content         = $session_row ? $session_row['content'] : '';
 		$ticket['messages']      = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
 		$ticket['messages']      = is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
 		$ticket['chat_count']    = count( $ticket['messages'] );
@@ -720,6 +725,25 @@ class DCTC_Support_Ticket_Service {
 			array( 'session_id' => $session_id )
 		);
 
+		// If agent replies, auto-take control (Pause AI) and assign agent if unassigned
+		if ( 'agent' === $sender_type ) {
+			if ( $ticket['control_mode'] !== 'human' ) {
+				self::set_control_mode( $ticket_id, 'human', 'agent', $user_id, $display_name );
+			}
+			if ( empty( $ticket['assigned_agent_id'] ) && $user_id ) {
+				$table_agents = $wpdb->prefix . 'dctc_support_agents';
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+				if ( $agent_row ) {
+					$wpdb->update(
+						$table_tickets,
+						array( 'assigned_agent_id' => absint( $agent_row['id'] ) ),
+						array( 'id' => $ticket_id )
+					);
+				}
+			}
+		}
+
 		// If customer replies to a resolved ticket, automatically reopen it
 		if ( 'customer' === $sender_type && in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
 			self::change_status( $ticket_id, 'open', 'customer', $user_id, $display_name );
@@ -727,8 +751,13 @@ class DCTC_Support_Ticket_Service {
 
 		// Update ticket updated_at and first_response_at
 		$ticket_updates = array( 'updated_at' => current_time( 'mysql' ) );
-		if ( 'agent' === $sender_type && empty( $ticket['first_response_at'] ) ) {
-			$ticket_updates['first_response_at'] = current_time( 'mysql' );
+		if ( 'agent' === $sender_type ) {
+			if ( empty( $ticket['first_response_at'] ) ) {
+				$ticket_updates['first_response_at'] = current_time( 'mysql' );
+			}
+			if ( ! in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
+				$ticket_updates['status'] = 'waiting_customer';
+			}
 		}
 		$wpdb->update( $table_tickets, $ticket_updates, array( 'id' => $ticket_id ) );
 

@@ -135,6 +135,16 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/control',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'toggle_control' ),
+				'permission_callback' => array( $this, 'permission_staff_take_control' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/reply',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -684,6 +694,31 @@ class DCTC_Support_REST_Controller {
 			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
 		}
 		return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'ai' ), 200 );
+	}
+
+	public function toggle_control( $request ) {
+		$id     = $request->get_param( 'id' );
+		$params = $request->get_json_params();
+		$mode   = isset( $params['mode'] ) ? sanitize_key( $params['mode'] ) : '';
+
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
+		if ( ! $ticket ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+		}
+
+		if ( 'human' === $mode ) {
+			$result = DCTC_Support_AI_Handoff_Service::take_control( $ticket['id'], get_current_user_id() );
+			if ( is_wp_error( $result ) ) {
+				return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			}
+			return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'human' ), 200 );
+		} else {
+			$result = DCTC_Support_AI_Handoff_Service::give_control_to_ai( $ticket['id'], get_current_user_id() );
+			if ( is_wp_error( $result ) ) {
+				return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			}
+			return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'ai' ), 200 );
+		}
 	}
 
 	public function add_reply( $request ) {

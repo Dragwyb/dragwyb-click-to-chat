@@ -345,9 +345,11 @@ class DCTC_AI_DB {
 		}
 
 		$assistant_entry = [
-			'role'       => 'assistant',
-			'content'    => $response,
-			'created_at' => $time,
+			'role'        => 'assistant',
+			'sender_type' => 'ai_agent',
+			'sender_name' => 'AI Assistant',
+			'content'     => $response,
+			'created_at'  => $time,
 		];
 
 		if ( ! empty( $sources ) && is_array( $sources ) ) {
@@ -364,9 +366,11 @@ class DCTC_AI_DB {
 
 		$new_messages = [
 			[
-				'role'       => 'user',
-				'content'    => $prompt,
-				'created_at' => $time,
+				'role'        => 'user',
+				'sender_type' => 'customer',
+				'sender_name' => ! empty( $email ) ? $email : 'Customer',
+				'content'     => $prompt,
+				'created_at'  => $time,
 			],
 			$assistant_entry,
 		];
@@ -426,6 +430,22 @@ class DCTC_AI_DB {
 			);
 
 			wp_cache_set( $cache_key, $messages_json, $cache_group, HOUR_IN_SECONDS );
+		}
+
+		// If a support ticket exists for this session, touch ticket updated_at so Support Center sees real-time changes
+		$table_tickets = esc_sql( $wpdb->prefix . 'dctc_support_tickets' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$linked_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$table_tickets} WHERE session_id = %s", $session_id ), ARRAY_A );
+		if ( $linked_ticket ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->update(
+				$table_tickets,
+				array(
+					'updated_at'            => $time,
+					'customer_last_seen_at' => $time,
+				),
+				array( 'id' => absint( $linked_ticket['id'] ) )
+			);
 		}
 
 		return $session_id;

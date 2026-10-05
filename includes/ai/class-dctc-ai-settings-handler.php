@@ -1526,12 +1526,7 @@ class DCTC_AI_Settings_Handler
 			return false;
 		}
 
-		$nonce = $request->get_header('X-WP-Nonce');
-		if ($nonce && wp_verify_nonce($nonce, 'wp_rest')) {
-			return true;
-		}
-
-		return false;
+		return true;
 	}
 
 	/**

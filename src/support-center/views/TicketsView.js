@@ -55,6 +55,24 @@ export default function TicketsView( {
 		}
 	}, [ selectedTicket?.messages, selectedTicket?.events ] );
 
+	// Real-time automatic background polling when an active ticket workspace is open
+	useEffect( () => {
+		if ( ! selectedTicketId ) return;
+		let isCancelled = false;
+
+		const interval = setInterval( () => {
+			if ( typeof document !== 'undefined' && document.hidden ) return;
+			if ( ! isCancelled && selectedTicketId ) {
+				onRefreshTicketDetails( selectedTicketId );
+			}
+		}, 4000 );
+
+		return () => {
+			isCancelled = true;
+			clearInterval( interval );
+		};
+	}, [ selectedTicketId ] );
+
 	// Priority badge helper
 	const getPriorityBadgeClass = ( priority ) => {
 		switch ( priority ) {
@@ -173,6 +191,7 @@ export default function TicketsView( {
 			if ( data?.success ) {
 				setReplyText( '' );
 				onRefreshTicketDetails( selectedTicketId );
+				onRefreshTickets();
 				onShowNotice( __( 'Reply sent to customer.', 'dragwyb-click-to-chat' ), 'success' );
 			}
 		} catch ( err ) {
@@ -331,10 +350,17 @@ export default function TicketsView( {
 								) }
 
 								<div className="dctc-sc-ticket-card-footer">
-									<span className="dctc-sc-control-indicator">
-										<span className={ `dashicons ${ item.control_mode === 'human' ? 'dashicons-admin-users' : 'dashicons-superhero' }` } style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
-										{ item.control_mode === 'human' ? __( 'Staff Assigned', 'dragwyb-click-to-chat' ) : __( 'AI Active', 'dragwyb-click-to-chat' ) }
-									</span>
+									{ Boolean( item.has_session || ( item.session_id && ( item.chat_count > 0 || item.message_count > 0 ) ) ) ? (
+										<span className="dctc-sc-control-indicator">
+											<span className={ `dashicons ${ item.control_mode === 'human' ? 'dashicons-admin-users' : 'dashicons-superhero' }` } style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+											{ item.control_mode === 'human' ? __( 'Staff Assigned', 'dragwyb-click-to-chat' ) : __( 'AI Active', 'dragwyb-click-to-chat' ) }
+										</span>
+									) : (
+										<span className="dctc-sc-control-indicator" style={ { color: '#94a3b8' } }>
+											<span className="dashicons dashicons-email-alt" style={ { fontSize: '12px', width: '12px', height: '12px', verticalAlign: 'middle', marginRight: '4px' } }></span>
+											{ item.origin_type ? item.origin_type.toUpperCase() : __( 'Standard Ticket', 'dragwyb-click-to-chat' ) }
+										</span>
+									) }
 									<span className="dctc-sc-card-time">{ item.created_at }</span>
 								</div>
 							</div>
@@ -421,25 +447,27 @@ export default function TicketsView( {
 								) }
 							</div>
 
-							<div className="dctc-sc-header-actions">
-								<button
-									type="button"
-									className={ `dctc-sc-control-action-btn ${ selectedTicket.control_mode === 'human' ? 'btn-release-ai' : 'btn-take-control' }` }
-									onClick={ handleToggleControl }
-								>
-									{ selectedTicket.control_mode === 'human' ? (
-										<>
-											<span className="dashicons dashicons-controls-play"></span>
-											{ __( 'Give Control to AI', 'dragwyb-click-to-chat' ) }
-										</>
-									) : (
-										<>
-											<span className="dashicons dashicons-controls-pause"></span>
-											{ __( 'Take Control (Pause AI)', 'dragwyb-click-to-chat' ) }
-										</>
-									) }
-								</button>
-							</div>
+							{ Boolean( selectedTicket.has_session || ( selectedTicket.session_id && ( selectedTicket.messages?.length > 0 || selectedTicket.chat_count > 0 ) ) ) && (
+								<div className="dctc-sc-header-actions">
+									<button
+										type="button"
+										className={ `dctc-sc-control-action-btn ${ selectedTicket.control_mode === 'human' ? 'btn-release-ai' : 'btn-take-control' }` }
+										onClick={ handleToggleControl }
+									>
+										{ selectedTicket.control_mode === 'human' ? (
+											<>
+												<span className="dashicons dashicons-controls-play"></span>
+												{ __( 'Give Control to AI', 'dragwyb-click-to-chat' ) }
+											</>
+										) : (
+											<>
+												<span className="dashicons dashicons-controls-pause"></span>
+												{ __( 'Take Control (Pause AI)', 'dragwyb-click-to-chat' ) }
+											</>
+										) }
+									</button>
+								</div>
+							) }
 						</div>
 
 						{ /* Status Bar Quick Actions */ }
@@ -501,23 +529,23 @@ export default function TicketsView( {
 							) ) }
 
 							{ /* Messages Stream */ }
-							{ ( selectedTicket.messages || [] ).map( ( msg ) => {
-								const isCustomer = msg.sender_type === 'customer';
-								const isAI = msg.sender_type === 'ai_agent' || msg.sender_type === 'bot';
+							{ ( selectedTicket.messages || [] ).map( ( msg, idx ) => {
+								const isCustomer = msg.sender_type === 'customer' || msg.role === 'user';
 								const isHumanAgent = msg.sender_type === 'human_agent' || msg.sender_type === 'agent';
+								const isAI = ! isHumanAgent && ( msg.sender_type === 'ai_agent' || msg.sender_type === 'bot' || msg.role === 'assistant' );
 
 								let bubbleClass = 'dctc-sc-msg-customer';
 								if ( isAI ) bubbleClass = 'dctc-sc-msg-ai';
 								if ( isHumanAgent ) bubbleClass = 'dctc-sc-msg-agent';
 
 								return (
-									<div key={ msg.id } className={ `dctc-sc-msg-row ${ bubbleClass }` }>
+									<div key={ msg.id || `msg-${ idx }-${ msg.created_at || idx }` } className={ `dctc-sc-msg-row ${ bubbleClass }` }>
 										<div className="dctc-sc-msg-meta-line">
 											<span className="dctc-sc-msg-author">
 												{ isCustomer && (
 													<>
 														<span className="dashicons dashicons-admin-users" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
-														{ __( 'Customer', 'dragwyb-click-to-chat' ) }
+														{ selectedTicket.customer_name || selectedTicket.customer_email || __( 'Customer', 'dragwyb-click-to-chat' ) }
 													</>
 												) }
 												{ isAI && (
@@ -529,7 +557,7 @@ export default function TicketsView( {
 												{ isHumanAgent && (
 													<>
 														<span className="dashicons dashicons-businesswoman" style={ { fontSize: '13px', width: '13px', height: '13px', verticalAlign: 'middle', marginRight: '4px' } }></span>
-														{ msg.sender_name || __( 'Staff Agent', 'dragwyb-click-to-chat' ) }
+														{ msg.sender_name || selectedTicket.agent_name || __( 'Staff Agent', 'dragwyb-click-to-chat' ) }
 													</>
 												) }
 											</span>
