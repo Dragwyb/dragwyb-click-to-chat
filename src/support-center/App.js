@@ -155,17 +155,13 @@ export default function App() {
 				setTickets( data.tickets || [] );
 				setTotalTickets( data.total || 0 );
 				setTotalPages( data.total_pages || 1 );
-
-				if ( ! selectedTicketId && data.tickets?.length > 0 ) {
-					setSelectedTicketId( data.tickets[ 0 ].id );
-				}
 			}
 		} catch ( err ) {
 			console.error( 'Error fetching tickets:', err );
 		} finally {
 			setLoading( false );
 		}
-	}, [ currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery, selectedTicketId ] );
+	}, [ currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery ] );
 
 	// Fetch Single Ticket Details with silent polling and change detection
 	const fetchTicketDetails = useCallback( async ( ticketId, isSilent = false ) => {
@@ -308,6 +304,9 @@ export default function App() {
 		if ( selectedTicketId ) {
 			fetchTicketDetails( selectedTicketId );
 			fetchWooCommerceContext( selectedTicketId );
+		} else {
+			setSelectedTicket( null );
+			setWcData( null );
 		}
 	}, [ selectedTicketId, fetchTicketDetails, fetchWooCommerceContext ] );
 
@@ -317,18 +316,12 @@ export default function App() {
 			<header className="dctc-sc-header-bar">
 				<div className="dctc-sc-brand">
 					<div className="dctc-sc-brand-icon">
-						<span className="dashicons dashicons-tickets-alt"></span>
+						<span className="dashicons dashicons-format-chat"></span>
 					</div>
 					<div>
 						<h1 className="dctc-sc-app-title">{ __( 'Support Center', 'dragwyb-click-to-chat' ) }</h1>
 						<span className="dctc-sc-app-tagline">
 							{ __( 'Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat' ) }
-							{ userPermissions.support_role && (
-								<span style={ { marginLeft: '8px', fontSize: '11px', fontWeight: 700, padding: '2px 8px', background: '#e0e7ff', color: '#4338ca', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', gap: '4px' } }>
-									<span className={ `dashicons ${ userPermissions.is_admin ? 'dashicons-shield' : 'dashicons-businesswoman' }` } style={ { fontSize: '12px', width: '12px', height: '12px' } }></span>
-									{ userPermissions.is_admin ? __( 'Admin', 'dragwyb-click-to-chat' ) : userPermissions.support_role.toUpperCase() }
-								</span>
-							) }
 						</span>
 					</div>
 				</div>
@@ -346,9 +339,12 @@ export default function App() {
 					<button
 						type="button"
 						className={ `dctc-sc-nav-link ${ activeTab === 'tickets' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'tickets' ) }
+						onClick={ () => {
+							setSelectedTicketId( null );
+							setActiveTab( 'tickets' );
+						} }
 					>
-						<span className="dashicons dashicons-format-chat"></span>
+						<span className="dashicons dashicons-tickets-alt"></span>
 						{ __( 'Tickets', 'dragwyb-click-to-chat' ) }
 						{ totalTickets > 0 && <span className="dctc-sc-nav-badge">{ totalTickets }</span> }
 					</button>
@@ -371,9 +367,18 @@ export default function App() {
 							onClick={ () => setActiveTab( 'taxonomies' ) }
 						>
 							<span className="dashicons dashicons-category"></span>
-							{ __( 'Taxonomies', 'dragwyb-click-to-chat' ) }
+							{ __( 'Knowledge Base', 'dragwyb-click-to-chat' ) }
 						</button>
 					) }
+
+					<button
+						type="button"
+						className={ `dctc-sc-nav-link ${ activeTab === 'reports' ? 'active' : '' }` }
+						onClick={ () => setActiveTab( 'dashboard' ) }
+					>
+						<span className="dashicons dashicons-chart-bar"></span>
+						{ __( 'Reports', 'dragwyb-click-to-chat' ) }
+					</button>
 
 					{ canManageSettings && (
 						<button
@@ -382,10 +387,26 @@ export default function App() {
 							onClick={ () => setActiveTab( 'settings' ) }
 						>
 							<span className="dashicons dashicons-admin-generic"></span>
-							{ __( 'Settings & Permissions', 'dragwyb-click-to-chat' ) }
+							{ __( 'Settings', 'dragwyb-click-to-chat' ) }
 						</button>
 					) }
 				</nav>
+
+				<div className="dctc-sc-header-right">
+					<div className="dctc-sc-user-pill">
+						<div className="dctc-sc-user-avatar">
+							{ ( userPermissions.agent_name || 'Admin' ).substring( 0, 2 ).toUpperCase() }
+						</div>
+						<div className="dctc-sc-user-meta">
+							<span className="dctc-sc-user-name">
+								{ userPermissions.agent_name || 'Aniket Dogra' }
+							</span>
+							<span className="dctc-sc-user-role">
+								{ userPermissions.is_admin ? __( 'Administrator', 'dragwyb-click-to-chat' ) : __( 'Support Agent', 'dragwyb-click-to-chat' ) }
+							</span>
+						</div>
+					</div>
+				</div>
 			</header>
 
 			{ /* Global Toast Notice */ }
