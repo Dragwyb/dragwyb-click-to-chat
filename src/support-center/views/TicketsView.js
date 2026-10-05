@@ -82,8 +82,10 @@ export default function TicketsView( {
 		category_id: '',
 		priority: 'normal',
 		message: '',
+		attachments: [],
 	} );
 	const [ creatingTicket, setCreatingTicket ] = useState( false );
+	const modalMessageInputRef = useRef( null );
 
 	// Multi-select tickets state
 	const [ selectedTicketIds, setSelectedTicketIds ] = useState( [] );
@@ -414,6 +416,80 @@ export default function TicketsView( {
 		}
 	};
 
+	// WYSIWYG formatting helper for New Ticket modal
+	const applyFormatting = ( tagType ) => {
+		const textarea = modalMessageInputRef.current;
+		if ( ! textarea ) return;
+		const start = textarea.selectionStart || 0;
+		const end = textarea.selectionEnd || 0;
+		const text = newTicketData.message || '';
+		const selected = text.substring( start, end ) || 'sample text';
+		let replacement = '';
+		if ( tagType === 'bold' ) replacement = `<b>${ selected }</b>`;
+		else if ( tagType === 'italic' ) replacement = `<i>${ selected }</i>`;
+		else if ( tagType === 'underline' ) replacement = `<u>${ selected }</u>`;
+		else if ( tagType === 'link' ) replacement = `<a href="https://example.com">${ selected }</a>`;
+		else if ( tagType === 'ul' ) replacement = `\n<ul>\n  <li>${ selected }</li>\n</ul>\n`;
+		else if ( tagType === 'ol' ) replacement = `\n<ol>\n  <li>${ selected }</li>\n</ol>\n`;
+		else if ( tagType === 'quote' ) replacement = `\n<blockquote>${ selected }</blockquote>\n`;
+		else if ( tagType === 'code' ) replacement = `<code>${ selected }</code>`;
+
+		const updated = text.substring( 0, start ) + replacement + text.substring( end );
+		setNewTicketData( ( prev ) => ( { ...prev, message: updated } ) );
+		setTimeout( () => {
+			if ( textarea ) {
+				textarea.focus();
+				textarea.setSelectionRange( start + replacement.length, start + replacement.length );
+			}
+		}, 50 );
+	};
+
+	// File attachments helper for New Ticket modal
+	const handleAttachFiles = () => {
+		if ( window.wp && window.wp.media ) {
+			const frame = window.wp.media( {
+				title: __( 'Select or Upload Support Files', 'dragwyb-click-to-chat' ),
+				button: { text: __( 'Attach Files', 'dragwyb-click-to-chat' ) },
+				multiple: true,
+			} );
+			frame.on( 'select', () => {
+				const selection = frame.state().get( 'selection' ).toJSON();
+				const newAttachments = selection.map( ( file ) => ( {
+					id: file.id,
+					url: file.url,
+					name: file.filename || file.title || 'Attachment',
+					type: file.mime || file.type || '',
+				} ) );
+				setNewTicketData( ( prev ) => ( {
+					...prev,
+					attachments: [ ...( prev.attachments || [] ), ...newAttachments ],
+				} ) );
+			} );
+			frame.open();
+		} else {
+			const input = document.createElement( 'input' );
+			input.type = 'file';
+			input.multiple = true;
+			input.onchange = ( e ) => {
+				const files = Array.from( e.target.files );
+				const fileNames = files.map( ( f ) => ( { name: f.name, url: '', type: f.type } ) );
+				setNewTicketData( ( prev ) => ( {
+					...prev,
+					attachments: [ ...( prev.attachments || [] ), ...fileNames ],
+				} ) );
+			};
+			input.click();
+		}
+	};
+
+	// Remove single attachment chip
+	const handleRemoveAttachment = ( indexToRemove ) => {
+		setNewTicketData( ( prev ) => ( {
+			...prev,
+			attachments: ( prev.attachments || [] ).filter( ( _, idx ) => idx !== indexToRemove ),
+		} ) );
+	};
+
 	// Action: Create New Ticket Submit
 	const handleCreateTicketSubmit = async ( e ) => {
 		if ( e ) e.preventDefault();
@@ -423,10 +499,14 @@ export default function TicketsView( {
 		}
 		setCreatingTicket( true );
 		try {
+			const payload = {
+				...newTicketData,
+				initial_message: newTicketData.message,
+			};
 			const res = await apiFetch( {
 				path: '/dctc-ai/v1/support/tickets',
 				method: 'POST',
-				data: newTicketData,
+				data: payload,
 			} );
 			if ( res?.success ) {
 				setIsNewTicketModalOpen( false );
@@ -437,6 +517,7 @@ export default function TicketsView( {
 					category_id: '',
 					priority: 'normal',
 					message: '',
+					attachments: [],
 				} );
 				onShowNotice( __( 'Ticket created successfully!', 'dragwyb-click-to-chat' ), 'success' );
 				onRefreshTickets();
@@ -885,8 +966,8 @@ export default function TicketsView( {
 								<div className="dctc-sc-empty-inbox-features">
 									<div className="dctc-sc-empty-feature-card">
 										<div className="dctc-sc-empty-feature-icon" style={ { background: '#ec4899' } }>💬</div>
-										<h4>{ __( 'Chat Widget Integration', 'dragwyb-click-to-chat' ) }</h4>
-										<p>{ __( 'Tickets are created automatically when visitors request human support from your AI or WhatsApp chat widget.', 'dragwyb-click-to-chat' ) }</p>
+										<h4>{ __( 'Automated Ticket Generation', 'dragwyb-click-to-chat' ) }</h4>
+										<p>{ __( 'Tickets are generated automatically from your AI Assistant and chat channels whenever visitors report issues, submit product or lead inquiries, or request human support.', 'dragwyb-click-to-chat' ) }</p>
 									</div>
 									<div className="dctc-sc-empty-feature-card">
 										<div className="dctc-sc-empty-feature-icon" style={ { background: '#6366f1' } }>🌐</div>
@@ -1812,7 +1893,7 @@ export default function TicketsView( {
 									<input
 										type="text"
 										required
-										placeholder={ __( 'Brief summary of the issue...', 'dragwyb-click-to-chat' ) }
+										placeholder={ __( 'Enter a support issue title...', 'dragwyb-click-to-chat' ) }
 										value={ newTicketData.subject }
 										onChange={ ( e ) => setNewTicketData( { ...newTicketData, subject: e.target.value } ) }
 									/>
@@ -1867,14 +1948,70 @@ export default function TicketsView( {
 								</div>
 
 								<div className="dctc-sc-modal-form-group">
-									<label>{ __( 'Initial Message *', 'dragwyb-click-to-chat' ) }</label>
-									<textarea
-										rows="4"
-										required
-										placeholder={ __( 'Describe the problem details...', 'dragwyb-click-to-chat' ) }
-										value={ newTicketData.message }
-										onChange={ ( e ) => setNewTicketData( { ...newTicketData, message: e.target.value } ) }
-									/>
+									<label>{ __( 'Message *', 'dragwyb-click-to-chat' ) }</label>
+									<div className="dctc-sc-wysiwyg-container">
+										<div className="dctc-sc-wysiwyg-toolbar">
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'bold' ) } title={ __( 'Bold', 'dragwyb-click-to-chat' ) }>
+												<strong>B</strong>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'italic' ) } title={ __( 'Italic', 'dragwyb-click-to-chat' ) }>
+												<em>I</em>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'underline' ) } title={ __( 'Underline', 'dragwyb-click-to-chat' ) }>
+												<u>U</u>
+											</button>
+											<span className="dctc-sc-wysiwyg-divider"></span>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'link' ) } title={ __( 'Insert Link', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-admin-links"></span>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'ul' ) } title={ __( 'Bullet List', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-editor-ul"></span>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'ol' ) } title={ __( 'Numbered List', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-editor-ol"></span>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'quote' ) } title={ __( 'Blockquote', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-editor-quote"></span>
+											</button>
+											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={ () => applyFormatting( 'code' ) } title={ __( 'Code Block', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-editor-code"></span>
+											</button>
+											<span className="dctc-sc-wysiwyg-divider"></span>
+											<button type="button" className="dctc-sc-wysiwyg-btn attach-btn" onClick={ handleAttachFiles } title={ __( 'Attach Files / Media', 'dragwyb-click-to-chat' ) }>
+												<span className="dashicons dashicons-paperclip"></span>
+												<span>{ __( 'Attach Files', 'dragwyb-click-to-chat' ) }</span>
+											</button>
+										</div>
+
+										<textarea
+											ref={ modalMessageInputRef }
+											rows="5"
+											required
+											placeholder={ __( 'Briefly describe the problem details...', 'dragwyb-click-to-chat' ) }
+											value={ newTicketData.message }
+											onChange={ ( e ) => setNewTicketData( { ...newTicketData, message: e.target.value } ) }
+											className="dctc-sc-wysiwyg-textarea"
+										/>
+
+										{ newTicketData.attachments && newTicketData.attachments.length > 0 && (
+											<div className="dctc-sc-attachment-chips-wrap">
+												{ newTicketData.attachments.map( ( file, fIdx ) => (
+													<div key={ fIdx } className="dctc-sc-attachment-chip">
+														<span className="dashicons dashicons-media-default"></span>
+														<span className="chip-name" title={ file.name }>{ file.name }</span>
+														<button
+															type="button"
+															className="chip-remove"
+															onClick={ () => handleRemoveAttachment( fIdx ) }
+															title={ __( 'Remove file', 'dragwyb-click-to-chat' ) }
+														>
+															&times;
+														</button>
+													</div>
+												) ) }
+											</div>
+										) }
+									</div>
 								</div>
 							</div>
 

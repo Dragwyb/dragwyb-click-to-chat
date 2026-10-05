@@ -366,19 +366,10 @@ export default function App() {
 							className={ `dctc-sc-nav-link ${ activeTab === 'taxonomies' ? 'active' : '' }` }
 							onClick={ () => setActiveTab( 'taxonomies' ) }
 						>
-							<span className="dashicons dashicons-category"></span>
-							{ __( 'Knowledge Base', 'dragwyb-click-to-chat' ) }
+							<span className="dashicons dashicons-tag"></span>
+							{ __( 'Categories & Tags', 'dragwyb-click-to-chat' ) }
 						</button>
 					) }
-
-					<button
-						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'reports' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'dashboard' ) }
-					>
-						<span className="dashicons dashicons-chart-bar"></span>
-						{ __( 'Reports', 'dragwyb-click-to-chat' ) }
-					</button>
 
 					{ canManageSettings && (
 						<button
@@ -387,7 +378,7 @@ export default function App() {
 							onClick={ () => setActiveTab( 'settings' ) }
 						>
 							<span className="dashicons dashicons-admin-generic"></span>
-							{ __( 'Settings', 'dragwyb-click-to-chat' ) }
+							{ __( 'Support Settings', 'dragwyb-click-to-chat' ) }
 						</button>
 					) }
 				</nav>

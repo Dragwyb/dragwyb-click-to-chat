@@ -129,11 +129,30 @@ class DCTC_Support_Ticket_Service {
 			// Create new session entry for support portal origin
 			$initial_messages = array();
 			if ( ! empty( $data['initial_message'] ) ) {
-				$initial_messages[] = array(
+				$msg_entry = array(
 					'role'       => 'user',
-					'content'    => sanitize_textarea_field( $data['initial_message'] ),
+					'content'    => wp_kses_post( $data['initial_message'] ),
 					'created_at' => current_time( 'mysql' ),
 				);
+
+				if ( ! empty( $data['attachments'] ) && is_array( $data['attachments'] ) ) {
+					$sanitized_attachments = array();
+					foreach ( $data['attachments'] as $att ) {
+						if ( is_array( $att ) && ! empty( $att['url'] ) ) {
+							$sanitized_attachments[] = array(
+								'name' => ! empty( $att['name'] ) ? sanitize_text_field( $att['name'] ) : 'attachment',
+								'url'  => esc_url_raw( $att['url'] ),
+								'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
+								'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
+							);
+						}
+					}
+					if ( ! empty( $sanitized_attachments ) ) {
+						$msg_entry['attachments'] = $sanitized_attachments;
+					}
+				}
+
+				$initial_messages[] = $msg_entry;
 			}
 
 			$wpdb->insert(

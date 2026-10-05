@@ -145,12 +145,12 @@ class DCTC_Support_Manager {
 			);
 		}
 
-		// Submenu 4: Taxonomies (Categories, Tags, Products & Custom Taxonomies)
+		// Submenu 4: Categories & Tags (Categories, Tags, Products & Custom Taxonomies)
 		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) || DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
 			add_submenu_page(
 				'dragwyb-support-center',
-				esc_html__( 'Taxonomies', 'dragwyb-click-to-chat' ),
-				esc_html__( 'Taxonomies', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Categories & Tags', 'dragwyb-click-to-chat' ),
 				$support_cap,
 				'dragwyb-support-taxonomies',
 				array( $this, 'render_support_admin_page' )
