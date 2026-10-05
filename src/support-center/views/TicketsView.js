@@ -548,90 +548,125 @@ export default function TicketsView( {
 		return list;
 	}, [ tickets, activeFolder, activeView, assignedToFilter, sortBy ] );
 
+	// Determine if database has 0 tickets or if filters caused 0 matches
+	const hasActiveSearchOrFilters = Boolean(
+		searchQuery ||
+		statusFilter !== 'all' ||
+		priorityFilter !== 'all' ||
+		categoryFilter !== 'all' ||
+		activeSecondaryFilterCount > 0 ||
+		( activeFolder && activeFolder !== 'all' ) ||
+		activeView
+	);
+
+	const isDatabaseEmpty = ! loading && ( Number( totalTickets ) === 0 && tickets.length === 0 ) && ! hasActiveSearchOrFilters;
+
 	return (
 		<div className="dctc-sc-enterprise-container">
-			{ /* CLEAN COMPACT TOP TOOLBAR */ }
-			<div className="dctc-sc-filter-toolbar-wrap">
-				<div className="dctc-sc-filter-toolbar-main">
-					{ /* Left Folders Toggle Button */ }
-					<button
-						type="button"
-						className={ `dctc-sc-toggle-folders-btn ${ isFoldersExpanded ? 'active' : '' }` }
-						onClick={ () => setIsFoldersExpanded( ( prev ) => ! prev ) }
-						title={ isFoldersExpanded ? __( 'Collapse Folders Sidebar', 'dragwyb-click-to-chat' ) : __( 'Expand Folders Sidebar', 'dragwyb-click-to-chat' ) }
-					>
-						<span className="dashicons dashicons-category"></span>
-						<span>{ __( 'Folders', 'dragwyb-click-to-chat' ) }</span>
-						<span className={ `dashicons ${ isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2' }` } style={ { fontSize: '11px', width: '11px', height: '11px' } }></span>
-					</button>
-
-					{ /* Search Bar */ }
-					<div className="dctc-sc-toolbar-search">
-						<span className="dashicons dashicons-search"></span>
-						<input
-							type="text"
-							placeholder={ __( 'Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat' ) }
-							value={ searchQuery }
-							onChange={ ( e ) => setSearchQuery( e.target.value ) }
-						/>
-						{ searchQuery && (
+			{ /* TOP TOOLBAR */ }
+			<div className={ `dctc-sc-filter-toolbar-wrap ${ isDatabaseEmpty ? 'dctc-sc-filter-toolbar-empty' : '' }` }>
+				{ isDatabaseEmpty ? (
+					<div className="dctc-sc-filter-toolbar-main" style={ { justifyContent: 'space-between', width: '100%' } }>
+						<div className="dctc-sc-toolbar-brand-badge">
+							<span className="dashicons dashicons-tickets-alt" style={ { color: '#6366f1', fontSize: '20px', width: '20px', height: '20px' } }></span>
+							<strong style={ { fontSize: '14.5px', color: '#0f172a' } }>{ __( 'Tickets Workspace', 'dragwyb-click-to-chat' ) }</strong>
+							<span style={ { fontSize: '12px', color: '#64748b', background: '#f1f5f9', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 } }>
+								{ __( '0 Tickets', 'dragwyb-click-to-chat' ) }
+							</span>
+						</div>
+						<div className="dctc-sc-toolbar-actions">
 							<button
 								type="button"
-								className="dctc-sc-search-clear"
-								onClick={ () => setSearchQuery( '' ) }
+								className="dctc-sc-new-ticket-btn"
+								onClick={ () => setIsNewTicketModalOpen( true ) }
 							>
-								&times;
+								<span className="dashicons dashicons-plus"></span>
+								{ __( 'New Ticket', 'dragwyb-click-to-chat' ) }
 							</button>
-						) }
+						</div>
 					</div>
-
-					{ /* Quick Status Pills */ }
-					<div className="dctc-sc-quick-status-pills">
-						{ [
-							{ id: 'all', label: __( 'All', 'dragwyb-click-to-chat' ) },
-							{ id: 'open', label: __( 'Open', 'dragwyb-click-to-chat' ) },
-							{ id: 'pending', label: __( 'Pending', 'dragwyb-click-to-chat' ) },
-							{ id: 'resolved', label: __( 'Resolved', 'dragwyb-click-to-chat' ) },
-							{ id: 'closed', label: __( 'Closed', 'dragwyb-click-to-chat' ) },
-						].map( ( tab ) => (
-							<button
-								key={ tab.id }
-								type="button"
-								className={ `dctc-sc-status-pill-btn ${ statusFilter === tab.id ? 'active' : '' }` }
-								onClick={ () => { setStatusFilter( tab.id ); setCurrentPage( 1 ); } }
-							>
-								{ tab.label }
-							</button>
-						) ) }
-					</div>
-
-					{ /* Expandable Filter Toggle */ }
-					<button
-						type="button"
-						className={ `dctc-sc-more-filters-btn ${ showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : '' }` }
-						onClick={ () => setShowMoreFilters( ( prev ) => ! prev ) }
-						title={ __( 'Toggle advanced filters', 'dragwyb-click-to-chat' ) }
-					>
-						<span className="dashicons dashicons-filter"></span>
-						<span>{ __( 'Filter Options', 'dragwyb-click-to-chat' ) }</span>
-						{ activeSecondaryFilterCount > 0 && (
-							<span className="dctc-sc-filter-active-count">{ activeSecondaryFilterCount }</span>
-						) }
-						<span className={ `dashicons ${ showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2' }` } style={ { fontSize: '12px', width: '12px', height: '12px' } }></span>
-					</button>
-
-					{ /* New Ticket Action */ }
-					<div className="dctc-sc-toolbar-actions">
+				) : (
+					<div className="dctc-sc-filter-toolbar-main">
+						{ /* Left Folders Toggle Button */ }
 						<button
 							type="button"
-							className="dctc-sc-new-ticket-btn"
-							onClick={ () => setIsNewTicketModalOpen( true ) }
+							className={ `dctc-sc-toggle-folders-btn ${ isFoldersExpanded ? 'active' : '' }` }
+							onClick={ () => setIsFoldersExpanded( ( prev ) => ! prev ) }
+							title={ isFoldersExpanded ? __( 'Collapse Folders Sidebar', 'dragwyb-click-to-chat' ) : __( 'Expand Folders Sidebar', 'dragwyb-click-to-chat' ) }
 						>
-							<span className="dashicons dashicons-plus"></span>
-							{ __( 'New Ticket', 'dragwyb-click-to-chat' ) }
+							<span className="dashicons dashicons-category"></span>
+							<span>{ __( 'Folders', 'dragwyb-click-to-chat' ) }</span>
+							<span className={ `dashicons ${ isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2' }` } style={ { fontSize: '11px', width: '11px', height: '11px' } }></span>
 						</button>
+
+						{ /* Search Bar */ }
+						<div className="dctc-sc-toolbar-search">
+							<span className="dashicons dashicons-search"></span>
+							<input
+								type="text"
+								placeholder={ __( 'Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat' ) }
+								value={ searchQuery }
+								onChange={ ( e ) => setSearchQuery( e.target.value ) }
+							/>
+							{ searchQuery && (
+								<button
+									type="button"
+									className="dctc-sc-search-clear"
+									onClick={ () => setSearchQuery( '' ) }
+								>
+									&times;
+								</button>
+							) }
+						</div>
+
+						{ /* Quick Status Pills */ }
+						<div className="dctc-sc-quick-status-pills">
+							{ [
+								{ id: 'all', label: __( 'All', 'dragwyb-click-to-chat' ) },
+								{ id: 'open', label: __( 'Open', 'dragwyb-click-to-chat' ) },
+								{ id: 'pending', label: __( 'Pending', 'dragwyb-click-to-chat' ) },
+								{ id: 'resolved', label: __( 'Resolved', 'dragwyb-click-to-chat' ) },
+								{ id: 'closed', label: __( 'Closed', 'dragwyb-click-to-chat' ) },
+							].map( ( tab ) => (
+								<button
+									key={ tab.id }
+									type="button"
+									className={ `dctc-sc-status-pill-btn ${ statusFilter === tab.id ? 'active' : '' }` }
+									onClick={ () => { setStatusFilter( tab.id ); setCurrentPage( 1 ); } }
+								>
+									{ tab.label }
+								</button>
+							) ) }
+						</div>
+
+						{ /* Expandable Filter Toggle */ }
+						<button
+							type="button"
+							className={ `dctc-sc-more-filters-btn ${ showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : '' }` }
+							onClick={ () => setShowMoreFilters( ( prev ) => ! prev ) }
+							title={ __( 'Toggle advanced filters', 'dragwyb-click-to-chat' ) }
+						>
+							<span className="dashicons dashicons-filter"></span>
+							<span>{ __( 'Filter Options', 'dragwyb-click-to-chat' ) }</span>
+							{ activeSecondaryFilterCount > 0 && (
+								<span className="dctc-sc-filter-active-count">{ activeSecondaryFilterCount }</span>
+							) }
+							<span className={ `dashicons ${ showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2' }` } style={ { fontSize: '12px', width: '12px', height: '12px' } }></span>
+						</button>
+
+						{ /* New Ticket Action */ }
+						<div className="dctc-sc-toolbar-actions">
+							<button
+								type="button"
+								className="dctc-sc-new-ticket-btn"
+								onClick={ () => setIsNewTicketModalOpen( true ) }
+							>
+								<span className="dashicons dashicons-plus"></span>
+								{ __( 'New Ticket', 'dragwyb-click-to-chat' ) }
+							</button>
+						</div>
 					</div>
-				</div>
+				) }
 
 				{ /* SECONDARY FILTER DRAWER (Collapsible on demand) */ }
 				{ showMoreFilters && (
@@ -822,39 +857,115 @@ export default function TicketsView( {
 				{ /* IF NO TICKET IS SELECTED: FULL WIDTH ALL TICKETS LIST */ }
 				{ ! selectedTicketId && (
 					<section className="dctc-sc-col-list fullwidth">
-						<div className="dctc-sc-list-header">
-							<div className="dctc-sc-list-header-left">
-								<h3 className="dctc-sc-list-title">
-									{ activeFolder ? activeFolder.charAt( 0 ).toUpperCase() + activeFolder.slice( 1 ) + ' Tickets' : 'Filtered Views' }
-								</h3>
-								<span className="dctc-sc-list-subtitle">
-									{ totalTickets || filteredTickets.length } { __( 'tickets found', 'dragwyb-click-to-chat' ) }
-								</span>
-							</div>
-							<div className="dctc-sc-list-sort">
-								<select
-									value={ sortBy }
-									onChange={ ( e ) => setSortBy( e.target.value ) }
-								>
-									<option value="newest">{ __( 'Newest First', 'dragwyb-click-to-chat' ) }</option>
-									<option value="oldest">{ __( 'Oldest First', 'dragwyb-click-to-chat' ) }</option>
-									<option value="priority">{ __( 'Priority High-Low', 'dragwyb-click-to-chat' ) }</option>
-								</select>
-							</div>
-						</div>
+						{ isDatabaseEmpty ? (
+							/* BRAND NEW WORKSPACE EMPTY STATE (0 tickets created yet) */
+							<div className="dctc-sc-empty-inbox-container">
+								<div className="dctc-sc-empty-inbox-icon-wrap">
+									<svg viewBox="0 0 64 64" width="64" height="64" fill="none" style={ { width: '64px', height: '64px', display: 'block' } }>
+										<rect width="64" height="64" rx="20" fill="url(#empty-inbox-grad)" />
+										<path d="M20 24C20 21.79 21.79 20 24 20H40C42.21 20 44 21.79 44 24V40C44 42.21 42.21 44 40 44H24C21.79 44 20 42.21 20 40V24Z" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+										<path d="M20 26L32 34L44 26" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+										<circle cx="45" cy="19" r="4" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
+										<defs>
+											<linearGradient id="empty-inbox-grad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+												<stop stopColor="#6366F1" />
+												<stop offset="1" stopColor="#4338CA" />
+											</linearGradient>
+										</defs>
+									</svg>
+								</div>
 
-						<div className="dctc-sc-ticket-grid-fullwidth">
-							{ loading ? (
-								<div className="dctc-sc-loading-state">
-									<span className="spinner is-active"></span>
-									{ __( 'Loading tickets...', 'dragwyb-click-to-chat' ) }
+								<h2 className="dctc-sc-empty-inbox-title">
+									{ __( 'No Support Tickets Created Yet', 'dragwyb-click-to-chat' ) }
+								</h2>
+								<p className="dctc-sc-empty-inbox-desc">
+									{ __( 'Your support ticketing workspace is active and ready. Tickets will appear here automatically when visitors request agent support from your chat widget, submit inquiries via your frontend portal, or when staff logs a ticket.', 'dragwyb-click-to-chat' ) }
+								</p>
+
+								<div className="dctc-sc-empty-inbox-features">
+									<div className="dctc-sc-empty-feature-card">
+										<div className="dctc-sc-empty-feature-icon" style={ { background: '#ec4899' } }>💬</div>
+										<h4>{ __( 'Chat Widget Integration', 'dragwyb-click-to-chat' ) }</h4>
+										<p>{ __( 'Tickets are created automatically when visitors request human support from your AI or WhatsApp chat widget.', 'dragwyb-click-to-chat' ) }</p>
+									</div>
+									<div className="dctc-sc-empty-feature-card">
+										<div className="dctc-sc-empty-feature-icon" style={ { background: '#6366f1' } }>🌐</div>
+										<h4>{ __( 'Customer Helpdesk Portal', 'dragwyb-click-to-chat' ) }</h4>
+										<p>{ __( 'Customers can submit tickets and view replies directly through your website frontend portal.', 'dragwyb-click-to-chat' ) }</p>
+									</div>
+									<div className="dctc-sc-empty-feature-card">
+										<div className="dctc-sc-empty-feature-icon" style={ { background: '#10b981' } }>⚡</div>
+										<h4>{ __( 'Manual Ticket Creation', 'dragwyb-click-to-chat' ) }</h4>
+										<p>{ __( 'Agents can create tickets instantly for phone inquiries, emails, or offline requests.', 'dragwyb-click-to-chat' ) }</p>
+									</div>
 								</div>
-							) : filteredTickets.length === 0 ? (
-								<div className="dctc-sc-empty-state">
-									<span className="dashicons dashicons-clipboard"></span>
-									<p>{ __( 'No support tickets match your filters.', 'dragwyb-click-to-chat' ) }</p>
+
+								<div className="dctc-sc-empty-inbox-actions">
+									<button
+										type="button"
+										className="dctc-sc-new-ticket-btn"
+										onClick={ () => setIsNewTicketModalOpen( true ) }
+										style={ { padding: '12px 28px', fontSize: '15px' } }
+									>
+										<span className="dashicons dashicons-plus"></span>
+										{ __( 'Create Your First Ticket', 'dragwyb-click-to-chat' ) }
+									</button>
+									<a
+										href="admin.php?page=dragwyb-click-to-chat-guide&tab=support"
+										className="dctc-sc-reset-filters-btn"
+										style={ { padding: '12px 24px', fontSize: '14px', textDecoration: 'none', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: '6px' } }
+									>
+										<span>📖</span>
+										<span>{ __( 'Read Support Center Guide', 'dragwyb-click-to-chat' ) }</span>
+									</a>
 								</div>
-							) : (
+							</div>
+						) : (
+							<>
+								<div className="dctc-sc-list-header">
+									<div className="dctc-sc-list-header-left">
+										<h3 className="dctc-sc-list-title">
+											{ activeFolder ? activeFolder.charAt( 0 ).toUpperCase() + activeFolder.slice( 1 ) + ' Tickets' : 'Filtered Views' }
+										</h3>
+										<span className="dctc-sc-list-subtitle">
+											{ totalTickets || filteredTickets.length } { __( 'tickets found', 'dragwyb-click-to-chat' ) }
+										</span>
+									</div>
+									<div className="dctc-sc-list-sort">
+										<select
+											value={ sortBy }
+											onChange={ ( e ) => setSortBy( e.target.value ) }
+										>
+											<option value="newest">{ __( 'Newest First', 'dragwyb-click-to-chat' ) }</option>
+											<option value="oldest">{ __( 'Oldest First', 'dragwyb-click-to-chat' ) }</option>
+											<option value="priority">{ __( 'Priority High-Low', 'dragwyb-click-to-chat' ) }</option>
+										</select>
+									</div>
+								</div>
+
+								<div className="dctc-sc-ticket-grid-fullwidth">
+									{ loading ? (
+										<div className="dctc-sc-loading-state">
+											<span className="spinner is-active"></span>
+											{ __( 'Loading tickets...', 'dragwyb-click-to-chat' ) }
+										</div>
+									) : filteredTickets.length === 0 ? (
+										<div className="dctc-sc-filter-empty-state">
+											<div className="dctc-sc-filter-empty-icon">
+												<span className="dashicons dashicons-filter"></span>
+											</div>
+											<h3>{ __( 'No Support Tickets Match Your Filters', 'dragwyb-click-to-chat' ) }</h3>
+											<p>{ __( 'Try adjusting your search keywords, clearing status filters, or resetting advanced options.', 'dragwyb-click-to-chat' ) }</p>
+											<button
+												type="button"
+												className="dctc-sc-reset-filters-btn"
+												onClick={ handleResetFilters }
+											>
+												<span className="dashicons dashicons-image-rotate"></span>
+												{ __( 'Reset All Filters', 'dragwyb-click-to-chat' ) }
+											</button>
+										</div>
+									) : (
 								filteredTickets.map( ( item ) => {
 									const initials = getInitials( item.customer_name, item.customer_email || item.session_id );
 									const isStarred = starredTickets[ item.id ];
@@ -958,6 +1069,8 @@ export default function TicketsView( {
 								</button>
 							</div>
 						)}
+							</>
+						) }
 					</section>
 				) }
 

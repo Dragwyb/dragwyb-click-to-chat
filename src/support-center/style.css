@@ -5812,3 +5812,154 @@
   color: #b91c1c;
 }
 
+/* ==========================================================================
+   SUPPORT CENTER EMPTY INBOX & FILTER EMPTY STATES
+   ========================================================================== */
+
+.dctc-sc-toolbar-brand-badge {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.dctc-sc-empty-inbox-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  margin: 12px 0 24px;
+  padding: 50px 36px 44px;
+  text-align: center;
+  width: 100%;
+}
+
+.dctc-sc-empty-inbox-icon-wrap {
+  display: inline-flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  transform: translateY(0);
+  transition: transform 0.3s ease;
+}
+
+.dctc-sc-empty-inbox-icon-wrap:hover {
+  transform: translateY(-3px) scale(1.04);
+}
+
+.dctc-sc-empty-inbox-title {
+  color: #0f172a !important;
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px !important;
+}
+
+.dctc-sc-empty-inbox-desc {
+  color: #64748b !important;
+  font-size: 14.5px !important;
+  line-height: 1.6 !important;
+  margin: 0 auto 36px !important;
+  max-width: 660px;
+}
+
+.dctc-sc-empty-inbox-features {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin: 0 auto 36px;
+  max-width: 900px;
+  text-align: left;
+}
+
+.dctc-sc-empty-feature-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 20px 22px;
+  transition: all 0.2s ease;
+}
+
+.dctc-sc-empty-feature-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.dctc-sc-empty-feature-icon {
+  align-items: center;
+  border-radius: 10px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 16px;
+  height: 36px;
+  justify-content: center;
+  margin-bottom: 12px;
+  width: 36px;
+}
+
+.dctc-sc-empty-feature-card h4 {
+  color: #1e293b;
+  font-size: 14.5px;
+  font-weight: 700;
+  margin: 0 0 6px;
+}
+
+.dctc-sc-empty-feature-card p {
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dctc-sc-empty-inbox-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+}
+
+/* Filter Empty State (when filters yield no tickets) */
+.dctc-sc-filter-empty-state {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  margin: 20px 0;
+  padding: 44px 24px;
+  text-align: center;
+  width: 100%;
+}
+
+.dctc-sc-filter-empty-icon {
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 50%;
+  color: #64748b;
+  display: inline-flex;
+  height: 52px;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 52px;
+}
+
+.dctc-sc-filter-empty-icon .dashicons {
+  font-size: 24px;
+  height: 24px;
+  width: 24px;
+}
+
+.dctc-sc-filter-empty-state h3 {
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.dctc-sc-filter-empty-state p {
+  color: #64748b;
+  font-size: 13.5px;
+  margin: 0 auto 20px;
+  max-width: 480px;
+}
+
+
