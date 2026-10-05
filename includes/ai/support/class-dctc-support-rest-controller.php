@@ -48,6 +48,17 @@ class DCTC_Support_REST_Controller {
 			)
 		);
 
+		// AI Chatbot Session Keepalive / Heartbeat
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/session/heartbeat',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'session_heartbeat' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
 		// Staff: Tickets
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -549,6 +560,29 @@ class DCTC_Support_REST_Controller {
 
 	public function permission_staff_settings() {
 		return DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) || current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * AI Chatbot Session Keepalive / Heartbeat handler.
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 * @return WP_REST_Response
+	 */
+	public function session_heartbeat( $request ) {
+		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
+		if ( empty( $session_id ) ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => 'Missing session_id' ), 400 );
+		}
+
+		global $wpdb;
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$wpdb->update(
+			$table_sessions,
+			array( 'updated_at' => current_time( 'mysql' ) ),
+			array( 'session_id' => $session_id )
+		);
+
+		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
 
 	public function permission_portal_access( $request ) {

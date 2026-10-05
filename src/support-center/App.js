@@ -15,7 +15,7 @@ import SettingsView from './views/SettingsView';
 
 export default function App() {
 	// User Permissions State
-	const [ userPermissions, setUserPermissions ] = useState( () => {
+	const [userPermissions, setUserPermissions] = useState(() => {
 		return window.dctc_support_data?.permissions || {
 			view_tickets: true,
 			manage_agents: true,
@@ -24,170 +24,170 @@ export default function App() {
 			manage_settings: true,
 			is_admin: true,
 		};
-	} );
+	});
 
 	// Subtab router
-	const [ activeTab, setActiveTab ] = useState( () => {
-		const searchParams = new URLSearchParams( window.location.search );
-		const page = searchParams.get( 'page' ) || '';
-		const subtab = searchParams.get( 'subtab' ) || '';
-		if ( subtab === 'categories' || subtab === 'tags' || subtab === 'taxonomies' ) return 'taxonomies';
-		if ( subtab ) return subtab;
-		if ( page === 'dragwyb-support-tickets' ) return 'tickets';
-		if ( page === 'dragwyb-support-agents' ) return 'agents';
-		if ( page === 'dragwyb-support-categories' || page === 'dragwyb-support-tags' || page === 'dragwyb-support-taxonomies' ) return 'taxonomies';
-		if ( page === 'dragwyb-support-settings' ) return 'settings';
+	const [activeTab, setActiveTab] = useState(() => {
+		const searchParams = new URLSearchParams(window.location.search);
+		const page = searchParams.get('page') || '';
+		const subtab = searchParams.get('subtab') || '';
+		if (subtab === 'categories' || subtab === 'tags' || subtab === 'taxonomies') return 'taxonomies';
+		if (subtab) return subtab;
+		if (page === 'dragwyb-support-tickets') return 'tickets';
+		if (page === 'dragwyb-support-agents') return 'agents';
+		if (page === 'dragwyb-support-categories' || page === 'dragwyb-support-tags' || page === 'dragwyb-support-taxonomies') return 'taxonomies';
+		if (page === 'dragwyb-support-settings') return 'settings';
 		return 'dashboard';
-	} );
+	});
 
 	// Global Toast / Notice
-	const [ notice, setNotice ] = useState( null );
+	const [notice, setNotice] = useState(null);
 
 	// Dashboard Stats
-	const [ dashboardStats, setDashboardStats ] = useState( null );
-	const [ statsLoading, setStatsLoading ] = useState( false );
-	const [ statusUpdating, setStatusUpdating ] = useState( false );
+	const [dashboardStats, setDashboardStats] = useState(null);
+	const [statsLoading, setStatsLoading] = useState(false);
+	const [statusUpdating, setStatusUpdating] = useState(false);
 
 	// Tickets State
-	const [ tickets, setTickets ] = useState( [] );
-	const [ totalTickets, setTotalTickets ] = useState( 0 );
-	const [ currentPage, setCurrentPage ] = useState( 1 );
-	const [ totalPages, setTotalPages ] = useState( 1 );
-	const [ loading, setLoading ] = useState( false );
-	const [ selectedTicketId, setSelectedTicketId ] = useState( null );
-	const [ selectedTicket, setSelectedTicket ] = useState( null );
-	const [ ticketLoading, setTicketLoading ] = useState( false );
+	const [tickets, setTickets] = useState([]);
+	const [totalTickets, setTotalTickets] = useState(0);
+	const [currentPage, setCurrentPage] = useState(1);
+	const [totalPages, setTotalPages] = useState(1);
+	const [loading, setLoading] = useState(false);
+	const [selectedTicketId, setSelectedTicketId] = useState(null);
+	const [selectedTicket, setSelectedTicket] = useState(null);
+	const [ticketLoading, setTicketLoading] = useState(false);
 
 	// Filters
-	const [ statusFilter, setStatusFilter ] = useState( 'all' );
-	const [ priorityFilter, setPriorityFilter ] = useState( 'all' );
-	const [ categoryFilter, setCategoryFilter ] = useState( 'all' );
-	const [ searchQuery, setSearchQuery ] = useState( '' );
+	const [statusFilter, setStatusFilter] = useState('all');
+	const [priorityFilter, setPriorityFilter] = useState('all');
+	const [categoryFilter, setCategoryFilter] = useState('all');
+	const [searchQuery, setSearchQuery] = useState('');
 
 	// Metadata
-	const [ categories, setCategories ] = useState( [] );
-	const [ tags, setTags ] = useState( [] );
-	const [ agents, setAgents ] = useState( [] );
-	const [ supportSettings, setSupportSettings ] = useState( {} );
-	const [ permissionsMatrix, setPermissionsMatrix ] = useState( null );
+	const [categories, setCategories] = useState([]);
+	const [tags, setTags] = useState([]);
+	const [agents, setAgents] = useState([]);
+	const [supportSettings, setSupportSettings] = useState({});
+	const [permissionsMatrix, setPermissionsMatrix] = useState(null);
 
 	// WooCommerce context
-	const [ wcData, setWcData ] = useState( null );
-	const [ wcLoading, setWcLoading ] = useState( false );
+	const [wcData, setWcData] = useState(null);
+	const [wcLoading, setWcLoading] = useState(false);
 
-	const canManageAgents = !! ( userPermissions.is_admin || userPermissions.manage_agents );
-	const canManageTaxonomies = !! ( userPermissions.is_admin || userPermissions.manage_categories || userPermissions.manage_tags );
-	const canManageSettings = !! ( userPermissions.is_admin || userPermissions.manage_settings );
+	const canManageAgents = !!(userPermissions.is_admin || userPermissions.manage_agents);
+	const canManageTaxonomies = !!(userPermissions.is_admin || userPermissions.manage_categories || userPermissions.manage_tags);
+	const canManageSettings = !!(userPermissions.is_admin || userPermissions.manage_settings);
 
 	// Auto guard tabs against direct URL access if not authorized
-	useEffect( () => {
-		if ( activeTab === 'agents' && ! canManageAgents ) {
-			setActiveTab( 'dashboard' );
-		} else if ( activeTab === 'taxonomies' && ! canManageTaxonomies ) {
-			setActiveTab( 'dashboard' );
-		} else if ( activeTab === 'settings' && ! canManageSettings ) {
-			setActiveTab( 'dashboard' );
+	useEffect(() => {
+		if (activeTab === 'agents' && !canManageAgents) {
+			setActiveTab('dashboard');
+		} else if (activeTab === 'taxonomies' && !canManageTaxonomies) {
+			setActiveTab('dashboard');
+		} else if (activeTab === 'settings' && !canManageSettings) {
+			setActiveTab('dashboard');
 		}
-	}, [ activeTab, canManageAgents, canManageTaxonomies, canManageSettings ] );
+	}, [activeTab, canManageAgents, canManageTaxonomies, canManageSettings]);
 
-	const showNotice = ( message, type = 'success' ) => {
-		setNotice( { message, type } );
-		setTimeout( () => setNotice( null ), 6000 );
+	const showNotice = (message, type = 'success') => {
+		setNotice({ message, type });
+		setTimeout(() => setNotice(null), 6000);
 	};
 
 	// Fetch Metadata & Permissions
-	const fetchMetaData = useCallback( async () => {
+	const fetchMetaData = useCallback(async () => {
 		try {
 			const promises = [
-				apiFetch( { path: '/dctc-ai/v1/support/categories' } ),
-				apiFetch( { path: '/dctc-ai/v1/support/tags' } ),
-				apiFetch( { path: '/dctc-ai/v1/support/agents' } ),
-				apiFetch( { path: '/dctc-ai/v1/support/settings' } ),
-				apiFetch( { path: '/dctc-ai/v1/support/permissions' } ),
+				apiFetch({ path: '/dctc-ai/v1/support/categories' }),
+				apiFetch({ path: '/dctc-ai/v1/support/tags' }),
+				apiFetch({ path: '/dctc-ai/v1/support/agents' }),
+				apiFetch({ path: '/dctc-ai/v1/support/settings' }),
+				apiFetch({ path: '/dctc-ai/v1/support/permissions' }),
 			];
-			const [ catRes, tagRes, agentRes, setRes, permRes ] = await Promise.allSettled( promises );
+			const [catRes, tagRes, agentRes, setRes, permRes] = await Promise.allSettled(promises);
 
-			if ( catRes.status === 'fulfilled' && catRes.value?.success ) setCategories( catRes.value.categories || [] );
-			if ( tagRes.status === 'fulfilled' && tagRes.value?.success ) setTags( tagRes.value.tags || [] );
-			if ( agentRes.status === 'fulfilled' && agentRes.value?.success ) setAgents( agentRes.value.agents || [] );
-			if ( setRes.status === 'fulfilled' && setRes.value?.success ) setSupportSettings( setRes.value.settings || {} );
-			if ( permRes.status === 'fulfilled' && permRes.value?.success ) {
-				if ( permRes.value.permissions_matrix ) setPermissionsMatrix( permRes.value.permissions_matrix );
-				if ( permRes.value.user_permissions ) setUserPermissions( permRes.value.user_permissions );
+			if (catRes.status === 'fulfilled' && catRes.value?.success) setCategories(catRes.value.categories || []);
+			if (tagRes.status === 'fulfilled' && tagRes.value?.success) setTags(tagRes.value.tags || []);
+			if (agentRes.status === 'fulfilled' && agentRes.value?.success) setAgents(agentRes.value.agents || []);
+			if (setRes.status === 'fulfilled' && setRes.value?.success) setSupportSettings(setRes.value.settings || {});
+			if (permRes.status === 'fulfilled' && permRes.value?.success) {
+				if (permRes.value.permissions_matrix) setPermissionsMatrix(permRes.value.permissions_matrix);
+				if (permRes.value.user_permissions) setUserPermissions(permRes.value.user_permissions);
 			}
-		} catch ( err ) {
-			console.error( 'Error fetching support metadata:', err );
+		} catch (err) {
+			console.error('Error fetching support metadata:', err);
 		}
-	}, [] );
+	}, []);
 
 	// Fetch Dashboard Stats
-	const fetchDashboardStats = useCallback( async () => {
-		setStatsLoading( true );
+	const fetchDashboardStats = useCallback(async () => {
+		setStatsLoading(true);
 		try {
-			const data = await apiFetch( { path: '/dctc-ai/v1/support/dashboard' } );
-			if ( data?.success ) {
-				setDashboardStats( data.stats || null );
+			const data = await apiFetch({ path: '/dctc-ai/v1/support/dashboard' });
+			if (data?.success) {
+				setDashboardStats(data.stats || null);
 			}
-		} catch ( err ) {
-			console.error( 'Error fetching dashboard stats:', err );
+		} catch (err) {
+			console.error('Error fetching dashboard stats:', err);
 		} finally {
-			setStatsLoading( false );
+			setStatsLoading(false);
 		}
-	}, [] );
+	}, []);
 
 	// Fetch Tickets List
-	const fetchTickets = useCallback( async () => {
-		setLoading( true );
+	const fetchTickets = useCallback(async () => {
+		setLoading(true);
 		try {
-			const queryParams = new URLSearchParams( {
+			const queryParams = new URLSearchParams({
 				page: currentPage,
 				per_page: 20,
 				status: statusFilter,
 				priority: priorityFilter,
 				category_id: categoryFilter !== 'all' ? categoryFilter : '',
 				search: searchQuery,
-			} );
+			});
 
-			const data = await apiFetch( {
-				path: `/dctc-ai/v1/support/tickets?${ queryParams.toString() }`,
-			} );
-			if ( data?.success ) {
-				setTickets( data.tickets || [] );
-				setTotalTickets( data.total || 0 );
-				setTotalPages( data.total_pages || 1 );
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets?${queryParams.toString()}`,
+			});
+			if (data?.success) {
+				setTickets(data.tickets || []);
+				setTotalTickets(data.total || 0);
+				setTotalPages(data.total_pages || 1);
 			}
-		} catch ( err ) {
-			console.error( 'Error fetching tickets:', err );
+		} catch (err) {
+			console.error('Error fetching tickets:', err);
 		} finally {
-			setLoading( false );
+			setLoading(false);
 		}
-	}, [ currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery ] );
+	}, [currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery]);
 
 	// Fetch Single Ticket Details with silent polling and change detection
-	const fetchTicketDetails = useCallback( async ( ticketId, isSilent = false ) => {
-		if ( ! ticketId ) return;
-		if ( ! isSilent ) {
-			setTicketLoading( true );
+	const fetchTicketDetails = useCallback(async (ticketId, isSilent = false) => {
+		if (!ticketId) return;
+		if (!isSilent) {
+			setTicketLoading(true);
 		}
 		try {
-			const data = await apiFetch( {
-				path: `/dctc-ai/v1/support/tickets/${ ticketId }`,
-			} );
-			if ( data?.success && data.ticket ) {
-				setSelectedTicket( ( prevTicket ) => {
-					if ( ! prevTicket || prevTicket.id !== data.ticket.id ) {
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${ticketId}`,
+			});
+			if (data?.success && data.ticket) {
+				setSelectedTicket((prevTicket) => {
+					if (!prevTicket || prevTicket.id !== data.ticket.id) {
 						return data.ticket;
 					}
 
-					const prevMessages = Array.isArray( prevTicket.messages ) ? prevTicket.messages : [];
-					const incomingMessages = Array.isArray( data.ticket.messages ) ? data.ticket.messages : [];
+					const prevMessages = Array.isArray(prevTicket.messages) ? prevTicket.messages : [];
+					const incomingMessages = Array.isArray(data.ticket.messages) ? data.ticket.messages : [];
 
 					// Check if message count or message contents changed
 					let messagesChanged = prevMessages.length !== incomingMessages.length;
-					if ( ! messagesChanged ) {
-						for ( let i = 0; i < incomingMessages.length; i++ ) {
-							const prevM = prevMessages[ i ];
-							const newM = incomingMessages[ i ];
+					if (!messagesChanged) {
+						for (let i = 0; i < incomingMessages.length; i++) {
+							const prevM = prevMessages[i];
+							const newM = incomingMessages[i];
 							if (
 								prevM.id !== newM.id ||
 								prevM.content !== newM.content ||
@@ -208,11 +208,11 @@ export default function App() {
 						prevTicket.assigned_agent_id !== data.ticket.assigned_agent_id ||
 						prevTicket.control_mode !== data.ticket.control_mode ||
 						prevTicket.subject !== data.ticket.subject ||
-						JSON.stringify( prevTicket.tags || [] ) !== JSON.stringify( data.ticket.tags || [] ) ||
-						JSON.stringify( prevTicket.notes || [] ) !== JSON.stringify( data.ticket.notes || [] ) ||
-						JSON.stringify( prevTicket.events || [] ) !== JSON.stringify( data.ticket.events || [] );
+						JSON.stringify(prevTicket.tags || []) !== JSON.stringify(data.ticket.tags || []) ||
+						JSON.stringify(prevTicket.notes || []) !== JSON.stringify(data.ticket.notes || []) ||
+						JSON.stringify(prevTicket.events || []) !== JSON.stringify(data.ticket.events || []);
 
-					if ( messagesChanged || metadataChanged ) {
+					if (messagesChanged || metadataChanged) {
 						return {
 							...prevTicket,
 							...data.ticket,
@@ -222,48 +222,48 @@ export default function App() {
 
 					// Return identical reference to prevent re-render / blink
 					return prevTicket;
-				} );
+				});
 			}
-		} catch ( err ) {
-			console.error( 'Error fetching ticket detail:', err );
+		} catch (err) {
+			console.error('Error fetching ticket detail:', err);
 		} finally {
-			if ( ! isSilent ) {
-				setTicketLoading( false );
+			if (!isSilent) {
+				setTicketLoading(false);
 			}
 		}
-	}, [] );
+	}, []);
 
 	// Fetch WooCommerce Context
-	const fetchWooCommerceContext = useCallback( async ( ticketId ) => {
-		if ( ! ticketId ) return;
-		setWcLoading( true );
+	const fetchWooCommerceContext = useCallback(async (ticketId) => {
+		if (!ticketId) return;
+		setWcLoading(true);
 		try {
-			const data = await apiFetch( {
-				path: `/dctc-ai/v1/support/tickets/${ ticketId }/woocommerce`,
-			} );
-			if ( data?.success ) {
-				setWcData( data.woocommerce || null );
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${ticketId}/woocommerce`,
+			});
+			if (data?.success) {
+				setWcData(data.woocommerce || null);
 			}
-		} catch ( err ) {
-			console.error( 'Error fetching WooCommerce context:', err );
-			setWcData( null );
+		} catch (err) {
+			console.error('Error fetching WooCommerce context:', err);
+			setWcData(null);
 		} finally {
-			setWcLoading( false );
+			setWcLoading(false);
 		}
-	}, [] );
+	}, []);
 
 	// Update Availability
-	const handleUpdateStatus = async ( newStatus ) => {
-		setStatusUpdating( true );
+	const handleUpdateStatus = async (newStatus) => {
+		setStatusUpdating(true);
 		try {
-			const data = await apiFetch( {
+			const data = await apiFetch({
 				path: '/dctc-ai/v1/support/agents/me/status',
 				method: 'POST',
 				data: { status: newStatus },
-			} );
-			if ( data?.success ) {
-				setDashboardStats( ( prev ) => {
-					if ( ! prev ) return prev;
+			});
+			if (data?.success) {
+				setDashboardStats((prev) => {
+					if (!prev) return prev;
 					return {
 						...prev,
 						agent: {
@@ -271,57 +271,72 @@ export default function App() {
 							availability_status: newStatus,
 						},
 					};
-				} );
-				showNotice( __( 'Availability status updated.', 'dragwyb-click-to-chat' ), 'success' );
+				});
+				showNotice(__('Availability status updated.', 'dragwyb-click-to-chat'), 'success');
 			}
-		} catch ( err ) {
-			console.error( 'Error updating agent status:', err );
+		} catch (err) {
+			console.error('Error updating agent status:', err);
 		} finally {
-			setStatusUpdating( false );
+			setStatusUpdating(false);
 		}
 	};
 
 	// Jump to tickets workspace with filter
-	const handleJumpToTickets = ( filter = 'all', ticketId = null ) => {
-		setStatusFilter( filter );
-		setCurrentPage( 1 );
-		if ( ticketId ) {
-			setSelectedTicketId( ticketId );
+	const handleJumpToTickets = (filter = 'all', ticketId = null) => {
+		setStatusFilter(filter);
+		setCurrentPage(1);
+		if (ticketId) {
+			setSelectedTicketId(ticketId);
 		}
-		setActiveTab( 'tickets' );
+		setActiveTab('tickets');
 	};
 
-	useEffect( () => {
+	useEffect(() => {
 		fetchMetaData();
 		fetchDashboardStats();
-	}, [ fetchMetaData, fetchDashboardStats ] );
+	}, [fetchMetaData, fetchDashboardStats]);
 
-	useEffect( () => {
+	useEffect(() => {
 		fetchTickets();
-	}, [ fetchTickets ] );
+	}, [fetchTickets]);
 
-	useEffect( () => {
-		if ( selectedTicketId ) {
-			fetchTicketDetails( selectedTicketId );
-			fetchWooCommerceContext( selectedTicketId );
-		} else {
-			setSelectedTicket( null );
-			setWcData( null );
+	// 1-minute active polling to check for new tickets when viewing all tickets (and NOT inside a specific ticket conversation)
+	useEffect(() => {
+		if (activeTab !== 'tickets' || selectedTicketId) {
+			return;
 		}
-	}, [ selectedTicketId, fetchTicketDetails, fetchWooCommerceContext ] );
+
+		const interval = setInterval(() => {
+			if (typeof document !== 'undefined' && document.hidden) return;
+			// Refresh tickets list silently in background
+			fetchTickets();
+		}, 60000); // Every 1 minute (60 seconds)
+
+		return () => clearInterval(interval);
+	}, [activeTab, selectedTicketId, fetchTickets]);
+
+	useEffect(() => {
+		if (selectedTicketId) {
+			fetchTicketDetails(selectedTicketId);
+			fetchWooCommerceContext(selectedTicketId);
+		} else {
+			setSelectedTicket(null);
+			setWcData(null);
+		}
+	}, [selectedTicketId, fetchTicketDetails, fetchWooCommerceContext]);
 
 	return (
 		<div className="dctc-sc-app-wrapper">
-			{ /* Standalone Support Center Top Bar */ }
+			{ /* Standalone Support Center Top Bar */}
 			<header className="dctc-sc-header-bar">
 				<div className="dctc-sc-brand">
 					<div className="dctc-sc-brand-icon">
 						<span className="dashicons dashicons-format-chat"></span>
 					</div>
 					<div>
-						<h1 className="dctc-sc-app-title">{ __( 'Support Center', 'dragwyb-click-to-chat' ) }</h1>
+						<h1 className="dctc-sc-app-title">{__('Support Center', 'dragwyb-click-to-chat')}</h1>
 						<span className="dctc-sc-app-tagline">
-							{ __( 'Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat' ) }
+							{__('Hybrid AI & Agent Helpdesk', 'dragwyb-click-to-chat')}
 						</span>
 					</div>
 				</div>
@@ -329,160 +344,160 @@ export default function App() {
 				<nav className="dctc-sc-top-nav">
 					<button
 						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'dashboard' ? 'active' : '' }` }
-						onClick={ () => setActiveTab( 'dashboard' ) }
+						className={`dctc-sc-nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+						onClick={() => setActiveTab('dashboard')}
 					>
 						<span className="dashicons dashicons-dashboard"></span>
-						{ __( 'Dashboard', 'dragwyb-click-to-chat' ) }
+						{__('Dashboard', 'dragwyb-click-to-chat')}
 					</button>
 
 					<button
 						type="button"
-						className={ `dctc-sc-nav-link ${ activeTab === 'tickets' ? 'active' : '' }` }
-						onClick={ () => {
-							setSelectedTicketId( null );
-							setActiveTab( 'tickets' );
-						} }
+						className={`dctc-sc-nav-link ${activeTab === 'tickets' ? 'active' : ''}`}
+						onClick={() => {
+							setSelectedTicketId(null);
+							setActiveTab('tickets');
+						}}
 					>
 						<span className="dashicons dashicons-tickets-alt"></span>
-						{ __( 'Tickets', 'dragwyb-click-to-chat' ) }
-						{ totalTickets > 0 && <span className="dctc-sc-nav-badge">{ totalTickets }</span> }
+						{__('Tickets', 'dragwyb-click-to-chat')}
+						{totalTickets > 0 && <span className="dctc-sc-nav-badge">{totalTickets}</span>}
 					</button>
 
-					{ canManageAgents && (
+					{canManageAgents && (
 						<button
 							type="button"
-							className={ `dctc-sc-nav-link ${ activeTab === 'agents' ? 'active' : '' }` }
-							onClick={ () => setActiveTab( 'agents' ) }
+							className={`dctc-sc-nav-link ${activeTab === 'agents' ? 'active' : ''}`}
+							onClick={() => setActiveTab('agents')}
 						>
 							<span className="dashicons dashicons-groups"></span>
-							{ __( 'Agents & Staff', 'dragwyb-click-to-chat' ) }
+							{__('Agents & Staff', 'dragwyb-click-to-chat')}
 						</button>
-					) }
+					)}
 
-					{ canManageTaxonomies && (
+					{canManageTaxonomies && (
 						<button
 							type="button"
-							className={ `dctc-sc-nav-link ${ activeTab === 'taxonomies' ? 'active' : '' }` }
-							onClick={ () => setActiveTab( 'taxonomies' ) }
+							className={`dctc-sc-nav-link ${activeTab === 'taxonomies' ? 'active' : ''}`}
+							onClick={() => setActiveTab('taxonomies')}
 						>
 							<span className="dashicons dashicons-tag"></span>
-							{ __( 'Categories & Tags', 'dragwyb-click-to-chat' ) }
+							{__('Categories & Tags', 'dragwyb-click-to-chat')}
 						</button>
-					) }
+					)}
 
-					{ canManageSettings && (
+					{canManageSettings && (
 						<button
 							type="button"
-							className={ `dctc-sc-nav-link ${ activeTab === 'settings' ? 'active' : '' }` }
-							onClick={ () => setActiveTab( 'settings' ) }
+							className={`dctc-sc-nav-link ${activeTab === 'settings' ? 'active' : ''}`}
+							onClick={() => setActiveTab('settings')}
 						>
 							<span className="dashicons dashicons-admin-generic"></span>
-							{ __( 'Support Settings', 'dragwyb-click-to-chat' ) }
+							{__('Support Settings', 'dragwyb-click-to-chat')}
 						</button>
-					) }
+					)}
 				</nav>
 
 				<div className="dctc-sc-header-right">
 					<div className="dctc-sc-user-pill">
 						<div className="dctc-sc-user-avatar">
-							{ ( userPermissions.agent_name || 'Admin' ).substring( 0, 2 ).toUpperCase() }
+							{(userPermissions.agent_name || 'Admin').substring(0, 2).toUpperCase()}
 						</div>
 						<div className="dctc-sc-user-meta">
 							<span className="dctc-sc-user-name">
-								{ userPermissions.agent_name || 'Aniket Dogra' }
+								{userPermissions.agent_name || 'Aniket Dogra'}
 							</span>
 							<span className="dctc-sc-user-role">
-								{ userPermissions.is_admin ? __( 'Administrator', 'dragwyb-click-to-chat' ) : __( 'Support Agent', 'dragwyb-click-to-chat' ) }
+								{userPermissions.is_admin ? __('Administrator', 'dragwyb-click-to-chat') : __('Support Agent', 'dragwyb-click-to-chat')}
 							</span>
 						</div>
 					</div>
 				</div>
 			</header>
 
-			{ /* Global Toast Notice */ }
-			{ notice && (
-				<div className={ `dctc-sc-global-toast ${ notice.type }` }>
-					<span className={ `dashicons ${ notice.type === 'success' ? 'dashicons-yes-alt' : notice.type === 'error' ? 'dashicons-warning' : 'dashicons-info' }` }></span>
-					<span>{ notice.message }</span>
+			{ /* Global Toast Notice */}
+			{notice && (
+				<div className={`dctc-sc-global-toast ${notice.type}`}>
+					<span className={`dashicons ${notice.type === 'success' ? 'dashicons-yes-alt' : notice.type === 'error' ? 'dashicons-warning' : 'dashicons-info'}`}></span>
+					<span>{notice.message}</span>
 				</div>
-			) }
+			)}
 
-			{ /* Main Body Content View */ }
+			{ /* Main Body Content View */}
 			<main className="dctc-sc-main-content">
-				{ activeTab === 'dashboard' && (
+				{activeTab === 'dashboard' && (
 					<DashboardView
-						dashboardStats={ dashboardStats }
-						statsLoading={ statsLoading }
-						statusUpdating={ statusUpdating }
-						onUpdateStatus={ handleUpdateStatus }
-						onRefresh={ () => { fetchDashboardStats(); fetchTickets(); } }
-						onJumpToTickets={ handleJumpToTickets }
-						onSwitchTab={ setActiveTab }
-						userPermissions={ userPermissions }
+						dashboardStats={dashboardStats}
+						statsLoading={statsLoading}
+						statusUpdating={statusUpdating}
+						onUpdateStatus={handleUpdateStatus}
+						onRefresh={() => { fetchDashboardStats(); fetchTickets(); }}
+						onJumpToTickets={handleJumpToTickets}
+						onSwitchTab={setActiveTab}
+						userPermissions={userPermissions}
 					/>
-				) }
+				)}
 
-				{ activeTab === 'tickets' && (
+				{activeTab === 'tickets' && (
 					<TicketsView
-						tickets={ tickets }
-						totalTickets={ totalTickets }
-						loading={ loading }
-						currentPage={ currentPage }
-						totalPages={ totalPages }
-						setCurrentPage={ setCurrentPage }
-						statusFilter={ statusFilter }
-						setStatusFilter={ setStatusFilter }
-						priorityFilter={ priorityFilter }
-						setPriorityFilter={ setPriorityFilter }
-						categoryFilter={ categoryFilter }
-						setCategoryFilter={ setCategoryFilter }
-						searchQuery={ searchQuery }
-						setSearchQuery={ setSearchQuery }
-						selectedTicketId={ selectedTicketId }
-						setSelectedTicketId={ setSelectedTicketId }
-						selectedTicket={ selectedTicket }
-						ticketLoading={ ticketLoading }
-						categories={ categories }
-						agents={ agents }
-						tags={ tags }
-						wcData={ wcData }
-						wcLoading={ wcLoading }
-						onRefreshTickets={ fetchTickets }
-						onRefreshTicketDetails={ fetchTicketDetails }
-						onShowNotice={ showNotice }
-						userPermissions={ userPermissions }
+						tickets={tickets}
+						totalTickets={totalTickets}
+						loading={loading}
+						currentPage={currentPage}
+						totalPages={totalPages}
+						setCurrentPage={setCurrentPage}
+						statusFilter={statusFilter}
+						setStatusFilter={setStatusFilter}
+						priorityFilter={priorityFilter}
+						setPriorityFilter={setPriorityFilter}
+						categoryFilter={categoryFilter}
+						setCategoryFilter={setCategoryFilter}
+						searchQuery={searchQuery}
+						setSearchQuery={setSearchQuery}
+						selectedTicketId={selectedTicketId}
+						setSelectedTicketId={setSelectedTicketId}
+						selectedTicket={selectedTicket}
+						ticketLoading={ticketLoading}
+						categories={categories}
+						agents={agents}
+						tags={tags}
+						wcData={wcData}
+						wcLoading={wcLoading}
+						onRefreshTickets={fetchTickets}
+						onRefreshTicketDetails={fetchTicketDetails}
+						onShowNotice={showNotice}
+						userPermissions={userPermissions}
 					/>
-				) }
+				)}
 
-				{ activeTab === 'agents' && canManageAgents && (
+				{activeTab === 'agents' && canManageAgents && (
 					<AgentsView
-						agents={ agents }
-						onRefresh={ fetchMetaData }
-						userPermissions={ userPermissions }
+						agents={agents}
+						onRefresh={fetchMetaData}
+						userPermissions={userPermissions}
 					/>
-				) }
+				)}
 
-				{ activeTab === 'taxonomies' && canManageTaxonomies && (
+				{activeTab === 'taxonomies' && canManageTaxonomies && (
 					<TaxonomiesView
-						categories={ categories }
-						tags={ tags }
-						onRefresh={ fetchMetaData }
-						onShowNotice={ showNotice }
-						userPermissions={ userPermissions }
+						categories={categories}
+						tags={tags}
+						onRefresh={fetchMetaData}
+						onShowNotice={showNotice}
+						userPermissions={userPermissions}
 					/>
-				) }
+				)}
 
-				{ activeTab === 'settings' && canManageSettings && (
+				{activeTab === 'settings' && canManageSettings && (
 					<SettingsView
-						supportSettings={ supportSettings }
-						setSupportSettings={ setSupportSettings }
-						permissionsMatrix={ permissionsMatrix }
-						setPermissionsMatrix={ setPermissionsMatrix }
-						onShowNotice={ showNotice }
-						userPermissions={ userPermissions }
+						supportSettings={supportSettings}
+						setSupportSettings={setSupportSettings}
+						permissionsMatrix={permissionsMatrix}
+						setPermissionsMatrix={setPermissionsMatrix}
+						onShowNotice={showNotice}
+						userPermissions={userPermissions}
 					/>
-				) }
+				)}
 			</main>
 		</div>
 	);

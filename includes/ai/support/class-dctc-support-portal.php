@@ -269,15 +269,28 @@ class DCTC_Support_Portal {
 									<?php esc_html_e( 'Subject', 'dragwyb-click-to-chat' ); ?>
 									<span class="dctc-portal-required">*</span>
 								</label>
-								<input type="text" id="dctc-new-subject" required class="dctc-portal-input" placeholder="<?php esc_attr_e( 'Brief summary of what you need help with', 'dragwyb-click-to-chat' ); ?>" />
+								<input type="text" id="dctc-new-subject" required class="dctc-portal-input" placeholder="<?php esc_attr_e( 'Enter a support issue title...', 'dragwyb-click-to-chat' ); ?>" />
 							</div>
 
 							<div class="dctc-form-group">
 								<label for="dctc-new-message">
-									<?php esc_html_e( 'Message Details', 'dragwyb-click-to-chat' ); ?>
+									<?php esc_html_e( 'Message', 'dragwyb-click-to-chat' ); ?>
 									<span class="dctc-portal-required">*</span>
 								</label>
-								<textarea id="dctc-new-message" rows="4" required class="dctc-portal-textarea" placeholder="<?php esc_attr_e( 'Please provide detailed information to help us assist you faster...', 'dragwyb-click-to-chat' ); ?>"></textarea>
+								<div class="dctc-portal-wysiwyg-container">
+									<div class="dctc-portal-wysiwyg-toolbar">
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="bold" title="<?php esc_attr_e( 'Bold', 'dragwyb-click-to-chat' ); ?>"><strong>B</strong></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="italic" title="<?php esc_attr_e( 'Italic', 'dragwyb-click-to-chat' ); ?>"><em>I</em></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="underline" title="<?php esc_attr_e( 'Underline', 'dragwyb-click-to-chat' ); ?>"><u>U</u></button>
+										<span class="dctc-portal-wysiwyg-divider"></span>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="link" title="<?php esc_attr_e( 'Insert Link', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-admin-links"></span></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="ul" title="<?php esc_attr_e( 'Bullet List', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-ul"></span></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="ol" title="<?php esc_attr_e( 'Numbered List', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-ol"></span></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="quote" title="<?php esc_attr_e( 'Blockquote', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-quote"></span></button>
+										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="code" title="<?php esc_attr_e( 'Code Block', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-code"></span></button>
+									</div>
+									<textarea id="dctc-new-message" rows="5" required class="dctc-portal-textarea dctc-portal-wysiwyg-textarea" placeholder="<?php esc_attr_e( 'Briefly describe the problem details...', 'dragwyb-click-to-chat' ); ?>"></textarea>
+								</div>
 							</div>
 						</div>
 
@@ -367,6 +380,7 @@ class DCTC_Support_Portal {
 
 				let currentTicketUuid = null;
 				let guestToken = localStorage.getItem("dctc_guest_token") || "";
+				let detailPollInterval = null;
 
 				let taxonomiesData = {};
 				try {
@@ -387,6 +401,11 @@ class DCTC_Support_Portal {
 					if (view) view.classList.add("active");
 
 					if (view === viewList) {
+						if (detailPollInterval) {
+							clearInterval(detailPollInterval);
+							detailPollInterval = null;
+						}
+						currentTicketUuid = null;
 						if (btnNew) btnNew.style.display = "inline-flex";
 						if (btnMyTickets) btnMyTickets.style.display = "none";
 					} else {
@@ -579,13 +598,25 @@ class DCTC_Support_Portal {
 					}
 				}
 
-				// Load Single Ticket Detail
-				async function loadTicketDetail(uuid) {
+				// Load Single Ticket Detail with Real-Time Active Polling
+				async function loadTicketDetail(uuid, isSilentUpdate) {
 					currentTicketUuid = uuid;
-					showView(viewDetail);
+					if (!isSilentUpdate) {
+						showView(viewDetail);
+						if (detailPollInterval) clearInterval(detailPollInterval);
+						detailPollInterval = setInterval(function() {
+							if (document.hidden) return;
+							if (currentTicketUuid) {
+								loadTicketDetail(currentTicketUuid, true);
+							}
+						}, 4000); // Poll every 4 seconds for fresh agent replies
+					}
+
 					const msgContainer = document.getElementById("dctc-portal-detail-messages");
 					if (!msgContainer) return;
-					msgContainer.innerHTML = "<div>Loading conversation...</div>";
+					if (!isSilentUpdate) {
+						msgContainer.innerHTML = "<div>Loading conversation...</div>";
+					}
 
 					try {
 						const headers = { "X-WP-Nonce": nonce };
@@ -637,13 +668,51 @@ class DCTC_Support_Portal {
 								msgHtml += "</div>";
 							});
 
+							const previousScrollBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 40;
 							msgContainer.innerHTML = msgHtml || "<div>No messages yet.</div>";
-							msgContainer.scrollTop = msgContainer.scrollHeight;
+							if (!isSilentUpdate || previousScrollBottom) {
+								msgContainer.scrollTop = msgContainer.scrollHeight;
+							}
 						}
 					} catch (err) {
-						msgContainer.innerHTML = "<div style=\"color:#DC2626;\">Error loading ticket details.</div>";
+						if (!isSilentUpdate) {
+							msgContainer.innerHTML = "<div style=\"color:#DC2626;\">Error loading ticket details.</div>";
+						}
 					}
 				}
+
+				// WYSIWYG Formatting Actions for Create Ticket Modal
+				function applyPortalFormatting(tagType) {
+					const textarea = document.getElementById("dctc-new-message");
+					if (!textarea) return;
+					const start = textarea.selectionStart || 0;
+					const end = textarea.selectionEnd || 0;
+					const text = textarea.value || "";
+					const selected = text.substring(start, end) || "text";
+					let replacement = "";
+					if (tagType === "bold") replacement = "<b>" + selected + "</b>";
+					else if (tagType === "italic") replacement = "<i>" + selected + "</i>";
+					else if (tagType === "underline") replacement = "<u>" + selected + "</u>";
+					else if (tagType === "link") replacement = "<a href=\"https://example.com\">" + selected + "</a>";
+					else if (tagType === "ul") replacement = "\n<ul>\n  <li>" + selected + "</li>\n</ul>\n";
+					else if (tagType === "ol") replacement = "\n<ol>\n  <li>" + selected + "</li>\n</ol>\n";
+					else if (tagType === "quote") replacement = "\n<blockquote>" + selected + "</blockquote>\n";
+					else if (tagType === "code") replacement = "<code>" + selected + "</code>";
+
+					textarea.value = text.substring(0, start) + replacement + text.substring(end);
+					setTimeout(function() {
+						textarea.focus();
+						textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+					}, 40);
+				}
+
+				document.querySelectorAll(".dctc-portal-wysiwyg-btn").forEach(function(btn) {
+					btn.addEventListener("click", function(e) {
+						e.preventDefault();
+						const tag = this.getAttribute("data-tag");
+						if (tag) applyPortalFormatting(tag);
+					});
+				});
 
 				// Submit New Ticket
 				if (newForm) {
@@ -794,7 +863,7 @@ class DCTC_Support_Portal {
 					let searchTimeout;
 					searchInput.addEventListener("input", function() {
 						clearTimeout(searchTimeout);
-						searchTimeout = setTimeout(loadTickets, 300);
+						searchTimeout = setTimeout(loadTickets, 5000);
 					});
 				}
 
@@ -1254,6 +1323,69 @@ class DCTC_Support_Portal {
 				flex-wrap: wrap;
 				gap: 6px;
 				margin-top: 6px;
+			}
+			
+			/* WYSIWYG Editor Styles */
+			.dctc-portal-wysiwyg-container {
+				background: #ffffff;
+				border: 1px solid #CBD5E1;
+				border-radius: 8px;
+				overflow: hidden;
+				transition: border-color 0.15s, box-shadow 0.15s;
+			}
+			.dctc-portal-wysiwyg-container:focus-within {
+				border-color: #4F46E5;
+				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+			}
+			.dctc-portal-wysiwyg-toolbar {
+				align-items: center;
+				background: #F8FAFC;
+				border-bottom: 1px solid #E2E8F0;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 4px;
+				padding: 6px 10px;
+			}
+			.dctc-portal-wysiwyg-btn {
+				align-items: center;
+				background: #ffffff;
+				border: 1px solid #E2E8F0;
+				border-radius: 6px;
+				color: #475569;
+				cursor: pointer;
+				display: inline-flex;
+				font-size: 12px;
+				font-weight: 600;
+				height: 28px;
+				justify-content: center;
+				min-width: 28px;
+				padding: 2px 8px;
+				transition: all 0.15s;
+			}
+			.dctc-portal-wysiwyg-btn:hover {
+				background: #EEF2FF;
+				border-color: #C7D2FE;
+				color: #4F46E5;
+			}
+			.dctc-portal-wysiwyg-btn .dashicons {
+				font-size: 15px;
+				height: 15px;
+				width: 15px;
+			}
+			.dctc-portal-wysiwyg-divider {
+				background: #CBD5E1;
+				height: 18px;
+				margin: 0 4px;
+				width: 1px;
+			}
+			.dctc-portal-wysiwyg-textarea {
+				background: transparent !important;
+				border: none !important;
+				border-radius: 0 !important;
+				box-shadow: none !important;
+			}
+			.dctc-portal-wysiwyg-textarea:focus {
+				box-shadow: none !important;
 			}
 		';
 	}

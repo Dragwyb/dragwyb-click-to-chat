@@ -110,7 +110,6 @@ export default function TaxonomiesView( {
 		name: '',
 		slug: '',
 		sku: '',
-		price: '',
 		category_id: 0,
 	} );
 
@@ -497,7 +496,6 @@ export default function TaxonomiesView( {
 			name: prod.name || '',
 			slug: prod.slug || '',
 			sku: prod.sku || '',
-			price: prod.price || '',
 			category_id: prod.category_id || 0,
 		} );
 		setIsProdModalOpen( true );
@@ -887,17 +885,16 @@ export default function TaxonomiesView( {
 						<table className="wp-list-table widefat fixed striped dctc-sc-table">
 							<thead>
 								<tr>
-									<th style={ { width: '40%' } }>{ __( 'Product Name', 'dragwyb-click-to-chat' ) }</th>
-									<th style={ { width: '20%' } }>{ __( 'SKU', 'dragwyb-click-to-chat' ) }</th>
-									<th style={ { width: '15%' } }>{ __( 'Price', 'dragwyb-click-to-chat' ) }</th>
-									<th style={ { width: '15%' } }>{ __( 'Source', 'dragwyb-click-to-chat' ) }</th>
-									<th style={ { width: '10%', textAlign: 'right' } }>{ __( 'Actions', 'dragwyb-click-to-chat' ) }</th>
+									<th style={ { width: '45%' } }>{ __( 'Product Name', 'dragwyb-click-to-chat' ) }</th>
+									<th style={ { width: '25%' } }>{ __( 'SKU / Model Code', 'dragwyb-click-to-chat' ) }</th>
+									<th style={ { width: '18%' } }>{ __( 'Source', 'dragwyb-click-to-chat' ) }</th>
+									<th style={ { width: '12%', textAlign: 'right' } }>{ __( 'Actions', 'dragwyb-click-to-chat' ) }</th>
 								</tr>
 							</thead>
 							<tbody>
 								{ products.length === 0 ? (
 									<tr>
-										<td colSpan="5" style={ { textAlign: 'center', padding: '30px' } }>
+										<td colSpan="4" style={ { textAlign: 'center', padding: '30px' } }>
 											{ __( 'No products in catalog. Click "Sync WooCommerce Products" or "Add Product".', 'dragwyb-click-to-chat' ) }
 										</td>
 									</tr>
@@ -906,7 +903,6 @@ export default function TaxonomiesView( {
 										<tr key={ prod.id }>
 											<td><strong>{ prod.name }</strong></td>
 											<td><code>{ prod.sku || '—' }</code></td>
-											<td>{ prod.price ? `$${ Number( prod.price ).toFixed( 2 ) }` : '—' }</td>
 											<td>
 												{ prod.wc_product_id ? (
 													<span className="dctc-sc-badge" style={ { background: '#EDE9FE', color: '#5B21B6' } }>WooCommerce</span>
@@ -1807,35 +1803,18 @@ export default function TaxonomiesView( {
 									/>
 								</div>
 
-								<div className="dctc-sc-form-grid-2">
-									<div className="dctc-sc-form-group">
-										<label className="dctc-sc-field-label">
-											<span className="dashicons dashicons-barcode"></span>
-											{ __( 'SKU / Model Code', 'dragwyb-click-to-chat' ) }
-										</label>
-										<input
-											type="text"
-											className="dctc-sc-custom-input"
-											placeholder="e.g. PRO-01"
-											value={ prodForm.sku }
-											onChange={ ( e ) => setProdForm( { ...prodForm, sku: e.target.value } ) }
-										/>
-									</div>
-
-									<div className="dctc-sc-form-group">
-										<label className="dctc-sc-field-label">
-											<span className="dashicons dashicons-money-alt"></span>
-											{ __( 'Price ($)', 'dragwyb-click-to-chat' ) }
-										</label>
-										<input
-											type="number"
-											step="0.01"
-											className="dctc-sc-custom-input"
-											placeholder="29.99"
-											value={ prodForm.price }
-											onChange={ ( e ) => setProdForm( { ...prodForm, price: e.target.value } ) }
-										/>
-									</div>
+								<div className="dctc-sc-form-group">
+									<label className="dctc-sc-field-label">
+										<span className="dashicons dashicons-barcode"></span>
+										{ __( 'SKU / Model Code', 'dragwyb-click-to-chat' ) }
+									</label>
+									<input
+										type="text"
+										className="dctc-sc-custom-input"
+										placeholder="e.g. PRO-01"
+										value={ prodForm.sku }
+										onChange={ ( e ) => setProdForm( { ...prodForm, sku: e.target.value } ) }
+									/>
 								</div>
 
 								<div className="dctc-sc-form-group">

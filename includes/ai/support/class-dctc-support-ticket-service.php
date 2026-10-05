@@ -392,16 +392,26 @@ class DCTC_Support_Ticket_Service {
 		// Retrieve conversation messages and check session existence
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$session_row = ! empty( $ticket['session_id'] ) ? $wpdb->get_row(
-			$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] ),
+			$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] ),
 			ARRAY_A
 		) : null;
 
 		$ticket['has_session']   = ! empty( $session_row );
 		$session_content         = $session_row ? $session_row['content'] : '';
 		$ticket['messages']      = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
+		if ( empty( $ticket['messages'] ) ) {
+			$meta_msgs = self::get_ticket_meta( $ticket['id'], '_dctc_ticket_messages', true );
+			if ( is_array( $meta_msgs ) ) {
+				$ticket['messages'] = $meta_msgs;
+			}
+		}
 		$ticket['messages']      = is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
 		$ticket['chat_count']    = count( $ticket['messages'] );
 		$ticket['message_count'] = $ticket['chat_count'];
+
+		$session_updated = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
+		$now             = current_time( 'timestamp' );
+		$ticket['is_session_active'] = $session_row && ( ( $now - $session_updated ) < 90 );
 
 		return $ticket;
 	}
@@ -556,11 +566,33 @@ class DCTC_Support_Ticket_Service {
 		);
 
 		if ( ! empty( $ticket['session_id'] ) ) {
+			$raw_content = $wpdb->get_var(
+				$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $ticket['session_id'] )
+			);
+			$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
+			$messages = is_array( $messages ) ? $messages : array();
+
+			if ( 'human' === $control_mode && 'human' !== $old_mode ) {
+				$messages[] = array(
+					'role'        => 'system',
+					'sender_type' => 'system',
+					'sender_name' => 'System',
+					'content'     => sprintf( __( '— Support Agent %s took control of Ticket #%d —', 'dragwyb-click-to-chat' ), $actor_name ?: 'Staff', $ticket_id ),
+					'created_at'  => current_time( 'mysql' ),
+				);
+			}
+
 			$wpdb->update(
 				$table_sessions,
-				array( 'control_mode' => $control_mode, 'updated_at' => current_time( 'mysql' ) ),
+				array(
+					'control_mode' => $control_mode,
+					'content'      => wp_json_encode( $messages ),
+					'updated_at'   => current_time( 'mysql' ),
+				),
 				array( 'session_id' => $ticket['session_id'] )
 			);
+
+			self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
 		}
 
 		$event_type = 'human' === $control_mode ? 'agent_control_started' : 'ai_control_resumed';
@@ -751,6 +783,8 @@ class DCTC_Support_Ticket_Service {
 			),
 			array( 'session_id' => $session_id )
 		);
+
+		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
 
 		// If agent replies, auto-take control (Pause AI) and assign agent if unassigned
 		if ( 'agent' === $sender_type ) {

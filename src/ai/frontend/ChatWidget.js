@@ -435,6 +435,30 @@ export default function ChatWidget({ settings, inline }) {
 
 	const isWcActive = settings?.is_woocommerce_active !== false;
 
+	// AI Chatbot Session Keepalive / Heartbeat: ping every 25 seconds when widget is active
+	useEffect(() => {
+		if (!isOpen && !inline) return;
+		if (!sessionId) return;
+
+		// Immediate initial heartbeat ping
+		apiFetch({
+			path: '/dctc-ai/v1/support/session/heartbeat',
+			method: 'POST',
+			data: { session_id: sessionId },
+		}).catch(() => {});
+
+		const interval = setInterval(() => {
+			if (typeof document !== 'undefined' && document.hidden) return;
+			apiFetch({
+				path: '/dctc-ai/v1/support/session/heartbeat',
+				method: 'POST',
+				data: { session_id: sessionId },
+			}).catch(() => {});
+		}, 25000); // 25 seconds
+
+		return () => clearInterval(interval);
+	}, [isOpen, inline, sessionId]);
+
 	const handleOrderLookup = async (e) => {
 		if (e && e.preventDefault) {
 			e.preventDefault();
