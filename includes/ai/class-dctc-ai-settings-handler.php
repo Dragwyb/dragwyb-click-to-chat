@@ -113,6 +113,26 @@ class DCTC_AI_Settings_Handler
 
 		register_rest_route(
 			'dctc-ai/v1',
+			'/onboarding/complete',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this, 'dctc_ai_complete_onboarding'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
+			'/onboarding/skip',
+			[
+				'methods' => \WP_REST_Server::CREATABLE,
+				'callback' => [$this, 'dctc_ai_skip_onboarding'],
+				'permission_callback' => [$this, 'dctc_ai_permission_only_admins'],
+			]
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
 			'/setup-wizard',
 			[
 				'methods' => \WP_REST_Server::CREATABLE,
@@ -1410,25 +1430,184 @@ class DCTC_AI_Settings_Handler
 	}
 
 	/**
-	 * Mark the first-run setup wizard as completed or skipped, so it stops
-	 * auto-opening on future dashboard visits.
+	 * Complete full-plugin unified onboarding wizard.
+	 * Persists settings for Social Chat, AI Assistant, and Support Center,
+	 * creates database tables for Support Center on demand, auto-provisions
+	 * support portal page if requested, and marks onboarding completed.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_complete_onboarding($request)
+	{
+		$params = $request->get_json_params() ?: [];
+
+		$social_data  = isset($params['social_chat']) && is_array($params['social_chat']) ? $params['social_chat'] : [];
+		$ai_data      = isset($params['ai_assistant']) && is_array($params['ai_assistant']) ? $params['ai_assistant'] : [];
+		$support_data = isset($params['support_center']) && is_array($params['support_center']) ? $params['support_center'] : [];
+
+		// 1. Handle Social Chat Settings
+		$social_settings = get_option('dctc_settings', []);
+		if (!is_array($social_settings)) {
+			$social_settings = [];
+		}
+
+		$social_enabled = !empty($social_data['enabled']);
+		$social_settings['channels_enabled'] = $social_enabled ? '1' : '0';
+
+		if (isset($social_data['whatsapp_enabled'])) {
+			$social_settings['whatsapp_enabled'] = !empty($social_data['whatsapp_enabled']) ? '1' : '0';
+		}
+		if (isset($social_data['whatsapp_number'])) {
+			$social_settings['whatsapp_value'] = sanitize_text_field($social_data['whatsapp_number']);
+		}
+		if (isset($social_data['whatsapp_message'])) {
+			$social_settings['whatsapp_message'] = sanitize_text_field($social_data['whatsapp_message']);
+		}
+
+		if (isset($social_data['phone_enabled'])) {
+			$social_settings['phone_enabled'] = !empty($social_data['phone_enabled']) ? '1' : '0';
+		}
+		if (isset($social_data['phone_number'])) {
+			$social_settings['phone_value'] = sanitize_text_field($social_data['phone_number']);
+		}
+
+		if (isset($social_data['email_enabled'])) {
+			$social_settings['email_enabled'] = !empty($social_data['email_enabled']) ? '1' : '0';
+		}
+		if (isset($social_data['email_address'])) {
+			$social_settings['email_value'] = sanitize_email($social_data['email_address']);
+		}
+
+		if (isset($social_data['custom_link_enabled'])) {
+			$social_settings['contact_enabled'] = !empty($social_data['custom_link_enabled']) ? '1' : '0';
+		}
+		if (isset($social_data['custom_link_url'])) {
+			$social_settings['contact_value'] = esc_url_raw($social_data['custom_link_url']);
+		}
+
+		update_option('dctc_settings', $social_settings);
+		update_option('dragwyb_click_to_chat_settings', $social_settings);
+
+		// 2. Handle AI Assistant Settings
+		$ai_enabled = !empty($ai_data['enabled']);
+		$ai_settings = self::dctc_ai_get_all_settings();
+
+		if ($ai_enabled) {
+			$ai_settings['display']['entire_site'] = true;
+
+			if (!empty($ai_data['provider'])) {
+				$ai_settings['chatbot']['default_provider'] = sanitize_key($ai_data['provider']);
+			}
+			if (!empty($ai_data['model'])) {
+				$ai_settings['chatbot']['default_model'] = sanitize_text_field($ai_data['model']);
+			}
+			if (!empty($ai_data['assistant_name'])) {
+				$ai_settings['chatbot']['bot_name'] = sanitize_text_field($ai_data['assistant_name']);
+			}
+			if (!empty($ai_data['welcome_message'])) {
+				$ai_settings['chatbot']['welcome_message'] = sanitize_textarea_field($ai_data['welcome_message']);
+			}
+
+			// Store API key if provided and not masked
+			if (!empty($ai_data['api_key']) && !empty($ai_data['provider'])) {
+				$raw_key = trim($ai_data['api_key']);
+				if (strpos($raw_key, '****') === false && strlen($raw_key) > 3) {
+					$this->key_store->save_provider_key(sanitize_key($ai_data['provider']), $raw_key);
+				}
+			}
+		} else {
+			$ai_settings['display']['entire_site'] = false;
+		}
+
+		update_option('dctc_ai_chat_assistant_settings', $ai_settings);
+
+		// 3. Handle Support Center Settings & Tables
+		$support_enabled = !empty($support_data['enabled']);
+		$support_settings = get_option('dctc_support_settings', []);
+		if (!is_array($support_settings)) {
+			$support_settings = [];
+		}
+
+		$created_portal_url = '';
+		if ($support_enabled) {
+			$support_settings['enabled'] = true;
+			$support_settings['default_priority'] = !empty($support_data['default_priority']) ? sanitize_key($support_data['default_priority']) : 'normal';
+			$support_settings['support_email'] = !empty($support_data['support_email']) ? sanitize_email($support_data['support_email']) : get_option('admin_email');
+			$support_settings['customer_portal'] = !empty($support_data['customer_portal']);
+			if (!empty($support_data['default_category'])) {
+				$support_settings['default_category'] = sanitize_text_field($support_data['default_category']);
+			}
+
+			// Provision Support DB Tables on demand
+			if (file_exists(DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php')) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
+				\DCTC_Support_DB::create_tables();
+			}
+
+			// Auto-create Support Portal Page if requested
+			if (!empty($support_data['auto_create_portal_page'])) {
+				$existing_page_id = get_option('dctc_support_portal_page_id');
+				if (!$existing_page_id || !get_post($existing_page_id)) {
+					$page_obj = get_page_by_path('support-portal');
+					if ($page_obj) {
+						$existing_page_id = $page_obj->ID;
+					} else {
+						$new_page_id = wp_insert_post([
+							'post_title'   => 'Support Portal',
+							'post_name'    => 'support-portal',
+							'post_content' => '<!-- wp:shortcode -->[dctc_support_portal]<!-- /wp:shortcode -->',
+							'post_status'  => 'publish',
+							'post_type'    => 'page',
+						]);
+						if (!is_wp_error($new_page_id) && $new_page_id > 0) {
+							$existing_page_id = $new_page_id;
+						}
+					}
+				}
+				if ($existing_page_id) {
+					update_option('dctc_support_portal_page_id', $existing_page_id);
+					$created_portal_url = get_permalink($existing_page_id);
+				}
+			}
+		} else {
+			$support_settings['enabled'] = false;
+		}
+
+		update_option('dctc_support_settings', $support_settings);
+
+		return new \WP_REST_Response([
+			'success'            => true,
+			'message'            => esc_html__('Setup completed successfully!', 'dragwyb-click-to-chat'),
+			'portal_url'         => $created_portal_url,
+			'social_enabled'     => $social_enabled,
+			'ai_enabled'         => $ai_enabled,
+			'support_enabled'    => $support_enabled,
+		], 200);
+	}
+
+	/**
+	 * Skip onboarding wizard.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_skip_onboarding($request)
+	{
+		return new \WP_REST_Response([
+			'success' => true,
+			'message' => esc_html__('Onboarding skipped.', 'dragwyb-click-to-chat'),
+		], 200);
+	}
+
+	/**
+	 * Mark the first-run setup wizard status (legacy endpoint compatibility).
 	 *
 	 * @param \WP_REST_Request $request The REST request object.
 	 * @return \WP_REST_Response
 	 */
 	public function dctc_ai_update_setup_wizard_status($request)
 	{
-		$status = sanitize_text_field($request->get_param('status'));
-
-		if (!in_array($status, ['completed', 'skipped', 'pending'], true)) {
-			return new \WP_REST_Response(
-				['success' => false, 'message' => esc_html__('Invalid status.', 'dragwyb-click-to-chat')],
-				400
-			);
-		}
-
-		update_option('dctc_ai_setup_wizard_status', $status);
-
 		return new \WP_REST_Response(['success' => true], 200);
 	}
 

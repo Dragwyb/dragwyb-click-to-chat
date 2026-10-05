@@ -51,7 +51,17 @@ function dctc_add_settings_page() {
 		'dctc_channels_page_html'
 	);
 
-	// 3. Submenu: Guide (Documentation & Walkthroughs for Channels, AI, Support)
+	// 3. Submenu: Tickets (Direct link to Tickets workspace)
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'Tickets', 'dragwyb-click-to-chat' ),
+		__( 'Tickets', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-support',
+		'dctc_render_support_center_redirect'
+	);
+
+	// 4. Submenu: Guide (Documentation, Walkthroughs & Setup Wizard)
 	add_submenu_page(
 		'dragwyb-click-to-chat',
 		__( 'Guide', 'dragwyb-click-to-chat' ),
@@ -61,7 +71,7 @@ function dctc_add_settings_page() {
 		'dctc_guide_page_html'
 	);
 
-	// 4. Submenu: Settings (Dedicated settings page with General & Import/Export tabs)
+	// 5. Submenu: Settings (Dedicated settings page with General & Import/Export tabs)
 	add_submenu_page(
 		'dragwyb-click-to-chat',
 		__( 'Settings', 'dragwyb-click-to-chat' ),
@@ -80,6 +90,29 @@ function dctc_add_settings_page() {
 		'dragwyb-click-to-chat-ai',
 		'dctc_render_ai_assistant_page'
 	);
+}
+
+/**
+ * Redirect to Tickets workspace when clicked from Click to Chat > Tickets menu.
+ *
+ * @return void
+ */
+function dctc_render_support_center_redirect() {
+	wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-support-tickets' ) );
+	exit;
+}
+
+/**
+ * Render Onboarding / Setup Wizard screen when clicked from Click to Chat > Setup.
+ *
+ * @return void
+ */
+function dctc_render_onboarding_page() {
+	if ( class_exists( 'DCTC_AI_Module' ) ) {
+		DCTC_AI_Module::get_instance()->dctc_ai_render_admin_page();
+	} else {
+		require_once DCTC_PLUGIN_DIR . 'admin/ai/dctc-ai-dashboard.php';
+	}
 }
 
 /**

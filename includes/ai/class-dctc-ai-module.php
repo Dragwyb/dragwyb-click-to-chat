@@ -128,10 +128,6 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				update_option( 'dctc_ai_chat_assistant_settings', $default_settings );
 			}
 
-			if ( ! get_option( 'dctc_ai_setup_wizard_status' ) ) {
-				update_option( 'dctc_ai_setup_wizard_status', 'pending' );
-			}
-
 			update_option( 'dctc_ai_installed', '1' );
 			update_option( 'dctc_ai_db_version', DCTC_VERSION );
 
@@ -158,7 +154,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				return;
 			}
 
-			wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat-guide&tab=setup&open=1' ) );
 			exit;
 		}
 
@@ -172,10 +168,6 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			if ( $installed !== DCTC_VERSION ) {
 				DCTC_AI_DB::dctc_ai_create_tables();
 				update_option( 'dctc_ai_db_version', DCTC_VERSION );
-
-				if ( ! get_option( 'dctc_ai_setup_wizard_status' ) ) {
-					update_option( 'dctc_ai_setup_wizard_status', 'pending' );
-				}
 				update_option( 'dctc_ai_installed', '1' );
 			}
 		}
@@ -186,12 +178,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_maybe_complete_wizard() {
-			$wizard_status_nonce           = isset( $_GET['dctc_ai_wizard_status_nonce'] ) ? sanitize_text_field( wp_unslash( $_GET['dctc_ai_wizard_status_nonce'] ) ) : '';
-			$has_valid_wizard_status_nonce = wp_verify_nonce( $wizard_status_nonce, 'dctc_ai_wizard_status' );
-
-			if ( $has_valid_wizard_status_nonce && current_user_can( 'manage_options' ) && isset( $_GET['page'] ) && 'dragwyb-click-to-chat-ai' === sanitize_text_field( wp_unslash( $_GET['page'] ) ) && isset( $_GET['dctc_ai_wizard_status'] ) && 'completed' === sanitize_text_field( wp_unslash( $_GET['dctc_ai_wizard_status'] ) ) ) {
-				update_option( 'dctc_ai_setup_wizard_status', 'completed' );
-			}
+			// No-op for wizard status
 		}
 
 		/**
@@ -227,8 +214,12 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				( $this->admin_hook && $hook === $this->admin_hook ) ||
 				'dragwyb-click-to-chat' === $page ||
 				'dragwyb-click-to-chat-ai' === $page ||
+				'dragwyb-click-to-chat-guide' === $page ||
+				'dragwyb-click-to-chat-onboarding' === $page ||
 				'toplevel_page_dragwyb-click-to-chat' === $hook ||
-				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai' === $hook
+				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai' === $hook ||
+				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-guide' === $hook ||
+				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-onboarding' === $hook
 			);
 
 			if ( ! $is_ai_page ) {
@@ -282,6 +273,18 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				}
 			}
 
+			$social_settings      = get_option( 'dctc_settings', array() );
+			$support_settings     = get_option( 'dctc_support_settings', array() );
+			$portal_page_id       = get_option( 'dctc_support_portal_page_id' );
+			$portal_url           = $portal_page_id ? get_permalink( $portal_page_id ) : home_url( '/support-portal' );
+			$is_guide_page        = ( 'dragwyb-click-to-chat-guide' === $page );
+			$tab_param            = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
+			$open_param           = isset( $_GET['open'] ) ? sanitize_text_field( wp_unslash( $_GET['open'] ) ) : '';
+			$force_open           = isset( $_GET['dctc_open_onboarding'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_open_onboarding'] ) );
+
+			// Check tab === setup and open === 1 before auto-opening modal
+			$show_onboarding = ( $is_guide_page && 'setup' === $tab_param && '1' === $open_param ) || $force_open;
+
 			wp_localize_script(
 				'dctc-ai-dashboard-script',
 				'dctc_ai_data',
@@ -290,11 +293,19 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'nonce'              => wp_create_nonce( 'wp_rest' ),
 					'settings'           => $settings,
 					'models_list'        => $models_list,
+					'current_page'       => $page,
+					'is_onboarding_page' => $is_guide_page,
 					'load_limit'         => get_user_meta( get_current_user_id(), 'dctc_ai_sessions_load_limit', true ) ?: '100',
 					'sort_order'         => get_user_meta( get_current_user_id(), 'dctc_ai_sessions_sort_order', true ) ?: 'desc',
-					// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-					'show_setup_wizard'  => get_option( 'dctc_ai_setup_wizard_status' ) === 'pending' || ( isset( $_GET['dctc_ai_open_wizard'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_ai_open_wizard'] ) ) ),
-					'is_support_enabled' => class_exists( 'DCTC_Support_Manager' ) && ! empty( get_option( 'dctc_support_settings', array() )['enabled'] ),
+					'show_onboarding'    => $show_onboarding,
+					'show_setup_wizard'  => $show_onboarding,
+					'admin_email'        => get_option( 'admin_email' ),
+					'site_name'          => get_bloginfo( 'name' ),
+					'home_url'           => home_url(),
+					'social_settings'    => $social_settings,
+					'support_settings'   => $support_settings,
+					'portal_url'         => $portal_url,
+					'is_support_enabled' => class_exists( 'DCTC_Support_Manager' ) && ! empty( $support_settings['enabled'] ),
 				)
 			);
 		}
@@ -314,7 +325,6 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				);
 			}
 
-			update_option( 'dctc_ai_setup_wizard_status', 'completed' );
 			wp_send_json_success();
 		}
 

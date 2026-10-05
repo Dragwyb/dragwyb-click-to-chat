@@ -16,6 +16,12 @@
             // Tab switching
             $('.dctc-guide-tab-btn').on('click', this.handleTabSwitch.bind(this));
 
+            // Launch Onboarding Wizard Button
+            $(document).on('click', '.dctc-guide-launch-wizard-btn', function (e) {
+                e.preventDefault();
+                window.dispatchEvent(new CustomEvent('dctc_open_onboarding_wizard'));
+            });
+
             // Instant Feature Activation Button on Disabled State
             $(document).on('click', '.dctc-guide-activate-btn', this.handleFeatureActivation.bind(this));
 
@@ -74,7 +80,7 @@
         initTabFromUrl: function () {
             const urlParams = new URLSearchParams(window.location.search);
             const tab = urlParams.get('tab') || (window.location.hash ? window.location.hash.replace('#', '') : 'channels');
-            if (['channels', 'ai', 'support'].includes(tab)) {
+            if (['channels', 'ai', 'support', 'setup'].includes(tab)) {
                 this.switchTab(tab);
             } else {
                 this.switchTab('channels');

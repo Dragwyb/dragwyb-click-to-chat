@@ -34,9 +34,9 @@ $dctc_ai_enabled  = ! empty( $dctc_ai_settings['display']['entire_site'] );
 $dctc_support_settings = get_option( 'dctc_support_settings', array() );
 $dctc_support_enabled  = ! empty( $dctc_support_settings['enabled'] );
 
-// Active guide tab from URL (channels, ai, support)
+// Active guide tab from URL (channels, ai, support, setup)
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'channels', 'ai', 'support' ), true ) ? sanitize_key( $_GET['tab'] ) : 'channels';
+$dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'channels', 'ai', 'support', 'setup' ), true ) ? sanitize_key( $_GET['tab'] ) : 'channels';
 ?>
 
 <div class="dctc-admin-wrap dctc-guide-wrap">
@@ -44,10 +44,10 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 	<!-- Success Toast -->
 	<div class="dctc-success-message"></div>
 
-	<!-- Header with 3 Feature Tabs -->
+	<!-- Header with 4 Feature Tabs -->
 	<div class="dctc-header dctc-settings-header">
 		<div class="dctc-settings-tabs-wrapper">
-			<ul class="dctc-tabs dctc-guide-three-tabs">
+			<ul class="dctc-tabs dctc-guide-four-tabs">
 				<li>
 					<a href="#channels"
 						class="dctc-tab dctc-guide-tab-btn <?php echo 'channels' === $dctc_active_tab ? 'active' : ''; ?>"
@@ -67,6 +67,13 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						class="dctc-tab dctc-guide-tab-btn <?php echo 'support' === $dctc_active_tab ? 'active' : ''; ?>"
 						data-tab="support">
 						<span>🛡️ <?php esc_html_e( '3. Support Center', 'dragwyb-click-to-chat' ); ?></span>
+					</a>
+				</li>
+				<li>
+					<a href="#setup"
+						class="dctc-tab dctc-guide-tab-btn <?php echo 'setup' === $dctc_active_tab ? 'active' : ''; ?>"
+						data-tab="setup">
+						<span>⚡ <?php esc_html_e( '4. Setup Wizard', 'dragwyb-click-to-chat' ); ?></span>
 					</a>
 				</li>
 			</ul>
@@ -944,6 +951,91 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 
 		</div>
 
+		<!-- ================================================================= -->
+		<!-- TAB 4: SETUP WIZARD & CONFIGURATION OVERVIEW                       -->
+		<!-- ================================================================= -->
+		<div id="dctc-guide-tab-setup" class="dctc-guide-tab-content <?php echo 'setup' === $dctc_active_tab ? 'active' : ''; ?>" style="<?php echo 'setup' === $dctc_active_tab ? 'display: block;' : 'display: none;'; ?>">
+			<div class="dctc-setup-landing-container" style="max-width: 100%; margin: 0 auto;">
+				<div class="dctc-setup-landing-header">
+					<div class="dctc-setup-landing-header__badge">
+						<span>✦</span> <?php esc_html_e( 'Configuration & Setup', 'dragwyb-click-to-chat' ); ?>
+					</div>
+					<h1 class="dctc-setup-landing-header__title">
+						<?php esc_html_e( 'Dragwyb Click to Chat Setup', 'dragwyb-click-to-chat' ); ?>
+					</h1>
+					<p class="dctc-setup-landing-header__desc">
+						<?php esc_html_e( 'Configure communication channels, AI assistant automation, and customer support helpdesk from one centralized place.', 'dragwyb-click-to-chat' ); ?>
+					</p>
+				</div>
+
+				<div class="dctc-setup-landing-cards">
+					<div class="dctc-setup-landing-card">
+						<div class="dctc-setup-landing-card__icon" style="background: #ec4899;">
+							<span class="dashicons dashicons-format-chat" style="font-size: 20px; color: #fff;"></span>
+						</div>
+						<h3 class="dctc-setup-landing-card__title">
+							<?php esc_html_e( 'Social Chat (Channels)', 'dragwyb-click-to-chat' ); ?>
+						</h3>
+						<p class="dctc-setup-landing-card__desc">
+							<?php esc_html_e( 'Configure WhatsApp, Phone, Email and custom action buttons for your visitors.', 'dragwyb-click-to-chat' ); ?>
+						</p>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-channels' ) ); ?>" class="dctc-setup-landing-card__link">
+							<?php esc_html_e( 'Configure Channels →', 'dragwyb-click-to-chat' ); ?>
+						</a>
+					</div>
+
+					<div class="dctc-setup-landing-card">
+						<div class="dctc-setup-landing-card__icon" style="background: #6366f1;">
+							<span class="dashicons dashicons-superhero" style="font-size: 20px; color: #fff;"></span>
+						</div>
+						<h3 class="dctc-setup-landing-card__title">
+							<?php esc_html_e( 'AI Assistant', 'dragwyb-click-to-chat' ); ?>
+						</h3>
+						<p class="dctc-setup-landing-card__desc">
+							<?php esc_html_e( 'Manage AI engine providers, training content, knowledge base and lead scoring.', 'dragwyb-click-to-chat' ); ?>
+						</p>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ); ?>" class="dctc-setup-landing-card__link">
+							<?php esc_html_e( 'Open AI Dashboard →', 'dragwyb-click-to-chat' ); ?>
+						</a>
+					</div>
+
+					<div class="dctc-setup-landing-card">
+						<div class="dctc-setup-landing-card__icon" style="background: #10b981;">
+							<span class="dashicons dashicons-tickets-alt" style="font-size: 20px; color: #fff;"></span>
+						</div>
+						<h3 class="dctc-setup-landing-card__title">
+							<?php esc_html_e( 'Support Center', 'dragwyb-click-to-chat' ); ?>
+						</h3>
+						<p class="dctc-setup-landing-card__desc">
+							<?php esc_html_e( 'Manage support tickets, assign agent staff, taxonomies and customer portal.', 'dragwyb-click-to-chat' ); ?>
+						</p>
+						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-support-center' ) ); ?>" class="dctc-setup-landing-card__link">
+							<?php esc_html_e( 'View Support Center →', 'dragwyb-click-to-chat' ); ?>
+						</a>
+					</div>
+				</div>
+
+				<div class="dctc-setup-landing-action-box">
+					<h2 class="dctc-setup-landing-action-title">
+						<?php esc_html_e( 'Need to re-run the complete onboarding?', 'dragwyb-click-to-chat' ); ?>
+					</h2>
+					<p class="dctc-setup-landing-action-desc">
+						<?php esc_html_e( 'You can launch the 4-step wizard anytime to configure features, contact channels, and AI settings all in one flow.', 'dragwyb-click-to-chat' ); ?>
+					</p>
+					<button
+						type="button"
+						class="dctc-btn-primary dctc-guide-launch-wizard-btn"
+						style="padding: 14px 36px; font-size: 15px; cursor: pointer;"
+					>
+						🚀 <?php esc_html_e( 'Launch 4-Step Setup Wizard', 'dragwyb-click-to-chat' ); ?>
+					</button>
+				</div>
+			</div>
+		</div>
+
 	</div>
+
+	<!-- React Root for Onboarding Wizard Full-Screen Modal -->
+	<div id="dctc-ai-admin-root"></div>
 
 </div>

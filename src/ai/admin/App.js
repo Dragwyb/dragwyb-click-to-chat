@@ -1,10 +1,10 @@
 /**
- * AI Assistant admin shell: sidebar nav, hash routing, toast, setup wizard gate.
+ * AI Assistant admin shell: sidebar nav, hash routing, toast, and dedicated onboarding page gate.
  */
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Toast from './components/Toast';
-import SetupWizard from './wizard/SetupWizard';
+import OnboardingWizard from './onboarding/OnboardingWizard';
 import ChatbotSettings from './sections/ChatbotSettings';
 import AiEngineSettings from './sections/AiEngineSettings';
 import KnowledgeBase from './sections/KnowledgeBase';
@@ -17,7 +17,7 @@ import ErrorLogs from './sections/ErrorLogs';
 const TABS = [
 	{
 		id: 'chatbot-settings',
-		label: __( 'Chatbot Settings', 'dragwyb-click-to-chat' ),
+		label: __('Chatbot Settings', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-admin-settings',
 		desc: __(
 			'Configure bot identity, site-wide visibility, triggers, file uploads, avatars & styling.',
@@ -27,7 +27,7 @@ const TABS = [
 	},
 	{
 		id: 'ai-engine',
-		label: __( 'AI Engine & Prompt', 'dragwyb-click-to-chat' ),
+		label: __('AI Engine & Prompt', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-rest-api',
 		desc: __(
 			'Configure your AI providers, API keys, models, system instructions, and response behavior.',
@@ -37,7 +37,7 @@ const TABS = [
 	},
 	{
 		id: 'knowledge-base',
-		label: __( 'Knowledge Base', 'dragwyb-click-to-chat' ),
+		label: __('Knowledge Base', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-database',
 		desc: __(
 			'Provide custom text, links, documents, and index your website content for the chatbot to learn from.',
@@ -47,7 +47,7 @@ const TABS = [
 	},
 	{
 		id: 'ai-copilot',
-		label: __( 'AI Copilot', 'dragwyb-click-to-chat' ),
+		label: __('AI Copilot', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-superhero',
 		desc: __(
 			'Ask your AI Copilot anything about visitor questions, unanswered gaps, lead analytics, and content advice.',
@@ -57,7 +57,7 @@ const TABS = [
 	},
 	{
 		id: 'leads',
-		label: __( 'AI Leads', 'dragwyb-click-to-chat' ),
+		label: __('AI Leads', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-id',
 		desc: __(
 			'Review, qualify, search, filter, update statuses, and export leads collected by your AI assistant.',
@@ -67,7 +67,7 @@ const TABS = [
 	},
 	{
 		id: 'chat-sessions',
-		label: __( 'Chat Sessions', 'dragwyb-click-to-chat' ),
+		label: __('Chat Sessions', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-format-chat',
 		desc: __(
 			'View and manage recent conversations with your AI assistant.',
@@ -77,7 +77,7 @@ const TABS = [
 	},
 	{
 		id: 'chat-preview',
-		label: __( 'Chat Preview', 'dragwyb-click-to-chat' ),
+		label: __('Chat Preview', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-welcome-view-site',
 		desc: __(
 			'See how your chatbot appears to your website visitors.',
@@ -87,7 +87,7 @@ const TABS = [
 	},
 	{
 		id: 'error-logs',
-		label: __( 'Error Logs', 'dragwyb-click-to-chat' ),
+		label: __('Error Logs', 'dragwyb-click-to-chat'),
 		icon: 'dashicons-warning',
 		desc: __(
 			'Review recent plugin errors, warnings, and AI API failures.',
@@ -99,41 +99,64 @@ const TABS = [
 
 const NAV_GROUPS = [
 	{
-		label: __( 'Setup', 'dragwyb-click-to-chat' ),
-		items: [ 'chatbot-settings', 'ai-engine' ],
+		label: __('SETUP', 'dragwyb-click-to-chat'),
+		items: ['chatbot-settings', 'ai-engine'],
 	},
 	{
-		label: __( 'Knowledge', 'dragwyb-click-to-chat' ),
-		items: [ 'knowledge-base' ],
+		label: __('KNOWLEDGE', 'dragwyb-click-to-chat'),
+		items: ['knowledge-base'],
 	},
 	{
-		label: __( 'CRM & Sessions', 'dragwyb-click-to-chat' ),
-		items: [ 'ai-copilot', 'leads', 'chat-sessions' ],
+		label: __('CRM & SESSIONS', 'dragwyb-click-to-chat'),
+		items: ['ai-copilot', 'leads', 'chat-sessions'],
 	},
 	{
-		label: __( 'Monitor', 'dragwyb-click-to-chat' ),
-		items: [ 'chat-preview', 'error-logs' ],
+		label: __('MONITOR', 'dragwyb-click-to-chat'),
+		items: ['chat-preview', 'error-logs'],
 	},
 ];
 
-export default function App( { settings: initialSettings } ) {
-	const [ settings, setSettings ] = useState(
+export default function App({ settings: initialSettings }) {
+	const [settings, setSettings] = useState(
 		() => initialSettings || window.dctc_ai_data?.settings || {}
 	);
-	const [ notice, setNotice ] = useState( null );
-	const [ showWizard, setShowWizard ] = useState(
-		!! window.dctc_ai_data?.show_setup_wizard
-	);
-	const [ wizardKey, setWizardKey ] = useState( 0 );
+	const [notice, setNotice] = useState(null);
 
-	const saveChat = !! settings?.chatbot?.save_chat;
+	const currentPage =
+		window.dctc_ai_data?.current_page ||
+		new URLSearchParams(window.location.search).get('page') ||
+		'';
+	const isGuidePage = currentPage === 'dragwyb-click-to-chat-guide';
+	const searchParams = new URLSearchParams(window.location.search);
+	const isTabSetup = searchParams.get('tab') === 'setup';
+	const isOpenOne = searchParams.get('open') === '1';
+	const isExplicitOpen = searchParams.get('dctc_open_onboarding') === 'true';
+
+	// Check tab === setup and open === 1 before auto-opening modal
+	const [showWizard, setShowWizard] = useState(
+		() => (isGuidePage && isTabSetup && isOpenOne) || isExplicitOpen || !!window.dctc_ai_data?.show_onboarding
+	);
+	const [wizardKey, setWizardKey] = useState(0);
+
+	// Listen for global modal open events from Guide page button clicks
+	useEffect(() => {
+		const handleOpenWizard = () => {
+			setShowWizard(true);
+		};
+		window.addEventListener('dctc_open_onboarding_wizard', handleOpenWizard);
+		return () => {
+			window.removeEventListener('dctc_open_onboarding_wizard', handleOpenWizard);
+		};
+	}, []);
+
+	const saveChat = !!settings?.chatbot?.save_chat;
 	const visibleTabs = TABS.filter(
-		( tab ) => tab.id !== 'chat-sessions' || saveChat
+		(tab) => tab.id !== 'chat-sessions' || saveChat
 	);
 
-	const [ activeTab, setActiveTab ] = useState( () => {
-		const hash = window.location.hash.replace( '#', '' );
-		if ( hash === 'display-settings' ) {
+	const [activeTab, setActiveTab] = useState(() => {
+		const hash = window.location.hash.replace('#', '');
+		if (hash === 'display-settings') {
 			return 'chatbot-settings';
 		}
 		if (
@@ -144,172 +167,151 @@ export default function App( { settings: initialSettings } ) {
 		) {
 			return 'ai-engine';
 		}
-		if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
+		if (hash && visibleTabs.some((t) => t.id === hash)) {
 			return hash;
 		}
-		return visibleTabs[ 0 ]?.id || 'chatbot-settings';
-	} );
+		return visibleTabs[0]?.id || 'chatbot-settings';
+	});
 
-	const showNotice = useCallback( ( message, type = 'success' ) => {
-		setNotice( { message, type } );
-		setTimeout( () => setNotice( null ), 10000 );
-	}, [] );
+	const showNotice = useCallback((message, type = 'success') => {
+		setNotice({ message, type });
+		setTimeout(() => setNotice(null), 10000);
+	}, []);
 
-	const onSave = useCallback( ( partial ) => {
-		setSettings( ( prev ) => ( { ...prev, ...partial } ) );
-	}, [] );
+	const onSave = useCallback((partial) => {
+		setSettings((prev) => ({ ...prev, ...partial }));
+	}, []);
 
-	const current = visibleTabs.find( ( t ) => t.id === activeTab ) || visibleTabs[ 0 ];
+	const current = visibleTabs.find((t) => t.id === activeTab) || visibleTabs[0];
 	const Panel = current?.component;
 
-	useEffect( () => {
-		if ( ! visibleTabs.some( ( t ) => t.id === activeTab ) ) {
-			const id = visibleTabs[ 0 ].id;
-			setActiveTab( id );
+	useEffect(() => {
+		if (!visibleTabs.some((t) => t.id === activeTab)) {
+			const id = visibleTabs[0].id;
+			setActiveTab(id);
 			window.location.hash = id;
 		}
-	}, [ activeTab, visibleTabs ] );
+	}, [activeTab, visibleTabs]);
 
-	useEffect( () => {
-		const el = document.querySelector( '.dctc-ai-tabs .dctc-ai-tab.active' );
-		if ( el && typeof el.scrollIntoView === 'function' ) {
-			el.scrollIntoView( { block: 'nearest', inline: 'nearest' } );
+	useEffect(() => {
+		const el = document.querySelector('.dctc-ai-tabs .dctc-ai-tab.active');
+		if (el && typeof el.scrollIntoView === 'function') {
+			el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 		}
-	}, [ activeTab ] );
+	}, [activeTab]);
 
-	useEffect( () => {
+	useEffect(() => {
 		const onHash = () => {
-			const hash = window.location.hash.replace( '#', '' );
+			const hash = window.location.hash.replace('#', '');
 			if (
 				hash === 'api-keys' ||
 				hash === 'instructions' ||
 				hash === 'providers' ||
 				hash === 'prompt'
 			) {
-				setActiveTab( 'ai-engine' );
-			} else if ( hash && visibleTabs.some( ( t ) => t.id === hash ) ) {
-				setActiveTab( hash );
+				setActiveTab('ai-engine');
+			} else if (hash && visibleTabs.some((t) => t.id === hash)) {
+				setActiveTab(hash);
 			}
 		};
-		window.addEventListener( 'hashchange', onHash );
-		return () => window.removeEventListener( 'hashchange', onHash );
-	}, [ visibleTabs ] );
+		window.addEventListener('hashchange', onHash);
+		return () => window.removeEventListener('hashchange', onHash);
+	}, [visibleTabs]);
 
-	useEffect( () => {
-		if ( ! showWizard ) {
-			return;
-		}
-		const url = new URL( window.location.href );
-		if ( url.searchParams.has( 'dctc_ai_open_wizard' ) ) {
-			url.searchParams.delete( 'dctc_ai_open_wizard' );
-			window.history.replaceState( {}, '', url.toString() );
-		}
-	}, [ showWizard ] );
-
-	const goToTab = ( id ) => () => {
-		setActiveTab( id );
+	const goToTab = (id) => () => {
+		setActiveTab(id);
 		window.location.hash = id;
 	};
 
+	// When on the Guide page: render the Onboarding Wizard Modal and toasts
+	if (isGuidePage) {
+		return (
+			<div className="dctc-guide-react-root">
+				{notice && <Toast message={notice.message} type={notice.type} />}
+				{showWizard && (
+					<OnboardingWizard
+						key={wizardKey}
+						open={true}
+						onClose={() => {
+							if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+								const url = new URL(window.location.href);
+								if (url.searchParams.has('open') || url.searchParams.has('dctc_open_onboarding')) {
+									url.searchParams.delete('open');
+									url.searchParams.delete('dctc_open_onboarding');
+									window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+								}
+							}
+							setShowWizard(false);
+							setWizardKey((k) => k + 1);
+						}}
+						showNotice={showNotice}
+					/>
+				)}
+			</div>
+		);
+	}
+
+	// Normal Main Menu Page (dragwyb-click-to-chat):
 	return (
 		<div className="dctc-ai-dashboard-wrapper">
-			<SetupWizard
-				open={ showWizard }
-				settings={ settings }
-				onSave={ onSave }
-				onClose={ () => {
-					setShowWizard( false );
-					setWizardKey( ( k ) => k + 1 );
-				} }
-				showNotice={ showNotice }
-			/>
-
+			{notice && <Toast message={notice.message} type={notice.type} />}
 			<header className="dctc-ai-dashboard-header">
 				<div className="dctc-ai-brand">
 					<div className="dctc-ai-brand__icon-wrap" aria-hidden="true">
 						<span className="dashicons dashicons-format-chat" />
 					</div>
 					<div className="dctc-ai-brand__text-wrap">
-						<span className="dctc-ai-brand__title">{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }</span>
-						<span className="dctc-ai-brand__badge">{ __( 'PRO', 'dragwyb-click-to-chat' ) }</span>
+						<span className="dctc-ai-brand__title">{__('AI Assistant', 'dragwyb-click-to-chat')}</span>
+						<span className="dctc-ai-brand__badge">{__('PRO', 'dragwyb-click-to-chat')}</span>
 					</div>
 				</div>
 				<nav
 					className="dctc-ai-tabs"
 					role="tablist"
-					aria-label={ __( 'Settings sections', 'dragwyb-click-to-chat' ) }
+					aria-label={__('Settings sections', 'dragwyb-click-to-chat')}
 				>
-					{ NAV_GROUPS.map( ( group ) => (
-						<div className="dctc-ai-nav-group" key={ group.label }>
-							<span className="dctc-ai-nav-group__label">{ group.label }</span>
-							{ group.items.map( ( itemId ) => {
-								const tab = visibleTabs.find( ( t ) => t.id === itemId );
-								if ( ! tab ) {
+					{NAV_GROUPS.map((group) => (
+						<div className="dctc-ai-nav-group" key={group.label}>
+							<span className="dctc-ai-nav-group__label">{group.label}</span>
+							{group.items.map((itemId) => {
+								const tab = visibleTabs.find((t) => t.id === itemId);
+								if (!tab) {
 									return null;
 								}
 								return (
 									<button
-										key={ tab.id }
+										key={tab.id}
 										type="button"
 										role="tab"
-										title={ tab.label }
-										aria-selected={ activeTab === tab.id }
-										tabIndex={ activeTab === tab.id ? 0 : -1 }
-										className={
-											'dctc-ai-tab ' +
-											( activeTab === tab.id ? 'active' : '' )
-										}
-										onClick={ goToTab( tab.id ) }
+										id={`tab-${tab.id}`}
+										aria-controls={`panel-${tab.id}`}
+										aria-selected={activeTab === tab.id}
+										className={`dctc-ai-tab ${activeTab === tab.id ? 'active' : ''}`}
+										onClick={goToTab(tab.id)}
 									>
-										<span
-											className={ `dashicons ${ tab.icon }` }
-											aria-hidden="true"
-										/>
-										<span className="dctc-ai-tab-label">{ tab.label }</span>
+										<span className={`dashicons ${tab.icon}`} aria-hidden="true" />
+										<span className="dctc-ai-tab__label">{tab.label}</span>
 									</button>
 								);
-							} ) }
+							})}
 						</div>
-					) ) }
+					))}
 				</nav>
 			</header>
 
-			<main className="dctc-ai-content">
-				<header className="dctc-ai-content-header">
-					<div className="dctc-ai-content-header__meta">
-						<h1 id="dctc-ai-tab-title">{ current?.label }</h1>
-						<p id="dctc-ai-tab-desc">{ current?.desc }</p>
-					</div>
-					<div className="dctc-ai-content-header__actions">
-						<a
-							href="admin.php?page=dragwyb-click-to-chat-guide&tab=ai"
-							className="dctc-ai-guide-btn"
-							title={ __( 'View AI Assistant Documentation & Guide', 'dragwyb-click-to-chat' ) }
-						>
-							<span className="dashicons dashicons-book" aria-hidden="true" />
-							<span>{ __( 'User Guide', 'dragwyb-click-to-chat' ) }</span>
-						</a>
-					</div>
-				</header>
-
-				{ notice && (
-					<Toast
-						message={ notice.message }
-						type={ notice.type }
-						onClose={ () => setNotice( null ) }
+			<main
+				className="dctc-ai-dashboard-body"
+				id={`panel-${current?.id}`}
+				role="tabpanel"
+				aria-labelledby={`tab-${current?.id}`}
+			>
+				{Panel && (
+					<Panel
+						settings={settings}
+						onSave={onSave}
+						showNotice={showNotice}
 					/>
-				) }
-
-				<div className="dctc-ai-tab-panel active">
-					{ Panel && (
-						<Panel
-							key={ `${ activeTab }-${ wizardKey }` }
-							settings={ settings }
-							onSave={ onSave }
-							showNotice={ showNotice }
-						/>
-					) }
-				</div>
+				)}
 			</main>
 		</div>
 	);

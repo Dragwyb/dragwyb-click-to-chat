@@ -22,6 +22,7 @@ class DCTC_Support_Portal {
 	 */
 	public static function init() {
 		add_shortcode( 'dragwyb_support', array( __CLASS__, 'render_portal_shortcode' ) );
+		add_shortcode( 'dctc_support_portal', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_enqueue_portal_assets' ) );
 	}
 
