@@ -2,7 +2,8 @@
 /**
  * DCTC Support Tag Service
  *
- * Manages support tags and ticket-tag pivot relationships.
+ * Tag taxonomy layer built on the unified Taxonomy & Term architecture.
+ * Manages support tags and ticket-tag polymorphic relationships.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -23,12 +24,28 @@ class DCTC_Support_Tag_Service {
 	 */
 	public static function get_tags() {
 		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_tags';
+		$table = $wpdb->prefix . 'dctc_support_terms';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$tags = $wpdb->get_results( "SELECT * FROM `$table` ORDER BY name ASC", ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" );
+		if ( ! $table_exists ) {
+			if ( class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::create_tables();
+			}
+		}
 
-		return is_array( $tags) ? $tags : array();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );
+
+		if ( empty( $tags ) ) {
+			if ( class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::seed_default_data();
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );
+			}
+		}
+
+		return is_array( $tags ) ? $tags : array();
 	}
 
 	/**
@@ -43,7 +60,7 @@ class DCTC_Support_Tag_Service {
 		}
 
 		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_tags';
+		$table = $wpdb->prefix . 'dctc_support_terms';
 
 		$id     = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
 		$name   = ! empty( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
@@ -56,10 +73,13 @@ class DCTC_Support_Tag_Service {
 		}
 
 		$fields = array(
-			'name'   => $name,
-			'slug'   => $slug,
-			'color'  => $color ? $color : '#4F46E5',
-			'status' => $status,
+			'taxonomy_slug' => 'tag',
+			'parent_id'     => 0,
+			'name'          => $name,
+			'slug'          => $slug,
+			'color'         => $color ? $color : '#4F46E5',
+			'status'        => $status,
+			'updated_at'    => current_time( 'mysql' ),
 		);
 
 		if ( $id ) {
@@ -67,7 +87,7 @@ class DCTC_Support_Tag_Service {
 			return false !== $updated ? $id : false;
 		} else {
 			$fields['created_at'] = current_time( 'mysql' );
-			$inserted = $wpdb->insert( $table, $fields );
+			$inserted             = $wpdb->insert( $table, $fields );
 			return $inserted ? $wpdb->insert_id : false;
 		}
 	}
@@ -83,15 +103,16 @@ class DCTC_Support_Tag_Service {
 			return false;
 		}
 
-		global $wpdb;
-		$table_tags = $wpdb->prefix . 'dctc_support_tags';
-		$table_pivot = $wpdb->prefix . 'dctc_support_ticket_tags';
-		$tag_id      = absint( $tag_id );
+		$tag_id = absint( $tag_id );
+		if ( ! $tag_id ) {
+			return false;
+		}
 
-		$wpdb->delete( $table_pivot, array( 'tag_id' => $tag_id ), array( '%d' ) );
-		$deleted = $wpdb->delete( $table_tags, array( 'id' => $tag_id ), array( '%d' ) );
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			return DCTC_Support_Taxonomy_Service::delete_term( 'tag', $tag_id );
+		}
 
-		return (bool) $deleted;
+		return false;
 	}
 
 	/**
@@ -101,21 +122,10 @@ class DCTC_Support_Tag_Service {
 	 * @return array<int, array<string, mixed>>
 	 */
 	public static function get_ticket_tags( $ticket_id ) {
-		global $wpdb;
-		$table_tags  = $wpdb->prefix . 'dctc_support_tags';
-		$table_pivot = $wpdb->prefix . 'dctc_support_ticket_tags';
-		$ticket_id   = absint( $ticket_id );
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$tags = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT t.* FROM `$table_tags` t INNER JOIN `$table_pivot` p ON t.id = p.tag_id WHERE p.ticket_id = %d ORDER BY t.name ASC",
-				$ticket_id
-			),
-			ARRAY_A
-		);
-
-		return is_array( $tags ) ? $tags : array();
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			return DCTC_Support_Taxonomy_Service::get_object_terms( $ticket_id, 'tag', 'ticket' );
+		}
+		return array();
 	}
 
 	/**
@@ -126,70 +136,9 @@ class DCTC_Support_Tag_Service {
 	 * @return bool
 	 */
 	public static function set_ticket_tags( $ticket_id, $tags_input = array() ) {
-		global $wpdb;
-		$table_tags  = $wpdb->prefix . 'dctc_support_tags';
-		$table_pivot = $wpdb->prefix . 'dctc_support_ticket_tags';
-		$ticket_id   = absint( $ticket_id );
-		$tags_input  = is_array( $tags_input ) ? $tags_input : array();
-
-		// Delete existing associations
-		$wpdb->delete( $table_pivot, array( 'ticket_id' => $ticket_id ), array( '%d' ) );
-
-		if ( empty( $tags_input ) ) {
-			return true;
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			return DCTC_Support_Taxonomy_Service::set_object_terms( $ticket_id, $tags_input, 'tag', 'ticket' );
 		}
-
-		$tag_ids = array();
-		foreach ( $tags_input as $item ) {
-			if ( is_numeric( $item ) && (int) $item > 0 ) {
-				$tag_ids[] = absint( $item );
-			} elseif ( is_string( $item ) && '' !== trim( $item ) ) {
-				$tag_name = sanitize_text_field( trim( $item ) );
-				$tag_slug = sanitize_title( $tag_name );
-				if ( empty( $tag_slug ) ) {
-					continue;
-				}
-
-				// Find or create
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$existing_id = $wpdb->get_var(
-					$wpdb->prepare( "SELECT id FROM `$table_tags` WHERE slug = %s OR name = %s", $tag_slug, $tag_name )
-				);
-
-				if ( $existing_id ) {
-					$tag_ids[] = (int) $existing_id;
-				} else {
-					$wpdb->insert(
-						$table_tags,
-						array(
-							'name'       => $tag_name,
-							'slug'       => $tag_slug,
-							'color'      => '#4F46E5',
-							'status'     => 'active',
-							'created_at' => current_time( 'mysql' ),
-						)
-					);
-					if ( $wpdb->insert_id ) {
-						$tag_ids[] = (int) $wpdb->insert_id;
-					}
-				}
-			}
-		}
-
-		$tag_ids = array_unique( array_filter( $tag_ids ) );
-		foreach ( $tag_ids as $tag_id ) {
-			$wpdb->insert(
-				$table_pivot,
-				array(
-					'ticket_id'  => $ticket_id,
-					'tag_id'     => $tag_id,
-					'created_at' => current_time( 'mysql' ),
-				),
-				array( '%d', '%d', '%s' )
-			);
-		}
-
-		return true;
+		return false;
 	}
 }
-

@@ -115,22 +115,30 @@ class DCTC_Settings_Import_Export {
 
 		if ( in_array( 'support_data', $modules, true ) ) {
 			global $wpdb;
-			$tickets_table    = $wpdb->prefix . 'dctc_support_tickets';
-			$messages_table   = $wpdb->prefix . 'dctc_support_messages';
-			$categories_table = $wpdb->prefix . 'dctc_support_categories';
-			$tags_table       = $wpdb->prefix . 'dctc_support_tags';
+			$tickets_table     = $wpdb->prefix . 'dctc_support_tickets';
+			$ticket_meta_table = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$taxonomies_table  = $wpdb->prefix . 'dctc_support_taxonomies';
+			$terms_table       = $wpdb->prefix . 'dctc_support_terms';
+			$term_meta_table   = $wpdb->prefix . 'dctc_support_term_meta';
+			$rel_table         = $wpdb->prefix . 'dctc_support_term_relationships';
 			$payload['support_data'] = array();
 			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
 				$payload['support_data']['tickets'] = $wpdb->get_results( "SELECT * FROM `$tickets_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
 			}
-			if ( $wpdb->get_var( "SHOW TABLES LIKE '$messages_table'" ) === $messages_table ) {
-				$payload['support_data']['messages'] = $wpdb->get_results( "SELECT * FROM `$messages_table` ORDER BY id DESC LIMIT 10000", ARRAY_A );
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$ticket_meta_table'" ) === $ticket_meta_table ) {
+				$payload['support_data']['ticket_meta'] = $wpdb->get_results( "SELECT * FROM `$ticket_meta_table` ORDER BY meta_id ASC", ARRAY_A );
 			}
-			if ( $wpdb->get_var( "SHOW TABLES LIKE '$categories_table'" ) === $categories_table ) {
-				$payload['support_data']['categories'] = $wpdb->get_results( "SELECT * FROM `$categories_table` ORDER BY id ASC", ARRAY_A );
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$taxonomies_table'" ) === $taxonomies_table ) {
+				$payload['support_data']['taxonomies'] = $wpdb->get_results( "SELECT * FROM `$taxonomies_table` ORDER BY id ASC", ARRAY_A );
 			}
-			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tags_table'" ) === $tags_table ) {
-				$payload['support_data']['tags'] = $wpdb->get_results( "SELECT * FROM `$tags_table` ORDER BY id ASC", ARRAY_A );
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$terms_table'" ) === $terms_table ) {
+				$payload['support_data']['terms'] = $wpdb->get_results( "SELECT * FROM `$terms_table` ORDER BY id ASC", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$term_meta_table'" ) === $term_meta_table ) {
+				$payload['support_data']['term_meta'] = $wpdb->get_results( "SELECT * FROM `$term_meta_table` ORDER BY meta_id ASC", ARRAY_A );
+			}
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$rel_table'" ) === $rel_table ) {
+				$payload['support_data']['relationships'] = $wpdb->get_results( "SELECT * FROM `$rel_table` ORDER BY id ASC", ARRAY_A );
 			}
 		}
 
@@ -938,27 +946,42 @@ class DCTC_Settings_Import_Export {
 			}
 			++$applied;
 		}
-
 		if ( in_array( 'support_data', $modules, true ) && ! empty( $payload['support_data'] ) ) {
 			global $wpdb;
-			$tickets_table    = $wpdb->prefix . 'dctc_support_tickets';
-			$messages_table   = $wpdb->prefix . 'dctc_support_messages';
-			$categories_table = $wpdb->prefix . 'dctc_support_categories';
-			$tags_table       = $wpdb->prefix . 'dctc_support_tags';
+			$tickets_table     = $wpdb->prefix . 'dctc_support_tickets';
+			$ticket_meta_table = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$taxonomies_table  = $wpdb->prefix . 'dctc_support_taxonomies';
+			$terms_table       = $wpdb->prefix . 'dctc_support_terms';
+			$term_meta_table   = $wpdb->prefix . 'dctc_support_term_meta';
+			$rel_table         = $wpdb->prefix . 'dctc_support_term_relationships';
 
-			if ( ! empty( $payload['support_data']['categories'] ) && is_array( $payload['support_data']['categories'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$categories_table'" ) === $categories_table ) {
-				foreach ( $payload['support_data']['categories'] as $cat ) {
-					if ( is_array( $cat ) && ! empty( $cat['name'] ) ) {
-						unset( $cat['id'] );
-						$wpdb->replace( $categories_table, $cat );
+			if ( ! empty( $payload['support_data']['taxonomies'] ) && is_array( $payload['support_data']['taxonomies'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$taxonomies_table'" ) === $taxonomies_table ) {
+				foreach ( $payload['support_data']['taxonomies'] as $tax ) {
+					if ( is_array( $tax ) && ! empty( $tax['slug'] ) ) {
+						unset( $tax['id'] );
+						$wpdb->replace( $taxonomies_table, $tax );
 					}
 				}
 			}
-			if ( ! empty( $payload['support_data']['tags'] ) && is_array( $payload['support_data']['tags'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$tags_table'" ) === $tags_table ) {
-				foreach ( $payload['support_data']['tags'] as $tag ) {
-					if ( is_array( $tag ) && ! empty( $tag['name'] ) ) {
-						unset( $tag['id'] );
-						$wpdb->replace( $tags_table, $tag );
+			if ( ! empty( $payload['support_data']['terms'] ) && is_array( $payload['support_data']['terms'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$terms_table'" ) === $terms_table ) {
+				foreach ( $payload['support_data']['terms'] as $term ) {
+					if ( is_array( $term ) && ! empty( $term['slug'] ) ) {
+						$wpdb->replace( $terms_table, $term );
+					}
+				}
+			}
+			if ( ! empty( $payload['support_data']['term_meta'] ) && is_array( $payload['support_data']['term_meta'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$term_meta_table'" ) === $term_meta_table ) {
+				foreach ( $payload['support_data']['term_meta'] as $tmeta ) {
+					if ( is_array( $tmeta ) && ! empty( $tmeta['term_id'] ) ) {
+						$wpdb->replace( $term_meta_table, $tmeta );
+					}
+				}
+			}
+			if ( ! empty( $payload['support_data']['relationships'] ) && is_array( $payload['support_data']['relationships'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$rel_table'" ) === $rel_table ) {
+				foreach ( $payload['support_data']['relationships'] as $rel ) {
+					if ( is_array( $rel ) && ! empty( $rel['object_id'] ) ) {
+						unset( $rel['id'] );
+						$wpdb->replace( $rel_table, $rel );
 					}
 				}
 			}
@@ -970,11 +993,10 @@ class DCTC_Settings_Import_Export {
 					}
 				}
 			}
-			if ( ! empty( $payload['support_data']['messages'] ) && is_array( $payload['support_data']['messages'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$messages_table'" ) === $messages_table ) {
-				foreach ( $payload['support_data']['messages'] as $msg ) {
-					if ( is_array( $msg ) && ! empty( $msg['ticket_id'] ) ) {
-						unset( $msg['id'] );
-						$wpdb->insert( $messages_table, $msg );
+			if ( ! empty( $payload['support_data']['ticket_meta'] ) && is_array( $payload['support_data']['ticket_meta'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$ticket_meta_table'" ) === $ticket_meta_table ) {
+				foreach ( $payload['support_data']['ticket_meta'] as $tkm ) {
+					if ( is_array( $tkm ) && ! empty( $tkm['ticket_id'] ) ) {
+						$wpdb->replace( $ticket_meta_table, $tkm );
 					}
 				}
 			}

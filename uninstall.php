@@ -82,8 +82,15 @@ function dctc_execute_uninstall_cleanup() {
 	// Support Center & Helpdesk Ticketing
 	if ( $delete_support_data ) {
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_tickets';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_taxonomies';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_terms';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_term_meta';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_term_relationships';
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_categories';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_products';
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_tags';
+		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_taxonomy_terms';
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_ticket_tags';
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_agents';
 		$tables_to_drop[] = $wpdb->prefix . 'dctc_support_events';

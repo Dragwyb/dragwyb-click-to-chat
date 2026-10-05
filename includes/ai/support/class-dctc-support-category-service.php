@@ -2,7 +2,8 @@
 /**
  * DCTC Support Category Service
  *
- * Manages support categories, skill requirements, and routing metadata.
+ * Category taxonomy layer built on the unified Taxonomy & Term architecture.
+ * Manages support categories, routing rules, team/skill requirements, and sub-taxonomies.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -17,63 +18,92 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DCTC_Support_Category_Service {
 
 	/**
-	 * Ensure sub_taxonomies column exists in the categories table.
-	 */
-	public static function ensure_schema() {
-		static $verified = false;
-		if ( $verified ) {
-			return;
-		}
-		$verified = true;
-
-		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_categories';
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$col = $wpdb->get_results( "SHOW COLUMNS FROM `$table` LIKE 'sub_taxonomies'" );
-		if ( empty( $col ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( "ALTER TABLE `$table` ADD COLUMN `sub_taxonomies` text DEFAULT NULL AFTER `show_tags`" );
-		}
-	}
-
-	/**
 	 * Get all support categories.
 	 *
 	 * @param array $args Query arguments (e.g. status, parent_id).
 	 * @return array<int, array<string, mixed>>
 	 */
 	public static function get_categories( $args = array() ) {
-		self::ensure_schema();
-
 		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_categories';
+		$table_terms = $wpdb->prefix . 'dctc_support_terms';
+		$table_meta  = $wpdb->prefix . 'dctc_support_term_meta';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_terms'" );
+		if ( ! $table_exists ) {
+			if ( class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::create_tables();
+			}
+		}
 
 		$status = isset( $args['status'] ) ? sanitize_text_field( $args['status'] ) : '';
-		$where  = '1=1';
+		$where  = "taxonomy_slug = 'category'";
 
 		if ( ! empty( $status ) && 'all' !== $status ) {
 			$where .= $wpdb->prepare( ' AND status = %s', $status );
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		if ( isset( $args['parent_id'] ) ) {
+			$where .= $wpdb->prepare( ' AND parent_id = %d', absint( $args['parent_id'] ) );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$rows = $wpdb->get_results(
-			"SELECT * FROM `$table` WHERE $where ORDER BY display_order ASC, name ASC",
+			"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
 			ARRAY_A
 		);
+
+		if ( empty( $rows ) ) {
+			if ( class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::seed_default_data();
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$rows = $wpdb->get_results(
+					"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
+					ARRAY_A
+				);
+			}
+		}
 
 		if ( ! is_array( $rows ) ) {
 			return array();
 		}
 
+		$term_ids = wp_list_pluck( $rows, 'id' );
+		$meta_map = array();
+
+		if ( ! empty( $term_ids ) ) {
+			$ids_in = implode( ',', array_map( 'absint', $term_ids ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$meta_rows = $wpdb->get_results(
+				"SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($ids_in)",
+				ARRAY_A
+			);
+			if ( is_array( $meta_rows ) ) {
+				foreach ( $meta_rows as $mr ) {
+					$meta_map[ (int) $mr['term_id'] ][ $mr['meta_key'] ] = $mr['meta_value'];
+				}
+			}
+		}
+
 		foreach ( $rows as &$row ) {
-			$row['required_skills'] = ! empty( $row['required_skills'] ) ? json_decode( $row['required_skills'], true ) : array();
-			$row['required_skills'] = is_array( $row['required_skills'] ) ? $row['required_skills'] : array();
-			$row['sub_taxonomies']  = ! empty( $row['sub_taxonomies'] ) ? json_decode( $row['sub_taxonomies'], true ) : array();
-			$row['sub_taxonomies']  = is_array( $row['sub_taxonomies'] ) ? $row['sub_taxonomies'] : ( array_filter( array( ! empty( $row['show_product'] ) ? 'product' : '', ! empty( $row['show_tags'] ) ? 'tag' : '' ) ) );
-			$row['show_product']    = isset( $row['show_product'] ) ? (int) $row['show_product'] : 1;
-			$row['show_tags']       = isset( $row['show_tags'] ) ? (int) $row['show_tags'] : 1;
-			$row['color']           = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
+			$tid  = (int) $row['id'];
+			$meta = isset( $meta_map[ $tid ] ) ? $meta_map[ $tid ] : array();
+
+			$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
+			$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
+
+			$req_skills = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
+			$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
+
+			$sub_tax = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
+			$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
+
+			$row['requires_human'] = isset( $meta['requires_human'] ) ? (int) $meta['requires_human'] : 0;
+			$row['ai_allowed']     = isset( $meta['ai_allowed'] ) ? (int) $meta['ai_allowed'] : 1;
+			$row['auto_assign']    = isset( $meta['auto_assign'] ) ? (int) $meta['auto_assign'] : 1;
+			$row['show_product']   = isset( $meta['show_product'] ) ? (int) $meta['show_product'] : 1;
+			$row['show_tags']      = isset( $meta['show_tags'] ) ? (int) $meta['show_tags'] : 1;
+			$row['color']          = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
 		}
 
 		return $rows;
@@ -86,45 +116,56 @@ class DCTC_Support_Category_Service {
 	 * @return array<string, mixed>|null
 	 */
 	public static function get_category( $category_id ) {
-		self::ensure_schema();
-
 		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_categories';
+		$table_terms = $wpdb->prefix . 'dctc_support_terms';
+		$category_id = absint( $category_id );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $category_id ) ),
+			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category'", $category_id ),
 			ARRAY_A
 		);
 
-		if ( $row ) {
-			$row['required_skills'] = ! empty( $row['required_skills'] ) ? json_decode( $row['required_skills'], true ) : array();
-			$row['required_skills'] = is_array( $row['required_skills'] ) ? $row['required_skills'] : array();
-			$row['sub_taxonomies']  = ! empty( $row['sub_taxonomies'] ) ? json_decode( $row['sub_taxonomies'], true ) : array();
-			$row['sub_taxonomies']  = is_array( $row['sub_taxonomies'] ) ? $row['sub_taxonomies'] : ( array_filter( array( ! empty( $row['show_product'] ) ? 'product' : '', ! empty( $row['show_tags'] ) ? 'tag' : '' ) ) );
-			$row['show_product']    = isset( $row['show_product'] ) ? (int) $row['show_product'] : 1;
-			$row['show_tags']       = isset( $row['show_tags'] ) ? (int) $row['show_tags'] : 1;
-			$row['color']           = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
+		if ( ! $row ) {
+			return null;
 		}
+
+		$meta = class_exists( 'DCTC_Support_Taxonomy_Service' )
+			? DCTC_Support_Taxonomy_Service::get_all_term_meta( $category_id )
+			: array();
+
+		$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
+		$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
+
+		$req_skills = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
+		$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
+
+		$sub_tax = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
+		$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
+
+		$row['requires_human'] = isset( $meta['requires_human'] ) ? (int) $meta['requires_human'] : 0;
+		$row['ai_allowed']     = isset( $meta['ai_allowed'] ) ? (int) $meta['ai_allowed'] : 1;
+		$row['auto_assign']    = isset( $meta['auto_assign'] ) ? (int) $meta['auto_assign'] : 1;
+		$row['show_product']   = isset( $meta['show_product'] ) ? (int) $meta['show_product'] : 1;
+		$row['show_tags']      = isset( $meta['show_tags'] ) ? (int) $meta['show_tags'] : 1;
+		$row['color']          = ! empty( $row['color'] ) ? $row['color'] : '#4F46E5';
 
 		return $row;
 	}
 
 	/**
-	 * Create or update a category.
+	 * Create or update a category term and its metadata.
 	 *
 	 * @param array $data Category data.
 	 * @return int|false Category ID or false on failure.
 	 */
 	public static function save_category( $data ) {
-		self::ensure_schema();
-
 		if ( ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) ) {
 			return false;
 		}
 
 		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_categories';
+		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 
 		$id               = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
 		$name             = ! empty( $data['name'] ) ? sanitize_text_field( $data['name'] ) : '';
@@ -148,41 +189,52 @@ class DCTC_Support_Category_Service {
 		$show_tags    = in_array( 'tag', $sub_tax_list, true ) ? 1 : ( isset( $data['show_tags'] ) ? ( $data['show_tags'] ? 1 : 0 ) : 0 );
 
 		$skills = isset( $data['required_skills'] ) && is_array( $data['required_skills'] )
-			? wp_json_encode( array_map( 'sanitize_key', $data['required_skills'] ) )
-			: wp_json_encode( array() );
+			? wp_json_encode( array_values( array_map( 'sanitize_key', $data['required_skills'] ) ) )
+			: ( is_string( $data['required_skills'] ) && ! empty( $data['required_skills'] ) ? $data['required_skills'] : '[]' );
 
 		if ( empty( $name ) || empty( $slug ) ) {
 			return false;
 		}
 
-		$fields = array(
-			'parent_id'        => $parent_id,
-			'name'             => $name,
-			'slug'             => $slug,
-			'color'            => $color ? $color : '#4F46E5',
-			'description'      => $description,
-			'default_priority' => $default_priority,
-			'default_team_id'  => $default_team_id,
-			'required_skills'  => $skills,
-			'requires_human'   => $requires_human,
-			'ai_allowed'       => $ai_allowed,
-			'auto_assign'      => $auto_assign,
-			'show_product'     => $show_product,
-			'show_tags'        => $show_tags,
-			'sub_taxonomies'   => wp_json_encode( $sub_tax_list ),
-			'status'           => $status,
-			'display_order'    => $display_order,
+		$term_fields = array(
+			'taxonomy_slug' => 'category',
+			'parent_id'     => $parent_id,
+			'name'          => $name,
+			'slug'          => $slug,
+			'color'         => $color ? $color : '#4F46E5',
+			'description'   => $description,
+			'status'        => $status,
+			'display_order' => $display_order,
+			'updated_at'    => current_time( 'mysql' ),
 		);
 
 		if ( $id ) {
-			$fields['updated_at'] = current_time( 'mysql' );
-			$updated = $wpdb->update( $table, $fields, array( 'id' => $id ) );
-			return false !== $updated ? $id : false;
+			$wpdb->update( $table_terms, $term_fields, array( 'id' => $id ) );
+			$term_id = $id;
 		} else {
-			$fields['created_at'] = current_time( 'mysql' );
-			$inserted = $wpdb->insert( $table, $fields );
-			return $inserted ? $wpdb->insert_id : false;
+			$term_fields['created_at'] = current_time( 'mysql' );
+			$inserted                  = $wpdb->insert( $table_terms, $term_fields );
+			$term_id                   = $inserted ? (int) $wpdb->insert_id : 0;
 		}
+
+		if ( ! $term_id ) {
+			return false;
+		}
+
+		// Update Metadata
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'default_priority', $default_priority );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'default_team_id', $default_team_id );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'required_skills', $skills );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'requires_human', $requires_human );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'ai_allowed', $ai_allowed );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'auto_assign', $auto_assign );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'show_product', $show_product );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'show_tags', $show_tags );
+			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'sub_taxonomies', wp_json_encode( $sub_tax_list ) );
+		}
+
+		return $term_id;
 	}
 
 	/**
@@ -196,15 +248,15 @@ class DCTC_Support_Category_Service {
 			return false;
 		}
 
-		global $wpdb;
-		$table = $wpdb->prefix . 'dctc_support_categories';
+		$category_id = absint( $category_id );
+		if ( ! $category_id ) {
+			return false;
+		}
 
-		$deleted = $wpdb->delete(
-			$table,
-			array( 'id' => absint( $category_id ) ),
-			array( '%d' )
-		);
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			return DCTC_Support_Taxonomy_Service::delete_term( 'category', $category_id );
+		}
 
-		return (bool) $deleted;
+		return false;
 	}
 }

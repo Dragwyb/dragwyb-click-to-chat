@@ -159,6 +159,13 @@ class DCTC_Support_Ticket_Service {
 			DCTC_Support_Tag_Service::set_ticket_tags( $ticket_id, $data['tags'] );
 		}
 
+		// Save ticket meta if passed
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			foreach ( $data['meta'] as $mkey => $mval ) {
+				self::update_ticket_meta( $ticket_id, $mkey, $mval );
+			}
+		}
+
 		// Log ticket created event
 		DCTC_Support_Event_Service::log_event(
 			$ticket_id,
@@ -198,7 +205,7 @@ class DCTC_Support_Ticket_Service {
 		global $wpdb;
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 		$table_agents  = $wpdb->prefix . 'dctc_support_agents';
-		$table_cats    = $wpdb->prefix . 'dctc_support_categories';
+		$table_terms   = $wpdb->prefix . 'dctc_support_terms';
 
 		$page     = isset( $args['page'] ) ? max( 1, absint( $args['page'] ) ) : 1;
 		$per_page = isset( $args['per_page'] ) ? min( 100, max( 1, absint( $args['per_page'] ) ) ) : 20;
@@ -271,7 +278,7 @@ class DCTC_Support_Ticket_Service {
 				s.id as session_exists_id,
 				s.content as session_content
 				FROM `$table_tickets` t 
-				LEFT JOIN `$table_cats` c ON t.category_id = c.id
+				LEFT JOIN `$table_terms` c ON (t.category_id = c.id AND c.taxonomy_slug = 'category')
 				LEFT JOIN `$table_agents` a ON t.assigned_agent_id = a.id
 				LEFT JOIN `" . $wpdb->prefix . "dctc_ai_sessions` s ON t.session_id = s.session_id
 				WHERE $where 
@@ -323,7 +330,7 @@ class DCTC_Support_Ticket_Service {
 		global $wpdb;
 		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
 		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
-		$table_cats     = $wpdb->prefix . 'dctc_support_categories';
+		$table_terms    = $wpdb->prefix . 'dctc_support_terms';
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 
 		if ( is_numeric( $id_or_uuid ) ) {
@@ -338,7 +345,7 @@ class DCTC_Support_Ticket_Service {
 				a.wp_user_id as agent_wp_user_id,
 				a.support_role as agent_role
 				FROM `$table_tickets` t 
-				LEFT JOIN `$table_cats` c ON t.category_id = c.id
+				LEFT JOIN `$table_terms` c ON (t.category_id = c.id AND c.taxonomy_slug = 'category')
 				LEFT JOIN `$table_agents` a ON t.assigned_agent_id = a.id
 				WHERE $where";
 
@@ -361,6 +368,7 @@ class DCTC_Support_Ticket_Service {
 		$ticket['tags']   = DCTC_Support_Tag_Service::get_ticket_tags( $ticket['id'] );
 		$ticket['events'] = DCTC_Support_Event_Service::get_events( $ticket['id'], 'ASC', 50 );
 		$ticket['notes']  = DCTC_Support_Note_Service::get_notes( $ticket['id'] );
+		$ticket['meta']   = self::get_all_ticket_meta( $ticket['id'] );
 
 		// Retrieve conversation messages and check session existence
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -999,6 +1007,151 @@ class DCTC_Support_Ticket_Service {
 			'confidence'  => $confidence,
 			'tags'        => $tags,
 		);
+	}
+
+	/**
+	 * Get ticket metadata.
+	 *
+	 * @param int    $ticket_id Ticket ID.
+	 * @param string $meta_key Meta key.
+	 * @param bool   $single Return single string/array or all entries.
+	 * @return mixed
+	 */
+	public static function get_ticket_meta( $ticket_id, $meta_key = '', $single = true ) {
+		global $wpdb;
+		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id = absint( $ticket_id );
+
+		if ( empty( $meta_key ) ) {
+			return self::get_all_ticket_meta( $ticket_id );
+		}
+
+		$meta_key = sanitize_key( $meta_key );
+		if ( $single ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$val = $wpdb->get_var(
+				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE ticket_id = %d AND meta_key = %s LIMIT 1", $ticket_id, $meta_key )
+			);
+			return $val;
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			return $wpdb->get_col(
+				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
+			);
+		}
+	}
+
+	/**
+	 * Get all metadata for a ticket as associative key => value map.
+	 *
+	 * @param int $ticket_id Ticket ID.
+	 * @return array<string, mixed>
+	 */
+	public static function get_all_ticket_meta( $ticket_id ) {
+		global $wpdb;
+		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id = absint( $ticket_id );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$rows = $wpdb->get_results(
+			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE ticket_id = %d", $ticket_id ),
+			ARRAY_A
+		);
+
+		$map = array();
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$decoded = json_decode( $row['meta_value'], true );
+				$map[ $row['meta_key'] ] = ( null !== $decoded && is_array( $decoded ) ) ? $decoded : $row['meta_value'];
+			}
+		}
+
+		return $map;
+	}
+
+	/**
+	 * Update or insert ticket metadata.
+	 *
+	 * @param int    $ticket_id Ticket ID.
+	 * @param string $meta_key Meta key.
+	 * @param mixed  $meta_value Meta value (scalar or array).
+	 * @return bool
+	 */
+	public static function update_ticket_meta( $ticket_id, $meta_key, $meta_value ) {
+		global $wpdb;
+		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id = absint( $ticket_id );
+		$meta_key  = sanitize_key( $meta_key );
+
+		if ( empty( $ticket_id ) || empty( $meta_key ) ) {
+			return false;
+		}
+
+		$val_str = is_array( $meta_value ) || is_object( $meta_value )
+			? wp_json_encode( $meta_value )
+			: (string) $meta_value;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$existing = $wpdb->get_var(
+			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
+		);
+
+		if ( $existing ) {
+			$wpdb->update(
+				$table,
+				array( 'meta_value' => $val_str ),
+				array( 'meta_id' => (int) $existing ),
+				array( '%s' ),
+				array( '%d' )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'ticket_id'  => $ticket_id,
+					'meta_key'   => $meta_key,
+					'meta_value' => $val_str,
+				),
+				array( '%d', '%s', '%s' )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * Delete ticket metadata.
+	 *
+	 * @param int    $ticket_id Ticket ID.
+	 * @param string $meta_key Optional meta key.
+	 * @return bool
+	 */
+	public static function delete_ticket_meta( $ticket_id, $meta_key = '' ) {
+		global $wpdb;
+		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id = absint( $ticket_id );
+
+		if ( empty( $ticket_id ) ) {
+			return false;
+		}
+
+		if ( ! empty( $meta_key ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete(
+				$table,
+				array( 'ticket_id' => $ticket_id, 'meta_key' => sanitize_key( $meta_key ) ),
+				array( '%d', '%s' )
+			);
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$wpdb->delete(
+				$table,
+				array( 'ticket_id' => $ticket_id ),
+				array( '%d' )
+			);
+		}
+
+		return true;
 	}
 }
 

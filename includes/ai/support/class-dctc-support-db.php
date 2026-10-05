@@ -4,8 +4,7 @@
  *
  * Manages custom tables for Support Center:
  * - Tickets
- * - Categories
- * - Tags & Ticket-Tags
+ * - Unified Taxonomies, Terms, Term Meta, and Relationships
  * - Support Agents
  * - Ticket Events (Timeline & Audit)
  * - Internal Notes
@@ -27,7 +26,7 @@ class DCTC_Support_DB {
 	/**
 	 * Database schema version
 	 */
-	const DB_VERSION = '1.0.0';
+	const DB_VERSION = '2.0.0';
 
 	/**
 	 * Option key for support DB version
@@ -93,109 +92,95 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_tickets );
 
-		// 2. Support Categories Table
-		$table_categories = $wpdb->prefix . 'dctc_support_categories';
-		$sql_categories   = "CREATE TABLE `$table_categories` (
+		// 1b. Support Ticket Meta Table
+		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$sql_ticket_meta   = "CREATE TABLE `$table_ticket_meta` (
+			meta_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			ticket_id bigint(20) unsigned NOT NULL,
+			meta_key varchar(255) DEFAULT NULL,
+			meta_value longtext,
+			PRIMARY KEY  (meta_id),
+			KEY ticket_id (ticket_id),
+			KEY meta_key (meta_key(191))
+		) $charset_collate;";
+		dbDelta( $sql_ticket_meta );
+
+		// 2. Unified Taxonomies Table
+		$table_taxonomies = $wpdb->prefix . 'dctc_support_taxonomies';
+		$sql_taxonomies   = "CREATE TABLE `$table_taxonomies` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			parent_id bigint(20) unsigned DEFAULT 0 NOT NULL,
+			slug varchar(100) NOT NULL,
 			name varchar(150) NOT NULL,
-			slug varchar(150) NOT NULL,
-			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
 			description text,
-			default_priority varchar(20) DEFAULT 'normal' NOT NULL,
-			default_team_id bigint(20) unsigned DEFAULT 0 NOT NULL,
-			required_skills text,
-			requires_human tinyint(1) DEFAULT 0 NOT NULL,
-			ai_allowed tinyint(1) DEFAULT 1 NOT NULL,
-			auto_assign tinyint(1) DEFAULT 1 NOT NULL,
-			show_product tinyint(1) DEFAULT 1 NOT NULL,
-			show_tags tinyint(1) DEFAULT 1 NOT NULL,
-			sub_taxonomies text,
-			status varchar(20) DEFAULT 'active' NOT NULL,
+			is_system tinyint(1) DEFAULT 0 NOT NULL,
+			hierarchical tinyint(1) DEFAULT 0 NOT NULL,
+			icon_type varchar(20) DEFAULT 'preset' NOT NULL,
+			icon_dashicon varchar(100) DEFAULT 'dashicons-category' NOT NULL,
+			image_url text,
+			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
 			display_order int(11) DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY slug (slug),
-			KEY parent_id (parent_id),
-			KEY status (status)
+			KEY display_order (display_order)
 		) $charset_collate;";
-		dbDelta( $sql_categories );
+		dbDelta( $sql_taxonomies );
 
-		// Ensure sub_taxonomies column exists if table was created in an earlier version
-		$col_check = $wpdb->get_results( "SHOW COLUMNS FROM `$table_categories` LIKE 'sub_taxonomies'" );
-		if ( empty( $col_check ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN `sub_taxonomies` text DEFAULT NULL AFTER `show_tags`" );
-		}
-
-		// 2b. Support Products Table
-		$table_products = $wpdb->prefix . 'dctc_support_products';
-		$sql_products   = "CREATE TABLE `$table_products` (
+		// 3. Unified Terms Table
+		$table_terms = $wpdb->prefix . 'dctc_support_terms';
+		$sql_terms   = "CREATE TABLE `$table_terms` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			taxonomy_slug varchar(100) NOT NULL,
+			parent_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			name varchar(255) NOT NULL,
 			slug varchar(255) NOT NULL,
-			category_id bigint(20) unsigned DEFAULT 0 NOT NULL,
-			wc_product_id bigint(20) unsigned DEFAULT 0 NOT NULL,
-			sku varchar(100) DEFAULT '' NOT NULL,
-			price decimal(10,2) DEFAULT 0.00 NOT NULL,
+			description text,
+			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
+			display_order int(11) DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY  (id),
-			KEY category_id (category_id),
-			KEY wc_product_id (wc_product_id),
-			KEY status (status)
-		) $charset_collate;";
-		dbDelta( $sql_products );
-
-		// 3. Support Tags Table
-		$table_tags = $wpdb->prefix . 'dctc_support_tags';
-		$sql_tags   = "CREATE TABLE `$table_tags` (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			name varchar(100) NOT NULL,
-			slug varchar(100) NOT NULL,
-			color varchar(20) DEFAULT '#4F46E5' NOT NULL,
-			status varchar(20) DEFAULT 'active' NOT NULL,
-			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-			PRIMARY KEY  (id),
-			UNIQUE KEY slug (slug),
-			KEY status (status)
-		) $charset_collate;";
-		dbDelta( $sql_tags );
-
-		// 3b. Custom Taxonomy Terms Table
-		$table_tax_terms = $wpdb->prefix . 'dctc_support_taxonomy_terms';
-		$sql_tax_terms   = "CREATE TABLE `$table_tax_terms` (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			taxonomy_slug varchar(100) NOT NULL,
-			name varchar(150) NOT NULL,
-			slug varchar(150) NOT NULL,
-			color varchar(30) DEFAULT '#4F46E5' NOT NULL,
-			description text,
-			status varchar(20) DEFAULT 'active' NOT NULL,
-			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
-			PRIMARY KEY  (id),
 			KEY taxonomy_slug (taxonomy_slug),
-			KEY slug (slug)
+			KEY parent_id (parent_id),
+			KEY slug (slug(191)),
+			KEY status (status),
+			KEY display_order (display_order)
 		) $charset_collate;";
-		dbDelta( $sql_tax_terms );
+		dbDelta( $sql_terms );
 
-		// 4. Ticket Tags Pivot Table
-		$table_ticket_tags = $wpdb->prefix . 'dctc_support_ticket_tags';
-		$sql_ticket_tags   = "CREATE TABLE `$table_ticket_tags` (
+		// 4. Term Meta Table
+		$table_term_meta = $wpdb->prefix . 'dctc_support_term_meta';
+		$sql_term_meta   = "CREATE TABLE `$table_term_meta` (
+			meta_id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			term_id bigint(20) unsigned NOT NULL,
+			meta_key varchar(255) DEFAULT NULL,
+			meta_value longtext,
+			PRIMARY KEY  (meta_id),
+			KEY term_id (term_id),
+			KEY meta_key (meta_key(191))
+		) $charset_collate;";
+		dbDelta( $sql_term_meta );
+
+		// 5. Term Relationships Table
+		$table_relationships = $wpdb->prefix . 'dctc_support_term_relationships';
+		$sql_relationships   = "CREATE TABLE `$table_relationships` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			ticket_id bigint(20) unsigned NOT NULL,
-			tag_id bigint(20) unsigned NOT NULL,
+			object_id bigint(20) unsigned NOT NULL,
+			object_type varchar(50) DEFAULT 'ticket' NOT NULL,
+			term_id bigint(20) unsigned NOT NULL,
+			taxonomy_slug varchar(100) NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY  (id),
-			UNIQUE KEY ticket_tag (ticket_id,tag_id),
-			KEY ticket_id (ticket_id),
-			KEY tag_id (tag_id)
+			UNIQUE KEY object_term_rel (object_id, object_type, term_id),
+			KEY object_id (object_id),
+			KEY term_id (term_id),
+			KEY taxonomy_slug (taxonomy_slug)
 		) $charset_collate;";
-		dbDelta( $sql_ticket_tags );
+		dbDelta( $sql_relationships );
 
-		// 5. Support Agents Profile Table
+		// 6. Support Agents Profile Table
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
 		$sql_agents   = "CREATE TABLE `$table_agents` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -224,7 +209,7 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_agents );
 
-		// 6. Support Events / Audit Timeline Table
+		// 7. Support Events / Audit Timeline Table
 		$table_events = $wpdb->prefix . 'dctc_support_events';
 		$sql_events   = "CREATE TABLE `$table_events` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -245,7 +230,7 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_events );
 
-		// 7. Internal Notes Table (Staff Only)
+		// 8. Internal Notes Table (Staff Only)
 		$table_notes = $wpdb->prefix . 'dctc_support_notes';
 		$sql_notes   = "CREATE TABLE `$table_notes` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -265,7 +250,7 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_notes );
 
-		// 8. Support Assignments History Table
+		// 9. Support Assignments History Table
 		$table_assignments = $wpdb->prefix . 'dctc_support_assignments';
 		$sql_assignments   = "CREATE TABLE `$table_assignments` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -284,7 +269,7 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_assignments );
 
-		// 9. Support Notification Log Table
+		// 10. Support Notification Log Table
 		$table_notif_log = $wpdb->prefix . 'dctc_support_notification_log';
 		$sql_notif_log   = "CREATE TABLE `$table_notif_log` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -305,26 +290,276 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_notif_log );
 
-		// Ensure dynamic schema columns exist
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$cat_cols = (array) $wpdb->get_col( "DESCRIBE `$table_categories`", 0 );
-		if ( ! in_array( 'show_product', $cat_cols, true ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN show_product tinyint(1) DEFAULT 1 NOT NULL" );
-		}
-		if ( ! in_array( 'show_tags', $cat_cols, true ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN show_tags tinyint(1) DEFAULT 1 NOT NULL" );
-		}
-		if ( ! in_array( 'color', $cat_cols, true ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->query( "ALTER TABLE `$table_categories` ADD COLUMN color varchar(30) DEFAULT '#4F46E5' NOT NULL" );
-		}
+		// Migrate any legacy table data if present
+		self::migrate_legacy_data();
 
 		// Seed initial default categories, tags, and settings if not already present.
 		self::seed_default_data();
 
 		update_option( self::DB_VERSION_OPTION, self::DB_VERSION );
+	}
+
+	/**
+	 * Migrate legacy table data into unified taxonomy tables if present.
+	 *
+	 * @return void
+	 */
+	public static function migrate_legacy_data() {
+		global $wpdb;
+
+		$table_taxonomies    = $wpdb->prefix . 'dctc_support_taxonomies';
+		$table_terms         = $wpdb->prefix . 'dctc_support_terms';
+		$table_term_meta     = $wpdb->prefix . 'dctc_support_term_meta';
+		$table_relationships = $wpdb->prefix . 'dctc_support_term_relationships';
+
+		// 1. Seed / Migrate custom taxonomies from option into taxonomies table
+		$custom_option = get_option( 'dctc_support_custom_taxonomies', array() );
+		if ( is_array( $custom_option ) && ! empty( $custom_option ) ) {
+			foreach ( $custom_option as $idx => $ct ) {
+				if ( empty( $ct['slug'] ) ) {
+					continue;
+				}
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				$exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_taxonomies` WHERE slug = %s", $ct['slug'] ) );
+				if ( ! $exists ) {
+					$wpdb->insert(
+						$table_taxonomies,
+						array(
+							'slug'          => $ct['slug'],
+							'name'          => ! empty( $ct['name'] ) ? $ct['name'] : ucfirst( $ct['slug'] ),
+							'description'   => ! empty( $ct['description'] ) ? $ct['description'] : '',
+							'is_system'     => 0,
+							'hierarchical'  => ! empty( $ct['hierarchical'] ) ? 1 : 0,
+							'icon_type'     => ! empty( $ct['icon_type'] ) ? $ct['icon_type'] : 'preset',
+							'icon_dashicon' => ! empty( $ct['icon_dashicon'] ) ? $ct['icon_dashicon'] : 'dashicons-category',
+							'image_url'     => ! empty( $ct['image_url'] ) ? $ct['image_url'] : '',
+							'color'         => ! empty( $ct['color'] ) ? $ct['color'] : '#6366F1',
+							'display_order' => $idx + 10,
+							'created_at'    => current_time( 'mysql' ),
+							'updated_at'    => current_time( 'mysql' ),
+						)
+					);
+				}
+			}
+		}
+
+		// 2. Migrate legacy categories table (dctc_support_categories)
+		$legacy_cats_table = $wpdb->prefix . 'dctc_support_categories';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$legacy_cats_table'" ) === $legacy_cats_table ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$legacy_cats = $wpdb->get_results( "SELECT * FROM `$legacy_cats_table`", ARRAY_A );
+			if ( ! empty( $legacy_cats ) ) {
+				foreach ( $legacy_cats as $cat ) {
+					// Check if term already exists by id or slug in taxonomy 'category'
+					$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE (id = %d OR slug = %s) AND taxonomy_slug = 'category'", absint( $cat['id'] ), $cat['slug'] ) );
+					$term_id  = $existing ? (int) $existing : (int) $cat['id'];
+
+					if ( ! $existing ) {
+						$wpdb->insert(
+							$table_terms,
+							array(
+								'id'            => $term_id,
+								'taxonomy_slug' => 'category',
+								'parent_id'     => ! empty( $cat['parent_id'] ) ? absint( $cat['parent_id'] ) : 0,
+								'name'          => $cat['name'],
+								'slug'          => $cat['slug'],
+								'description'   => isset( $cat['description'] ) ? $cat['description'] : '',
+								'color'         => ! empty( $cat['color'] ) ? $cat['color'] : '#4F46E5',
+								'status'        => ! empty( $cat['status'] ) ? $cat['status'] : 'active',
+								'display_order' => isset( $cat['display_order'] ) ? (int) $cat['display_order'] : 0,
+								'created_at'    => ! empty( $cat['created_at'] ) ? $cat['created_at'] : current_time( 'mysql' ),
+								'updated_at'    => ! empty( $cat['updated_at'] ) ? $cat['updated_at'] : current_time( 'mysql' ),
+							)
+						);
+					}
+
+					// Migrate category metadata
+					$meta_map = array(
+						'default_priority' => isset( $cat['default_priority'] ) ? $cat['default_priority'] : 'normal',
+						'default_team_id'  => isset( $cat['default_team_id'] ) ? $cat['default_team_id'] : 0,
+						'required_skills'  => isset( $cat['required_skills'] ) ? $cat['required_skills'] : '[]',
+						'requires_human'   => isset( $cat['requires_human'] ) ? $cat['requires_human'] : 0,
+						'ai_allowed'       => isset( $cat['ai_allowed'] ) ? $cat['ai_allowed'] : 1,
+						'auto_assign'      => isset( $cat['auto_assign'] ) ? $cat['auto_assign'] : 1,
+						'show_product'     => isset( $cat['show_product'] ) ? $cat['show_product'] : 1,
+						'show_tags'        => isset( $cat['show_tags'] ) ? $cat['show_tags'] : 1,
+						'sub_taxonomies'   => isset( $cat['sub_taxonomies'] ) ? $cat['sub_taxonomies'] : '["product","tag"]',
+					);
+
+					foreach ( $meta_map as $mkey => $mval ) {
+						// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+						$m_exists = $wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM `$table_term_meta` WHERE term_id = %d AND meta_key = %s", $term_id, $mkey ) );
+						if ( ! $m_exists ) {
+							$wpdb->insert(
+								$table_term_meta,
+								array(
+									'term_id'    => $term_id,
+									'meta_key'   => $mkey,
+									'meta_value' => is_array( $mval ) ? wp_json_encode( $mval ) : (string) $mval,
+								)
+							);
+						}
+					}
+				}
+			}
+		}
+
+		// 3. Migrate legacy products table (dctc_support_products)
+		$legacy_prods_table = $wpdb->prefix . 'dctc_support_products';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$legacy_prods_table'" ) === $legacy_prods_table ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$legacy_prods = $wpdb->get_results( "SELECT * FROM `$legacy_prods_table`", ARRAY_A );
+			if ( ! empty( $legacy_prods ) ) {
+				foreach ( $legacy_prods as $prod ) {
+					$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE slug = %s AND taxonomy_slug = 'product'", $prod['slug'] ) );
+					if ( ! $existing ) {
+						$wpdb->insert(
+							$table_terms,
+							array(
+								'taxonomy_slug' => 'product',
+								'parent_id'     => 0,
+								'name'          => $prod['name'],
+								'slug'          => $prod['slug'],
+								'description'   => '',
+								'color'         => '#059669',
+								'status'        => ! empty( $prod['status'] ) ? $prod['status'] : 'active',
+								'display_order' => 0,
+								'created_at'    => ! empty( $prod['created_at'] ) ? $prod['created_at'] : current_time( 'mysql' ),
+								'updated_at'    => ! empty( $prod['updated_at'] ) ? $prod['updated_at'] : current_time( 'mysql' ),
+							)
+						);
+						$term_id = $wpdb->insert_id;
+					} else {
+						$term_id = (int) $existing;
+					}
+
+					if ( $term_id ) {
+						$prod_meta = array(
+							'category_id'   => isset( $prod['category_id'] ) ? $prod['category_id'] : 0,
+							'wc_product_id' => isset( $prod['wc_product_id'] ) ? $prod['wc_product_id'] : 0,
+							'sku'           => isset( $prod['sku'] ) ? $prod['sku'] : '',
+							'price'         => isset( $prod['price'] ) ? $prod['price'] : 0.00,
+						);
+						foreach ( $prod_meta as $mkey => $mval ) {
+							$m_exists = $wpdb->get_var( $wpdb->prepare( "SELECT meta_id FROM `$table_term_meta` WHERE term_id = %d AND meta_key = %s", $term_id, $mkey ) );
+							if ( ! $m_exists ) {
+								$wpdb->insert(
+									$table_term_meta,
+									array(
+										'term_id'    => $term_id,
+										'meta_key'   => $mkey,
+										'meta_value' => (string) $mval,
+									)
+								);
+							}
+						}
+
+						// Link product to category in term_relationships if category_id exists
+						if ( ! empty( $prod['category_id'] ) ) {
+							$rel_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_relationships` WHERE object_id = %d AND object_type = 'term' AND term_id = %d", $term_id, absint( $prod['category_id'] ) ) );
+							if ( ! $rel_exists ) {
+								$wpdb->insert(
+									$table_relationships,
+									array(
+										'object_id'     => $term_id,
+										'object_type'   => 'term',
+										'term_id'       => absint( $prod['category_id'] ),
+										'taxonomy_slug' => 'category',
+										'created_at'    => current_time( 'mysql' ),
+									)
+								);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// 4. Migrate legacy tags table (dctc_support_tags)
+		$legacy_tags_table = $wpdb->prefix . 'dctc_support_tags';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$legacy_tags_table'" ) === $legacy_tags_table ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$legacy_tags = $wpdb->get_results( "SELECT * FROM `$legacy_tags_table`", ARRAY_A );
+			if ( ! empty( $legacy_tags ) ) {
+				foreach ( $legacy_tags as $tag ) {
+					$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE (id = %d OR slug = %s) AND taxonomy_slug = 'tag'", absint( $tag['id'] ), $tag['slug'] ) );
+					if ( ! $existing ) {
+						$wpdb->insert(
+							$table_terms,
+							array(
+								'id'            => absint( $tag['id'] ),
+								'taxonomy_slug' => 'tag',
+								'parent_id'     => 0,
+								'name'          => $tag['name'],
+								'slug'          => $tag['slug'],
+								'description'   => '',
+								'color'         => ! empty( $tag['color'] ) ? $tag['color'] : '#4F46E5',
+								'status'        => ! empty( $tag['status'] ) ? $tag['status'] : 'active',
+								'display_order' => 0,
+								'created_at'    => ! empty( $tag['created_at'] ) ? $tag['created_at'] : current_time( 'mysql' ),
+								'updated_at'    => current_time( 'mysql' ),
+							)
+						);
+					}
+				}
+			}
+		}
+
+		// 5. Migrate legacy custom taxonomy terms (dctc_support_taxonomy_terms)
+		$legacy_tax_terms = $wpdb->prefix . 'dctc_support_taxonomy_terms';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$legacy_tax_terms'" ) === $legacy_tax_terms ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$legacy_tterms = $wpdb->get_results( "SELECT * FROM `$legacy_tax_terms`", ARRAY_A );
+			if ( ! empty( $legacy_tterms ) ) {
+				foreach ( $legacy_tterms as $tt ) {
+					$existing = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE slug = %s AND taxonomy_slug = %s", $tt['slug'], $tt['taxonomy_slug'] ) );
+					if ( ! $existing ) {
+						$wpdb->insert(
+							$table_terms,
+							array(
+								'taxonomy_slug' => $tt['taxonomy_slug'],
+								'parent_id'     => 0,
+								'name'          => $tt['name'],
+								'slug'          => $tt['slug'],
+								'description'   => isset( $tt['description'] ) ? $tt['description'] : '',
+								'color'         => ! empty( $tt['color'] ) ? $tt['color'] : '#4F46E5',
+								'status'        => ! empty( $tt['status'] ) ? $tt['status'] : 'active',
+								'display_order' => 0,
+								'created_at'    => ! empty( $tt['created_at'] ) ? $tt['created_at'] : current_time( 'mysql' ),
+								'updated_at'    => current_time( 'mysql' ),
+							)
+						);
+					}
+				}
+			}
+		}
+
+		// 6. Migrate legacy ticket tags pivot (dctc_support_ticket_tags)
+		$legacy_ticket_tags = $wpdb->prefix . 'dctc_support_ticket_tags';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '$legacy_ticket_tags'" ) === $legacy_ticket_tags ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			$legacy_ttags = $wpdb->get_results( "SELECT * FROM `$legacy_ticket_tags`", ARRAY_A );
+			if ( ! empty( $legacy_ttags ) ) {
+				foreach ( $legacy_ttags as $rel ) {
+					$wpdb->replace(
+						$table_relationships,
+						array(
+							'object_id'     => absint( $rel['ticket_id'] ),
+							'object_type'   => 'ticket',
+							'term_id'       => absint( $rel['tag_id'] ),
+							'taxonomy_slug' => 'tag',
+							'created_at'    => ! empty( $rel['created_at'] ) ? $rel['created_at'] : current_time( 'mysql' ),
+						),
+						array( '%d', '%s', '%d', '%s', '%s' )
+					);
+				}
+			}
+		}
 	}
 
 	/**
@@ -335,9 +570,74 @@ class DCTC_Support_DB {
 	public static function seed_default_data() {
 		global $wpdb;
 
-		// Seed Categories
-		$table_categories = $wpdb->prefix . 'dctc_support_categories';
-		$count_categories = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_categories`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$table_taxonomies = $wpdb->prefix . 'dctc_support_taxonomies';
+		$table_terms      = $wpdb->prefix . 'dctc_support_terms';
+		$table_term_meta  = $wpdb->prefix . 'dctc_support_term_meta';
+
+		// Seed Taxonomies (category, tag, product)
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count_tax = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_taxonomies`" );
+		if ( 0 === $count_tax ) {
+			$default_taxonomies = array(
+				array(
+					'slug'          => 'category',
+					'name'          => 'Categories',
+					'description'   => 'Main routing taxonomy with priority and staff assignment rules.',
+					'is_system'     => 1,
+					'hierarchical'  => 1,
+					'icon_type'     => 'preset',
+					'icon_dashicon' => 'dashicons-category',
+					'color'         => '#4F46E5',
+					'display_order' => 1,
+				),
+				array(
+					'slug'          => 'tag',
+					'name'          => 'Tags',
+					'description'   => 'Visual classification tags for fast identification and badge design.',
+					'is_system'     => 1,
+					'hierarchical'  => 0,
+					'icon_type'     => 'preset',
+					'icon_dashicon' => 'dashicons-tag',
+					'color'         => '#D97706',
+					'display_order' => 2,
+				),
+				array(
+					'slug'          => 'product',
+					'name'          => 'Products',
+					'description'   => 'WooCommerce and custom products for support catalog item routing.',
+					'is_system'     => 1,
+					'hierarchical'  => 0,
+					'icon_type'     => 'preset',
+					'icon_dashicon' => 'dashicons-products',
+					'color'         => '#059669',
+					'display_order' => 3,
+				),
+			);
+
+			foreach ( $default_taxonomies as $dt ) {
+				$wpdb->insert(
+					$table_taxonomies,
+					array(
+						'slug'          => $dt['slug'],
+						'name'          => $dt['name'],
+						'description'   => $dt['description'],
+						'is_system'     => $dt['is_system'],
+						'hierarchical'  => $dt['hierarchical'],
+						'icon_type'     => $dt['icon_type'],
+						'icon_dashicon' => $dt['icon_dashicon'],
+						'image_url'     => '',
+						'color'         => $dt['color'],
+						'display_order' => $dt['display_order'],
+						'created_at'    => current_time( 'mysql' ),
+						'updated_at'    => current_time( 'mysql' ),
+					)
+				);
+			}
+		}
+
+		// Seed Category Terms
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count_categories = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_terms` WHERE taxonomy_slug = %s", 'category' ) );
 
 		if ( 0 === $count_categories ) {
 			$default_categories = array(
@@ -345,6 +645,7 @@ class DCTC_Support_DB {
 					'name'             => 'Product Support',
 					'slug'             => 'product-support',
 					'description'      => 'General questions and troubleshooting for products.',
+					'color'            => '#4F46E5',
 					'default_priority' => 'normal',
 					'required_skills'  => wp_json_encode( array( 'product' ) ),
 					'requires_human'   => 0,
@@ -355,6 +656,7 @@ class DCTC_Support_DB {
 					'name'             => 'WooCommerce & Orders',
 					'slug'             => 'woocommerce-orders',
 					'description'      => 'Order tracking, checkout issues, cart problems, and payments.',
+					'color'            => '#7C3AED',
 					'default_priority' => 'high',
 					'required_skills'  => wp_json_encode( array( 'woocommerce', 'orders' ) ),
 					'requires_human'   => 0,
@@ -365,6 +667,7 @@ class DCTC_Support_DB {
 					'name'             => 'Technical & Bugs',
 					'slug'             => 'technical-bugs',
 					'description'      => 'Technical errors, bug reports, and integration issues.',
+					'color'            => '#DC2626',
 					'default_priority' => 'high',
 					'required_skills'  => wp_json_encode( array( 'technical' ) ),
 					'requires_human'   => 1,
@@ -375,6 +678,7 @@ class DCTC_Support_DB {
 					'name'             => 'Billing & License',
 					'slug'             => 'billing-license',
 					'description'      => 'Invoices, refunds, subscriptions, and license key activations.',
+					'color'            => '#059669',
 					'default_priority' => 'normal',
 					'required_skills'  => wp_json_encode( array( 'billing' ) ),
 					'requires_human'   => 1,
@@ -385,29 +689,51 @@ class DCTC_Support_DB {
 
 			foreach ( $default_categories as $idx => $cat ) {
 				$wpdb->insert(
-					$table_categories,
+					$table_terms,
 					array(
-						'parent_id'        => 0,
-						'name'             => $cat['name'],
-						'slug'             => $cat['slug'],
-						'description'      => $cat['description'],
+						'taxonomy_slug' => 'category',
+						'parent_id'     => 0,
+						'name'          => $cat['name'],
+						'slug'          => $cat['slug'],
+						'description'   => $cat['description'],
+						'color'         => $cat['color'],
+						'status'        => 'active',
+						'display_order' => $idx + 1,
+						'created_at'    => current_time( 'mysql' ),
+						'updated_at'    => current_time( 'mysql' ),
+					)
+				);
+				$term_id = $wpdb->insert_id;
+
+				if ( $term_id ) {
+					$meta_fields = array(
 						'default_priority' => $cat['default_priority'],
+						'default_team_id'  => 0,
 						'required_skills'  => $cat['required_skills'],
 						'requires_human'   => $cat['requires_human'],
 						'ai_allowed'       => $cat['ai_allowed'],
 						'auto_assign'      => $cat['auto_assign'],
-						'status'           => 'active',
-						'display_order'    => $idx + 1,
-						'created_at'       => current_time( 'mysql' ),
-					),
-					array( '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%d', '%s' )
-				);
+						'show_product'     => 1,
+						'show_tags'        => 1,
+						'sub_taxonomies'   => wp_json_encode( array( 'product', 'tag' ) ),
+					);
+					foreach ( $meta_fields as $mkey => $mval ) {
+						$wpdb->insert(
+							$table_term_meta,
+							array(
+								'term_id'    => $term_id,
+								'meta_key'   => $mkey,
+								'meta_value' => (string) $mval,
+							)
+						);
+					}
+				}
 			}
 		}
 
-		// Seed Tags
-		$table_tags = $wpdb->prefix . 'dctc_support_tags';
-		$count_tags = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tags`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Seed Tag Terms
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count_tags = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_terms` WHERE taxonomy_slug = %s", 'tag' ) );
 
 		if ( 0 === $count_tags ) {
 			$default_tags = array(
@@ -419,17 +745,21 @@ class DCTC_Support_DB {
 				array( 'name' => 'AI Escalation', 'slug' => 'ai-escalation', 'color' => '#10B981' ),
 			);
 
-			foreach ( $default_tags as $tag ) {
+			foreach ( $default_tags as $idx => $tag ) {
 				$wpdb->insert(
-					$table_tags,
+					$table_terms,
 					array(
-						'name'       => $tag['name'],
-						'slug'       => $tag['slug'],
-						'color'      => $tag['color'],
-						'status'     => 'active',
-						'created_at' => current_time( 'mysql' ),
-					),
-					array( '%s', '%s', '%s', '%s', '%s' )
+						'taxonomy_slug' => 'tag',
+						'parent_id'     => 0,
+						'name'          => $tag['name'],
+						'slug'          => $tag['slug'],
+						'description'   => '',
+						'color'         => $tag['color'],
+						'status'        => 'active',
+						'display_order' => $idx + 1,
+						'created_at'    => current_time( 'mysql' ),
+						'updated_at'    => current_time( 'mysql' ),
+					)
 				);
 			}
 		}
@@ -465,7 +795,8 @@ class DCTC_Support_DB {
 
 		// Auto-register the current admin user as a Support Administrator agent if no agents exist
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
-		$count_agents = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_agents`" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$count_agents = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_agents`" );
 
 		if ( 0 === $count_agents ) {
 			$admins = get_users( array( 'role' => 'administrator', 'number' => 1 ) );
@@ -487,8 +818,7 @@ class DCTC_Support_DB {
 						'notification_email_enabled' => 1,
 						'notification_preferences'   => wp_json_encode( array( 'all' => true ) ),
 						'created_at'                 => current_time( 'mysql' ),
-					),
-					array( '%d', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%d', '%d', '%d', '%s', '%s' )
+					)
 				);
 			}
 		}
@@ -503,7 +833,7 @@ class DCTC_Support_DB {
 		global $wpdb;
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$max_number = $wpdb->get_var( "SELECT MAX(ticket_number) FROM `$table_tickets`" );
 
 		return $max_number ? ( (int) $max_number + 1 ) : 10001;
