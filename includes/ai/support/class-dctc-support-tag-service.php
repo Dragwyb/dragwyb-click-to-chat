@@ -29,8 +29,11 @@ class DCTC_Support_Tag_Service {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" );
 		if ( ! $table_exists ) {
-			if ( class_exists( 'DCTC_Support_DB' ) ) {
+			$support_settings = get_option( 'dctc_support_settings', array() );
+			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::create_tables();
+			} else {
+				return array();
 			}
 		}
 
@@ -38,7 +41,8 @@ class DCTC_Support_Tag_Service {
 		$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );
 
 		if ( empty( $tags ) ) {
-			if ( class_exists( 'DCTC_Support_DB' ) ) {
+			$support_settings = get_option( 'dctc_support_settings', array() );
+			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );

@@ -31,8 +31,11 @@ class DCTC_Support_Category_Service {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_terms'" );
 		if ( ! $table_exists ) {
-			if ( class_exists( 'DCTC_Support_DB' ) ) {
+			$support_settings = get_option( 'dctc_support_settings', array() );
+			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::create_tables();
+			} else {
+				return array();
 			}
 		}
 
@@ -54,7 +57,8 @@ class DCTC_Support_Category_Service {
 		);
 
 		if ( empty( $rows ) ) {
-			if ( class_exists( 'DCTC_Support_DB' ) ) {
+			$support_settings = get_option( 'dctc_support_settings', array() );
+			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$rows = $wpdb->get_results(

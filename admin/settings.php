@@ -382,8 +382,14 @@ function dctc_save_settings() {
 		if ( ! is_array( $support_settings ) ) {
 			$support_settings = array();
 		}
-		$support_settings['enabled'] = ( '1' === $_POST['support_center_enabled'] );
+		$enabled                     = ( '1' === $_POST['support_center_enabled'] );
+		$support_settings['enabled'] = $enabled;
 		update_option( 'dctc_support_settings', $support_settings );
+
+		if ( $enabled && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
+			DCTC_Support_DB::create_tables();
+		}
 	}
 
 	// 4. Privacy & Uninstall Cleanup Settings

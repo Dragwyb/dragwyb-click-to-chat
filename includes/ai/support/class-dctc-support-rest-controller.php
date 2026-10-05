@@ -1001,6 +1001,11 @@ class DCTC_Support_REST_Controller {
 	public function save_settings( $request ) {
 		$data = $request->get_json_params();
 		update_option( 'dctc_support_settings', $data );
+
+		if ( ! empty( $data['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
+			DCTC_Support_DB::create_tables();
+		}
+
 		return new WP_REST_Response( array( 'success' => true, 'settings' => $data ), 200 );
 	}
 

@@ -236,8 +236,9 @@ class DCTC_AI_DB {
 			DCTC_Error_Logger::create_table();
 		}
 
-		// Initialize Support Center Custom Tables & Seed Defaults
-		if ( file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
+		// Initialize Support Center Custom Tables ONLY if feature is enabled
+		$support_settings = get_option( 'dctc_support_settings', array() );
+		if ( ! empty( $support_settings['enabled'] ) && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
 			DCTC_Support_DB::create_tables();
 		}
