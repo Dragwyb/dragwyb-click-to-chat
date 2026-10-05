@@ -592,21 +592,21 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 					</div>
 				</div>
 
-				<!-- Step 5: HIGHLIGHTED FEATURE - Automated Lead Scoring & Unified Inbox -->
+				<!-- Step 5: HIGHLIGHTED FEATURE - Automated Lead Scoring & Support Center -->
 				<div class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 05', 'dragwyb-click-to-chat' ); ?></span>
 							<span class="dctc-chip-tag is-highlight">⭐ <?php esc_html_e( 'Highlighted Feature', 'dragwyb-click-to-chat' ); ?></span>
 						</div>
-						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Automated Lead Scoring & Unified Inbox Handoff', 'dragwyb-click-to-chat' ); ?></h2>
+						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Automated Lead Scoring & Support Center Handoff', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
 							<?php esc_html_e( 'Collect customer inquiries, score leads automatically, and intervene with live human replies when needed.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
 							<li><strong><?php esc_html_e( 'CRM Lead Capture:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Autonomous collection of visitor Name, Email, Phone, Company, and Project Budget.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Lead Scoring (0-100):', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'AI calculates buyer urgency score and tags high-intent leads.', 'dragwyb-click-to-chat' ); ?></li>
-							<li><strong><?php esc_html_e( 'Unified Inbox Live Takeover:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Intervene in real-time or route conversations to WhatsApp or Support Center.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Support Center Live Takeover:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Intervene in real-time or route conversations to WhatsApp or Support Center.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
 					</div>
 					<div class="dctc-zigzag-visual">
