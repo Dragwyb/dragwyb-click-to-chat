@@ -214,15 +214,19 @@ class DCTC_Support_Agent_Service {
 	 */
 	public static function update_workload( $agent_id ) {
 		global $wpdb;
-		$table_agents  = $wpdb->prefix . 'dctc_support_agents';
-		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
-		$agent_id      = absint( $agent_id );
+		$table_agents      = $wpdb->prefix . 'dctc_support_agents';
+		$table_tickets     = $wpdb->prefix . 'dctc_support_tickets';
+		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$agent_id          = absint( $agent_id );
 
 		// Active tickets are those in open, pending, waiting_customer states
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM `$table_tickets` WHERE assigned_agent_id = %d AND status IN ('new', 'open', 'pending', 'waiting_customer')",
+				"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
+				INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id 
+				WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value = %d 
+				AND t.status IN ('new', 'open', 'pending', 'waiting_customer')",
 				$agent_id
 			)
 		);

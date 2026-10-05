@@ -250,10 +250,7 @@ class DCTC_AI_Chat_Controller {
 			if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 				$support_settings = get_option( 'dctc_support_settings', array() );
 				if ( ! empty( $support_settings['enabled'] ) ) {
-					global $wpdb;
-					$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-					$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
+					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
 						$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
 
@@ -538,10 +535,7 @@ class DCTC_AI_Chat_Controller {
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 					$support_settings = get_option( 'dctc_support_settings', array() );
 					if ( ! empty( $support_settings['enabled'] ) ) {
-						global $wpdb;
-						$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-						$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
+						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 						if ( ! $existing_ticket ) {
 							DCTC_Support_Ticket_Service::create_ticket(
 								array(
@@ -563,10 +557,7 @@ class DCTC_AI_Chat_Controller {
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 					$support_settings = get_option( 'dctc_support_settings', array() );
 					if ( ! empty( $support_settings['enabled'] ) ) {
-						global $wpdb;
-						$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
-						// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-						$existing_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_tickets` WHERE session_id = %s", $session_id ), ARRAY_A );
+						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 						if ( ! $existing_ticket ) {
 							$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
 
@@ -1811,51 +1802,27 @@ CONVERSATION MEMORY:
 	 * @return array|null Ticket array or null
 	 */
 	public function get_session_ticket_info( $session_id ) {
-		global $wpdb;
 		if ( empty( $session_id ) ) {
 			return null;
 		}
-		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
 
-		// First check session row for linked support_ticket_id
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$session = $wpdb->get_row( $wpdb->prepare( "SELECT support_ticket_id, control_mode FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
-
-		$ticket = null;
-		if ( ! empty( $session['support_ticket_id'] ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ), ARRAY_A );
-		}
-
-		// Fallback: check tickets table directly by session_id
-		if ( ! $ticket ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE session_id = %s ORDER BY id DESC LIMIT 1", $session_id ), ARRAY_A );
-		}
+		$ticket = class_exists( 'DCTC_Support_Ticket_Service' )
+			? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id )
+			: null;
 
 		if ( ! $ticket ) {
 			return null;
 		}
 
-		$agent_name = '';
-		if ( ! empty( $ticket['assigned_agent_id'] ) ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$agent = $wpdb->get_row( $wpdb->prepare( "SELECT wp_user_id FROM `$table_agents` WHERE id = %d", absint( $ticket['assigned_agent_id'] ) ), ARRAY_A );
-			if ( $agent && ! empty( $agent['wp_user_id'] ) ) {
-				$user = get_userdata( $agent['wp_user_id'] );
-				if ( $user ) {
-					$agent_name = $user->display_name;
-				}
-			}
-		}
+		$agent_name = ( ! empty( $ticket['agent_name'] ) && __( 'Unassigned', 'dragwyb-click-to-chat' ) !== $ticket['agent_name'] )
+			? $ticket['agent_name']
+			: '';
 
 		return array(
 			'id'            => (int) $ticket['id'],
 			'ticket_number' => (int) $ticket['ticket_number'],
 			'status'        => $ticket['status'],
-			'control_mode'  => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : ( $session['control_mode'] ?? 'ai' ),
+			'control_mode'  => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : 'ai',
 			'agent_name'    => $agent_name,
 		);
 	}

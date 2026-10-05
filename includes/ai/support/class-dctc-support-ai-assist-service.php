@@ -48,15 +48,15 @@ class DCTC_Support_AI_Assist_Service {
 
 		$summary_clean = sanitize_textarea_field( trim( $response ) );
 
-		// Update ticket
+		// Update ticket meta and touch updated_at
 		global $wpdb;
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'ai_summary', $summary_clean );
+		}
 		$wpdb->update(
 			$table_tickets,
-			array(
-				'ai_summary' => $summary_clean,
-				'updated_at' => current_time( 'mysql' ),
-			),
+			array( 'updated_at' => current_time( 'mysql' ) ),
 			array( 'id' => absint( $ticket_id ) )
 		);
 

@@ -434,10 +434,12 @@ class DCTC_AI_DB {
 		}
 
 		// If a support ticket exists for this session, touch ticket updated_at so Support Center sees real-time changes
-		$table_tickets = esc_sql( $wpdb->prefix . 'dctc_support_tickets' );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$linked_ticket = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM {$table_tickets} WHERE session_id = %s", $session_id ), ARRAY_A );
-		if ( $linked_ticket ) {
+		$linked_ticket = class_exists( 'DCTC_Support_Ticket_Service' )
+			? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id )
+			: null;
+
+		if ( $linked_ticket && ! empty( $linked_ticket['id'] ) ) {
+			$table_tickets = esc_sql( $wpdb->prefix . 'dctc_support_tickets' );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$wpdb->update(
 				$table_tickets,

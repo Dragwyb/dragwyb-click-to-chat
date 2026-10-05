@@ -2,8 +2,8 @@
 /**
  * DCTC Support Note Service
  *
- * Manages private staff internal notes attached to tickets.
- * Strictly isolated from customer APIs.
+ * Manages private staff internal notes attached to tickets stored cleanly
+ * inside wp_dctc_support_ticket_meta. Strictly isolated from customer APIs.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -18,13 +18,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DCTC_Support_Note_Service {
 
 	/**
+	 * Meta key identifier for internal notes in wp_dctc_support_ticket_meta.
+	 */
+	const META_KEY = '_dctc_support_note';
+
+	/**
 	 * Add an internal note to a ticket.
 	 *
 	 * @param int         $ticket_id Ticket ID.
 	 * @param string      $content   Note content.
 	 * @param bool        $is_pinned Whether note is pinned.
 	 * @param int|null    $user_id   Optional agent user ID.
-	 * @return int|false  Inserted note ID or false on failure.
+	 * @return int|false  Inserted note ID (meta_id) or false on failure.
 	 */
 	public static function add_note( $ticket_id, $content, $is_pinned = false, $user_id = null ) {
 		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
@@ -38,27 +43,34 @@ class DCTC_Support_Note_Service {
 			return false;
 		}
 
-		$user = get_userdata( $user_id );
+		$user       = get_userdata( $user_id );
 		$agent_name = $user ? $user->display_name : 'Staff Agent';
 
 		global $wpdb;
-		$table_notes = $wpdb->prefix . 'dctc_support_notes';
+		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 
 		$uuid = wp_generate_uuid4();
+		$note_payload = array(
+			'uuid'             => $uuid,
+			'ticket_id'        => $ticket_id,
+			'agent_wp_user_id' => $user_id,
+			'agent_name'       => sanitize_text_field( $agent_name ),
+			'author_name'      => sanitize_text_field( $agent_name ),
+			'content'          => $content,
+			'note'             => $content,
+			'is_pinned'        => $is_pinned ? 1 : 0,
+			'created_at'       => current_time( 'mysql' ),
+			'updated_at'       => current_time( 'mysql' ),
+		);
 
 		$inserted = $wpdb->insert(
-			$table_notes,
+			$table_meta,
 			array(
-				'uuid'              => $uuid,
-				'ticket_id'         => $ticket_id,
-				'agent_wp_user_id'  => $user_id,
-				'agent_name'        => sanitize_text_field( $agent_name ),
-				'content'           => $content,
-				'is_pinned'         => $is_pinned ? 1 : 0,
-				'created_at'        => current_time( 'mysql' ),
-				'updated_at'        => current_time( 'mysql' ),
+				'ticket_id'  => $ticket_id,
+				'meta_key'   => self::META_KEY,
+				'meta_value' => wp_json_encode( $note_payload ),
 			),
-			array( '%s', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
+			array( '%d', '%s', '%s' )
 		);
 
 		if ( $inserted ) {
@@ -92,25 +104,50 @@ class DCTC_Support_Note_Service {
 		}
 
 		global $wpdb;
-		$table_notes = $wpdb->prefix . 'dctc_support_notes';
-		$ticket_id   = absint( $ticket_id );
+		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id  = absint( $ticket_id );
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$notes = $wpdb->get_results(
+		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM `$table_notes` WHERE ticket_id = %d ORDER BY is_pinned DESC, created_at ASC",
-				$ticket_id
+				"SELECT meta_id, meta_value FROM `$table_meta` WHERE ticket_id = %d AND meta_key = %s ORDER BY meta_id ASC",
+				$ticket_id,
+				self::META_KEY
 			),
 			ARRAY_A
 		);
 
-		return is_array( $notes ) ? $notes : array();
+		$notes = array();
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				$note = json_decode( $row['meta_value'], true );
+				if ( is_array( $note ) ) {
+					$note['id']          = (int) $row['meta_id'];
+					$note['author_name'] = ! empty( $note['author_name'] ) ? $note['author_name'] : ( ! empty( $note['agent_name'] ) ? $note['agent_name'] : 'Staff Agent' );
+					$note['agent_name']  = ! empty( $note['agent_name'] ) ? $note['agent_name'] : $note['author_name'];
+					$note['content']     = isset( $note['content'] ) ? $note['content'] : ( isset( $note['note'] ) ? $note['note'] : '' );
+					$note['note']        = isset( $note['note'] ) ? $note['note'] : ( isset( $note['content'] ) ? $note['content'] : '' );
+					$note['is_pinned']   = ! empty( $note['is_pinned'] ) ? 1 : 0;
+					$notes[]             = $note;
+				}
+			}
+		}
+
+		// Sort notes: pinned first, then chronological
+		usort( $notes, function( $a, $b ) {
+			if ( (int) $a['is_pinned'] !== (int) $b['is_pinned'] ) {
+				return (int) $b['is_pinned'] - (int) $a['is_pinned'];
+			}
+			return (int) $a['id'] - (int) $b['id'];
+		} );
+
+		return $notes;
 	}
 
 	/**
 	 * Delete an internal note.
 	 *
-	 * @param int $note_id Note ID.
+	 * @param int $note_id Note ID (meta_id).
 	 * @return bool
 	 */
 	public static function delete_note( $note_id ) {
@@ -119,13 +156,16 @@ class DCTC_Support_Note_Service {
 		}
 
 		global $wpdb;
-		$table_notes = $wpdb->prefix . 'dctc_support_notes';
-		$note_id     = absint( $note_id );
+		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$note_id    = absint( $note_id );
 
 		$deleted = $wpdb->delete(
-			$table_notes,
-			array( 'id' => $note_id ),
-			array( '%d' )
+			$table_meta,
+			array(
+				'meta_id'  => $note_id,
+				'meta_key' => self::META_KEY,
+			),
+			array( '%d', '%s' )
 		);
 
 		return (bool) $deleted;

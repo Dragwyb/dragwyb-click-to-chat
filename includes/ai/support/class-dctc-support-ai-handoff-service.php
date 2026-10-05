@@ -50,11 +50,7 @@ class DCTC_Support_AI_Handoff_Service {
 
 			// If linked to a support ticket, check ticket control_mode & status
 			if ( ! empty( $session['support_ticket_id'] ) ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$ticket = $wpdb->get_row(
-					$wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", absint( $session['support_ticket_id'] ) ),
-					ARRAY_A
-				);
+				$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( absint( $session['support_ticket_id'] ) ) : null;
 				if ( $ticket ) {
 					if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
 						return true;
@@ -192,25 +188,11 @@ class DCTC_Support_AI_Handoff_Service {
 		// Update ticket state & log customer reply
 		if ( $session && ! empty( $session['support_ticket_id'] ) ) {
 			$ticket_id = absint( $session['support_ticket_id'] );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$ticket = $wpdb->get_row(
-				$wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", $ticket_id ),
-				ARRAY_A
-			);
+			$ticket    = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( $ticket_id ) : null;
 
 			if ( $ticket ) {
-				if ( ! empty( $ticket['assigned_agent_id'] ) ) {
-					// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-					$agent = $wpdb->get_row(
-						$wpdb->prepare( "SELECT wp_user_id FROM `$table_agents` WHERE id = %d", absint( $ticket['assigned_agent_id'] ) ),
-						ARRAY_A
-					);
-					if ( $agent ) {
-						$agent_user = get_userdata( $agent['wp_user_id'] );
-						if ( $agent_user ) {
-							$agent_name = $agent_user->display_name;
-						}
-					}
+				if ( ! empty( $ticket['agent_name'] ) && __( 'Unassigned', 'dragwyb-click-to-chat' ) !== $ticket['agent_name'] ) {
+					$agent_name = $ticket['agent_name'];
 				}
 
 				// If ticket was resolved/closed, reopen it
