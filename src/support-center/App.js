@@ -167,21 +167,73 @@ export default function App() {
 		}
 	}, [ currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery, selectedTicketId ] );
 
-	// Fetch Single Ticket Details
-	const fetchTicketDetails = useCallback( async ( ticketId ) => {
+	// Fetch Single Ticket Details with silent polling and change detection
+	const fetchTicketDetails = useCallback( async ( ticketId, isSilent = false ) => {
 		if ( ! ticketId ) return;
-		setTicketLoading( true );
+		if ( ! isSilent ) {
+			setTicketLoading( true );
+		}
 		try {
 			const data = await apiFetch( {
 				path: `/dctc-ai/v1/support/tickets/${ ticketId }`,
 			} );
 			if ( data?.success && data.ticket ) {
-				setSelectedTicket( data.ticket );
+				setSelectedTicket( ( prevTicket ) => {
+					if ( ! prevTicket || prevTicket.id !== data.ticket.id ) {
+						return data.ticket;
+					}
+
+					const prevMessages = Array.isArray( prevTicket.messages ) ? prevTicket.messages : [];
+					const incomingMessages = Array.isArray( data.ticket.messages ) ? data.ticket.messages : [];
+
+					// Check if message count or message contents changed
+					let messagesChanged = prevMessages.length !== incomingMessages.length;
+					if ( ! messagesChanged ) {
+						for ( let i = 0; i < incomingMessages.length; i++ ) {
+							const prevM = prevMessages[ i ];
+							const newM = incomingMessages[ i ];
+							if (
+								prevM.id !== newM.id ||
+								prevM.content !== newM.content ||
+								prevM.role !== newM.role ||
+								prevM.sender_type !== newM.sender_type ||
+								prevM.sender_name !== newM.sender_name ||
+								prevM.created_at !== newM.created_at
+							) {
+								messagesChanged = true;
+								break;
+							}
+						}
+					}
+
+					const metadataChanged =
+						prevTicket.status !== data.ticket.status ||
+						prevTicket.priority !== data.ticket.priority ||
+						prevTicket.assigned_agent_id !== data.ticket.assigned_agent_id ||
+						prevTicket.control_mode !== data.ticket.control_mode ||
+						prevTicket.subject !== data.ticket.subject ||
+						JSON.stringify( prevTicket.tags || [] ) !== JSON.stringify( data.ticket.tags || [] ) ||
+						JSON.stringify( prevTicket.notes || [] ) !== JSON.stringify( data.ticket.notes || [] ) ||
+						JSON.stringify( prevTicket.events || [] ) !== JSON.stringify( data.ticket.events || [] );
+
+					if ( messagesChanged || metadataChanged ) {
+						return {
+							...prevTicket,
+							...data.ticket,
+							messages: incomingMessages,
+						};
+					}
+
+					// Return identical reference to prevent re-render / blink
+					return prevTicket;
+				} );
 			}
 		} catch ( err ) {
 			console.error( 'Error fetching ticket detail:', err );
 		} finally {
-			setTicketLoading( false );
+			if ( ! isSilent ) {
+				setTicketLoading( false );
+			}
 		}
 	}, [] );
 

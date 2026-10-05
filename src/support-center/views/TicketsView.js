@@ -63,7 +63,7 @@ export default function TicketsView( {
 		const interval = setInterval( () => {
 			if ( typeof document !== 'undefined' && document.hidden ) return;
 			if ( ! isCancelled && selectedTicketId ) {
-				onRefreshTicketDetails( selectedTicketId );
+				onRefreshTicketDetails( selectedTicketId, true );
 			}
 		}, 4000 );
 
@@ -71,7 +71,7 @@ export default function TicketsView( {
 			isCancelled = true;
 			clearInterval( interval );
 		};
-	}, [ selectedTicketId ] );
+	}, [ selectedTicketId, onRefreshTicketDetails ] );
 
 	// Priority badge helper
 	const getPriorityBadgeClass = ( priority ) => {
@@ -538,8 +538,16 @@ export default function TicketsView( {
 								if ( isAI ) bubbleClass = 'dctc-sc-msg-ai';
 								if ( isHumanAgent ) bubbleClass = 'dctc-sc-msg-agent';
 
+								const msgKey = msg.id ? `msg-${ msg.id }` : ( msg.uuid ? `msg-${ msg.uuid }` : `msg-idx-${ idx }` );
+
 								return (
-									<div key={ msg.id || `msg-${ idx }-${ msg.created_at || idx }` } className={ `dctc-sc-msg-row ${ bubbleClass }` }>
+									<div
+										key={ msgKey }
+										data-index={ idx }
+										data-msg-uuid={ selectedTicket.uuid || '' }
+										data-msg-id={ msg.id || '' }
+										className={ `dctc-sc-msg-row ${ bubbleClass }` }
+									>
 										<div className="dctc-sc-msg-meta-line">
 											<span className="dctc-sc-msg-author">
 												{ isCustomer && (
