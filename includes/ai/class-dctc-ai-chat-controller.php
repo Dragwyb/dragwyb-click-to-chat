@@ -441,13 +441,13 @@ class DCTC_AI_Chat_Controller {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$session_row = $wpdb->get_row(
 					$wpdb->prepare(
-						"SELECT content, user_email FROM {$wpdb->prefix}dctc_ai_sessions WHERE session_id = %s ORDER BY id DESC LIMIT 1",
+						"SELECT content, email FROM {$wpdb->prefix}dctc_ai_sessions WHERE session_id = %s ORDER BY id DESC LIMIT 1",
 						$session_id
 					)
 				);
 				if ( $session_row ) {
-					if ( empty( $known_user_email ) && ! empty( $session_row->user_email ) ) {
-						$known_user_email = $session_row->user_email;
+					if ( empty( $known_user_email ) && ! empty( $session_row->email ) ) {
+						$known_user_email = $session_row->email;
 					}
 					if ( ! empty( $session_row->content ) ) {
 						$msg_history = json_decode( $session_row->content, true );

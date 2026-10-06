@@ -24,6 +24,8 @@ class DCTC_Support_Portal {
 		add_shortcode( 'support_portal', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_shortcode( 'dragwyb_support', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_shortcode( 'dctc_support_portal', array( __CLASS__, 'render_portal_shortcode' ) );
+		add_shortcode( 'dctc_support_tickets', array( __CLASS__, 'render_portal_shortcode' ) );
+		add_shortcode( 'dctc_support_kb', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_enqueue_portal_assets' ) );
 	}
 
@@ -35,7 +37,9 @@ class DCTC_Support_Portal {
 		$has_portal_shortcode = is_a( $post, 'WP_Post' ) && (
 			has_shortcode( $post->post_content, 'support_portal' ) ||
 			has_shortcode( $post->post_content, 'dragwyb_support' ) ||
-			has_shortcode( $post->post_content, 'dctc_support_portal' )
+			has_shortcode( $post->post_content, 'dctc_support_portal' ) ||
+			has_shortcode( $post->post_content, 'dctc_support_tickets' ) ||
+			has_shortcode( $post->post_content, 'dctc_support_kb' )
 		);
 		if ( $has_portal_shortcode || is_singular() ) {
 			self::enqueue_portal_styles();

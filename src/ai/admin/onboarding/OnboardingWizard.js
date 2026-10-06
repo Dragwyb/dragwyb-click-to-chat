@@ -293,6 +293,7 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 				data: {
 					social_chat: {
 						...socialChatSettings,
+						widget_position: ( features.socialChat && features.aiAssistant ) ? 'left' : ( socialChatSettings.widget_position || 'right' ),
 						enabled: features.socialChat && socialChatSettings.enabled,
 					},
 					ai_assistant: {

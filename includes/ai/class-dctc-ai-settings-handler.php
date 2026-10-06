@@ -870,7 +870,7 @@ class DCTC_AI_Settings_Handler
 				'budget_limit_message' => 'You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.',
 				'enable_budget_email_alerts' => true,
 				'alert_email' => '',
-				'enable_error_log' => false,
+				'enable_error_log' => true,
 				'error_log_retention_days' => 0,
 				'enable_lead_capture' => false,
 				'lead_trigger_type' => 'manual',
@@ -1262,7 +1262,7 @@ class DCTC_AI_Settings_Handler
 			'budget_limit_message' => isset($params['budget_limit_message']) ? sanitize_textarea_field($params['budget_limit_message']) : (isset($existing_chatbot['budget_limit_message']) ? $existing_chatbot['budget_limit_message'] : 'You have reached the daily chat limit. Please connect with our team directly via WhatsApp or Support.'),
 			'enable_budget_email_alerts' => isset($params['enable_budget_email_alerts']) ? (bool) $params['enable_budget_email_alerts'] : (isset($existing_chatbot['enable_budget_email_alerts']) ? (bool) $existing_chatbot['enable_budget_email_alerts'] : true),
 			'alert_email' => isset($params['alert_email']) ? sanitize_email($params['alert_email']) : (isset($existing_chatbot['alert_email']) ? $existing_chatbot['alert_email'] : ''),
-			'enable_error_log' => isset($params['enable_error_log']) ? (bool) $params['enable_error_log'] : (isset($existing_chatbot['enable_error_log']) ? (bool) $existing_chatbot['enable_error_log'] : false),
+			'enable_error_log' => isset($params['enable_error_log']) ? (bool) $params['enable_error_log'] : (isset($existing_chatbot['enable_error_log']) ? (bool) $existing_chatbot['enable_error_log'] : true),
 			'error_log_retention_days' => isset($params['error_log_retention_days']) ? max(0, intval($params['error_log_retention_days'])) : (isset($existing_chatbot['error_log_retention_days']) ? intval($existing_chatbot['error_log_retention_days']) : 0),
 			'enable_lead_capture' => isset($params['enable_lead_capture']) ? (bool) $params['enable_lead_capture'] : (isset($existing_chatbot['enable_lead_capture']) ? (bool) $existing_chatbot['enable_lead_capture'] : false),
 			'lead_trigger_type' => isset($params['lead_trigger_type']) && in_array($params['lead_trigger_type'], ['manual', 'time_delay', 'message_count', 'intent'], true) ? $params['lead_trigger_type'] : (isset($existing_chatbot['lead_trigger_type']) ? $existing_chatbot['lead_trigger_type'] : 'manual'),
@@ -1486,11 +1486,20 @@ class DCTC_AI_Settings_Handler
 			$social_settings['contact_value'] = esc_url_raw($social_data['custom_link_url']);
 		}
 
+		$ai_enabled = !empty($ai_data['enabled']);
+
+		// If user enables both social chat widget and AI assistant, default social chat widget position to left
+		if ($social_enabled && $ai_enabled) {
+			$social_settings['widget_position'] = 'left';
+			$social_settings['position']        = 'left';
+		} elseif (isset($social_data['widget_position']) && in_array($social_data['widget_position'], ['left', 'right', 'custom'], true)) {
+			$social_settings['widget_position'] = sanitize_text_field($social_data['widget_position']);
+		}
+
 		update_option('dctc_settings', $social_settings);
 		update_option('dragwyb_click_to_chat_settings', $social_settings);
 
 		// 2. Handle AI Assistant Settings
-		$ai_enabled = !empty($ai_data['enabled']);
 		$ai_settings = self::dctc_ai_get_all_settings();
 
 		if ($ai_enabled) {

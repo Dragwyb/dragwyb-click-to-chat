@@ -10,7 +10,8 @@
   width: calc(100% + 20px);
 }
 
-.dctc-sc-app-wrapper {
+.dctc-sc-app-wrapper,
+.dctc-sc-app-wrap {
   background: #f8fafc;
   box-sizing: border-box;
   color: #0f172a;
@@ -20,7 +21,8 @@
   padding: 0 24px 40px;
 }
 
-.dctc-sc-app-wrapper * {
+.dctc-sc-app-wrapper *,
+.dctc-sc-app-wrap * {
   box-sizing: border-box;
 }
 

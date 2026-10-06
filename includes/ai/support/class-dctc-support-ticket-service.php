@@ -282,7 +282,16 @@ class DCTC_Support_Ticket_Service {
 
 		// Status filter (ignore trash by default unless requested)
 		if ( ! empty( $args['status'] ) && 'all' !== $args['status'] ) {
-			$where .= $wpdb->prepare( ' AND t.status = %s', sanitize_key( $args['status'] ) );
+			$status_val = sanitize_key( $args['status'] );
+			if ( 'pending' === $status_val ) {
+				$where .= " AND t.status IN ('pending', 'waiting_customer', 'waiting_agent', 'hold')";
+			} elseif ( 'open' === $status_val ) {
+				$where .= " AND t.status IN ('open', 'new')";
+			} elseif ( 'resolved' === $status_val ) {
+				$where .= " AND t.status IN ('resolved', 'closed')";
+			} else {
+				$where .= $wpdb->prepare( ' AND t.status = %s', $status_val );
+			}
 		} else {
 			$where .= " AND t.status != 'trash'";
 		}
@@ -1119,26 +1128,30 @@ class DCTC_Support_Ticket_Service {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$today_created = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today ) );
 
-		// Assigned to me today
-		if ( $agent_id ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$my_today_assigned = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value = %d AND DATE(t.created_at) = %s AND t.status != 'trash'",
-					$agent_id,
-					$today
-				)
-			);
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$my_active = (int) $wpdb->get_var(
-				$wpdb->prepare(
-					"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value = %d AND t.status IN ('open', 'pending', 'waiting_customer')",
-					$agent_id
-				)
-			);
-		} else {
-			$my_today_assigned = $today_created;
+		// Assigned to me metrics
+		$agent_ids_check = array_filter( array_unique( array( $agent_id, $user_id ) ) );
+		$agent_placeholders = ! empty( $agent_ids_check ) ? implode( ',', array_map( 'absint', $agent_ids_check ) ) : '0';
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$my_active = (int) $wpdb->get_var(
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value IN ($agent_placeholders) AND t.status IN ('open', 'pending', 'waiting_customer')"
+		);
+
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$my_today_assigned = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value IN ($agent_placeholders) AND DATE(t.created_at) = %s AND t.status != 'trash'",
+				$today
+			)
+		);
+
+		// If user is admin and has no individual assigned tickets, show site active open/pending
+		if ( $is_admin && 0 === $my_active && ( $total_open + $total_pending ) > 0 ) {
 			$my_active = $total_open + $total_pending;
+			$my_today_assigned = $today_created;
+		} elseif ( 0 === $my_today_assigned && $my_active > 0 ) {
+			// If active tickets exist for agent, display active count so hero/card is meaningful
+			$my_today_assigned = $my_active;
 		}
 
 		// Control mode breakdown

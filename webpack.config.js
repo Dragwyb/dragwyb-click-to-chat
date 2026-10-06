@@ -16,6 +16,26 @@ module.exports = {
 			__dirname,
 			'src/support-center/index.js'
 		),
+		'support/dctc-support-dashboard': path.resolve(
+			__dirname,
+			'src/support-center/dashboard.js'
+		),
+		'support/dctc-support-tickets': path.resolve(
+			__dirname,
+			'src/support-center/tickets.js'
+		),
+		'support/dctc-support-agents': path.resolve(
+			__dirname,
+			'src/support-center/agents.js'
+		),
+		'support/dctc-support-taxonomies': path.resolve(
+			__dirname,
+			'src/support-center/taxonomies.js'
+		),
+		'support/dctc-support-settings': path.resolve(
+			__dirname,
+			'src/support-center/settings.js'
+		),
 	},
 	output: {
 		...defaultConfig.output,

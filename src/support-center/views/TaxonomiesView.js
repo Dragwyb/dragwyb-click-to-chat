@@ -859,15 +859,17 @@ export default function TaxonomiesView( {
 							<span>{ __( 'Product items catalog for support ticket tagging and auto-classification.', 'dragwyb-click-to-chat' ) }</span>
 						</div>
 						<div style={ { display: 'flex', gap: '8px' } }>
-							<button
-								type="button"
-								className="button"
-								onClick={ handleSyncWooCommerce }
-								disabled={ syncingWc }
-							>
-								<span className={ `dashicons dashicons-update ${ syncingWc ? 'rotating' : '' }` } style={ { verticalAlign: 'middle', marginRight: '4px' } }></span>
-								{ syncingWc ? __( 'Syncing...', 'dragwyb-click-to-chat' ) : __( 'Sync WooCommerce Products', 'dragwyb-click-to-chat' ) }
-							</button>
+							{ !! window.dctc_support_data?.is_woocommerce_active && (
+								<button
+									type="button"
+									className="button"
+									onClick={ handleSyncWooCommerce }
+									disabled={ syncingWc }
+								>
+									<span className={ `dashicons dashicons-update ${ syncingWc ? 'rotating' : '' }` } style={ { verticalAlign: 'middle', marginRight: '4px' } }></span>
+									{ syncingWc ? __( 'Syncing...', 'dragwyb-click-to-chat' ) : __( 'Sync WooCommerce Products', 'dragwyb-click-to-chat' ) }
+								</button>
+							) }
 							{ canManage && (
 								<button type="button" className="button button-primary" onClick={ handleOpenAddProd }>
 									<span className="dashicons dashicons-plus-alt2" style={ { verticalAlign: 'middle', marginRight: '4px' } }></span>

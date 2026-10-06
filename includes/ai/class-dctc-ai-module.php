@@ -304,8 +304,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'home_url'           => home_url(),
 					'social_settings'    => $social_settings,
 					'support_settings'   => $support_settings,
-					'portal_url'         => $portal_url,
-					'is_support_enabled' => class_exists( 'DCTC_Support_Manager' ) && ! empty( $support_settings['enabled'] ),
+					'portal_url'            => $portal_url,
+					'is_support_enabled'    => class_exists( 'DCTC_Support_Manager' ) && ! empty( $support_settings['enabled'] ),
+					'is_woocommerce_active' => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
 				)
 			);
 		}

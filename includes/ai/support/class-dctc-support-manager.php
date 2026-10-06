@@ -176,6 +176,21 @@ class DCTC_Support_Manager {
 	 * @return void
 	 */
 	public function render_support_admin_page() {
+		$page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+
+		// Server-side page permission checks
+		if ( 'dragwyb-support-agents' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_agents' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access Agents & Staff settings.', 'dragwyb-click-to-chat' ), 403 );
+		}
+
+		if ( 'dragwyb-support-taxonomies' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access Categories & Tags.', 'dragwyb-click-to-chat' ), 403 );
+		}
+
+		if ( 'dragwyb-support-settings' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access Support Settings.', 'dragwyb-click-to-chat' ), 403 );
+		}
+
 		require_once DCTC_PLUGIN_DIR . 'admin/support/dctc-support-dashboard.php';
 	}
 
@@ -197,6 +212,17 @@ class DCTC_Support_Manager {
 			return;
 		}
 
+		// Verify user has permission to access the requested page before enqueuing script
+		if ( 'dragwyb-support-agents' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_agents' ) ) {
+			return;
+		}
+		if ( 'dragwyb-support-taxonomies' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
+			return;
+		}
+		if ( 'dragwyb-support-settings' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+			return;
+		}
+
 		wp_enqueue_media();
 		if ( function_exists( 'wp_enqueue_editor' ) ) {
 			wp_enqueue_editor();
@@ -206,6 +232,8 @@ class DCTC_Support_Manager {
 		$css_candidates = array(
 			'build/ai/support/style-dctc-support-center.css',
 			'build/support/style-dctc-support-center.css',
+			'build/ai/support/style-dctc-support-dashboard.css',
+			'build/ai/support/style-dctc-support-tickets.css',
 		);
 		foreach ( $css_candidates as $css_path ) {
 			if ( file_exists( DCTC_PLUGIN_DIR . $css_path ) ) {
@@ -214,17 +242,39 @@ class DCTC_Support_Manager {
 			}
 		}
 
-		// Standalone Support JS
-		$asset_file = file_exists( DCTC_PLUGIN_DIR . 'build/ai/support/dctc-support-center.asset.php' )
-			? require DCTC_PLUGIN_DIR . 'build/ai/support/dctc-support-center.asset.php'
+		// Determine specific script handle and bundle path based on active page
+		$script_slug = 'dctc-support-dashboard';
+		if ( 'dragwyb-support-tickets' === $page ) {
+			$script_slug = 'dctc-support-tickets';
+		} elseif ( 'dragwyb-support-agents' === $page ) {
+			$script_slug = 'dctc-support-agents';
+		} elseif ( 'dragwyb-support-taxonomies' === $page ) {
+			$script_slug = 'dctc-support-taxonomies';
+		} elseif ( 'dragwyb-support-settings' === $page ) {
+			$script_slug = 'dctc-support-settings';
+		}
+
+		// Fallback to legacy/all-in-one bundle if split bundle doesn't exist
+		$js_relative_path = "build/ai/support/{$script_slug}.js";
+		$asset_relative_path = "build/ai/support/{$script_slug}.asset.php";
+		if ( ! file_exists( DCTC_PLUGIN_DIR . $js_relative_path ) ) {
+			$script_slug = 'dctc-support-center';
+			$js_relative_path = 'build/ai/support/dctc-support-center.js';
+			$asset_relative_path = 'build/ai/support/dctc-support-center.asset.php';
+		}
+
+		$asset_file = file_exists( DCTC_PLUGIN_DIR . $asset_relative_path )
+			? require DCTC_PLUGIN_DIR . $asset_relative_path
 			: array(
 				'dependencies' => array( 'wp-element', 'wp-components', 'wp-i18n', 'wp-api-fetch' ),
 				'version'      => DCTC_VERSION,
 			);
 
+		$handle = "{$script_slug}-script";
+
 		wp_enqueue_script(
-			'dctc-support-center-script',
-			DCTC_PLUGIN_URL . 'build/ai/support/dctc-support-center.js',
+			$handle,
+			DCTC_PLUGIN_URL . $js_relative_path,
 			$asset_file['dependencies'],
 			$asset_file['version'],
 			true
@@ -236,13 +286,15 @@ class DCTC_Support_Manager {
 			: array( 'view_tickets' => true, 'is_admin' => current_user_can( 'manage_options' ) );
 
 		wp_localize_script(
-			'dctc-support-center-script',
+			$handle,
 			'dctc_support_data',
 			array(
-				'rest_url'    => esc_url_raw( rest_url() ),
-				'nonce'       => wp_create_nonce( 'wp_rest' ),
-				'user_id'     => $user_id,
-				'permissions' => $permissions,
+				'rest_url'              => esc_url_raw( rest_url() ),
+				'nonce'                 => wp_create_nonce( 'wp_rest' ),
+				'user_id'               => $user_id,
+				'permissions'           => $permissions,
+				'current_page'          => $page,
+				'is_woocommerce_active' => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
 			)
 		);
 	}

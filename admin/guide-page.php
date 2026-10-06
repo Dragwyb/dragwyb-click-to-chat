@@ -831,21 +831,18 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 							<div class="dctc-shortcode-copy-box">
 								<code>[dctc_support_portal]</code>
 								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal]">
-									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Submission Portal', 'dragwyb-click-to-chat' ); ?></span>
+									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Primary Shortcode', 'dragwyb-click-to-chat' ); ?></span>
 								</button>
 							</div>
 							<div class="dctc-shortcode-copy-box">
-								<code>[dctc_support_tickets]</code>
-								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_tickets]">
-									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Tickets Dashboard', 'dragwyb-click-to-chat' ); ?></span>
+								<code>[dragwyb_support]</code>
+								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dragwyb_support]">
+									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Alias Shortcode', 'dragwyb-click-to-chat' ); ?></span>
 								</button>
 							</div>
-							<div class="dctc-shortcode-copy-box">
-								<code>[dctc_support_kb]</code>
-								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_kb]">
-									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Self-Service KB', 'dragwyb-click-to-chat' ); ?></span>
-								</button>
-							</div>
+							<p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">
+								<?php esc_html_e( 'Renders the complete self-service customer portal including interactive ticket submission form, user ticket history dashboard, real-time message threading, and file attachment support.', 'dragwyb-click-to-chat' ); ?>
+							</p>
 						</div>
 					</div>
 					<div class="dctc-zigzag-visual">

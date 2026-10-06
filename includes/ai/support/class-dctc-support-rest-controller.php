@@ -605,7 +605,7 @@ class DCTC_Support_REST_Controller {
 	public function get_dashboard() {
 		$user_id = get_current_user_id();
 		$stats   = DCTC_Support_Ticket_Service::get_dashboard_stats( $user_id );
-		return new WP_REST_Response( array_merge( array( 'success' => true ), $stats ), 200 );
+		return new WP_REST_Response( array_merge( array( 'success' => true, 'stats' => $stats ), $stats ), 200 );
 	}
 
 	public function update_my_status( $request ) {

@@ -171,6 +171,9 @@ export default function SettingsView( {
 		}
 	};
 
+	const isWcActive = !!window.dctc_support_data?.is_woocommerce_active;
+	const activePermissions = PERMISSION_DEFINITIONS.filter( ( p ) => p.key !== 'view_woocommerce_data' || isWcActive );
+
 	return (
 		<form onSubmit={ handleSubmit } className="dctc-sc-settings-wrap">
 			{ localNotice && (
@@ -180,8 +183,82 @@ export default function SettingsView( {
 				</div>
 			) }
 
-			<div className="dctc-sc-settings-columns">
-				{ /* Section 1: General & Routing */ }
+			{ /* Section 1: Staff Roles & Access Permissions Matrix (Displayed First) */ }
+			<div className="dctc-sc-panel-box">
+				<div className="dctc-sc-panel-header">
+					<div className="dctc-sc-panel-icon-wrap icon-purple">
+						<span className="dashicons dashicons-lock"></span>
+					</div>
+					<div>
+						<h3>{ __( 'Staff Roles & Granular Permission Matrix', 'dragwyb-click-to-chat' ) }</h3>
+						<p className="dctc-sc-panel-sub">
+							{ __( 'Control which staff roles can modify/remove agents, categories, tags, settings, and perform full admin operations.', 'dragwyb-click-to-chat' ) }
+						</p>
+					</div>
+				</div>
+
+				<div style={ { padding: '16px 20px', overflowX: 'auto' } }>
+					<table className="wp-list-table widefat fixed striped dctc-sc-perm-table" style={ { width: '100%', borderCollapse: 'collapse' } }>
+						<thead>
+							<tr>
+								<th style={ { width: '38%', textAlign: 'left', padding: '12px 14px' } }>
+									{ __( 'Capability / Action', 'dragwyb-click-to-chat' ) }
+								</th>
+								{ ROLES.map( ( r ) => (
+									<th key={ r.key } style={ { textAlign: 'center', padding: '12px 8px', width: '12%' } }>
+										<div style={ { display: 'flex', justifyContent: 'center', marginBottom: '4px' } }>
+											<span className={ `dashicons ${ r.icon }` } style={ { fontSize: '18px', width: '18px', height: '18px', color: '#4f46e5' } }></span>
+										</div>
+										<div style={ { fontWeight: 700, fontSize: '12px', color: '#0f172a' } }>{ r.label }</div>
+										<span style={ { fontSize: '10.5px', color: '#64748b', fontWeight: 500 } }>{ r.badge }</span>
+									</th>
+								) ) }
+							</tr>
+						</thead>
+						<tbody>
+							{ activePermissions.map( ( p ) => (
+								<tr key={ p.key }>
+									<td style={ { padding: '12px 14px', verticalAlign: 'middle' } }>
+										<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
+											<span className={ `dashicons ${ p.icon }` } style={ { color: p.color, fontSize: '18px', width: '18px', height: '18px' } }></span>
+											<div>
+												<strong style={ { fontSize: '13px', color: '#0f172a' } }>{ p.label }</strong>
+												<p style={ { margin: '2px 0 0', fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 } }>{ p.desc }</p>
+											</div>
+										</div>
+									</td>
+									{ ROLES.map( ( r ) => {
+										const isChecked = r.key === 'admin' ? true : !! ( matrix[ r.key ] && matrix[ r.key ][ p.key ] );
+										const isDisabled = r.key === 'admin';
+										return (
+											<td key={ r.key } style={ { textAlign: 'center', verticalAlign: 'middle', padding: '10px 8px' } }>
+												<label style={ { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: isDisabled ? 'default' : 'pointer' } }>
+													<input
+														type="checkbox"
+														checked={ isChecked }
+														disabled={ isDisabled }
+														onChange={ () => handleTogglePermission( r.key, p.key ) }
+														style={ {
+															width: '18px',
+															height: '18px',
+															borderRadius: '4px',
+															accentColor: '#4f46e5',
+															cursor: isDisabled ? 'default' : 'pointer',
+														} }
+													/>
+												</label>
+											</td>
+										);
+									} ) }
+								</tr>
+							) ) }
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+			<div className="dctc-sc-settings-columns" style={ { marginTop: '24px' } }>
+				{ /* Section 2: General & Routing */ }
 				<div className="dctc-sc-panel-box">
 					<div className="dctc-sc-panel-header">
 						<div className="dctc-sc-panel-icon-wrap icon-indigo">
@@ -286,7 +363,7 @@ export default function SettingsView( {
 					</div>
 				</div>
 
-				{ /* Section 2: Email Notifications & Portal */ }
+				{ /* Section 3: Email Notifications & Policies */ }
 				<div className="dctc-sc-panel-box">
 					<div className="dctc-sc-panel-header">
 						<div className="dctc-sc-panel-icon-wrap icon-amber">
@@ -353,80 +430,6 @@ export default function SettingsView( {
 							</label>
 						</div>
 					</div>
-				</div>
-			</div>
-
-			{ /* Section 3: Staff Roles & Access Permissions Matrix */ }
-			<div className="dctc-sc-panel-box" style={ { marginTop: '24px' } }>
-				<div className="dctc-sc-panel-header">
-					<div className="dctc-sc-panel-icon-wrap icon-purple">
-						<span className="dashicons dashicons-lock"></span>
-					</div>
-					<div>
-						<h3>{ __( 'Staff Roles & Granular Permission Matrix', 'dragwyb-click-to-chat' ) }</h3>
-						<p className="dctc-sc-panel-sub">
-							{ __( 'Control which staff roles can modify/remove agents, categories, tags, settings, and perform full admin operations.', 'dragwyb-click-to-chat' ) }
-						</p>
-					</div>
-				</div>
-
-				<div style={ { padding: '16px 20px', overflowX: 'auto' } }>
-					<table className="wp-list-table widefat fixed striped dctc-sc-perm-table" style={ { width: '100%', borderCollapse: 'collapse' } }>
-						<thead>
-							<tr>
-								<th style={ { width: '38%', textAlign: 'left', padding: '12px 14px' } }>
-									{ __( 'Capability / Action', 'dragwyb-click-to-chat' ) }
-								</th>
-								{ ROLES.map( ( r ) => (
-									<th key={ r.key } style={ { textAlign: 'center', padding: '12px 8px', width: '12%' } }>
-										<div style={ { display: 'flex', justifyContent: 'center', marginBottom: '4px' } }>
-											<span className={ `dashicons ${ r.icon }` } style={ { fontSize: '18px', width: '18px', height: '18px', color: '#4f46e5' } }></span>
-										</div>
-										<div style={ { fontWeight: 700, fontSize: '12px', color: '#0f172a' } }>{ r.label }</div>
-										<span style={ { fontSize: '10.5px', color: '#64748b', fontWeight: 500 } }>{ r.badge }</span>
-									</th>
-								) ) }
-							</tr>
-						</thead>
-						<tbody>
-							{ PERMISSION_DEFINITIONS.map( ( p ) => (
-								<tr key={ p.key }>
-									<td style={ { padding: '12px 14px', verticalAlign: 'middle' } }>
-										<div style={ { display: 'flex', alignItems: 'center', gap: '8px' } }>
-											<span className={ `dashicons ${ p.icon }` } style={ { color: p.color, fontSize: '18px', width: '18px', height: '18px' } }></span>
-											<div>
-												<strong style={ { fontSize: '13px', color: '#0f172a' } }>{ p.label }</strong>
-												<p style={ { margin: '2px 0 0', fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 } }>{ p.desc }</p>
-											</div>
-										</div>
-									</td>
-									{ ROLES.map( ( r ) => {
-										const isChecked = r.key === 'admin' ? true : !! ( matrix[ r.key ] && matrix[ r.key ][ p.key ] );
-										const isDisabled = r.key === 'admin';
-										return (
-											<td key={ r.key } style={ { textAlign: 'center', verticalAlign: 'middle', padding: '10px 8px' } }>
-												<label style={ { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: isDisabled ? 'default' : 'pointer' } }>
-													<input
-														type="checkbox"
-														checked={ isChecked }
-														disabled={ isDisabled }
-														onChange={ () => handleTogglePermission( r.key, p.key ) }
-														style={ {
-															width: '18px',
-															height: '18px',
-															borderRadius: '4px',
-															accentColor: '#4f46e5',
-															cursor: isDisabled ? 'default' : 'pointer',
-														} }
-													/>
-												</label>
-											</td>
-										);
-									} ) }
-								</tr>
-							) ) }
-						</tbody>
-					</table>
 				</div>
 			</div>
 

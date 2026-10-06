@@ -173,7 +173,7 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			if ( isset( $settings['chatbot']['enable_error_log'] ) ) {
 				return (bool) $settings['chatbot']['enable_error_log'];
 			}
-			return false;
+			return true;
 		}
 
 		/**

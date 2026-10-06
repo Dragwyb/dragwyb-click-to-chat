@@ -641,18 +641,31 @@ export default function TicketsView({
 
 	// Reset all filters
 	const handleResetFilters = () => {
-		setStatusFilter('all');
-		setPriorityFilter('all');
-		setCategoryFilter('all');
+		if (setStatusFilter) setStatusFilter('all');
+		if (setPriorityFilter) setPriorityFilter('all');
+		if (setCategoryFilter) setCategoryFilter('all');
 		setAssignedToFilter('all');
 		setProductFilter('all');
 		setTagFilter('all');
 		setDateRangeFilter('all');
 		setCustomerTypeFilter('all');
-		setSearchQuery('');
+		if (setSearchQuery) setSearchQuery('');
 		setActiveFolder('all');
 		setActiveView(null);
-		setCurrentPage(1);
+		if (setCurrentPage) setCurrentPage(1);
+
+		if (typeof window !== 'undefined' && window.history?.replaceState) {
+			const url = new URL(window.location.href);
+			url.searchParams.delete('status');
+			url.searchParams.delete('priority');
+			url.searchParams.delete('category_id');
+			url.searchParams.delete('search');
+			window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+		}
+
+		if (onRefreshTickets) {
+			onRefreshTickets();
+		}
 	};
 
 	// Copy session ID
@@ -760,14 +773,6 @@ export default function TicketsView({
 									<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
 									<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
 								</button>
-								<button
-									type="button"
-									className="dctc-sc-new-ticket-btn"
-									onClick={() => setIsNewTicketModalOpen(true)}
-								>
-									<span className="dashicons dashicons-plus"></span>
-									{__('New Ticket', 'dragwyb-click-to-chat')}
-								</button>
 							</div>
 						</div>
 					) : (
@@ -849,15 +854,6 @@ export default function TicketsView({
 								>
 									<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
 									<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
-								</button>
-
-								<button
-									type="button"
-									className="dctc-sc-new-ticket-btn"
-									onClick={() => setIsNewTicketModalOpen(true)}
-								>
-									<span className="dashicons dashicons-plus"></span>
-									{__('New Ticket', 'dragwyb-click-to-chat')}
 								</button>
 							</div>
 						</div>
@@ -1097,22 +1093,13 @@ export default function TicketsView({
 								</div>
 
 								<div className="dctc-sc-empty-inbox-actions">
-									<button
-										type="button"
-										className="dctc-sc-new-ticket-btn"
-										onClick={() => setIsNewTicketModalOpen(true)}
-										style={{ padding: '12px 28px', fontSize: '15px' }}
-									>
-										<span className="dashicons dashicons-plus"></span>
-										{__('Create Your First Ticket', 'dragwyb-click-to-chat')}
-									</button>
 									<a
 										href="admin.php?page=dragwyb-click-to-chat-guide&tab=support"
 										className="dctc-sc-reset-filters-btn"
-										style={{ padding: '12px 24px', fontSize: '14px', textDecoration: 'none', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+										style={{ padding: '12px 28px', fontSize: '14.5px', textDecoration: 'none', background: '#f8fafc', display: 'inline-flex', alignItems: 'center', gap: '8px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#4f46e5', fontWeight: 600 }}
 									>
-										<span>📖</span>
-										<span>{__('Read Support Center Guide', 'dragwyb-click-to-chat')}</span>
+										<span className="dashicons dashicons-book" style={{ fontSize: '18px', width: '18px', height: '18px' }}></span>
+										<span>{__('View Support Portal Setup Guide', 'dragwyb-click-to-chat')}</span>
 									</a>
 								</div>
 							</div>
@@ -1151,7 +1138,7 @@ export default function TicketsView({
 												<span className="dashicons dashicons-filter"></span>
 											</div>
 											<h3>{__('No Support Tickets Match Your Filters', 'dragwyb-click-to-chat')}</h3>
-											<p>{__('Try adjusting your search keywords, clearing status filters, or resetting advanced options.', 'dragwyb-click-to-chat')}</p>
+											<p>{__('We couldn\'t find any tickets matching your selected criteria. Try adjusting your search keywords or resetting filters.', 'dragwyb-click-to-chat')}</p>
 											<button
 												type="button"
 												className="dctc-sc-reset-filters-btn"

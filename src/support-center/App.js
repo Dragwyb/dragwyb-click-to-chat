@@ -130,7 +130,7 @@ export default function App() {
 		try {
 			const data = await apiFetch({ path: '/dctc-ai/v1/support/dashboard' });
 			if (data?.success) {
-				setDashboardStats(data.stats || null);
+				setDashboardStats(data.stats || data);
 			}
 		} catch (err) {
 			console.error('Error fetching dashboard stats:', err);
