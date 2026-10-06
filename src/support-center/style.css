@@ -6533,3 +6533,176 @@
   background: #e2e8f0;
   color: #0f172a;
 }
+
+/* ==========================================================================
+   TICKET VIEW CONTROLS: CHEVRON DROPDOWNS, NAV ARROWS & PANEL COLLAPSE
+   ========================================================================== */
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  position: relative;
+  transition: box-shadow 0.15s ease;
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown::after {
+  background-color: currentColor;
+  content: "";
+  height: 12px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat center / contain;
+  opacity: 0.75;
+  pointer-events: none;
+  position: absolute;
+  right: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  width: 12px;
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown:hover {
+  box-shadow: 0 0 0 1px currentColor inset;
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown:hover::after {
+  opacity: 1;
+  transform: translateY(-35%);
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown:focus-within {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown select,
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown select:hover,
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown select:focus {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  box-shadow: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  height: 26px;
+  letter-spacing: 0.4px;
+  line-height: 26px;
+  min-height: 26px;
+  outline: none;
+  padding: 0 26px 0 12px;
+  text-transform: uppercase;
+}
+
+.dctc-sc-ws-header .dctc-sc-ws-badge-dropdown select option {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.dctc-sc-ws-header .dctc-sc-nav-arrows {
+  align-items: stretch;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  display: inline-flex;
+  gap: 0;
+  overflow: hidden;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+  width: 30px;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn + .dctc-sc-arrow-btn {
+  border-left: 1px solid #e2e8f0;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn .dashicons,
+.dctc-sc-left-panel-collapse-btn .dashicons {
+  font-size: 16px;
+  height: 16px;
+  line-height: 16px;
+  width: 16px;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn:hover:not(:disabled) {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(99, 102, 241, 0.45);
+  outline: none;
+}
+
+.dctc-sc-ws-header .dctc-sc-arrow-btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.dctc-sc-left-panel-collapse-btn {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: inline-flex;
+  flex-shrink: 0;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  transition: all 0.15s ease;
+  width: 28px;
+}
+
+.dctc-sc-left-panel-collapse-btn:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+}
+
+.dctc-sc-left-panel-collapse-btn:focus-visible {
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+  outline: none;
+}
+
+.dctc-sc-ticket-fields select.dctc-sc-detail-select,
+.dctc-sc-ticket-fields select.dctc-sc-detail-select:hover {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  background-size: 14px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  cursor: pointer;
+  padding-right: 32px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dctc-sc-ticket-fields select.dctc-sc-detail-select:hover {
+  border-color: #a5b4fc;
+}
+
+.dctc-sc-ticket-fields select.dctc-sc-detail-select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  color: #0f172a;
+  outline: none;
+}

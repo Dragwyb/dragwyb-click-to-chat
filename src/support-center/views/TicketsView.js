@@ -628,14 +628,14 @@ export default function TicketsView({
 	};
 
 	// Prev / Next ticket navigation
+	const currentTicketIndex = selectedTicketId ? tickets.findIndex((t) => t.id === selectedTicketId) : -1;
+
 	const handleNavigateTicket = (direction) => {
-		if (!tickets.length || !selectedTicketId) return;
-		const currentIndex = tickets.findIndex((t) => t.id === selectedTicketId);
-		if (currentIndex === -1) return;
-		if (direction === 'prev' && currentIndex > 0) {
-			handleOpenTicket(tickets[currentIndex - 1].id);
-		} else if (direction === 'next' && currentIndex < tickets.length - 1) {
-			handleOpenTicket(tickets[currentIndex + 1].id);
+		if (currentTicketIndex === -1) return;
+		if (direction === 'prev' && currentTicketIndex > 0) {
+			handleOpenTicket(tickets[currentTicketIndex - 1].id);
+		} else if (direction === 'next' && currentTicketIndex < tickets.length - 1) {
+			handleOpenTicket(tickets[currentTicketIndex + 1].id);
 		}
 	};
 
@@ -1276,6 +1276,7 @@ export default function TicketsView({
 											className="dctc-sc-left-panel-collapse-btn"
 											onClick={() => setIsLeftTicketsPanelExpanded(false)}
 											title={__('Collapse Tickets Sidebar', 'dragwyb-click-to-chat')}
+											aria-label={__('Collapse Tickets Sidebar', 'dragwyb-click-to-chat')}
 										>
 											<span className="dashicons dashicons-arrow-left-alt2"></span>
 										</button>
@@ -1378,7 +1379,7 @@ export default function TicketsView({
 											<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
 
 											{ /* Status dropdown badge */}
-											<div className="dctc-sc-ws-badge-dropdown">
+											<div className={`dctc-sc-ws-badge-dropdown ${getStatusBadgeClass(selectedTicket?.status)}`}>
 												<select
 													value={selectedTicket?.status || 'open'}
 													onChange={(e) => handleStatusChange(e.target.value)}
@@ -1393,7 +1394,7 @@ export default function TicketsView({
 											</div>
 
 											{ /* Priority dropdown badge */}
-											<div className="dctc-sc-ws-badge-dropdown">
+											<div className={`dctc-sc-ws-badge-dropdown ${getPriorityBadgeClass(selectedTicket?.priority)}`}>
 												<select
 													value={selectedTicket?.priority || 'normal'}
 													onChange={(e) => handlePriorityChange(e.target.value)}
@@ -1436,17 +1437,21 @@ export default function TicketsView({
 													type="button"
 													className="dctc-sc-arrow-btn"
 													onClick={() => handleNavigateTicket('prev')}
+													disabled={currentTicketIndex <= 0}
 													title={__('Previous Ticket', 'dragwyb-click-to-chat')}
+													aria-label={__('Previous Ticket', 'dragwyb-click-to-chat')}
 												>
-													&lt;
+													<span className="dashicons dashicons-arrow-left-alt2"></span>
 												</button>
 												<button
 													type="button"
 													className="dctc-sc-arrow-btn"
 													onClick={() => handleNavigateTicket('next')}
+													disabled={currentTicketIndex === -1 || currentTicketIndex >= tickets.length - 1}
 													title={__('Next Ticket', 'dragwyb-click-to-chat')}
+													aria-label={__('Next Ticket', 'dragwyb-click-to-chat')}
 												>
-													&gt;
+													<span className="dashicons dashicons-arrow-right-alt2"></span>
 												</button>
 											</div>
 
