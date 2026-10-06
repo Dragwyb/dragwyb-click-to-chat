@@ -35,7 +35,7 @@ class DCTC_Support_AI_Assist_Service {
 
 		$conversation_text = '';
 		foreach ( $messages as $msg ) {
-			$role = isset( $msg['role'] ) && 'assistant' === $msg['role'] ? 'Agent/AI' : 'Customer';
+			$role               = isset( $msg['role'] ) && 'assistant' === $msg['role'] ? 'Agent/AI' : 'Customer';
 			$conversation_text .= $role . ': ' . ( $msg['content'] ?? '' ) . "\n";
 		}
 
@@ -85,12 +85,12 @@ class DCTC_Support_AI_Assist_Service {
 			return new WP_Error( 'ticket_not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ) );
 		}
 
-		$messages = ! empty( $ticket['messages'] ) ? $ticket['messages'] : array();
+		$messages  = ! empty( $ticket['messages'] ) ? $ticket['messages'] : array();
 		$site_name = get_bloginfo( 'name' );
 
 		$conversation_text = '';
 		foreach ( $messages as $msg ) {
-			$role = isset( $msg['role'] ) && 'assistant' === $msg['role'] ? 'Staff' : 'Customer';
+			$role               = isset( $msg['role'] ) && 'assistant' === $msg['role'] ? 'Staff' : 'Customer';
 			$conversation_text .= $role . ': ' . ( $msg['content'] ?? '' ) . "\n";
 		}
 
@@ -123,7 +123,7 @@ class DCTC_Support_AI_Assist_Service {
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/ai-providers/class-dctc-ai-provider-manager.php';
 		$manager = DCTC_AI_Provider_Manager::get_instance();
 
-		$provider_name = ! empty( $bot['active_provider'] ) ? $bot['active_provider'] : 'gemini';
+		$provider_name = ! empty( $bot['active_provider'] ) ? $bot['active_provider'] : 'google';
 		$provider      = $manager->get_provider( $provider_name );
 
 		if ( ! $provider ) {
