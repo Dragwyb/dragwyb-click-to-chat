@@ -264,7 +264,7 @@ class DCTC_AI_Leads_Controller
 						'origin_type'      => 'chatbot',
 						'reply_surface'    => 'chatbot_widget',
 						'interaction_type' => 'LEAD_GENERATION',
-						'control_mode'     => 'human',
+						'control_mode'     => 'ai',
 						'initial_message'  => $lead_summary,
 					] );
 

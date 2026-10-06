@@ -234,6 +234,10 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		enable_support_escalation: chatbot.enable_support_escalation !== false,
 		auto_assign_support_tickets: chatbot.auto_assign_support_tickets !== false,
 		auto_pause_ai_on_ticket: chatbot.auto_pause_ai_on_ticket !== false,
+		human_agent_max_wait_time: chatbot.human_agent_max_wait_time ?? 60,
+		human_agent_waiting_message:
+			chatbot.human_agent_waiting_message ||
+			__('Sorry to keep you waiting...', 'dragwyb-click-to-chat'),
 
 		// Messages & Notifications (Centralized Messages Tab)
 		order_tracking_prompt_msg:
@@ -584,6 +588,8 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			enable_support_escalation: form.enable_support_escalation,
 			auto_assign_support_tickets: form.auto_assign_support_tickets,
 			auto_pause_ai_on_ticket: form.auto_pause_ai_on_ticket,
+			human_agent_max_wait_time: form.human_agent_max_wait_time,
+			human_agent_waiting_message: form.human_agent_waiting_message,
 			enable_ai_tools: form.enable_ai_tools,
 			enabled_tools: form.enabled_tools,
 			workflow_webhook_url: form.workflow_webhook_url,
@@ -1612,6 +1618,33 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 											checked={form.auto_pause_ai_on_ticket}
 											onChange={(v) => setField('auto_pause_ai_on_ticket', v)}
 										/>
+									</div>
+
+									<div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+										<div style={{ paddingRight: '1rem' }}>
+											<strong style={{ display: 'block', color: '#1e293b', fontSize: '0.9rem', marginBottom: '0.25rem' }}>
+												{__('Maximum Wait Time for Agent Response', 'dragwyb-click-to-chat')}
+											</strong>
+											<span style={{ fontSize: '0.825rem', color: '#64748b' }}>
+												{__('If a live human agent takes longer than this duration without replying and is not actively viewing the ticket, automatically fallback to AI assistant and resume AI control mode.', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px' }}>
+											<input
+												type="number"
+												id="human_agent_max_wait_time"
+												className="dctc-ai-bot-input"
+												style={{ width: '90px', textAlign: 'center' }}
+												min="10"
+												max="1800"
+												step="5"
+												value={form.human_agent_max_wait_time}
+												onChange={(e) => setField('human_agent_max_wait_time', e.target.value === '' ? '' : Math.max(10, Number(e.target.value)))}
+											/>
+											<span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500 }}>
+												{__('sec (default 60s)', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
 									</div>
 								</div>
 							</SwitcherCard>
@@ -3270,6 +3303,23 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 										/>
 										<p className="dctc-ai-bot-hint">
 											{__('Sent to the visitor in chat when a support ticket is created for their active session.', 'dragwyb-click-to-chat')}
+										</p>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="human_agent_waiting_message">
+											{__('Human Agent Waiting Status Message (Every 30s Update)', 'dragwyb-click-to-chat')}
+										</label>
+										<textarea
+											id="human_agent_waiting_message"
+											className="dctc-ai-bot-input dctc-ai-bot-textarea"
+											rows="2"
+											value={form.human_agent_waiting_message}
+											onChange={(e) => setField('human_agent_waiting_message', e.target.value)}
+											placeholder={__('Sorry to keep you waiting...', 'dragwyb-click-to-chat')}
+										/>
+										<p className="dctc-ai-bot-hint">
+											{__('Displayed with the typing animation every 30 seconds when the visitor is waiting for a live human agent reply.', 'dragwyb-click-to-chat')}
 										</p>
 									</div>
 								</div>

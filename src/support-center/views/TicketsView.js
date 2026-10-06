@@ -446,6 +446,65 @@ export default function TicketsView({
 		};
 	}, [selectedTicketId, onRefreshTicketDetails]);
 
+	// Agent Viewing Presence Tracker for active ticket
+	useEffect(() => {
+		if (!selectedTicketId) return;
+		const ticketId = selectedTicketId;
+
+		const sendPresence = (isViewing) => {
+			try {
+				apiFetch({
+					path: `/dctc-ai/v1/support/tickets/${ticketId}/presence`,
+					method: 'POST',
+					data: { viewing: isViewing ? 1 : 0 },
+				}).catch(() => {});
+			} catch (e) {}
+		};
+
+		// Send initial viewing signal if document is visible
+		if (typeof document === 'undefined' || !document.hidden) {
+			sendPresence(1);
+		}
+
+		// Periodic pulse every 12s while open and visible
+		const presenceInterval = setInterval(() => {
+			if (typeof document !== 'undefined' && document.hidden) {
+				sendPresence(0);
+				return;
+			}
+			sendPresence(1);
+		}, 12000);
+
+		// Handle visibility change (tab switch, minimize)
+		const handleVisibilityChange = () => {
+			if (document.hidden) {
+				sendPresence(0);
+			} else {
+				sendPresence(1);
+			}
+		};
+
+		// Handle window beforeunload
+		const handleBeforeUnload = () => {
+			sendPresence(0);
+		};
+
+		if (typeof document !== 'undefined') {
+			document.addEventListener('visibilitychange', handleVisibilityChange);
+			window.addEventListener('beforeunload', handleBeforeUnload);
+		}
+
+		return () => {
+			clearInterval(presenceInterval);
+			if (typeof document !== 'undefined') {
+				document.removeEventListener('visibilitychange', handleVisibilityChange);
+				window.removeEventListener('beforeunload', handleBeforeUnload);
+			}
+			// When closing or switching away from ticket, mark as not in view
+			sendPresence(0);
+		};
+	}, [selectedTicketId]);
+
 	// Counts calculation for folders and views
 	const folderCounts = useMemo(() => {
 		const counts = {

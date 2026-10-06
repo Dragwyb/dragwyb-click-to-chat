@@ -380,7 +380,14 @@ class DCTC_AI_DB {
 			$messages = json_decode( $existing_messages, true );
 			$messages = is_array( $messages ) ? $messages : [];
 
-			$messages = array_merge( $messages, $new_messages );
+			$last_idx = count( $messages ) - 1;
+			// Prevent duplicate user message if the last message in history is already this user prompt
+			if ( $last_idx >= 0 && isset( $messages[ $last_idx ]['role'] ) && 'user' === $messages[ $last_idx ]['role'] && trim( (string) $messages[ $last_idx ]['content'] ) === trim( (string) $prompt ) ) {
+				$messages[] = $assistant_entry;
+			} else {
+				$messages = array_merge( $messages, $new_messages );
+			}
+
 			$messages = array_slice( $messages, -50 );
 
 			$messages_json = wp_json_encode( $messages );
@@ -405,6 +412,7 @@ class DCTC_AI_DB {
 			wp_cache_set( $cache_key, $messages_json, $cache_group, HOUR_IN_SECONDS );
 
 		} else {
+			$messages      = $new_messages;
 			$messages_json = wp_json_encode( $new_messages );
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Inserting into custom table.
@@ -433,7 +441,7 @@ class DCTC_AI_DB {
 			wp_cache_set( $cache_key, $messages_json, $cache_group, HOUR_IN_SECONDS );
 		}
 
-		// If a support ticket exists for this session, touch ticket updated_at so Support Center sees real-time changes
+		// If a support ticket exists for this session, touch ticket updated_at & sync messages
 		$linked_ticket = class_exists( 'DCTC_Support_Ticket_Service' )
 			? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id )
 			: null;
@@ -449,6 +457,9 @@ class DCTC_AI_DB {
 				),
 				array( 'id' => absint( $linked_ticket['id'] ) )
 			);
+
+			// Keep ticket meta synchronized with full conversation including AI assistant response
+			DCTC_Support_Ticket_Service::update_ticket_meta( $linked_ticket['id'], '_dctc_ticket_messages', $messages );
 		}
 
 		return $session_id;

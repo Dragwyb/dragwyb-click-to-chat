@@ -252,8 +252,6 @@ class DCTC_AI_Chat_Controller {
 				if ( ! empty( $support_settings['enabled'] ) ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
-						$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
-
 						DCTC_Support_Ticket_Service::create_ticket(
 							array(
 								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
@@ -262,8 +260,7 @@ class DCTC_AI_Chat_Controller {
 								'origin_type'      => 'chatbot',
 								'reply_surface'    => 'chatbot_widget',
 								'interaction_type' => 'HYBRID_SUPPORT',
-								'control_mode'     => $auto_pause ? 'human' : 'ai',
-								'initial_message'  => $prompt,
+								'control_mode'     => 'ai',
 							)
 						);
 					}
@@ -636,8 +633,6 @@ class DCTC_AI_Chat_Controller {
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
-						$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : false;
-
 						DCTC_Support_Ticket_Service::create_ticket(
 							array(
 								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
@@ -646,8 +641,7 @@ class DCTC_AI_Chat_Controller {
 								'origin_type'      => 'chatbot',
 								'reply_surface'    => 'chatbot_widget',
 								'interaction_type' => 'HYBRID_SUPPORT',
-								'control_mode'     => $auto_pause ? 'human' : 'ai',
-								'initial_message'  => $prompt,
+								'control_mode'     => 'ai',
 							)
 						);
 					} else {
@@ -1483,8 +1477,9 @@ CONVERSATION MEMORY:
 	 * Save conversation to database
 	 */
 	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources = array() ) {
-		// Save to database if enabled
-		if ( isset( $bot['save_chat'] ) && (bool) $bot['save_chat'] ) {
+		// Save to database if enabled or if ticket is attached
+		$save_enabled = ! isset( $bot['save_chat'] ) || (bool) $bot['save_chat'];
+		if ( $save_enabled || class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db = new DCTC_AI_DB();
 				$db->dctc_ai_save_message( $prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources );

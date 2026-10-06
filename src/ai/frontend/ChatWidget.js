@@ -408,6 +408,91 @@ export default function ChatWidget({ settings, inline }) {
 	const [activeTicketInfo, setActiveTicketInfo] = useState(null);
 	const [hasActiveTicket, setHasActiveTicket] = useState(false);
 
+	// Human agent waiting & auto-fallback states
+	const [isWaitingForAgent, setIsWaitingForAgent] = useState(false);
+	const [waitingAgentStatusText, setWaitingAgentStatusText] = useState('');
+	const lastSentPromptRef = useRef('');
+	const wait30sTimerRef = useRef(null);
+	const maxWaitTimeoutRef = useRef(null);
+
+	const clearAgentWaitTimers = useCallback(() => {
+		if (wait30sTimerRef.current) {
+			clearTimeout(wait30sTimerRef.current);
+			wait30sTimerRef.current = null;
+		}
+		if (maxWaitTimeoutRef.current) {
+			clearTimeout(maxWaitTimeoutRef.current);
+			maxWaitTimeoutRef.current = null;
+		}
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			clearAgentWaitTimers();
+		};
+	}, [clearAgentWaitTimers]);
+
+	const triggerAiFallback = useCallback(async (fallbackPrompt) => {
+		if (!sessionId || !isMountedRef.current) return;
+		try {
+			const activePageContext = window.dctc_ai_frontend_data?.page_context || {
+				url: window.location.href,
+				title: document.title,
+			};
+
+			const response = await apiFetch({
+				path: '/dctc-ai/v1/chat',
+				method: 'POST',
+				data: {
+					prompt: fallbackPrompt || 'Please assist me with my inquiry.',
+					session_id: sessionId,
+					email,
+					page_context: activePageContext,
+					visitor_lang: navigator.language || navigator.userLanguage || '',
+					fallback_trigger: true,
+				},
+			});
+
+			if (!isMountedRef.current) return;
+
+			if (response?.success) {
+				if (response.is_human_handled) {
+					return;
+				}
+
+				clearAgentWaitTimers();
+				setIsWaitingForAgent(false);
+				setWaitingAgentStatusText('');
+				setIsLoading(false);
+
+				let botMessage = response.message;
+				if (typeof botMessage === 'object' && botMessage !== null) {
+					botMessage = botMessage.text || botMessage.content || JSON.stringify(botMessage);
+				}
+
+				if (botMessage) {
+					setMessages((prev) => [
+						...prev,
+						{
+							role: 'bot',
+							content: botMessage,
+							sources: Array.isArray(response.sources) ? response.sources : [],
+							action_buttons: Array.isArray(response.action_buttons) ? response.action_buttons : [],
+							products: Array.isArray(response.products) ? response.products : [],
+							show_order_tracker: !!response.show_order_tracker,
+						},
+					]);
+				}
+
+				if (response.control_mode) {
+					setActiveControlMode(response.control_mode);
+				}
+			}
+		} catch (e) {
+			// Silently catch background fallback network error
+		}
+	}, [sessionId, email, clearAgentWaitTimers]);
+
 	// AI Lead Capture State
 	const [showLeadForm, setShowLeadForm] = useState(false);
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
@@ -867,6 +952,11 @@ export default function ChatWidget({ settings, inline }) {
 							);
 
 							if (hasNewMessages || hasNewAgentReply) {
+								clearAgentWaitTimers();
+								setIsWaitingForAgent(false);
+								setWaitingAgentStatusText('');
+								setIsLoading(false);
+
 								return validServerMsgs.map((m, idx) => ({
 									id: m.id || `srv_${idx}_${m.created_at || idx}`,
 									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
@@ -1599,6 +1689,47 @@ export default function ChatWidget({ settings, inline }) {
 				) {
 					setSessionId(response.session_id);
 				}
+
+				if (response.is_human_handled) {
+					// Human control mode active: do NOT show a static text notice
+					setIsWaitingForAgent(true);
+					setIsLoading(true); // Keep typing animation active
+
+					clearAgentWaitTimers();
+
+					// Set 30-second timer to show waiting status message
+					const waitingMsg = chatbot.human_agent_waiting_message || __('Sorry to keep you waiting...', 'dragwyb-click-to-chat');
+					wait30sTimerRef.current = setTimeout(() => {
+						if (isMountedRef.current) {
+							setWaitingAgentStatusText(waitingMsg);
+						}
+					}, 30000);
+
+					// Set maximum wait time timer (default 60s)
+					const maxWaitSec = parseInt(chatbot.human_agent_max_wait_time, 10) || 60;
+					maxWaitTimeoutRef.current = setTimeout(() => {
+						if (isMountedRef.current) {
+							triggerAiFallback(prompt);
+						}
+					}, Math.max(10, maxWaitSec) * 1000);
+
+					if (response.has_ticket && response.ticket) {
+						const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
+						setHasActiveTicket(!isClosed);
+						setActiveTicketInfo(response.ticket);
+						if (response.ticket.agent_name) {
+							setAssignedAgentName(response.ticket.agent_name);
+						}
+						if (response.control_mode) {
+							setActiveControlMode(response.control_mode);
+						}
+					}
+					return;
+				}
+
+				clearAgentWaitTimers();
+				setIsWaitingForAgent(false);
+				setWaitingAgentStatusText('');
 
 				let botMessage = response.message;
 				if (
@@ -2501,8 +2632,22 @@ export default function ChatWidget({ settings, inline }) {
 					createElement(
 						'div',
 						{
-							className: 'dctc-ai-message dctc-ai-message-bot',
+							className: 'dctc-ai-message dctc-ai-message-bot dctc-ai-message-typing-wrap',
 						},
+						waitingAgentStatusText &&
+						createElement(
+							'div',
+							{
+								className: 'dctc-ai-waiting-status-text',
+								style: {
+									fontSize: '0.8rem',
+									color: '#64748b',
+									marginBottom: '6px',
+									fontStyle: 'italic',
+								},
+							},
+							waitingAgentStatusText
+						),
 						createElement(
 							'div',
 							{ className: 'dctc-ai-typing' },

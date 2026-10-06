@@ -1942,3 +1942,13 @@
   color: #2563eb;
   opacity: 1;
 }
+
+.dctc-ai-waiting-status-text {
+  animation: dctcAiFadeIn 0.3s ease-in-out;
+  color: #64748b;
+  font-size: 0.825rem;
+  font-style: italic;
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+

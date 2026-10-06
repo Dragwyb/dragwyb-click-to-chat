@@ -161,6 +161,16 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/presence',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'update_viewing_presence' ),
+				'permission_callback' => array( $this, 'permission_staff_view' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/reply',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -576,7 +586,13 @@ class DCTC_Support_REST_Controller {
 	public function session_heartbeat( $request ) {
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
 		if ( empty( $session_id ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => 'Missing session_id' ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => 'Missing session_id',
+				),
+				400
+			);
 		}
 
 		global $wpdb;
@@ -605,7 +621,16 @@ class DCTC_Support_REST_Controller {
 	public function get_dashboard() {
 		$user_id = get_current_user_id();
 		$stats   = DCTC_Support_Ticket_Service::get_dashboard_stats( $user_id );
-		return new WP_REST_Response( array_merge( array( 'success' => true, 'stats' => $stats ), $stats ), 200 );
+		return new WP_REST_Response(
+			array_merge(
+				array(
+					'success' => true,
+					'stats'   => $stats,
+				),
+				$stats
+			),
+			200
+		);
 	}
 
 	public function update_my_status( $request ) {
@@ -615,7 +640,13 @@ class DCTC_Support_REST_Controller {
 
 		$allowed = array( 'available', 'away', 'offline' );
 		if ( ! in_array( $status, $allowed, true ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Invalid status.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Invalid status.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
 
 		global $wpdb;
@@ -629,7 +660,13 @@ class DCTC_Support_REST_Controller {
 			array( 'wp_user_id' => $user_id )
 		);
 
-		return new WP_REST_Response( array( 'success' => true, 'availability_status' => $status ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'             => true,
+				'availability_status' => $status,
+			),
+			200
+		);
 	}
 
 	public function get_tickets( $request ) {
@@ -639,21 +676,45 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function get_ticket( $request ) {
-		$id = $request->get_param( 'id' );
+		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $ticket ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $ticket,
+			),
+			200
+		);
 	}
 
 	public function create_ticket( $request ) {
 		$params = $request->get_json_params();
 		$ticket = DCTC_Support_Ticket_Service::create_ticket( $params );
 		if ( is_wp_error( $ticket ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $ticket->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $ticket->get_error_message(),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $ticket ), 201 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $ticket,
+			),
+			201
+		);
 	}
 
 	public function update_ticket( $request ) {
@@ -664,10 +725,22 @@ class DCTC_Support_REST_Controller {
 		$result  = DCTC_Support_Ticket_Service::update_ticket_properties( $id, $params, 'agent', $user_id );
 
 		if ( is_wp_error( $result ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $result ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $result,
+			),
+			200
+		);
 	}
 
 	public function change_status( $request ) {
@@ -677,7 +750,13 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$user_id   = get_current_user_id();
@@ -695,7 +774,13 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$user_id   = get_current_user_id();
@@ -714,7 +799,13 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$updated = DCTC_Support_Ticket_Service::assign_ticket( $ticket['id'], $agent_id, 0, 'manual', $reason, get_current_user_id() );
@@ -725,28 +816,64 @@ class DCTC_Support_REST_Controller {
 		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$result = DCTC_Support_AI_Handoff_Service::take_control( $ticket['id'], get_current_user_id() );
 		if ( is_wp_error( $result ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'human' ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'      => true,
+				'control_mode' => 'human',
+			),
+			200
+		);
 	}
 
 	public function release_control( $request ) {
 		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$result = DCTC_Support_AI_Handoff_Service::give_control_to_ai( $ticket['id'], get_current_user_id() );
 		if ( is_wp_error( $result ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'ai' ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'      => true,
+				'control_mode' => 'ai',
+			),
+			200
+		);
 	}
 
 	public function toggle_control( $request ) {
@@ -756,21 +883,51 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		if ( 'human' === $mode ) {
 			$result = DCTC_Support_AI_Handoff_Service::take_control( $ticket['id'], get_current_user_id() );
 			if ( is_wp_error( $result ) ) {
-				return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+				return new WP_REST_Response(
+					array(
+						'success' => false,
+						'message' => $result->get_error_message(),
+					),
+					400
+				);
 			}
-			return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'human' ), 200 );
+			return new WP_REST_Response(
+				array(
+					'success'      => true,
+					'control_mode' => 'human',
+				),
+				200
+			);
 		} else {
 			$result = DCTC_Support_AI_Handoff_Service::give_control_to_ai( $ticket['id'], get_current_user_id() );
 			if ( is_wp_error( $result ) ) {
-				return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+				return new WP_REST_Response(
+					array(
+						'success' => false,
+						'message' => $result->get_error_message(),
+					),
+					400
+				);
 			}
-			return new WP_REST_Response( array( 'success' => true, 'control_mode' => 'ai' ), 200 );
+			return new WP_REST_Response(
+				array(
+					'success'      => true,
+					'control_mode' => 'ai',
+				),
+				200
+			);
 		}
 	}
 
@@ -781,16 +938,34 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$result = DCTC_Support_Ticket_Service::add_reply( $ticket['id'], $message, 'agent', get_current_user_id() );
 		if ( is_wp_error( $result ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
 		}
 
 		$updated_ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket['id'] );
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $updated_ticket ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $updated_ticket,
+			),
+			200
+		);
 	}
 
 	public function add_note( $request ) {
@@ -801,16 +976,34 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$note_id = DCTC_Support_Note_Service::add_note( $ticket['id'], $content, $is_pinned, get_current_user_id() );
 		if ( ! $note_id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not add internal note.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not add internal note.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
 
 		$notes = DCTC_Support_Note_Service::get_notes( $ticket['id'] );
-		return new WP_REST_Response( array( 'success' => true, 'notes' => $notes ), 201 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'notes'   => $notes,
+			),
+			201
+		);
 	}
 
 	public function delete_note( $request ) {
@@ -826,61 +1019,166 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		DCTC_Support_Tag_Service::set_ticket_tags( $ticket['id'], $tags );
 		$updated_tags = DCTC_Support_Tag_Service::get_ticket_tags( $ticket['id'] );
 
-		return new WP_REST_Response( array( 'success' => true, 'tags' => $updated_tags ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'tags'    => $updated_tags,
+			),
+			200
+		);
 	}
 
 	public function get_woocommerce_context( $request ) {
-		$id = $request->get_param( 'id' );
+		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$wc_context = DCTC_Support_WooCommerce_Service::get_customer_wc_context( $ticket['id'] );
-		return new WP_REST_Response( array( 'success' => true, 'woocommerce' => $wc_context ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'     => true,
+				'woocommerce' => $wc_context,
+			),
+			200
+		);
 	}
 
 	public function generate_ai_summary( $request ) {
-		$id = $request->get_param( 'id' );
+		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$summary = DCTC_Support_AI_Assist_Service::generate_summary( $ticket['id'] );
 		if ( is_wp_error( $summary ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $summary->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $summary->get_error_message(),
+				),
+				400
+			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'ai_summary' => $summary ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'ai_summary' => $summary,
+			),
+			200
+		);
 	}
 
 	public function suggest_ai_reply( $request ) {
-		$id = $request->get_param( 'id' );
+		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		$suggested = DCTC_Support_AI_Assist_Service::suggest_reply( $ticket['id'] );
 		if ( is_wp_error( $suggested ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $suggested->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $suggested->get_error_message(),
+				),
+				400
+			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'suggested_reply' => $suggested ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'         => true,
+				'suggested_reply' => $suggested,
+			),
+			200
+		);
+	}
+
+	public function update_viewing_presence( $request ) {
+		$id     = $request->get_param( 'id' );
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
+		if ( ! $ticket ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
+		}
+
+		$params = $request->get_json_params();
+		if ( empty( $params ) ) {
+			$params = $request->get_params();
+		}
+
+		$viewing = isset( $params['viewing'] ) ? ( (bool) $params['viewing'] ? 1 : 0 ) : 1;
+		$now     = current_time( 'timestamp' );
+		$user_id = get_current_user_id();
+
+		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing', $viewing );
+		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', $now );
+		if ( $user_id ) {
+			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing_user_id', $user_id );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'ticket_id'  => (int) $ticket['id'],
+				'viewing'    => $viewing,
+				'updated_at' => $now,
+			),
+			200
+		);
 	}
 
 	public function delete_ticket( $request ) {
 		$id     = $request->get_param( 'id' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
 		// Move to trash
@@ -891,16 +1189,34 @@ class DCTC_Support_REST_Controller {
 	// Categories & Tags & Agents
 	public function get_categories() {
 		$categories = DCTC_Support_Category_Service::get_categories();
-		return new WP_REST_Response( array( 'success' => true, 'categories' => $categories ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'categories' => $categories,
+			),
+			200
+		);
 	}
 
 	public function save_category( $request ) {
 		$data = $request->get_json_params();
 		$id   = DCTC_Support_Category_Service::save_category( $data );
 		if ( ! $id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save category.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save category.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'id'      => $id,
+			),
+			200
+		);
 	}
 
 	public function delete_category( $request ) {
@@ -911,16 +1227,34 @@ class DCTC_Support_REST_Controller {
 
 	public function get_tags() {
 		$tags = DCTC_Support_Tag_Service::get_tags();
-		return new WP_REST_Response( array( 'success' => true, 'tags' => $tags ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'tags'    => $tags,
+			),
+			200
+		);
 	}
 
 	public function save_tag( $request ) {
 		$data = $request->get_json_params();
 		$id   = DCTC_Support_Tag_Service::save_tag( $data );
 		if ( ! $id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save tag.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save tag.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'id'      => $id,
+			),
+			200
+		);
 	}
 
 	public function delete_tag( $request ) {
@@ -933,16 +1267,34 @@ class DCTC_Support_REST_Controller {
 	public function get_products( $request ) {
 		$params   = $request->get_params();
 		$products = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::get_products( $params ) : array();
-		return new WP_REST_Response( array( 'success' => true, 'products' => $products ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'products' => $products,
+			),
+			200
+		);
 	}
 
 	public function save_product( $request ) {
 		$data = $request->get_json_params();
 		$id   = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::save_product( $data ) : false;
 		if ( ! $id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save product.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save product.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'id'      => $id,
+			),
+			200
+		);
 	}
 
 	public function delete_product( $request ) {
@@ -952,24 +1304,49 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function sync_wc_products() {
-		$count = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::sync_woocommerce_products() : 0;
+		$count    = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::sync_woocommerce_products() : 0;
 		$products = class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::get_products() : array();
-		return new WP_REST_Response( array( 'success' => true, 'synced_count' => $count, 'products' => $products ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'      => true,
+				'synced_count' => $count,
+				'products'     => $products,
+			),
+			200
+		);
 	}
 
 	// Dynamic Taxonomies & Terms
 	public function get_taxonomies() {
 		$taxonomies = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_taxonomies() : array();
-		return new WP_REST_Response( array( 'success' => true, 'taxonomies' => $taxonomies ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'taxonomies' => $taxonomies,
+			),
+			200
+		);
 	}
 
 	public function save_taxonomy( $request ) {
 		$data = $request->get_json_params();
 		$tax  = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::save_taxonomy( $data ) : false;
 		if ( ! $tax ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save taxonomy.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save taxonomy.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'taxonomy' => $tax ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'taxonomy' => $tax,
+			),
+			200
+		);
 	}
 
 	public function delete_taxonomy( $request ) {
@@ -981,7 +1358,13 @@ class DCTC_Support_REST_Controller {
 	public function get_taxonomy_terms( $request ) {
 		$slug  = $request->get_param( 'slug' );
 		$terms = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_terms( $slug ) : array();
-		return new WP_REST_Response( array( 'success' => true, 'terms' => $terms ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'terms'   => $terms,
+			),
+			200
+		);
 	}
 
 	public function save_taxonomy_term( $request ) {
@@ -989,9 +1372,21 @@ class DCTC_Support_REST_Controller {
 		$data = $request->get_json_params();
 		$id   = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::save_term( $slug, $data ) : false;
 		if ( ! $id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save taxonomy term.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save taxonomy term.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'id'      => $id,
+			),
+			200
+		);
 	}
 
 	public function delete_taxonomy_term( $request ) {
@@ -1003,16 +1398,34 @@ class DCTC_Support_REST_Controller {
 
 	public function get_agents() {
 		$agents = DCTC_Support_Agent_Service::get_agents();
-		return new WP_REST_Response( array( 'success' => true, 'agents' => $agents ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'agents'  => $agents,
+			),
+			200
+		);
 	}
 
 	public function save_agent( $request ) {
 		$data = $request->get_json_params();
 		$id   = DCTC_Support_Agent_Service::save_agent( $data );
 		if ( ! $id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Could not save agent.', 'dragwyb-click-to-chat' ) ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Could not save agent.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		return new WP_REST_Response( array( 'success' => true, 'id' => $id ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'id'      => $id,
+			),
+			200
+		);
 	}
 
 	public function delete_agent( $request ) {
@@ -1043,12 +1456,24 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'users' => $formatted ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'users'   => $formatted,
+			),
+			200
+		);
 	}
 
 	public function get_settings() {
 		$settings = get_option( 'dctc_support_settings', array() );
-		return new WP_REST_Response( array( 'success' => true, 'settings' => $settings ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'settings' => $settings,
+			),
+			200
+		);
 	}
 
 	public function save_settings( $request ) {
@@ -1059,7 +1484,13 @@ class DCTC_Support_REST_Controller {
 			DCTC_Support_DB::create_tables();
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'settings' => $data ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'settings' => $data,
+			),
+			200
+		);
 	}
 
 	public function get_permissions() {
@@ -1098,7 +1529,13 @@ class DCTC_Support_REST_Controller {
 		$user_id = get_current_user_id();
 		$user    = get_userdata( $user_id );
 		if ( ! $user ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Not authenticated.', 'dragwyb-click-to-chat' ) ), 401 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Not authenticated.', 'dragwyb-click-to-chat' ),
+				),
+				401
+			);
 		}
 
 		$perms = DCTC_Support_Permission_Service::get_user_permissions( $user_id );
@@ -1134,7 +1571,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function create_portal_ticket( $request ) {
-		$params = $request->get_json_params();
+		$params  = $request->get_json_params();
 		$user_id = get_current_user_id();
 
 		$params['origin_type']      = 'support_portal';
@@ -1148,21 +1585,39 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::create_ticket( $params );
 		if ( is_wp_error( $ticket ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $ticket->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $ticket->get_error_message(),
+				),
+				400
+			);
 		}
 
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $ticket ), 201 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $ticket,
+			),
+			201
+		);
 	}
 
 	public function get_portal_ticket( $request ) {
-		$uuid = $request->get_param( 'uuid' );
+		$uuid   = $request->get_param( 'uuid' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
-		$user_id = get_current_user_id();
+		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
 		// Security: Customer authorization check
@@ -1176,14 +1631,26 @@ class DCTC_Support_REST_Controller {
 		}
 
 		if ( ! $is_owner ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ) ), 403 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
 		}
 
 		// Strip internal notes and sensitive staff-only metadata from customer response
 		unset( $ticket['notes'] );
 		unset( $ticket['ai_classification_confidence'] );
 
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $ticket ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $ticket,
+			),
+			200
+		);
 	}
 
 	public function portal_reply( $request ) {
@@ -1193,10 +1660,16 @@ class DCTC_Support_REST_Controller {
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
-		$user_id = get_current_user_id();
+		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
 		$is_owner = false;
@@ -1207,28 +1680,52 @@ class DCTC_Support_REST_Controller {
 		}
 
 		if ( ! $is_owner ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ) ), 403 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
 		}
 
 		$result = DCTC_Support_Ticket_Service::add_reply( $ticket['id'], $message, 'customer', $user_id );
 		if ( is_wp_error( $result ) ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
 		}
 
 		$updated_ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket['id'] );
 		unset( $updated_ticket['notes'] );
 
-		return new WP_REST_Response( array( 'success' => true, 'ticket' => $updated_ticket ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $updated_ticket,
+			),
+			200
+		);
 	}
 
 	public function portal_close_ticket( $request ) {
-		$uuid = $request->get_param( 'uuid' );
+		$uuid   = $request->get_param( 'uuid' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 		if ( ! $ticket ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ) ), 404 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
 		}
 
-		$user_id = get_current_user_id();
+		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
 		$is_owner = false;
@@ -1239,10 +1736,22 @@ class DCTC_Support_REST_Controller {
 		}
 
 		if ( ! $is_owner ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ) ), 403 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
 		}
 
 		DCTC_Support_Ticket_Service::change_status( $ticket['id'], 'closed', 'customer', $user_id );
-		return new WP_REST_Response( array( 'success' => true, 'status' => 'closed' ), 200 );
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'status'  => 'closed',
+			),
+			200
+		);
 	}
 }

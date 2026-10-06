@@ -47,10 +47,12 @@ class DCTC_Support_AI_Handoff_Service {
 
 			$control_mode = ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai';
 			$ticket       = null;
+			$ticket_id    = 0;
 
 			// If linked to a support ticket, check ticket control_mode & status
 			if ( ! empty( $session['support_ticket_id'] ) ) {
-				$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( absint( $session['support_ticket_id'] ) ) : null;
+				$ticket_id = absint( $session['support_ticket_id'] );
+				$ticket    = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( $ticket_id ) : null;
 				if ( $ticket ) {
 					if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
 						return true;
@@ -61,17 +63,54 @@ class DCTC_Support_AI_Handoff_Service {
 				}
 			}
 
-			// If in human mode, check if the human agent took action / replied recently (within 40 seconds)
+			// If in human mode, check agent viewing state and response wait time
 			if ( 'human' === $control_mode ) {
+				// 1. Check if agent is currently viewing this ticket
+				$is_agent_viewing = false;
+				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					$viewing_meta   = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
+					$last_viewed_at = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
+					$now            = current_time( 'timestamp' );
+
+					if ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
+						$is_agent_viewing = true;
+					}
+				}
+
+				// If agent is actively viewing the ticket conversation, do not fallback to AI
+				if ( $is_agent_viewing ) {
+					return true;
+				}
+
+				// 2. Fetch configurable max wait time for human agent response (default 60s / 1 min)
+				$settings         = get_option( 'dctc_ai_settings', array() );
+				$chatbot_settings = ! empty( $settings['chatbot'] ) && is_array( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+				$max_wait_time    = isset( $chatbot_settings['human_agent_max_wait_time'] ) ? max( 10, intval( $chatbot_settings['human_agent_max_wait_time'] ) ) : 60;
+
 				$last_activity = ! empty( $session['updated_at'] ) ? strtotime( $session['updated_at'] ) : 0;
 				$now           = current_time( 'timestamp' );
 				$elapsed       = $now - $last_activity;
 
-				// Give the live agent 40 seconds grace period to reply.
-				// If 40 seconds elapse without agent reply, fallback to AI response so visitor is never left stranded.
-				if ( $elapsed >= 0 && $elapsed < 40 ) {
+				// If within grace period, keep blocking AI response to give human agent time
+				if ( $elapsed >= 0 && $elapsed < $max_wait_time ) {
 					return true;
 				}
+
+				// If agent did not reply within max wait time and is not viewing, auto fallback to AI!
+				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					DCTC_Support_Ticket_Service::set_control_mode( $ticket_id, 'ai', 'system', 0, 'Auto-Fallback: Agent wait timeout' );
+				} else {
+					$wpdb->update(
+						$table_sessions,
+						array(
+							'control_mode' => 'ai',
+							'updated_at'   => current_time( 'mysql' ),
+						),
+						array( 'session_id' => $session_id )
+					);
+				}
+
+				return false;
 			}
 		}
 
@@ -184,6 +223,8 @@ class DCTC_Support_AI_Handoff_Service {
 		);
 
 		$agent_name = __( 'a support specialist', 'dragwyb-click-to-chat' );
+		$ticket_id  = 0;
+		$ticket     = null;
 
 		// Update ticket state & log customer reply
 		if ( $session && ! empty( $session['support_ticket_id'] ) ) {
@@ -195,6 +236,11 @@ class DCTC_Support_AI_Handoff_Service {
 					$agent_name = $ticket['agent_name'];
 				}
 
+				// Sync messages to ticket meta
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
+				}
+
 				// If ticket was resolved/closed, reopen it
 				if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
 					DCTC_Support_Ticket_Service::change_status( $ticket_id, 'open', 'customer', $user_id, $sender_name );
@@ -202,9 +248,9 @@ class DCTC_Support_AI_Handoff_Service {
 					$wpdb->update(
 						$table_tickets,
 						array(
-							'status'               => 'waiting_agent',
+							'status'                => 'waiting_agent',
 							'customer_last_seen_at' => current_time( 'mysql' ),
-							'updated_at'           => current_time( 'mysql' ),
+							'updated_at'            => current_time( 'mysql' ),
 						),
 						array( 'id' => $ticket_id )
 					);
@@ -222,12 +268,6 @@ class DCTC_Support_AI_Handoff_Service {
 			}
 		}
 
-		$human_reply_notice = sprintf(
-			/* translators: %s: Agent name */
-			__( 'Your message has been received by %s. Our team is actively reviewing your request and will respond shortly.', 'dragwyb-click-to-chat' ),
-			$agent_name
-		);
-
 		$ticket_info = array(
 			'id'            => (int) $ticket_id,
 			'ticket_number' => $ticket ? (int) $ticket['ticket_number'] : 0,
@@ -237,15 +277,16 @@ class DCTC_Support_AI_Handoff_Service {
 		);
 
 		return array(
-			'success'            => true,
-			'message'            => $human_reply_notice,
-			'control_mode'       => 'human',
-			'handler'            => 'human_support',
-			'session_id'         => $session_id,
-			'messages'           => $messages,
-			'is_human_handled'   => true,
-			'has_ticket'         => true,
-			'ticket'             => $ticket_info,
+			'success'          => true,
+			'message'          => '', // No static text bubble; frontend renders typing dots and waiting animation
+			'control_mode'     => 'human',
+			'handler'          => 'human_support',
+			'session_id'       => $session_id,
+			'messages'         => $messages,
+			'is_human_handled' => true,
+			'waiting_agent'    => true,
+			'has_ticket'       => (bool) $ticket_id,
+			'ticket'           => $ticket_info,
 		);
 	}
 }
