@@ -8,8 +8,8 @@ import SupportHeader from './components/SupportHeader';
 import TicketsView from './views/TicketsView';
 import './style.css';
 
-if ( ! window.wpApiSettings?.nonce && window.dctc_support_data?.nonce ) {
-	apiFetch.use( apiFetch.createNonceMiddleware( window.dctc_support_data.nonce ) );
+if (!window.wpApiSettings?.nonce && window.dctc_support_data?.nonce) {
+	apiFetch.use(apiFetch.createNonceMiddleware(window.dctc_support_data.nonce));
 }
 
 function TicketsApp() {
@@ -22,6 +22,9 @@ function TicketsApp() {
 		is_admin: true,
 	};
 
+	const urlParameters = new URLSearchParams(window.location.search);
+	const ticketIdFromUrl = urlParameters.get('ticket_id');
+
 	const [notice, setNotice] = useState(null);
 
 	// Tickets State
@@ -30,7 +33,7 @@ function TicketsApp() {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [totalPages, setTotalPages] = useState(1);
 	const [loading, setLoading] = useState(false);
-	const [selectedTicketId, setSelectedTicketId] = useState(null);
+	const [selectedTicketId, setSelectedTicketId] = useState(ticketIdFromUrl);
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [ticketLoading, setTicketLoading] = useState(false);
 
@@ -56,6 +59,16 @@ function TicketsApp() {
 	const showNotice = (message, type = 'success') => {
 		setNotice({ message, type });
 		setTimeout(() => setNotice(null), 6000);
+	};
+
+	const updateTickeIdInUrl = (ticketId) => {
+		const newUrl = new URL(window.location);
+		if (ticketId) {
+			newUrl.searchParams.set('ticket_id', ticketId);
+		} else {
+			newUrl.searchParams.delete('ticket_id');
+		}
+		window.history.pushState({}, '', newUrl);
 	};
 
 	// Fetch Metadata
@@ -238,9 +251,11 @@ function TicketsApp() {
 		if (selectedTicketId) {
 			fetchTicketDetails(selectedTicketId);
 			fetchWooCommerceContext(selectedTicketId);
+			updateTickeIdInUrl(selectedTicketId);
 		} else {
 			setSelectedTicket(null);
 			setWcData(null);
+			updateTickeIdInUrl(null);
 		}
 	}, [selectedTicketId, fetchTicketDetails, fetchWooCommerceContext]);
 
@@ -424,6 +439,14 @@ function TicketsApp() {
 					totalPages={totalPages}
 					loading={loading}
 					onRefreshTickets={fetchTickets}
+					statusFilter={statusFilter}
+					setStatusFilter={setStatusFilter}
+					priorityFilter={priorityFilter}
+					setPriorityFilter={setPriorityFilter}
+					categoryFilter={categoryFilter}
+					setCategoryFilter={setCategoryFilter}
+					searchQuery={searchQuery}
+					setSearchQuery={setSearchQuery}
 					selectedTicketId={selectedTicketId}
 					setSelectedTicketId={setSelectedTicketId}
 					selectedTicket={selectedTicket}
@@ -445,6 +468,7 @@ function TicketsApp() {
 					onReplySubmit={handleReplySubmit}
 					onAddInternalNote={handleAddInternalNote}
 					onDeleteTicket={handleDeleteTicket}
+					onRefreshTicketDetails={fetchTicketDetails}
 					onShowNotice={showNotice}
 					userPermissions={userPermissions}
 				/>

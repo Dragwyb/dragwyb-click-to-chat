@@ -259,9 +259,7 @@ class DCTC_Support_Manager {
 		$js_relative_path    = "build/ai/support/{$script_slug}.js";
 		$asset_relative_path = "build/ai/support/{$script_slug}.asset.php";
 		if ( ! file_exists( DCTC_PLUGIN_DIR . $js_relative_path ) ) {
-			$script_slug         = 'dctc-support-center';
-			$js_relative_path    = 'build/ai/support/dctc-support-center.js';
-			$asset_relative_path = 'build/ai/support/dctc-support-center.asset.php';
+			return;
 		}
 
 		$asset_file = file_exists( DCTC_PLUGIN_DIR . $asset_relative_path )

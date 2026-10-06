@@ -1,5 +1,5 @@
-const defaultConfig = require( '@wordpress/scripts/config/webpack.config' );
-const path = require( 'path' );
+const defaultConfig = require('@wordpress/scripts/config/webpack.config');
+const path = require('path');
 
 module.exports = {
 	...defaultConfig,
@@ -11,10 +11,6 @@ module.exports = {
 		'frontend/dctc-ai-frontend': path.resolve(
 			__dirname,
 			'src/ai/frontend/index.js'
-		),
-		'support/dctc-support-center': path.resolve(
-			__dirname,
-			'src/support-center/index.js'
 		),
 		'support/dctc-support-dashboard': path.resolve(
 			__dirname,
@@ -39,6 +35,6 @@ module.exports = {
 	},
 	output: {
 		...defaultConfig.output,
-		path: path.resolve( __dirname, 'build/ai' ),
+		path: path.resolve(__dirname, 'build/ai'),
 	},
 };
