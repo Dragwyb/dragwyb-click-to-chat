@@ -60,6 +60,10 @@ export default function TicketsView({
 	const [showMoreFilters, setShowMoreFilters] = useState(false);
 	const [showCustomerSession, setShowCustomerSession] = useState(false);
 	const [showAdvancedProps, setShowAdvancedProps] = useState(false);
+	const [showCustomerCard, setShowCustomerCard] = useState(true);
+	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(true);
+	const [showCommerceCard, setShowCommerceCard] = useState(false);
+	const [showQuickActionsCard, setShowQuickActionsCard] = useState(false);
 
 	// Workspace Subtabs: 'conversation' | 'notes' | 'activity'
 	const [workspaceTab, setWorkspaceTab] = useState('conversation');
@@ -113,7 +117,7 @@ export default function TicketsView({
 		if (timelineEndRef.current) {
 			timelineEndRef.current.scrollIntoView({ behavior: 'smooth' });
 		}
-	}, [selectedTicket?.messages, selectedTicket?.events]);
+	}, [selectedTicket?.messages]);
 
 	// Auto background polling for live updates
 	useEffect(() => {
@@ -1379,7 +1383,7 @@ export default function TicketsView({
 											<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
 
 											{ /* Status dropdown badge */}
-											<div className={`dctc-sc-ws-badge-dropdown ${getStatusBadgeClass(selectedTicket?.status)}`}>
+											<div className="dctc-sc-ws-badge-dropdown">
 												<select
 													value={selectedTicket?.status || 'open'}
 													onChange={(e) => handleStatusChange(e.target.value)}
@@ -1394,7 +1398,7 @@ export default function TicketsView({
 											</div>
 
 											{ /* Priority dropdown badge */}
-											<div className={`dctc-sc-ws-badge-dropdown ${getPriorityBadgeClass(selectedTicket?.priority)}`}>
+											<div className="dctc-sc-ws-badge-dropdown">
 												<select
 													value={selectedTicket?.priority || 'normal'}
 													onChange={(e) => handlePriorityChange(e.target.value)}
@@ -1598,7 +1602,7 @@ export default function TicketsView({
 
 																{!isCustomer && (
 																	<div className="dctc-sc-msg-status-receipt">
-																		<span className="dctc-sc-double-check">✓✓</span>
+																		<span className="dctc-sc-double-check">&check;&check;</span>
 																	</div>
 																)}
 															</div>
@@ -1607,20 +1611,6 @@ export default function TicketsView({
 												})
 											)}
 
-											{ /* Audit Trail Events */}
-											<div className="dctc-sc-audit-timeline">
-												{(selectedTicket?.events && selectedTicket.events.length > 0) ? (
-													selectedTicket.events.map((evt, idx) => (
-														<div key={`evt-${idx}`} className="dctc-sc-audit-node">
-															<div className="dctc-sc-audit-dot"></div>
-															<div className="dctc-sc-audit-text">
-																<span><strong>{evt.actor_name || 'System'}</strong>: {(evt.event_type || '').replace('_', ' ')} {evt.new_value ? `→ ${evt.new_value}` : ''}</span>
-																<span className="dctc-sc-audit-time">{evt.created_at}</span>
-															</div>
-														</div>
-													))
-												) : null}
-											</div>
 											<div ref={timelineEndRef} />
 										</div>
 									)}
@@ -1844,83 +1834,100 @@ export default function TicketsView({
 							<aside className="dctc-sc-col-details">
 								{ /* CUSTOMER CARD */}
 								<div className="dctc-sc-details-card">
-									<div className="dctc-sc-card-head">
+									<button
+										type="button"
+										className="dctc-sc-card-head dctc-sc-card-head-toggle"
+										onClick={() => setShowCustomerCard((prev) => !prev)}
+										aria-expanded={showCustomerCard}
+									>
 										<div className="dctc-sc-card-head-title">
 											<span className="dashicons dashicons-admin-users"></span>
 											<h4>{__('Customer Details', 'dragwyb-click-to-chat')}</h4>
 										</div>
-									</div>
-
-									<div className="dctc-sc-customer-summary">
-										<div className="dctc-sc-cust-avatar-large">
-											{getInitials(selectedTicket?.customer_name, selectedTicket?.customer_email || selectedTicket?.session_id)}
-										</div>
-										<div className="dctc-sc-cust-identity">
-											<span className="dctc-sc-cust-fullname">
-												{selectedTicket?.customer_name || (selectedTicket?.session_id ? `Guest (${selectedTicket.session_id.substring(0, 8)})` : 'Guest Visitor')}
-											</span>
-											<span className="dctc-sc-guest-tag">{__('Guest', 'dragwyb-click-to-chat')}</span>
-										</div>
-									</div>
-
-									<div className="dctc-sc-customer-info-rows">
-										<div className="dctc-sc-info-row">
-											<span className="dashicons dashicons-email"></span>
-											<span className="dctc-sc-info-text">
-												{selectedTicket?.customer_email || __('Not provided (Live Chat)', 'dragwyb-click-to-chat')}
-											</span>
-										</div>
-										{selectedTicket?.customer_phone && (
-											<div className="dctc-sc-info-row">
-												<span className="dashicons dashicons-phone"></span>
-												<span className="dctc-sc-info-text">{selectedTicket.customer_phone}</span>
-											</div>
-										)}
-									</div>
-
-									{ /* Expand Session & Technical Details Toggle */}
-									<button
-										type="button"
-										className="dctc-sc-expand-toggle-btn"
-										onClick={() => setShowCustomerSession((prev) => !prev)}
-									>
-										<span className="dashicons dashicons-admin-generic"></span>
-										<span>{__('Session & Technical Info', 'dragwyb-click-to-chat')}</span>
-										<span className={`dashicons ${showCustomerSession ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
+										<span className={`dashicons ${showCustomerCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
 									</button>
 
-									{showCustomerSession && (
-										<div className="dctc-sc-expanded-section">
-											<div className="dctc-sc-stat-item">
-												<span className="stat-name">{__('First Seen', 'dragwyb-click-to-chat')}</span>
-												<span className="stat-data">{selectedTicket?.created_at || 'Oct 04, 2026'}</span>
+									{showCustomerCard && (
+										<div className="dctc-sc-card-body">
+											<div className="dctc-sc-customer-summary">
+												<div className="dctc-sc-cust-avatar-large">
+													{getInitials(selectedTicket?.customer_name, selectedTicket?.customer_email || selectedTicket?.session_id)}
+												</div>
+												<div className="dctc-sc-cust-identity">
+													<span className="dctc-sc-cust-fullname">
+														{selectedTicket?.customer_name || (selectedTicket?.session_id ? `Guest (${selectedTicket.session_id.substring(0, 8)})` : 'Guest Visitor')}
+													</span>
+													<span className="dctc-sc-guest-tag">{__('Guest', 'dragwyb-click-to-chat')}</span>
+												</div>
+										</div>
+
+											<div className="dctc-sc-customer-info-rows">
+												<div className="dctc-sc-info-row">
+													<span className="dashicons dashicons-email"></span>
+													<span className="dctc-sc-info-text">
+														{selectedTicket?.customer_email || __('Not provided (Live Chat)', 'dragwyb-click-to-chat')}
+													</span>
+												</div>
+												{selectedTicket?.customer_phone && (
+													<div className="dctc-sc-info-row">
+														<span className="dashicons dashicons-phone"></span>
+														<span className="dctc-sc-info-text">{selectedTicket.customer_phone}</span>
+													</div>
+												)}
 											</div>
-											<div className="dctc-sc-stat-item">
-												<span className="stat-name">{__('Total Chats', 'dragwyb-click-to-chat')}</span>
-												<span className="stat-data">{selectedTicket?.chat_count !== undefined ? selectedTicket.chat_count : (selectedTicket?.messages?.length || 0)}</span>
-											</div>
-											<div className="dctc-sc-stat-item">
-												<span className="stat-name">{__('Total Tickets', 'dragwyb-click-to-chat')}</span>
-												<span className="stat-data">1</span>
-											</div>
-											<div className="dctc-sc-stat-item">
-												<span className="stat-name">{__('Origin Surface', 'dragwyb-click-to-chat')}</span>
-												<span className="stat-data">{selectedTicket?.reply_surface === 'chatbot_widget' ? 'Chatbot Widget' : 'Support Portal'}</span>
-											</div>
+
+											{ /* Expand Session & Technical Details Toggle */}
+											<button
+												type="button"
+												className="dctc-sc-expand-toggle-btn"
+												onClick={() => setShowCustomerSession((prev) => !prev)}
+											>
+												<span className="dashicons dashicons-admin-generic"></span>
+												<span>{__('Session & Technical Info', 'dragwyb-click-to-chat')}</span>
+												<span className={`dashicons ${showCustomerSession ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
+											</button>
+
+											{showCustomerSession && (
+												<div className="dctc-sc-expanded-section">
+													<div className="dctc-sc-stat-item">
+														<span className="stat-name">{__('First Seen', 'dragwyb-click-to-chat')}</span>
+														<span className="stat-data">{selectedTicket?.created_at || 'Oct 04, 2026'}</span>
+													</div>
+													<div className="dctc-sc-stat-item">
+														<span className="stat-name">{__('Total Chats', 'dragwyb-click-to-chat')}</span>
+														<span className="stat-data">{selectedTicket?.chat_count !== undefined ? selectedTicket.chat_count : (selectedTicket?.messages?.length || 0)}</span>
+													</div>
+													<div className="dctc-sc-stat-item">
+														<span className="stat-name">{__('Total Tickets', 'dragwyb-click-to-chat')}</span>
+														<span className="stat-data">1</span>
+													</div>
+													<div className="dctc-sc-stat-item">
+														<span className="stat-name">{__('Origin Surface', 'dragwyb-click-to-chat')}</span>
+														<span className="stat-data">{selectedTicket?.reply_surface === 'chatbot_widget' ? 'Chatbot Widget' : 'Support Portal'}</span>
+													</div>
+												</div>
+											)}
 										</div>
 									)}
 								</div>
 
 								{ /* TICKET PROPERTIES CARD */}
 								<div className="dctc-sc-details-card">
-									<div className="dctc-sc-card-head">
+									<button
+										type="button"
+										className="dctc-sc-card-head dctc-sc-card-head-toggle"
+										onClick={() => setShowTicketPropertiesCard((prev) => !prev)}
+										aria-expanded={showTicketPropertiesCard}
+									>
 										<div className="dctc-sc-card-head-title">
 											<span className="dashicons dashicons-clipboard"></span>
 											<h4>{__('Ticket Properties', 'dragwyb-click-to-chat')}</h4>
 										</div>
-									</div>
+										<span className={`dashicons ${showTicketPropertiesCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
+									</button>
 
-									<div className="dctc-sc-ticket-fields">
+									{showTicketPropertiesCard && (
+									<div className="dctc-sc-card-body dctc-sc-ticket-fields">
 										{ /* Daily Vital 1: Status */}
 										<div className="dctc-sc-field-row">
 											<label>{__('Status', 'dragwyb-click-to-chat')}</label>
@@ -2134,12 +2141,18 @@ export default function TicketsView({
 											</div>
 										)}
 									</div>
+									)}
 								</div>
 
 								{ /* WOOCOMMERCE ASSOCIATED ORDERS & PRODUCTS CARD (Shown only if customer has WC orders/products, otherwise skipped) */}
 								{wcData && wcData.is_active && Array.isArray(wcData.recent_orders) && wcData.recent_orders.length > 0 && (
 									<div className="dctc-sc-details-card">
-										<div className="dctc-sc-card-head">
+										<button
+											type="button"
+											className="dctc-sc-card-head dctc-sc-card-head-toggle"
+											onClick={() => setShowCommerceCard((prev) => !prev)}
+											aria-expanded={showCommerceCard}
+										>
 											<div className="dctc-sc-card-head-title">
 												<span className="dashicons dashicons-cart" style={{ color: '#7c3aed' }}></span>
 												<h4>{__('WooCommerce Orders', 'dragwyb-click-to-chat')}</h4>
@@ -2149,9 +2162,11 @@ export default function TicketsView({
 													{wcData.total_spent}
 												</span>
 											)}
-										</div>
+											<span className={`dashicons ${showCommerceCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
+										</button>
 
-										<div className="dctc-sc-wc-orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+										{showCommerceCard && (
+										<div className="dctc-sc-card-body dctc-sc-wc-orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
 											{wcData.recent_orders.map((order) => (
 												<div key={order.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
 													<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -2173,19 +2188,27 @@ export default function TicketsView({
 												</div>
 											))}
 										</div>
+										)}
 									</div>
 								)}
 
 								{ /* QUICK ACTIONS CARD */}
 								<div className="dctc-sc-details-card">
-									<div className="dctc-sc-card-head">
+									<button
+										type="button"
+										className="dctc-sc-card-head dctc-sc-card-head-toggle"
+										onClick={() => setShowQuickActionsCard((prev) => !prev)}
+										aria-expanded={showQuickActionsCard}
+									>
 										<div className="dctc-sc-card-head-title">
 											<span className="dashicons dashicons-admin-generic"></span>
 											<h4>{__('Quick Actions', 'dragwyb-click-to-chat')}</h4>
 										</div>
-									</div>
+										<span className={`dashicons ${showQuickActionsCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
+									</button>
 
-									<div className="dctc-sc-quick-actions-grid">
+									{showQuickActionsCard && (
+									<div className="dctc-sc-card-body dctc-sc-quick-actions-grid">
 										<button
 											type="button"
 											className="dctc-sc-quick-action-btn"
@@ -2222,6 +2245,7 @@ export default function TicketsView({
 											{__('Delete', 'dragwyb-click-to-chat')}
 										</button>
 									</div>
+									)}
 								</div>
 							</aside>
 						)}
