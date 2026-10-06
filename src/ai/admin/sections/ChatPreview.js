@@ -4,13 +4,13 @@
 import { __ } from '@wordpress/i18n';
 
 const FEATURES = [
-	__( 'Header & User Message colors', 'dragwyb-click-to-chat' ),
-	__( 'Assistant Name & Greeting', 'dragwyb-click-to-chat' ),
-	__( 'Bot Avatar updates', 'dragwyb-click-to-chat' ),
-	__( 'Assistant Icon updates', 'dragwyb-click-to-chat' ),
-	__( 'Message bubble styling', 'dragwyb-click-to-chat' ),
-	__( 'Chat Launcher visibility', 'dragwyb-click-to-chat' ),
-	__( 'Source citation links & chips', 'dragwyb-click-to-chat' ),
+	__('Header & User Message colors', 'dragwyb-click-to-chat'),
+	__('Assistant Name & Greeting', 'dragwyb-click-to-chat'),
+	__('Bot Avatar updates', 'dragwyb-click-to-chat'),
+	__('Assistant Icon updates', 'dragwyb-click-to-chat'),
+	__('Message bubble styling', 'dragwyb-click-to-chat'),
+	__('Chat Launcher visibility', 'dragwyb-click-to-chat'),
+	__('Source citation links & chips', 'dragwyb-click-to-chat'),
 ];
 
 const SAMPLE_USER = __(
@@ -22,31 +22,31 @@ const SAMPLE_BOT = __(
 	'dragwyb-click-to-chat'
 );
 
-export default function ChatPreview( { settings } ) {
+export default function ChatPreview({ settings }) {
 	const bot = settings?.chatbot || {};
 	const display = settings?.display || {};
 	const primary = bot.primary_color || '#6366f1';
-	const name = bot.bot_name || __( 'AI Assistant', 'dragwyb-click-to-chat' );
+	const name = bot.bot_name || __('AI Assistant', 'dragwyb-click-to-chat');
 	const greeting =
 		bot.greeting_msg ||
 		__(
 			'Hello! I am your AI assistant. How can I help you today?',
 			'dragwyb-click-to-chat'
 		);
-	const styleClass = `dctc-ai-preview-widget--${ bot.bubble_style || 'rounded' }`;
+	const styleClass = `dctc-ai-preview-widget--${bot.bubble_style || 'rounded'}`;
 	const avatar = bot.bot_avatar || '';
 	const assistantIcon = display.assistant_icon || '';
-	const initial = name.trim().charAt( 0 ).toUpperCase() || 'B';
+	const initial = name.trim().charAt(0).toUpperCase() || 'B';
 
-	const Avatar = ( { className } ) => (
-		<div className={ className } aria-hidden="true">
-			{ avatar ? (
-				<img src={ avatar } alt="" />
-			) : className.includes( 'bot-avatar' ) ? (
+	const Avatar = ({ className }) => (
+		<div className={className} aria-hidden="true">
+			{avatar ? (
+				<img src={avatar} alt="" />
+			) : className.includes('bot-avatar') ? (
 				<span className="dashicons dashicons-admin-users" aria-hidden="true" />
 			) : (
-				<span>{ initial }</span>
-			) }
+				<span>{initial}</span>
+			)}
 		</div>
 	);
 
@@ -54,28 +54,28 @@ export default function ChatPreview( { settings } ) {
 		<div className="dctc-ai-preview">
 			<div className="dctc-ai-preview__stage">
 				<div
-					className={ `dctc-ai-preview-widget ${ styleClass }` }
-					style={ { '--dctc-ai-preview-primary': primary } }
+					className={`dctc-ai-preview-widget ${styleClass}`}
+					style={{ '--dctc-ai-preview-primary': primary }}
 				>
 					<header className="dctc-ai-preview-widget__header">
 						<div className="dctc-ai-preview-widget__header-main">
 							<Avatar className="dctc-ai-preview-widget__avatar" />
 							<div className="dctc-ai-preview-widget__info">
-								<strong>{ name }</strong>
+								<strong>{name}</strong>
 								<span className="dctc-ai-preview-widget__status">
 									<span
 										className="dctc-ai-preview-widget__status-dot"
 										aria-hidden="true"
 									/>
-									{ __( 'Online', 'dragwyb-click-to-chat' ) }
+									{__('Online', 'dragwyb-click-to-chat')}
 								</span>
 							</div>
 						</div>
 						<button
 							type="button"
 							className="dctc-ai-preview-widget__close"
-							aria-label={ __( 'Close chat', 'dragwyb-click-to-chat' ) }
-							tabIndex={ -1 }
+							aria-label={__('Close chat', 'dragwyb-click-to-chat')}
+							tabIndex={-1}
 						>
 							<span className="dashicons dashicons-no-alt" aria-hidden="true" />
 						</button>
@@ -85,22 +85,22 @@ export default function ChatPreview( { settings } ) {
 						<div className="dctc-ai-preview-widget__row dctc-ai-preview-widget__row--bot">
 							<Avatar className="dctc-ai-preview-widget__bot-avatar" />
 							<div className="dctc-ai-preview-widget__bubble dctc-ai-preview-widget__bubble--bot">
-								<p>{ greeting }</p>
+								<p>{greeting}</p>
 							</div>
 						</div>
 						<div className="dctc-ai-preview-widget__row dctc-ai-preview-widget__row--user">
 							<div className="dctc-ai-preview-widget__bubble dctc-ai-preview-widget__bubble--user">
-								<p>{ SAMPLE_USER }</p>
+								<p>{SAMPLE_USER}</p>
 							</div>
 						</div>
 						<div className="dctc-ai-preview-widget__row dctc-ai-preview-widget__row--bot">
 							<Avatar className="dctc-ai-preview-widget__bot-avatar" />
 							<div className="dctc-ai-preview-widget__bubble dctc-ai-preview-widget__bubble--bot">
-								<p>{ SAMPLE_BOT }</p>
-								{ bot.show_sources !== false && (
+								<p>{SAMPLE_BOT}</p>
+								{bot.show_sources !== false && (
 									<div className="dctc-ai-sources">
 										<span className="dctc-ai-sources__label">
-											{ __( 'Sources:', 'dragwyb-click-to-chat' ) }
+											{__('Sources:', 'dragwyb-click-to-chat')}
 										</span>
 										<div className="dctc-ai-sources__list">
 											<span className="dctc-ai-source-chip">
@@ -121,7 +121,7 @@ export default function ChatPreview( { settings } ) {
 													<line x1="10" y1="14" x2="21" y2="3" />
 												</svg>
 												<span className="dctc-ai-source-chip__title">
-													{ __( 'Documentation Guide', 'dragwyb-click-to-chat' ) }
+													{__('Documentation Guide', 'dragwyb-click-to-chat')}
 												</span>
 											</span>
 											<span className="dctc-ai-source-chip">
@@ -142,12 +142,12 @@ export default function ChatPreview( { settings } ) {
 													<line x1="10" y1="14" x2="21" y2="3" />
 												</svg>
 												<span className="dctc-ai-source-chip__title">
-													{ __( 'Knowledge Base FAQ', 'dragwyb-click-to-chat' ) }
+													{__('Knowledge Base FAQ', 'dragwyb-click-to-chat')}
 												</span>
 											</span>
 										</div>
 									</div>
-								) }
+								)}
 							</div>
 						</div>
 					</div>
@@ -156,16 +156,16 @@ export default function ChatPreview( { settings } ) {
 						<input
 							type="text"
 							className="dctc-ai-preview-widget__input"
-							placeholder={ __( 'Type a message…', 'dragwyb-click-to-chat' ) }
+							placeholder={__('Type a message…', 'dragwyb-click-to-chat')}
 							disabled
-							aria-label={ __( 'Message input', 'dragwyb-click-to-chat' ) }
+							aria-label={__('Message input', 'dragwyb-click-to-chat')}
 						/>
 						<button
 							type="button"
 							className="dctc-ai-preview-widget__send"
 							disabled
-							aria-label={ __( 'Send', 'dragwyb-click-to-chat' ) }
-							tabIndex={ -1 }
+							aria-label={__('Send', 'dragwyb-click-to-chat')}
+							tabIndex={-1}
 						>
 							<svg
 								width="18"
@@ -189,20 +189,20 @@ export default function ChatPreview( { settings } ) {
 				<div
 					className={
 						'dctc-ai-preview__launcher' +
-						( assistantIcon ? ' dctc-ai-preview__launcher--custom' : '' )
+						(assistantIcon ? ' dctc-ai-preview__launcher--custom' : '')
 					}
-					style={ assistantIcon ? undefined : { background: primary } }
+					style={assistantIcon ? undefined : { background: primary }}
 					aria-hidden="true"
 				>
-					{ assistantIcon ? (
+					{assistantIcon ? (
 						<img
 							className="dctc-ai-preview__launcher-icon"
-							src={ assistantIcon }
+							src={assistantIcon}
 							alt=""
 						/>
 					) : (
 						<span className="dashicons dashicons-format-chat" />
-					) }
+					)}
 				</div>
 			</div>
 
@@ -211,23 +211,23 @@ export default function ChatPreview( { settings } ) {
 					<span className="dashicons dashicons-visibility" />
 				</div>
 				<h3 className="dctc-ai-preview__panel-title">
-					{ __( 'Live Preview', 'dragwyb-click-to-chat' ) }
+					{__('Live Preview', 'dragwyb-click-to-chat')}
 				</h3>
 				<p className="dctc-ai-preview__panel-desc">
-					{ __(
+					{__(
 						'Any changes you make in the Chatbot Settings will immediately reflect here. Test your user experience before going live.',
 						'dragwyb-click-to-chat'
-					) }
+					)}
 				</p>
 				<ul className="dctc-ai-preview__features">
-					{ FEATURES.map( ( feature ) => (
-						<li key={ feature }>
+					{FEATURES.map((feature) => (
+						<li key={feature}>
 							<span className="dctc-ai-preview__check" aria-hidden="true">
 								<span className="dashicons dashicons-yes" />
 							</span>
-							{ feature }
+							{feature}
 						</li>
-					) ) }
+					))}
 				</ul>
 			</aside>
 		</div>

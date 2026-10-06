@@ -548,8 +548,15 @@ class DCTC_AI_Chat_Controller {
 			}
 
 			// Dynamic Integration: Auto-connect with Lead System if purchase/lead intent or email provided
+			$should_show_lead_form = false;
+			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
+
 			if ( 'lead_generation' === $detected_intent || ! empty( $detected_email ) ) {
-				if ( ! empty( $email ) && class_exists( 'DCTC_AI_DB' ) ) {
+				if ( ! empty( $bot['enable_lead_capture'] ) ) {
+					$should_show_lead_form = true;
+				}
+
+				if ( class_exists( 'DCTC_AI_DB' ) ) {
 					$score = 75;
 					if ( ! empty( $detected_email ) ) {
 						$score += 15;
@@ -558,79 +565,78 @@ class DCTC_AI_Chat_Controller {
 						$score += 10;
 					}
 
-					$lead_id = DCTC_AI_DB::save_lead(
-						array(
-							'session_id'   => $session_id,
-							'name'         => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
-							'email'        => $email,
-							'phone'        => $detected_phone,
-							'requirement'  => $prompt,
-							'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
-							'score'        => min( 100, $score ),
-							'intent_level' => 'high',
-							'status'       => 'qualified',
-						)
-					);
+					$lead_email = ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' );
+					$lead_name  = is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor';
 
-					if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
-						$leads_controller = new DCTC_AI_Leads_Controller();
-						$leads_controller->maybe_send_lead_email(
+					if ( ! empty( $lead_email ) || ! empty( $bot['enable_lead_capture'] ) ) {
+						$lead_id = DCTC_AI_DB::save_lead(
 							array(
-								'id'          => $lead_id,
-								'name'        => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
-								'email'       => $email,
-								'phone'       => $detected_phone,
-								'requirement' => $prompt,
-								'score'       => min( 100, $score ),
-								'status'      => 'qualified',
+								'session_id'   => $session_id,
+								'name'         => $lead_name,
+								'email'        => $lead_email ?: 'visitor_' . substr( $session_id, 0, 8 ) . '@lead.local',
+								'phone'        => $detected_phone,
+								'requirement'  => $prompt,
+								'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
+								'score'        => min( 100, $score ),
+								'intent_level' => 'high',
+								'status'       => 'new',
 							)
 						);
+
+						if ( $lead_id && ! empty( $lead_email ) && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
+							$leads_controller = new DCTC_AI_Leads_Controller();
+							$leads_controller->maybe_send_lead_email(
+								array(
+									'id'          => $lead_id,
+									'name'        => $lead_name,
+									'email'       => $lead_email,
+									'phone'       => $detected_phone,
+									'requirement' => $prompt,
+									'score'       => min( 100, $score ),
+									'status'      => 'new',
+								)
+							);
+						}
 					}
 				}
 
 				// Auto-create/sync connected Lead ticket in Support Center
-				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-					$support_settings = get_option( 'dctc_support_settings', array() );
-					if ( ! empty( $support_settings['enabled'] ) ) {
-						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-						if ( ! $existing_ticket ) {
-							DCTC_Support_Ticket_Service::create_ticket(
-								array(
-									'subject'          => '[Lead] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
-									'session_id'       => $session_id,
-									'customer_email'   => $email,
-									'origin_type'      => 'chatbot',
-									'reply_surface'    => 'chatbot_widget',
-									'interaction_type' => 'LEAD_GENERATION',
-									'control_mode'     => 'ai',
-									'initial_message'  => $prompt,
-								)
-							);
-						}
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
+					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+					if ( ! $existing_ticket ) {
+						DCTC_Support_Ticket_Service::create_ticket(
+							array(
+								'subject'          => '[Lead Inquiry] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
+								'session_id'       => $session_id,
+								'customer_email'   => $email,
+								'origin_type'      => 'chatbot',
+								'reply_surface'    => 'chatbot_widget',
+								'interaction_type' => 'LEAD_GENERATION',
+								'control_mode'     => 'ai',
+								'initial_message'  => $prompt,
+							)
+						);
 					}
 				}
 			} elseif ( in_array( $detected_intent, array( 'support_ticket', 'human_handoff' ), true ) ) {
 				// Auto-create/sync Support Ticket in Support Center
-				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-					$support_settings = get_option( 'dctc_support_settings', array() );
-					if ( ! empty( $support_settings['enabled'] ) ) {
-						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-						if ( ! $existing_ticket ) {
-							$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : ( ! empty( $support_settings['auto_pause_ai'] ) );
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
+					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+					if ( ! $existing_ticket ) {
+						$auto_pause = isset( $bot['auto_pause_ai_on_ticket'] ) ? (bool) $bot['auto_pause_ai_on_ticket'] : false;
 
-							DCTC_Support_Ticket_Service::create_ticket(
-								array(
-									'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
-									'session_id'       => $session_id,
-									'customer_email'   => $email,
-									'origin_type'      => 'chatbot',
-									'reply_surface'    => 'chatbot_widget',
-									'interaction_type' => 'HYBRID_SUPPORT',
-									'control_mode'     => $auto_pause ? 'human' : 'ai',
-									'initial_message'  => $prompt,
-								)
-							);
-						}
+						DCTC_Support_Ticket_Service::create_ticket(
+							array(
+								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
+								'session_id'       => $session_id,
+								'customer_email'   => $email,
+								'origin_type'      => 'chatbot',
+								'reply_surface'    => 'chatbot_widget',
+								'interaction_type' => 'HYBRID_SUPPORT',
+								'control_mode'     => $auto_pause ? 'human' : 'ai',
+								'initial_message'  => $prompt,
+							)
+						);
 					}
 				}
 			}
@@ -716,7 +722,7 @@ class DCTC_AI_Chat_Controller {
 				'sources'         => $sources,
 				'reference_links' => $sources,
 				'products'        => $wc_products,
-				'show_lead_form'  => false,
+				'show_lead_form'  => ! empty( $should_show_lead_form ),
 				'has_ticket'      => $has_ticket,
 				'ticket'          => $ticket_info,
 				'control_mode'    => $control_mode,
@@ -1522,7 +1528,7 @@ CONVERSATION MEMORY:
 			);
 		}
 
-		// High-confidence multi-word patterns for Human Handoff requests
+		// 1. High-confidence patterns for Human Handoff requests
 		$patterns_handoff = array(
 			'/\b(talk to a human|talk to a real person|talk to a human agent|talk to a live agent|talk to an agent|talk to customer support)\b/i',
 			'/\b(speak with a human|speak to a human|speak with a live agent|speak to an agent|speak to a support representative)\b/i',
@@ -1530,6 +1536,7 @@ CONVERSATION MEMORY:
 			'/\b(transfer me to a human|transfer me to a live agent|transfer to an agent|escalate to a support manager)\b/i',
 			'/\b(live chat with human|live chat with an agent|chat with a human specialist|switch to a human agent)\b/i',
 			'/\b(call human support|phone support team|chat on whatsapp with support|connect to whatsapp support)\b/i',
+			'/\b(agent please|human please|connect with real agent|speak to human|talk to human)\b/i',
 		);
 
 		foreach ( $patterns_handoff as $pattern ) {
@@ -1542,13 +1549,15 @@ CONVERSATION MEMORY:
 			}
 		}
 
-		// High-confidence multi-word patterns for Support Ticket & Technical Issues
+		// 2. High-confidence patterns for Support Ticket & Technical Issues
 		$patterns_support = array(
-			'/\b(open a support ticket|create a support ticket|submit a support ticket|file a support ticket|raise a support ticket)\b/i',
-			'/\b(need technical support|troubleshoot this problem|having a technical issue|system is not working)\b/i',
-			'/\b(item arrived damaged|received a broken item|product is defective|claim warranty for my item)\b/i',
-			'/\b(request a refund for order|want a refund for my order|return my ordered item|cancel my placed order)\b/i',
-			'/\b(billing charge issue|failed payment transaction|incorrect invoice amount|payment deduction error)\b/i',
+			'/\b(open a support ticket|create a support ticket|submit a support ticket|file a support ticket|raise a support ticket|create ticket|open ticket|support ticket)\b/i',
+			'/\b(need technical support|troubleshoot this problem|having a technical issue|system is not working|not working properly|broken feature|bug in the plugin)\b/i',
+			'/\b(item arrived damaged|received a broken item|product is defective|claim warranty for my item|damaged product|broken product)\b/i',
+			'/\b(request a refund|want a refund|return my ordered item|cancel my placed order|cancel order|get a refund|refund policy)\b/i',
+			'/\b(billing charge issue|failed payment|incorrect invoice amount|payment deduction error|payment failed|charged twice)\b/i',
+			'/\b(need help with error|error in|facing an issue|facing problem|having problem with|cannot log in|login problem|account issue)\b/i',
+			'/\b(i need support|contact support|customer support|support team|help desk|ticket assistance)\b/i',
 		);
 
 		foreach ( $patterns_support as $pattern ) {
@@ -1561,13 +1570,15 @@ CONVERSATION MEMORY:
 			}
 		}
 
-		// High-confidence multi-word patterns for Sales & Lead Inquiries
+		// 3. High-confidence patterns for Sales, Purchase & Lead Inquiries
 		$patterns_lead = array(
-			'/\b(request a custom quote|get a price estimate|inquire about bulk pricing|enterprise plan inquiry)\b/i',
-			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project)\b/i',
-			'/\b(interested in purchasing this product|interested to purchase your product|interested in buying your products)\b/i',
-			'/\b(want to buy this product|looking to purchase a product|ready to purchase this product|want to place an order)\b/i',
-			'/\b(send me pricing details|need a custom price estimate|looking for enterprise pricing)\b/i',
+			'/\b(want to buy|like to buy|ready to buy|wish to buy|looking to buy|interested in buying|interested to buy|plan to buy)\b/i',
+			'/\b(want to purchase|like to purchase|ready to purchase|looking to purchase|interested in purchasing|interested to purchase|plan to purchase)\b/i',
+			'/\b(buy your product|purchase your product|buy product|purchase product|buy this|purchase this|order this|place an order|want an order|buy now)\b/i',
+			'/\b(request a custom quote|get a price estimate|inquire about bulk pricing|enterprise plan inquiry|custom quote|get a quote)\b/i',
+			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project|schedule a demo|book a demo)\b/i',
+			'/\b(send me pricing details|need a custom price estimate|looking for enterprise pricing|pricing plans|pricing details|how much does.*cost|how much is)\b/i',
+			'/\b(how to buy|can i buy|how do i purchase|can i purchase|where to buy|interested in your product|interested in product)\b/i',
 		);
 
 		foreach ( $patterns_lead as $pattern ) {
@@ -1575,12 +1586,12 @@ CONVERSATION MEMORY:
 				return array(
 					'intent'     => 'lead_generation',
 					'category'   => 'sales',
-					'confidence' => 0.85,
+					'confidence' => 0.88,
 				);
 			}
 		}
 
-		// High-confidence multi-word patterns for WooCommerce Order Tracking
+		// 4. High-confidence patterns for WooCommerce Order Tracking
 		$patterns_order = array(
 			'/\b(track my order status|where is my order package|check my order status|find my order delivery)\b/i',
 			'/\b(track my shipment status|check package delivery status|tracking number for my order|status of my order)\b/i',

@@ -203,6 +203,39 @@ export default function LeadsManagement({ showNotice }) {
 
 	return (
 		<div className="dctc-ai-leads-management">
+			<header className="dctc-ai-section-header">
+				<div className="dctc-ai-section-header__left">
+					<div className="dctc-ai-section-header__icon-box">
+						<span className="dashicons dashicons-id" />
+					</div>
+					<div>
+						<div className="dctc-ai-section-header__title-row">
+							<h1 className="dctc-ai-section-header__title">
+								{__('AI Leads Management & CRM', 'dragwyb-click-to-chat')}
+							</h1>
+							<span className="dctc-ai-status-pill is-active">
+								{sprintf(__('%d Total Leads', 'dragwyb-click-to-chat'), total)}
+							</span>
+						</div>
+						<p className="dctc-ai-section-header__desc">
+							{__('Review, qualify, search, filter, update statuses, and export leads automatically captured by your AI assistant.', 'dragwyb-click-to-chat')}
+						</p>
+					</div>
+				</div>
+
+				<div className="dctc-ai-section-header__right">
+					<button
+						type="button"
+						className="dctc-ai-btn dctc-ai-btn-secondary"
+						onClick={handleExportCSV}
+						disabled={exporting || leads.length === 0}
+					>
+						<span className="dashicons dashicons-download" />
+						{exporting ? __('Exporting…', 'dragwyb-click-to-chat') : __('Export CSV', 'dragwyb-click-to-chat')}
+					</button>
+				</div>
+			</header>
+
 			{/* Top Metric Cards */}
 			<div className="dctc-ai-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
 				<div className="dctc-ai-stat-card" style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>

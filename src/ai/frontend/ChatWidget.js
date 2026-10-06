@@ -1611,6 +1611,10 @@ export default function ChatWidget({ settings, inline }) {
 				]);
 
 
+				if (response.show_lead_form && !leadFormSubmitted) {
+					setShowLeadForm(true);
+				}
+
 				if (response.has_ticket && response.ticket) {
 					const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
 					setHasActiveTicket(!isClosed);

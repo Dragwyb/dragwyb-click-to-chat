@@ -11,8 +11,18 @@ import {
 } from '../utils/providers';
 
 const SUBTABS = [
-	{ id: 'sources', label: __('Sources', 'dragwyb-click-to-chat') },
-	{ id: 'vector-db', label: __('Database', 'dragwyb-click-to-chat') },
+	{
+		id: 'sources',
+		label: __('Knowledge Sources', 'dragwyb-click-to-chat'),
+		icon: 'dashicons-media-text',
+		desc: __('Direct text, web URLs & training docs', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'vector-db',
+		label: __('Database & Indexing', 'dragwyb-click-to-chat'),
+		icon: 'dashicons-database',
+		desc: __('Vector store, embedding & sync triggers', 'dragwyb-click-to-chat'),
+	},
 ];
 
 const TEXT_HINT = __(
@@ -451,10 +461,46 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 
 	return (
 		<div className="dctc-ai-kb-settings">
+			<header className="dctc-ai-section-header">
+				<div className="dctc-ai-section-header__left">
+					<div className="dctc-ai-section-header__icon-box">
+						<span className="dashicons dashicons-database" />
+					</div>
+					<div>
+						<div className="dctc-ai-section-header__title-row">
+							<h1 className="dctc-ai-section-header__title">
+								{__('Knowledge Base & Content Indexer', 'dragwyb-click-to-chat')}
+							</h1>
+							<span className="dctc-ai-status-pill is-active">
+								{stats?.total_indexed ? sprintf(__('%d Documents Indexed', 'dragwyb-click-to-chat'), stats.total_indexed) : __('Vector Store Active', 'dragwyb-click-to-chat')}
+							</span>
+						</div>
+						<p className="dctc-ai-section-header__desc">
+							{subtab === 'sources'
+								? __('Provide direct factual text, crawlable web URLs, and training documents for your chatbot to learn from.', 'dragwyb-click-to-chat')
+								: __('Configure vector database storage (SQLite / Pinecone), chunk sizing, embedding models, and auto-sync.', 'dragwyb-click-to-chat')}
+						</p>
+					</div>
+				</div>
+
+				<div className="dctc-ai-section-header__right">
+					<button
+						type="button"
+						className="dctc-ai-btn dctc-ai-btn-primary dctc-ai-btn-header-save"
+						onClick={onSubmit}
+						disabled={saving || !dirty}
+					>
+						<span className={`dashicons ${saving ? 'dashicons-update spin-anim' : 'dashicons-saved'}`} />
+						{saving ? __('Saving…', 'dragwyb-click-to-chat') : dirty ? __('Save Changes', 'dragwyb-click-to-chat') : __('Saved', 'dragwyb-click-to-chat')}
+					</button>
+				</div>
+			</header>
+
 			<nav
-				className="dctc-ai-kb-subnav"
+				className="dctc-ai-subtab-nav"
 				role="tablist"
 				aria-label={__('Knowledge base sections', 'dragwyb-click-to-chat')}
+				style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}
 			>
 				{SUBTABS.map((tab) => (
 					<button
@@ -462,34 +508,38 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 						type="button"
 						role="tab"
 						aria-selected={subtab === tab.id}
-						className={
-							'dctc-ai-kb-subtab ' + (subtab === tab.id ? 'active' : '')
-						}
+						className={`dctc-ai-subtab-btn ${subtab === tab.id ? 'active' : ''}`}
 						onClick={() => setSubtab(tab.id)}
 					>
-						{tab.label}
+						<span className={`dashicons ${tab.icon}`} aria-hidden="true" />
+						<div className="dctc-ai-subtab-btn__content">
+							<span className="dctc-ai-subtab-btn__label">{tab.label}</span>
+							<span className="dctc-ai-subtab-btn__hint">{tab.desc}</span>
+						</div>
 					</button>
 				))}
 			</nav>
 
 			<form onSubmit={onSubmit}>
 				{ /* Sources */}
-				<div className={subtab === 'sources' ? '' : 'dctc-ai-kb-panel--hidden'}>
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-media-text" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__('Direct Text Knowledge', 'dragwyb-click-to-chat')}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">{TEXT_HINT}</p>
+				<div className={`dctc-ai-tab-panel-section ${subtab === 'sources' ? '' : 'dctc-ai-kb-panel--hidden'}`}>
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-media-text" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__('Direct Text Knowledge', 'dragwyb-click-to-chat')}
+									</h2>
+									<p className="dctc-ai-card__desc">{TEXT_HINT}</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
+						<div className="dctc-ai-card__body">
 							<textarea
-								className="dctc-ai-kb-textarea"
+								className="dctc-ai-bot-textarea"
 								rows="8"
 								value={knowledgeText}
 								onChange={(e) => setKnowledgeText(e.target.value)}
@@ -499,21 +549,23 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 								)}
 							/>
 						</div>
-					</article>
+					</section>
 
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-admin-site-alt3" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__('Web Pages (URLs)', 'dragwyb-click-to-chat')}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">{URL_HINT}</p>
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-admin-site-alt3" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__('Web Pages (URLs)', 'dragwyb-click-to-chat')}
+									</h2>
+									<p className="dctc-ai-card__desc">{URL_HINT}</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
+						<div className="dctc-ai-card__body">
 							<div className="dctc-ai-kb-url-list">
 								{urls.map((url, idx) => (
 									<div key={idx} className="dctc-ai-kb-url-item">
@@ -523,7 +575,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 										/>
 										<input
 											type="url"
-											className="dctc-ai-kb-url-input"
+											className="dctc-ai-bot-input"
 											value={url}
 											onChange={(e) => {
 												const value = e.target.value;
@@ -558,40 +610,43 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 							</div>
 							<button
 								type="button"
-								className="dctc-ai-kb-add-url"
+								className="dctc-ai-btn dctc-ai-btn-sm dctc-ai-btn-secondary"
+								style={{ marginTop: '0.75rem' }}
 								onClick={() => setUrls([...urls, ''])}
 							>
 								{__('+ Add URL', 'dragwyb-click-to-chat')}
 							</button>
 						</div>
-					</article>
+					</section>
 				</div>
 
 				{ /* Database */}
 				<div
-					className={subtab === 'vector-db' ? '' : 'dctc-ai-kb-panel--hidden'}
+					className={`dctc-ai-tab-panel-section ${subtab === 'vector-db' ? '' : 'dctc-ai-kb-panel--hidden'}`}
 				>
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-media-text" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__(
-										'Website Content to Index',
-										'dragwyb-click-to-chat'
-									)}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">
-									{__(
-										'Select which post types to include. Leave all unchecked to skip indexing your website content.',
-										'dragwyb-click-to-chat'
-									)}
-								</p>
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-admin-post" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__(
+											'Website Content to Index',
+											'dragwyb-click-to-chat'
+										)}
+									</h2>
+									<p className="dctc-ai-card__desc">
+										{__(
+											'Select which post types to include. Leave all unchecked to skip indexing your website content.',
+											'dragwyb-click-to-chat'
+										)}
+									</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
+						<div className="dctc-ai-card__body">
 							<div className="dctc-ai-kb-post-types">
 								{availableTypes.length > 0 ? (
 									availableTypes.map((type) => (
@@ -649,26 +704,28 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 								</div>
 							)}
 						</div>
-					</article>
+					</section>
 
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-database" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__('Database', 'dragwyb-click-to-chat')}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">
-									{__(
-										'Choose where to store your document embeddings for semantic search.',
-										'dragwyb-click-to-chat'
-									)}
-								</p>
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-database" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__('Database Storage Engine', 'dragwyb-click-to-chat')}
+									</h2>
+									<p className="dctc-ai-card__desc">
+										{__(
+											'Choose where to store your document embeddings for semantic search.',
+											'dragwyb-click-to-chat'
+										)}
+									</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
+						<div className="dctc-ai-card__body">
 							<div className="dctc-ai-kb-db-options">
 								{VECTOR_DB_OPTIONS.map((opt) => (
 									<label key={opt.value} className="dctc-ai-radio-card">
@@ -688,54 +745,23 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 								))}
 							</div>
 						</div>
-					</article>
+					</section>
 
 					{vectorDb === 'pinecone' && (
-						<article className="dctc-ai-kb-card dctc-ai-kb-pinecone-card">
-							<header className="dctc-ai-kb-card__header dctc-ai-kb-pinecone-header">
-								<div className="dctc-ai-kb-pinecone-header__main">
-									<span
-										className="dctc-ai-kb-card__icon"
-										aria-hidden="true"
-									>
+						<section className="dctc-ai-card dctc-ai-kb-pinecone-card">
+							<header className="dctc-ai-card__header dctc-ai-kb-pinecone-header">
+								<div className="dctc-ai-card__header-left">
+									<div className="dctc-ai-card-icon">
 										<span className="dashicons dashicons-cloud" />
-									</span>
-									<div className="dctc-ai-kb-card__heading">
-										<h3 className="dctc-ai-kb-card__title dctc-ai-kb-pinecone-title">
+									</div>
+									<div>
+										<h2 className="dctc-ai-card__title dctc-ai-kb-pinecone-title">
 											{__(
 												'Pinecone Configuration',
 												'dragwyb-click-to-chat'
 											)}
-											{embedInfo.dimensions && (
-												<span className="dctc-ai-info-tooltip-wrapper">
-													<button
-														type="button"
-														className="dctc-ai-info-btn"
-														aria-label={__(
-															'Dimensions info',
-															'dragwyb-click-to-chat'
-														)}
-													>
-														i
-													</button>
-													<span
-														className="dctc-ai-info-tooltip"
-														role="tooltip"
-													>
-														{sprintf(
-															/* translators: 1: provider name, 2: dimensions */
-															__(
-																'Because you selected %1$s, your Pinecone index must be created with exactly %2$d dimensions.',
-																'dragwyb-click-to-chat'
-															),
-															embedInfo.provider,
-															embedInfo.dimensions
-														)}
-													</span>
-												</span>
-											)}
-										</h3>
-										<p className="dctc-ai-kb-card__desc">
+										</h2>
+										<p className="dctc-ai-card__desc">
 											{__(
 												'Connect your Pinecone cloud vector database.',
 												'dragwyb-click-to-chat'
@@ -765,55 +791,55 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									</button>
 								)}
 							</header>
-							<div className="dctc-ai-kb-card__body">
-								<div className="dctc-ai-kb-form-group">
+							<div className="dctc-ai-card__body">
+								<div className="dctc-ai-bot-field">
 									<label className="dctc-ai-label">
 										{__('Pinecone API Key', 'dragwyb-click-to-chat')}
-										<input
-											type="password"
-											className="dctc-ai-input"
-											value={pineconeKey}
-											onChange={(e) => setPineconeKey(e.target.value)}
-											placeholder="pcsk_..."
-										/>
 									</label>
-									<p className="dctc-ai-hint">
+									<input
+										type="password"
+										className="dctc-ai-bot-input"
+										value={pineconeKey}
+										onChange={(e) => setPineconeKey(e.target.value)}
+										placeholder="pcsk_..."
+									/>
+									<p className="dctc-ai-bot-hint">
 										{__(
 											'You can generate an API key from the "API Keys" section in your Pinecone dashboard.',
 											'dragwyb-click-to-chat'
 										)}
 									</p>
 								</div>
-								<div className="dctc-ai-kb-form-group">
+								<div className="dctc-ai-bot-field">
 									<label className="dctc-ai-label">
 										{__('Pinecone Host', 'dragwyb-click-to-chat')}
-										<input
-											type="text"
-											className="dctc-ai-input"
-											value={pineconeHost}
-											onChange={(e) => setPineconeHost(e.target.value)}
-											placeholder="https://index-xxxxx.svc.aped-4627-b74a.pinecone.io"
-										/>
 									</label>
-									<p className="dctc-ai-hint">
+									<input
+										type="text"
+										className="dctc-ai-bot-input"
+										value={pineconeHost}
+										onChange={(e) => setPineconeHost(e.target.value)}
+										placeholder="https://index-xxxxx.svc.aped-4627-b74a.pinecone.io"
+									/>
+									<p className="dctc-ai-bot-hint">
 										{__(
 											'The host URL for your index. Find this by clicking on your index in the Pinecone dashboard.',
 											'dragwyb-click-to-chat'
 										)}
 									</p>
 								</div>
-								<div className="dctc-ai-kb-form-group">
+								<div className="dctc-ai-bot-field">
 									<label className="dctc-ai-label">
 										{__('Index Name', 'dragwyb-click-to-chat')}
-										<input
-											type="text"
-											className="dctc-ai-input"
-											value={pineconeIndex}
-											onChange={(e) => setPineconeIndex(e.target.value)}
-											placeholder="e.g. dctc-ai-index"
-										/>
 									</label>
-									<p className="dctc-ai-hint">
+									<input
+										type="text"
+										className="dctc-ai-bot-input"
+										value={pineconeIndex}
+										onChange={(e) => setPineconeIndex(e.target.value)}
+										placeholder="e.g. dctc-ai-index"
+									/>
+									<p className="dctc-ai-bot-hint">
 										{__(
 											'The exact name of the index you created.',
 											'dragwyb-click-to-chat'
@@ -821,76 +847,35 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									</p>
 								</div>
 							</div>
-						</article>
+						</section>
 					)}
 
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-lightbulb" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__('Embedding Configuration', 'dragwyb-click-to-chat')}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">
-									{__(
-										'Select the AI provider to generate vector embeddings.',
-										'dragwyb-click-to-chat'
-									)}
-								</p>
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-lightbulb" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__('Embedding Configuration', 'dragwyb-click-to-chat')}
+									</h2>
+									<p className="dctc-ai-card__desc">
+										{__(
+											'Select the AI provider to generate vector embeddings.',
+											'dragwyb-click-to-chat'
+										)}
+									</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
-							<div className="dctc-ai-kb-form-group">
-								<div
-									style={{
-										display: 'flex',
-										alignItems: 'center',
-										marginBottom: '0.375rem',
-									}}
-								>
-									<label
-										className="dctc-ai-label"
-										style={{ marginBottom: 0 }}
-									>
-										{__('Embedding Provider', 'dragwyb-click-to-chat')}
-									</label>
-									{vectorDb === 'pinecone' && (
-										<div className="dctc-ai-info-tooltip-wrapper">
-											<button
-												type="button"
-												className="dctc-ai-info-btn"
-												aria-label={__(
-													'Dimensions info',
-													'dragwyb-click-to-chat'
-												)}
-											>
-												i
-											</button>
-											<div className="dctc-ai-info-tooltip">
-												{sprintf(
-													__(
-														'Because you selected %1$s, your Pinecone index must be created with exactly %2$d dimensions.',
-														'dragwyb-click-to-chat'
-													),
-													embeddingProvider === 'google'
-														? __(
-															'Google Gemini (gemini-embedding-001)',
-															'dragwyb-click-to-chat'
-														)
-														: __(
-															'OpenAI (text-embedding-3-small)',
-															'dragwyb-click-to-chat'
-														),
-													embeddingProvider === 'google' ? 768 : 1536
-												)}
-											</div>
-										</div>
-									)}
-								</div>
+						<div className="dctc-ai-card__body">
+							<div className="dctc-ai-bot-field">
+								<label className="dctc-ai-label">
+									{__('Embedding Provider', 'dragwyb-click-to-chat')}
+								</label>
 								<select
-									className="dctc-ai-select dctc-ai-kb-embedding-select"
+									className="dctc-ai-bot-select"
 									value={embeddingProvider}
 									onChange={(e) => setEmbeddingProvider(e.target.value)}
 								>
@@ -907,34 +892,29 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 										)}
 									</option>
 								</select>
-								<p className="dctc-ai-hint">
+								<p className="dctc-ai-bot-hint">
 									{__(
 										'Select the provider to use for processing your knowledge base into vectors.',
 										'dragwyb-click-to-chat'
 									)}
 								</p>
 							</div>
-							<div className="dctc-ai-kb-info-block">
-								<p>
+							<div className="dctc-ai-kb-info-block" style={{ marginTop: '1rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+								<p style={{ margin: '0 0 0.5rem 0' }}>
 									<strong>
 										{__('Status:', 'dragwyb-click-to-chat')}
-									</strong>
+									</strong>{' '}
 									{embedInfo.key ? (
-										<span className="dctc-ai-kb-status dctc-ai-kb-status--ok">
-											✓{' '}
-											{__(
-												'API Key Configured',
-												'dragwyb-click-to-chat'
-											)}
+										<span style={{ color: '#059669', fontWeight: 600 }}>
+											✓ {__('API Key Configured', 'dragwyb-click-to-chat')}
 										</span>
 									) : (
-										<span className="dctc-ai-kb-status dctc-ai-kb-status--missing">
-											✗{' '}
-											{__('API Key Missing', 'dragwyb-click-to-chat')}
+										<span style={{ color: '#dc2626', fontWeight: 600 }}>
+											✗ {__('API Key Missing', 'dragwyb-click-to-chat')}
 										</span>
 									)}
 								</p>
-								<p>
+								<p style={{ margin: 0 }}>
 									<strong>
 										{__(
 											'Required Index Dimensions:',
@@ -943,43 +923,37 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									</strong>{' '}
 									{embedInfo.dimensions}
 								</p>
-								{!embedInfo.key && (
-									<p className="dctc-ai-kb-warning">
+							</div>
+						</div>
+					</section>
+
+					{ /* Hallucination Protection & Fallback */}
+					<section className="dctc-ai-card">
+						<header className="dctc-ai-card__header">
+							<div className="dctc-ai-card__header-left">
+								<div className="dctc-ai-card-icon">
+									<span className="dashicons dashicons-shield" />
+								</div>
+								<div>
+									<h2 className="dctc-ai-card__title">
+										{__('Hallucination Protection & Fallback', 'dragwyb-click-to-chat')}
+									</h2>
+									<p className="dctc-ai-card__desc">
 										{__(
-											'⚠️ No AI API key found for the selected provider. Please add an API key in the API Keys tab to enable RAG indexing.',
+											'Control confidence thresholds and prevent the AI from inventing facts when knowledge base evidence is insufficient.',
 											'dragwyb-click-to-chat'
 										)}
 									</p>
-								)}
-							</div>
-						</div>
-					</article>
-
-					{ /* Hallucination Protection & Fallback (Feature 03) */}
-					<article className="dctc-ai-kb-card">
-						<header className="dctc-ai-kb-card__header">
-							<span className="dctc-ai-kb-card__icon" aria-hidden="true">
-								<span className="dashicons dashicons-shield" />
-							</span>
-							<div className="dctc-ai-kb-card__heading">
-								<h3 className="dctc-ai-kb-card__title">
-									{__('Hallucination Protection & Fallback', 'dragwyb-click-to-chat')}
-								</h3>
-								<p className="dctc-ai-kb-card__desc">
-									{__(
-										'Control confidence thresholds and prevent the AI from inventing facts when knowledge base evidence is insufficient.',
-										'dragwyb-click-to-chat'
-									)}
-								</p>
+								</div>
 							</div>
 						</header>
-						<div className="dctc-ai-kb-card__body">
-							<div className="dctc-ai-kb-form-group">
+						<div className="dctc-ai-card__body">
+							<div className="dctc-ai-bot-field">
 								<label className="dctc-ai-label">
 									{__('Minimum Evidence Confidence Threshold', 'dragwyb-click-to-chat')}
 								</label>
 								<select
-									className="dctc-ai-select"
+									className="dctc-ai-bot-select"
 									value={minConfidence}
 									onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
 								>
@@ -987,7 +961,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 									<option value={0.65}>{__('Balanced (0.65) — Recommended for most websites', 'dragwyb-click-to-chat')}</option>
 									<option value={0.50}>{__('Permissive (0.50) — Tolerates looser matches', 'dragwyb-click-to-chat')}</option>
 								</select>
-								<p className="dctc-ai-hint">
+								<p className="dctc-ai-bot-hint">
 									{__(
 										'Retrieved chunks with a similarity score below this threshold are filtered out to prevent answering from weak or irrelevant context.',
 										'dragwyb-click-to-chat'
@@ -995,7 +969,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 								</p>
 							</div>
 
-							<div className="dctc-ai-kb-form-group" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+							<div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
 								<label className="dctc-ai-checkbox" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
 									<input
 										type="checkbox"
@@ -1017,18 +991,18 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 							</div>
 
 							{requireIndexed && (
-								<div className="dctc-ai-kb-form-group" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+								<div className="dctc-ai-bot-field" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
 									<label className="dctc-ai-label">
 										{__('Fallback / Unknown-Answer Message', 'dragwyb-click-to-chat')}
 									</label>
 									<textarea
-										className="dctc-ai-textarea"
+										className="dctc-ai-bot-textarea"
 										rows={3}
 										value={noDataMessage}
 										onChange={(e) => setNoDataMessage(e.target.value)}
 										placeholder={DEFAULT_NO_DATA}
 									/>
-									<p className="dctc-ai-hint">
+									<p className="dctc-ai-bot-hint">
 										{__(
 											'Message shown to visitors when no verified evidence is found. Support handoff buttons (WhatsApp / Contact) will be offered alongside this message.',
 											'dragwyb-click-to-chat'
@@ -1037,7 +1011,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 								</div>
 							)}
 						</div>
-					</article>
+					</section>
 				</div>
 
 				<footer className="dctc-ai-form-footer">

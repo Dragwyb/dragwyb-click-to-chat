@@ -164,6 +164,39 @@ export default function ErrorLogs( { showNotice } ) {
 
 	return (
 		<div className="dctc-ai-error-logs">
+			<header className="dctc-ai-section-header">
+				<div className="dctc-ai-section-header__left">
+					<div className="dctc-ai-section-header__icon-box">
+						<span className="dashicons dashicons-warning" />
+					</div>
+					<div>
+						<div className="dctc-ai-section-header__title-row">
+							<h1 className="dctc-ai-section-header__title">
+								{__('Error Logs & System Diagnostics', 'dragwyb-click-to-chat')}
+							</h1>
+							<span className={`dctc-ai-status-pill ${logs.length > 0 ? 'is-warning' : 'is-active'}`}>
+								{logs.length > 0 ? sprintf(__('%d Logged Errors', 'dragwyb-click-to-chat'), logs.length) : __('System Healthy (0 Errors)', 'dragwyb-click-to-chat')}
+							</span>
+						</div>
+						<p className="dctc-ai-section-header__desc">
+							{__('Review runtime errors, failed AI requests, rate limits, and server-side connection issues with full debug context.', 'dragwyb-click-to-chat')}
+						</p>
+					</div>
+				</div>
+
+				<div className="dctc-ai-section-header__right">
+					<button
+						type="button"
+						className="dctc-ai-btn dctc-ai-btn-secondary"
+						onClick={loadLogs}
+						disabled={loading || clearing}
+					>
+						<span className="dashicons dashicons-update" />
+						{__('Refresh Logs', 'dragwyb-click-to-chat')}
+					</button>
+				</div>
+			</header>
+
 			{ ! isLoggingEnabled && (
 				<div
 					className="dctc-ai-notice dctc-ai-notice-info"
