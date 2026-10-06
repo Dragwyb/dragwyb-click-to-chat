@@ -616,6 +616,19 @@ class DCTC_AI_Chat_Controller {
 								'initial_message'  => $prompt,
 							)
 						);
+					} else {
+						$ticket_id  = (int) $existing_ticket['id'];
+						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
+						if ( $ticket_obj && $ticket_obj->is_valid() ) {
+							if ( ! empty( $email ) ) {
+								$ticket_obj->update_email( $email );
+							}
+							if ( ! empty( $detected_phone ) ) {
+								$ticket_obj->update_phone( $detected_phone );
+							}
+							$ticket_obj->update_meta( 'detected_intent', $detected_intent, 'auto' );
+							$ticket_obj->update_meta( 'last_customer_inquiry', $prompt, 'textarea' );
+						}
 					}
 				}
 			} elseif ( in_array( $detected_intent, array( 'support_ticket', 'human_handoff' ), true ) ) {
@@ -637,6 +650,18 @@ class DCTC_AI_Chat_Controller {
 								'initial_message'  => $prompt,
 							)
 						);
+					} else {
+						$ticket_id  = (int) $existing_ticket['id'];
+						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
+						if ( $ticket_obj && $ticket_obj->is_valid() ) {
+							if ( ! empty( $email ) ) {
+								$ticket_obj->update_email( $email );
+							}
+							if ( ! empty( $detected_phone ) ) {
+								$ticket_obj->update_phone( $detected_phone );
+							}
+							$ticket_obj->update_meta( 'detected_intent', $detected_intent, 'auto' );
+						}
 					}
 				}
 			}
@@ -1113,12 +1138,12 @@ LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-CONVERSATIONAL LEAD CAPTURE & POLITE EMAIL SHARING:
-- When a user shows interest in buying, pricing, quotes, support assistance, or custom inquiries:
+CONVERSATIONAL LEAD CAPTURE & POLITE CONTACT SHARING:
+- When a user shows interest in buying, products, pricing, quotes, support assistance, or custom inquiries:
   1. Warmly and helpfully answer their questions directly using available knowledge base facts.
-  2. If the user's email has NOT been provided AND has NOT been requested in any prior message in this session:
-     Politely and respectfully ask them ONCE: \"If you are comfortable sharing your email address with us, please feel free to provide it so our team can follow up with you directly.\"
-  3. STRICT RULE: Ask for their email ONLY ONCE during the entire conversation. If you have already asked previously or if their email is known, NEVER ask again.
+  2. Lead Form Rule: If the lead generation feature is enabled and the lead generation form is showing/active, you do NOT need to ask for their email or phone if they fill the form.
+  3. If they have NOT filled the form and their email/phone is not provided: Politely and respectfully ask them ONCE: \"If you would like our team to follow up with you directly, please feel free to share your email or phone number so our team will contact you.\"
+  4. STRICT RULE: Ask for contact info (email or phone) ONLY ONCE during the conversation. If you have already asked previously or if their email/phone is known or if they filled the form, NEVER ask again.
 - At the very end of your response, always append a hidden intent metadata tag in this exact format:
 <!--INTENT:{\"intent\":\"lead_generation|support_ticket|human_handoff|order_tracking|general_qa\",\"email\":\"extracted_email_or_empty\",\"phone\":\"extracted_phone_or_empty\"}-->
 
@@ -1463,6 +1488,27 @@ CONVERSATION MEMORY:
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db = new DCTC_AI_DB();
 				$db->dctc_ai_save_message( $prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources );
+			}
+		}
+
+		// Keep connected Support Ticket updated in real-time
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+			if ( $ticket && ! empty( $ticket['id'] ) ) {
+				global $wpdb;
+				$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+				$ticket_updates = array(
+					'customer_last_seen_at' => current_time( 'mysql' ),
+					'updated_at'            => current_time( 'mysql' ),
+				);
+				if ( ! empty( $email ) && empty( $ticket['customer_email'] ) ) {
+					$ticket_updates['customer_email'] = sanitize_email( $email );
+				}
+				$wpdb->update(
+					$table_tickets,
+					$ticket_updates,
+					array( 'id' => (int) $ticket['id'] )
+				);
 			}
 		}
 	}

@@ -610,11 +610,41 @@ class DCTC_Support_Ticket_Service {
 		$ticket['chat_count']    = count( $ticket['messages'] );
 		$ticket['message_count'] = $ticket['chat_count'];
 
+		// Phone resolution
+		$ticket['customer_phone'] = '';
+		if ( ! empty( $ticket_meta['customer_phone'] ) ) {
+			$ticket['customer_phone'] = (string) $ticket_meta['customer_phone'];
+		} elseif ( ! empty( $ticket_meta['phone'] ) ) {
+			$ticket['customer_phone'] = (string) $ticket_meta['phone'];
+		}
+
 		$session_updated = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
 		$now             = current_time( 'timestamp' );
 		$ticket['is_session_active'] = $session_row && ( ( $now - $session_updated ) < 90 );
 
+		// Instantiate OOP model to load AI useful content & WC info
+		if ( class_exists( 'DCTC_Support_Ticket' ) ) {
+			$ticket_obj = new DCTC_Support_Ticket( $ticket );
+			$ticket['ai_useful_content'] = $ticket_obj->get_ai_useful_content();
+			if ( empty( $ticket['customer_phone'] ) && ! empty( $ticket['ai_useful_content']['customer_phone'] ) ) {
+				$ticket['customer_phone'] = $ticket['ai_useful_content']['customer_phone'];
+			}
+		}
+
 		return $ticket;
+	}
+
+	/**
+	 * Get OOP Ticket object for standard object-oriented operations.
+	 *
+	 * @param int|string|array $id_or_uuid_or_session Ticket ID, UUID, session ID, or data array.
+	 * @return DCTC_Support_Ticket|null
+	 */
+	public static function get_ticket_object( $id_or_uuid_or_session ) {
+		if ( class_exists( 'DCTC_Support_Ticket' ) ) {
+			return DCTC_Support_Ticket::get( $id_or_uuid_or_session );
+		}
+		return null;
 	}
 
 	/**

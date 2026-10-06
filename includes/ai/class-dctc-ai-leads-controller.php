@@ -163,23 +163,129 @@ class DCTC_AI_Leads_Controller
 				if ( ! empty( $email ) ) $summary_parts[] = 'Email: ' . $email;
 				if ( ! empty( $phone ) ) $summary_parts[] = 'Phone: ' . $phone;
 				if ( ! empty( $company ) ) $summary_parts[] = 'Company: ' . $company;
+				if ( ! empty( $company_size ) ) $summary_parts[] = 'Company Size: ' . $company_size;
 				if ( ! empty( $budget ) ) $summary_parts[] = 'Budget: ' . $budget;
 				if ( ! empty( $timeline ) ) $summary_parts[] = 'Timeline: ' . $timeline;
+				if ( ! empty( $interest ) ) $summary_parts[] = 'Interest: ' . $interest;
 				if ( ! empty( $requirement ) ) $summary_parts[] = 'Requirement: ' . $requirement;
 
 				$lead_summary = implode( "\n", $summary_parts );
 
-				DCTC_Support_Ticket_Service::create_ticket( [
-					'subject'          => '[Lead] ' . ( ! empty( $name ) ? $name : ( ! empty( $email ) ? $email : 'Website Lead Inquiry' ) ),
-					'session_id'       => $session_id,
-					'customer_email'   => $email,
-					'customer_name'    => $name,
-					'origin_type'      => 'chatbot',
-					'reply_surface'    => 'chatbot_widget',
-					'interaction_type' => 'LEAD_GENERATION',
-					'control_mode'     => 'human',
-					'initial_message'  => $lead_summary,
-				] );
+				$existing_ticket = ! empty( $session_id ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
+
+				if ( $existing_ticket && ! empty( $existing_ticket['id'] ) ) {
+					// UPDATE EXISTING TICKET for same session
+					$ticket_id  = (int) $existing_ticket['id'];
+					$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
+
+					if ( $ticket_obj && $ticket_obj->is_valid() ) {
+						if ( ! empty( $email ) ) {
+							$ticket_obj->update_email( $email );
+						}
+						if ( ! empty( $phone ) ) {
+							$ticket_obj->update_phone( $phone );
+						}
+						if ( ! empty( $name ) ) {
+							$ticket_obj->update_name( $name );
+						}
+
+						$ticket_obj->update_meta( 'lead_id', $lead_id, 'auto' );
+						$ticket_obj->update_meta( 'lead_score', $scoring['score'], 'auto' );
+						$ticket_obj->update_meta( 'intent_level', $scoring['intent_level'], 'auto' );
+						if ( ! empty( $company ) ) $ticket_obj->update_meta( 'company', $company, 'auto' );
+						if ( ! empty( $company_size ) ) $ticket_obj->update_meta( 'company_size', $company_size, 'auto' );
+						if ( ! empty( $budget ) ) $ticket_obj->update_meta( 'budget', $budget, 'auto' );
+						if ( ! empty( $timeline ) ) $ticket_obj->update_meta( 'timeline', $timeline, 'auto' );
+						if ( ! empty( $interest ) ) {
+							$ticket_obj->update_meta( 'interest', $interest, 'auto' );
+							$ticket_obj->update_meta( 'product', $interest, 'auto' );
+						}
+						if ( ! empty( $requirement ) ) $ticket_obj->update_meta( 'requirement', $requirement, 'textarea' );
+						if ( ! empty( $source_url ) ) $ticket_obj->update_meta( 'source_url', $source_url, 'url' );
+						$ticket_obj->update_meta( 'interaction_type', 'LEAD_GENERATION', 'auto' );
+
+						// Update subject if generic
+						if ( ! empty( $name ) && ( strpos( $existing_ticket['subject'], 'Support Request' ) !== false || strpos( $existing_ticket['subject'], 'Guest' ) !== false || empty( $existing_ticket['subject'] ) ) ) {
+							DCTC_Support_Ticket_Service::update_ticket_properties( $ticket_id, [ 'subject' => '[Lead] ' . $name ] );
+						}
+					} else {
+						// Fallback via DCTC_Support_Ticket_Service
+						if ( ! empty( $email ) ) {
+							global $wpdb;
+							$wpdb->update( $wpdb->prefix . 'dctc_support_tickets', [ 'customer_email' => $email, 'updated_at' => current_time( 'mysql' ) ], [ 'id' => $ticket_id ] );
+						}
+						if ( ! empty( $phone ) ) {
+							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'customer_phone', $phone );
+							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'phone', $phone );
+						}
+						if ( ! empty( $name ) ) {
+							global $wpdb;
+							$wpdb->update( $wpdb->prefix . 'dctc_support_tickets', [ 'customer_name' => $name ], [ 'id' => $ticket_id ] );
+						}
+						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'lead_id', $lead_id );
+						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'lead_score', $scoring['score'] );
+						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'intent_level', $scoring['intent_level'] );
+						if ( ! empty( $company ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'company', $company );
+						if ( ! empty( $budget ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'budget', $budget );
+						if ( ! empty( $timeline ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'timeline', $timeline );
+						if ( ! empty( $interest ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'interest', $interest );
+						if ( ! empty( $requirement ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'requirement', $requirement );
+					}
+
+					// Log Event in support ticket activity
+					if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+						DCTC_Support_Event_Service::log_event(
+							$ticket_id,
+							'lead_captured',
+							'Inquiry received',
+							'Lead details submitted: ' . ( ! empty( $email ) ? $email : $name ),
+							'customer',
+							0,
+							! empty( $name ) ? $name : 'Visitor'
+						);
+					}
+
+					// Add internal note with lead details
+					if ( class_exists( 'DCTC_Support_Note_Service' ) && ! empty( $lead_summary ) ) {
+						DCTC_Support_Note_Service::add_note(
+							$ticket_id,
+							"📋 AI Lead Capture Form Submitted:\n" . $lead_summary . "\nScore: " . $scoring['score'] . "/100 (" . strtoupper( $scoring['intent_level'] ) . ")",
+							0,
+							false
+						);
+					}
+				} else {
+					// CREATE NEW TICKET if no ticket existed for this session
+					$created = DCTC_Support_Ticket_Service::create_ticket( [
+						'subject'          => '[Lead] ' . ( ! empty( $name ) ? $name : ( ! empty( $email ) ? $email : 'Website Lead Inquiry' ) ),
+						'session_id'       => $session_id,
+						'customer_email'   => $email,
+						'customer_name'    => $name,
+						'origin_type'      => 'chatbot',
+						'reply_surface'    => 'chatbot_widget',
+						'interaction_type' => 'LEAD_GENERATION',
+						'control_mode'     => 'human',
+						'initial_message'  => $lead_summary,
+					] );
+
+					if ( is_array( $created ) && ! empty( $created['id'] ) ) {
+						$new_ticket_id = (int) $created['id'];
+						if ( ! empty( $phone ) ) {
+							DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'customer_phone', $phone );
+							DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'phone', $phone );
+						}
+						DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'lead_id', $lead_id );
+						DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'lead_score', $scoring['score'] );
+						DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'intent_level', $scoring['intent_level'] );
+						if ( ! empty( $company ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'company', $company );
+						if ( ! empty( $company_size ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'company_size', $company_size );
+						if ( ! empty( $budget ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'budget', $budget );
+						if ( ! empty( $timeline ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'timeline', $timeline );
+						if ( ! empty( $interest ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'interest', $interest );
+						if ( ! empty( $requirement ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'requirement', $requirement );
+						if ( ! empty( $source_url ) ) DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'source_url', $source_url );
+					}
+				}
 			}
 		}
 

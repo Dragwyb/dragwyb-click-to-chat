@@ -369,6 +369,7 @@ export default function TicketsView({
 	const [showCustomerSession, setShowCustomerSession] = useState(false);
 	const [showAdvancedProps, setShowAdvancedProps] = useState(false);
 	const [showCustomerCard, setShowCustomerCard] = useState(true);
+	const [showAiUsefulContentCard, setShowAiUsefulContentCard] = useState(true);
 	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(true);
 	const [showCommerceCard, setShowCommerceCard] = useState(false);
 	const [showQuickActionsCard, setShowQuickActionsCard] = useState(false);
@@ -2216,6 +2217,134 @@ export default function TicketsView({
 										</div>
 									)}
 								</div>
+
+								{ /* AI CONVERSATION USEFUL CONTENT CARD */}
+								{((selectedTicket?.ai_useful_content && selectedTicket.ai_useful_content.has_ai_content) || selectedTicket?.meta?.lead_id || selectedTicket?.meta?.budget || selectedTicket?.meta?.requirement || selectedTicket?.meta?.company || selectedTicket?.customer_phone) && (
+									<div className="dctc-sc-details-card dctc-sc-ai-useful-card">
+										<button
+											type="button"
+											className="dctc-sc-card-head dctc-sc-card-head-toggle"
+											onClick={() => setShowAiUsefulContentCard((prev) => !prev)}
+											aria-expanded={showAiUsefulContentCard}
+										>
+											<div className="dctc-sc-card-head-title">
+												<span className="dashicons dashicons-format-chat" style={{ color: '#0ea5e9' }}></span>
+												<h4>{__('AI Conversation Useful Content', 'dragwyb-click-to-chat')}</h4>
+											</div>
+											<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+												{selectedTicket?.ai_useful_content?.lead_score > 0 && (
+													<span className="dctc-sc-badge dctc-sc-badge-resolved" style={{ fontSize: '10px', padding: '2px 6px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }}>
+														{`Score: ${selectedTicket.ai_useful_content.lead_score}/100`}
+													</span>
+												)}
+												<span className={`dashicons ${showAiUsefulContentCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
+											</div>
+										</button>
+
+										{showAiUsefulContentCard && (
+											<div className="dctc-sc-card-body dctc-sc-ai-useful-body">
+												<div className="dctc-sc-ai-fields-grid">
+													{(selectedTicket?.customer_email || selectedTicket?.ai_useful_content?.customer_email) && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Email', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val email">
+																<a href={`mailto:${selectedTicket?.customer_email || selectedTicket?.ai_useful_content?.customer_email}`}>
+																	{selectedTicket?.customer_email || selectedTicket?.ai_useful_content?.customer_email}
+																</a>
+															</span>
+														</div>
+													)}
+
+													{(selectedTicket?.customer_phone || selectedTicket?.ai_useful_content?.customer_phone) && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Phone Number', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val phone">
+																<a href={`tel:${selectedTicket?.customer_phone || selectedTicket?.ai_useful_content?.customer_phone}`}>
+																	{selectedTicket?.customer_phone || selectedTicket?.ai_useful_content?.customer_phone}
+																</a>
+															</span>
+														</div>
+													)}
+
+													{selectedTicket?.ai_useful_content?.company && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Company', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val">{selectedTicket.ai_useful_content.company}</span>
+														</div>
+													)}
+
+													{selectedTicket?.ai_useful_content?.company_size && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Company Size', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val">{selectedTicket.ai_useful_content.company_size}</span>
+														</div>
+													)}
+
+													{selectedTicket?.ai_useful_content?.budget && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Budget', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val highlight">{selectedTicket.ai_useful_content.budget}</span>
+														</div>
+													)}
+
+													{selectedTicket?.ai_useful_content?.timeline && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Timeline', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val">{selectedTicket.ai_useful_content.timeline}</span>
+														</div>
+													)}
+
+													{selectedTicket?.ai_useful_content?.interest && (
+														<div className="dctc-sc-ai-field-item">
+															<span className="dctc-sc-ai-field-label">{__('Product Interest', 'dragwyb-click-to-chat')}</span>
+															<span className="dctc-sc-ai-field-val">{selectedTicket.ai_useful_content.interest}</span>
+														</div>
+													)}
+												</div>
+
+												{ /* Requirement / Query Note */}
+												{selectedTicket?.ai_useful_content?.requirement && (
+													<div className="dctc-sc-ai-requirement-box">
+														<span className="dctc-sc-ai-field-label">{__('Requirement / Notes', 'dragwyb-click-to-chat')}</span>
+														<p className="dctc-sc-ai-requirement-text">{selectedTicket.ai_useful_content.requirement}</p>
+													</div>
+												)}
+
+												{ /* Related WooCommerce Product */}
+												{selectedTicket?.ai_useful_content?.wc_product_info && (
+													<div className="dctc-sc-ai-wc-product-card">
+														<span className="dctc-sc-ai-field-label">{__('Related WooCommerce Product', 'dragwyb-click-to-chat')}</span>
+														<div className="dctc-sc-ai-wc-row">
+															{selectedTicket.ai_useful_content.wc_product_info.image_url && (
+																<img
+																	src={selectedTicket.ai_useful_content.wc_product_info.image_url}
+																	alt={selectedTicket.ai_useful_content.wc_product_info.name}
+																	className="dctc-sc-ai-wc-thumb"
+																/>
+															)}
+															<div className="dctc-sc-ai-wc-details">
+																<a
+																	href={selectedTicket.ai_useful_content.wc_product_info.edit_url || selectedTicket.ai_useful_content.wc_product_info.permalink}
+																	target="_blank"
+																	rel="noreferrer"
+																	className="dctc-sc-ai-wc-title"
+																>
+																	{selectedTicket.ai_useful_content.wc_product_info.name}
+																</a>
+																<div className="dctc-sc-ai-wc-meta">
+																	<span className="dctc-sc-ai-wc-price" dangerouslySetInnerHTML={{ __html: selectedTicket.ai_useful_content.wc_product_info.price_html || `$${selectedTicket.ai_useful_content.wc_product_info.price}` }}></span>
+																	{selectedTicket.ai_useful_content.wc_product_info.sku && selectedTicket.ai_useful_content.wc_product_info.sku !== 'N/A' && (
+																		<span className="dctc-sc-ai-wc-sku">SKU: {selectedTicket.ai_useful_content.wc_product_info.sku}</span>
+																	)}
+																</div>
+															</div>
+														</div>
+													</div>
+												)}
+											</div>
+										)}
+									</div>
+								)}
 
 								{ /* TICKET PROPERTIES CARD */}
 								<div className="dctc-sc-details-card">

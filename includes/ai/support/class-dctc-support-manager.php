@@ -58,7 +58,8 @@ class DCTC_Support_Manager {
 		require_once $dir . 'class-dctc-support-tag-service.php';
 		require_once $dir . 'class-dctc-support-product-service.php';
 		require_once $dir . 'class-dctc-support-taxonomy-service.php';
-		require_once $dir . 'class-dctc-support-agent-service.php';
+		require_once $dir . 'class-dctc-support-ticket-base.php';
+		require_once $dir . 'class-dctc-support-ticket.php';
 		require_once $dir . 'class-dctc-support-ticket-service.php';
 		require_once $dir . 'class-dctc-support-assignment-engine.php';
 		require_once $dir . 'class-dctc-support-ai-handoff-service.php';
