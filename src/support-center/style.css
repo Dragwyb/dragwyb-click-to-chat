@@ -4943,6 +4943,632 @@
   opacity: 0.5;
 }
 
+/* =========================================================
+   DRAGWYB SUPPORT CENTER
+   TICKET WORKSPACE SKELETON
+========================================================= */
+
+.dctc-sc-workspace-skeleton {
+	min-height: 100%;
+}
+
+/* =========================================================
+   SKELETON TOKENS
+========================================================= */
+
+.dctc-sc-workspace-skeleton,
+.dctc-sc-details-skeleton {
+	--dctc-sk-bg: #e8edf4;
+	--dctc-sk-border: #dbe4ef;
+	--dctc-sk-surface: #fff;
+	--dctc-sk-radius: 5px;
+	--dctc-sk-speed: 1.5s;
+}
+
+/* =========================================================
+   BASE SKELETON
+========================================================= */
+
+.dctc-sk {
+	position: relative;
+	display: block;
+	overflow: hidden;
+	flex: 0 0 auto;
+	background: var(--dctc-sk-bg);
+	border-radius: var(--dctc-sk-radius);
+}
+
+.dctc-sk::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.55) 42%,
+		rgba(255, 255, 255, 0.9) 50%,
+		rgba(255, 255, 255, 0.55) 58%,
+		transparent 100%
+	);
+	transform: translateX(-100%);
+	animation: dctc-support-skeleton-shimmer var(--dctc-sk-speed) infinite;
+}
+
+@keyframes dctc-support-skeleton-shimmer {
+	to {
+		transform: translateX(100%);
+	}
+}
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.dctc-sk-ticket-id {
+	width: 65px;
+	height: 15px;
+}
+
+.dctc-sk-status {
+	width: 76px;
+	height: 30px;
+	border-radius: 15px;
+}
+
+.dctc-sk-priority {
+	width: 105px;
+	height: 40px;
+	border-radius: 18px;
+}
+
+/* =========================================================
+   TICKET INFORMATION
+========================================================= */
+
+.dctc-sk-ticket-title {
+	width: min(260px, 55%);
+	height: 24.5px;
+	margin-bottom: 14px;
+}
+
+.dctc-sk-ticket-meta {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.dctc-sk-meta-item {
+	width: 110px;
+	height: 13px;
+}
+
+.dctc-sk-meta-item.meta-medium {
+	width: 135px;
+}
+
+.dctc-sk-meta-item.meta-small {
+	width: 75px;
+}
+
+/* =========================================================
+   CONVERSATION
+========================================================= */
+
+.dctc-sc-skeleton-conversation {
+	min-height: 400px;
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 30px;
+	padding: 24px 28px 40px;
+	overflow: hidden;
+}
+
+/* Message row */
+
+.dctc-sk-message {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	width: 100%;
+}
+
+.dctc-sk-message-customer {
+	justify-content: flex-start;
+}
+
+.dctc-sk-message-agent {
+	justify-content: flex-end;
+}
+
+/* Avatar */
+
+.dctc-sk-avatar {
+	width: 42px;
+	height: 42px;
+	border-radius: 50%;
+}
+
+/* Message content */
+
+.dctc-sk-message-body {
+	width: min(74%, 820px);
+	min-width: 0;
+}
+
+.dctc-sk-message-agent .dctc-sk-message-body {
+	width: min(40%, 350px);
+}
+
+/* Message meta */
+
+.dctc-sk-message-meta {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 10px;
+}
+
+.dctc-sk-message-meta-right {
+	justify-content: flex-end;
+}
+
+.dctc-sk-author {
+	width: 95px;
+	height: 12px;
+}
+
+.dctc-sk-author-small {
+	width: 50px;
+	height: 12px;
+}
+
+.dctc-sk-time {
+	width: 90px;
+	height: 10px;
+}
+
+/* =========================================================
+   MESSAGE BUBBLE
+========================================================= */
+
+.dctc-sk-bubble {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 9px;
+	padding: 17px 18px;
+	background: var(--dctc-sk-surface);
+	border: 1px solid var(--dctc-sk-border);
+	border-radius: 12px;
+	box-sizing: border-box;
+}
+
+.dctc-sk-bubble-large {
+	min-height: 105px;
+}
+
+.dctc-sk-bubble-agent {
+	min-height: 70px;
+	margin-left: auto;
+}
+
+/* Message lines */
+
+.dctc-sk-line {
+	height: 10px;
+	border-radius: 4px;
+}
+
+.dctc-sk-line.line-95 {
+	width: 95%;
+}
+
+.dctc-sk-line.line-90 {
+	width: 90%;
+}
+
+.dctc-sk-line.line-88 {
+	width: 88%;
+}
+
+.dctc-sk-line.line-68 {
+	width: 68%;
+}
+
+.dctc-sk-line.line-58 {
+	width: 58%;
+}
+
+/* =========================================================
+   COMPOSER
+========================================================= */
+
+.dctc-sc-skeleton-composer {
+	pointer-events: none;
+	opacity: 0.72;
+}
+
+.dctc-sk-composer-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+}
+
+.dctc-sk-composer-tabs {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.dctc-sk-composer-tab {
+	width: 145px;
+	height: 40px;
+	border-radius: 6px;
+}
+
+.dctc-sk-composer-tab + .dctc-sk-composer-tab {
+	width: 135px;
+}
+
+.dctc-sk-ai-button {
+	width: 180px;
+	height: 40px;
+	border-radius: 7px;
+}
+
+.dctc-sk-composer-input {
+	height: 95px;
+	margin: 12px;
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 10px;
+	background: var(--dctc-sk-bg);
+	border-radius: 8px;
+	box-sizing: border-box;
+}
+
+.dctc-sk-input-line {
+	width: 90%;
+	height: 10px;
+}
+
+.dctc-sk-input-line.input-medium {
+	width: 65%;
+}
+
+.dctc-sk-composer-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 16px 14px;
+}
+
+.dctc-sk-composer-footer-left {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.dctc-sk-footer-control {
+	width: 90px;
+	height: 30px;
+	border-radius: 6px;
+}
+
+.dctc-sk-footer-control.footer-small {
+	width: 60px;
+}
+
+.dctc-sk-send-button {
+	width: 120px;
+	height: 38px;
+	border-radius: 7px;
+}
+
+/* =========================================================
+   RIGHT SIDEBAR
+========================================================= */
+
+.dctc-sc-details-skeleton {
+	width: 100%;
+	pointer-events: none;
+}
+
+/* Card */
+
+.dctc-sk-sidebar-card {
+	padding: 18px 20px;
+	background: var(--dctc-sk-surface);
+	border: 1px solid var(--dctc-sk-border);
+	border-radius: 12px;
+	box-sizing: border-box;
+}
+
+/* Card header */
+
+.dctc-sk-sidebar-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 33px;
+}
+
+.dctc-sk-sidebar-heading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.dctc-sk-sidebar-icon {
+	width: 17px;
+	height: 17px;
+	border-radius: 4px;
+}
+
+.dctc-sk-customer-heading {
+	width: 126px;
+	height: 15px;
+}
+
+.dctc-sk-properties-heading {
+	width: 122px;
+	height: 15px;
+}
+
+.dctc-sk-collapse-icon {
+	width: 14px;
+	height: 14px;
+	border-radius: 3px;
+}
+
+/* =========================================================
+   CUSTOMER DETAILS
+========================================================= */
+
+.dctc-sk-customer {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	margin-bottom: 17px;
+}
+
+.dctc-sk-customer-avatar {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+}
+
+.dctc-sk-customer-info {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 8px;
+	min-width: 0;
+}
+
+.dctc-sk-customer-name {
+	width: 110px;
+	height: 15px;
+}
+
+.dctc-sk-guest-badge {
+	width: 45px;
+	height: 21px;
+	border-radius: 5px;
+}
+
+.dctc-sk-email-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.dctc-sk-email-icon {
+	width: 16px;
+	height: 12px;
+	border-radius: 3px;
+}
+
+.dctc-sk-email {
+	width: 150px;
+	height: 12px;
+}
+
+/* =========================================================
+   SIDEBAR EXPANDABLE ROWS
+========================================================= */
+
+.dctc-sk-sidebar-expand {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	min-height: 37.6px;
+	padding: 0 14px;
+	border: 1px solid var(--dctc-sk-border);
+	border-radius: 9px;
+	box-sizing: border-box;
+}
+
+.dctc-sk-sidebar-expand-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.dctc-sk-expand-icon,
+.dctc-sk-folder-icon {
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+}
+
+.dctc-sk-expand-title {
+	width: 145px;
+	height: 13px;
+}
+
+.dctc-sk-expand-arrow {
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+}
+
+.dctc-sk-more-properties {
+	width: 115px;
+	height: 13px;
+}
+
+/* =========================================================
+   TICKET PROPERTIES
+========================================================= */
+
+.dctc-sk-properties-card {
+	padding-bottom: 18px;
+}
+
+.dctc-sk-property {
+	margin-bottom: 17px;
+}
+
+.dctc-sk-property-label {
+	display: block;
+	width: 55px;
+	height: 11px;
+	margin: 0 auto 10px;
+}
+
+.dctc-sk-property-label.property-medium {
+	width: 62px;
+}
+
+.dctc-sk-property-label.property-large {
+	width: 82px;
+}
+
+.dctc-sk-property-select {
+	position: relative;
+	width: 100%;
+	height: 40px;
+	background: var(--dctc-sk-surface);
+	border: 1px solid var(--dctc-sk-border);
+	border-radius: 9px;
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+.dctc-sk-property-select::before {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 14px;
+	width: 105px;
+	height: 12px;
+	transform: translateY(-50%);
+	background: var(--dctc-sk-bg);
+	border-radius: 4px;
+}
+
+.dctc-sk-property-select::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 25px;
+  left: calc(100% - 25px);
+  width: 12px;
+  height: 12px;
+  transform: translateY(-50%) !important;
+  background: var(--dctc-sk-bg);
+  border-radius: 3px;
+}
+
+/* =========================================================
+   DISABLED CONTROLS
+========================================================= */
+
+.dctc-sc-workspace-skeleton button:disabled {
+	cursor: default;
+	opacity: 0.75;
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+	.dctc-sk::after {
+		animation: none;
+	}
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 850px) {
+	.dctc-sk-message-body {
+		width: 82%;
+	}
+
+	.dctc-sk-message-agent .dctc-sk-message-body {
+		width: 48%;
+	}
+
+	.dctc-sk-properties-card {
+		margin-top: 0;
+	}
+}
+
+@media (max-width: 600px) {
+	.dctc-sc-skeleton-conversation {
+		padding: 20px 16px 32px;
+	}
+
+	.dctc-sk-message-body,
+	.dctc-sk-message-agent .dctc-sk-message-body {
+		width: calc(100% - 54px);
+	}
+
+	.dctc-sk-message-agent .dctc-sk-message-body {
+		width: 65%;
+	}
+
+	.dctc-sk-meta-item.meta-small {
+		display: none;
+	}
+
+	.dctc-sk-customer-heading {
+		width: 105px;
+	}
+
+	.dctc-sk-properties-heading {
+		width: 105px;
+	}
+
+	.dctc-sk-email {
+		max-width: calc(100% - 25px);
+	}
+
+	.dctc-sk-composer-tab {
+		width: 115px;
+	}
+
+	.dctc-sk-composer-tab + .dctc-sk-composer-tab {
+		width: 105px;
+	}
+
+	.dctc-sk-ai-button {
+		width: 130px;
+	}
+}
+
 /* ==========================================================
    TICKET WORKSPACE (Active Ticket View)
    ========================================================== */
