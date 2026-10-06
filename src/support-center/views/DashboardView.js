@@ -50,7 +50,7 @@ export default function DashboardView( {
 							</span>
 						</div>
 						<p className="dctc-sc-hero-subtitle">
-							{ agent?.user_email || __( 'Support Staff Member', 'dragwyb-click-to-chat' ) } •{ ' ' }
+							{ agent?.user_email || __( 'Support Staff Member', 'dragwyb-click-to-chat' ) } &bull;{ ' ' }
 							<span className="dctc-sc-hero-workload-text">
 								{ __( 'Workload:', 'dragwyb-click-to-chat' ) }{ ' ' }
 								<strong>{ agent?.current_active ?? 0 }</strong> / { agent?.max_active ?? 10 } { __( 'active tickets', 'dragwyb-click-to-chat' ) }
@@ -109,7 +109,7 @@ export default function DashboardView( {
 						<span className="dctc-sc-kpi-subtext">
 							{ dashboardStats?.today_created ?? 0 } { __( 'new tickets site-wide today', 'dragwyb-click-to-chat' ) }
 						</span>
-						<span className="dctc-sc-kpi-arrow">→</span>
+						<span className="dctc-sc-kpi-arrow">&rarr;</span>
 					</div>
 				</div>
 
@@ -126,7 +126,7 @@ export default function DashboardView( {
 						<span className="dctc-sc-kpi-subtext">
 							{ __( 'Requires response or customer follow-up', 'dragwyb-click-to-chat' ) }
 						</span>
-						<span className="dctc-sc-kpi-arrow">→</span>
+						<span className="dctc-sc-kpi-arrow">&rarr;</span>
 					</div>
 				</div>
 
@@ -143,7 +143,7 @@ export default function DashboardView( {
 						<span className="dctc-sc-kpi-subtext">
 							{ dashboardStats?.total_tickets ?? 0 } { __( 'total tickets', 'dragwyb-click-to-chat' ) } ({ dashboardStats?.total_resolved ?? 0 } { __( 'resolved', 'dragwyb-click-to-chat' ) })
 						</span>
-						<span className="dctc-sc-kpi-arrow">→</span>
+						<span className="dctc-sc-kpi-arrow">&rarr;</span>
 					</div>
 				</div>
 
@@ -176,7 +176,7 @@ export default function DashboardView( {
 						<span className="dctc-sc-kpi-subtext">
 							{ __( 'Live hybrid handoff & takeover active', 'dragwyb-click-to-chat' ) }
 						</span>
-						<span className="dctc-sc-kpi-arrow">→</span>
+						<span className="dctc-sc-kpi-arrow">&rarr;</span>
 					</div>
 				</div>
 			</div>
@@ -224,7 +224,7 @@ export default function DashboardView( {
 						<span className="dashicons dashicons-rss"></span>
 						{ __( 'Live Support Activity & Audit Stream', 'dragwyb-click-to-chat' ) }
 					</h3>
-					<span className="dctc-sc-badge-live">● { __( 'Live Feed', 'dragwyb-click-to-chat' ) }</span>
+					<span className="dctc-sc-badge-live">&bull; { __( 'Live Feed', 'dragwyb-click-to-chat' ) }</span>
 				</div>
 
 				{ ( ! dashboardStats?.recent_activity || dashboardStats.recent_activity.length === 0 ) ? (
