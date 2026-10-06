@@ -69,10 +69,18 @@ class DCTC_Support_AI_Handoff_Service {
 				$is_agent_viewing = false;
 				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 					$viewing_meta   = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
+					$viewing_users  = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
 					$last_viewed_at = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
 					$now            = current_time( 'timestamp' );
 
-					if ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
+					if ( is_array( $viewing_users ) && ! empty( $viewing_users ) ) {
+						$active = array_filter( $viewing_users, function( $v ) use ( $now ) {
+							return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
+						} );
+						if ( ! empty( $active ) ) {
+							$is_agent_viewing = true;
+						}
+					} elseif ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
 						$is_agent_viewing = true;
 					}
 				}
@@ -203,13 +211,17 @@ class DCTC_Support_AI_Handoff_Service {
 		$current_user = $user_id ? get_userdata( $user_id ) : null;
 		$sender_name  = $current_user ? $current_user->display_name : 'Customer';
 
-		$messages[] = array(
-			'role'        => 'user',
-			'sender_type' => 'customer',
-			'sender_name' => $sender_name,
-			'content'     => $prompt,
-			'created_at'  => current_time( 'mysql' ),
-		);
+		// Deduplicate consecutive identical customer message
+		$last_idx = count( $messages ) - 1;
+		if ( ! ( $last_idx >= 0 && isset( $messages[ $last_idx ]['role'] ) && 'user' === $messages[ $last_idx ]['role'] && trim( (string) $messages[ $last_idx ]['content'] ) === trim( (string) $prompt ) ) ) {
+			$messages[] = array(
+				'role'        => 'user',
+				'sender_type' => 'customer',
+				'sender_name' => $sender_name,
+				'content'     => $prompt,
+				'created_at'  => current_time( 'mysql' ),
+			);
+		}
 
 		// Persist message to session
 		$wpdb->update(

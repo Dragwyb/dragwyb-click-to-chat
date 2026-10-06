@@ -560,8 +560,89 @@ class DCTC_AI_DB {
 		$table = $wpdb->prefix . 'dctc_ai_leads';
 		$time  = current_time( 'mysql' );
 
+		$session_id = sanitize_text_field( $lead['session_id'] ?? '' );
+		$lead_id    = ! empty( $lead['id'] ) ? absint( $lead['id'] ) : 0;
+
+		// If no explicit lead_id is provided, check if a lead already exists for this session
+		if ( ! $lead_id && ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$existing_lead = $wpdb->get_row(
+				$wpdb->prepare( "SELECT * FROM `{$table}` WHERE session_id = %s ORDER BY id DESC LIMIT 1", $session_id ),
+				ARRAY_A
+			);
+
+			if ( $existing_lead ) {
+				$lead_id = absint( $existing_lead['id'] );
+
+				// Smart merge non-empty values
+				$new_name = sanitize_text_field( $lead['name'] ?? '' );
+				$merged_name = ( ! empty( $new_name ) && 'Chat Visitor' !== $new_name )
+					? $new_name
+					: ( ! empty( $existing_lead['name'] ) ? $existing_lead['name'] : ( $new_name ?: 'Chat Visitor' ) );
+
+				$new_email = sanitize_email( $lead['email'] ?? '' );
+				$is_placeholder = empty( $new_email ) || false !== strpos( $new_email, '@lead.local' );
+				$merged_email = ( ! $is_placeholder )
+					? $new_email
+					: ( ! empty( $existing_lead['email'] ) && false === strpos( $existing_lead['email'], '@lead.local' ) ? $existing_lead['email'] : $new_email );
+
+				$new_phone = sanitize_text_field( $lead['phone'] ?? '' );
+				$merged_phone = ! empty( $new_phone ) ? $new_phone : ( $existing_lead['phone'] ?? '' );
+
+				$new_company = sanitize_text_field( $lead['company'] ?? '' );
+				$merged_company = ! empty( $new_company ) ? $new_company : ( $existing_lead['company'] ?? '' );
+
+				$new_size = sanitize_text_field( $lead['company_size'] ?? '' );
+				$merged_size = ! empty( $new_size ) ? $new_size : ( $existing_lead['company_size'] ?? '' );
+
+				$new_budget = sanitize_text_field( $lead['budget'] ?? '' );
+				$merged_budget = ! empty( $new_budget ) ? $new_budget : ( $existing_lead['budget'] ?? '' );
+
+				$new_timeline = sanitize_text_field( $lead['timeline'] ?? '' );
+				$merged_timeline = ! empty( $new_timeline ) ? $new_timeline : ( $existing_lead['timeline'] ?? '' );
+
+				$new_interest = sanitize_text_field( $lead['interest'] ?? '' );
+				$merged_interest = ! empty( $new_interest ) ? $new_interest : ( $existing_lead['interest'] ?? '' );
+
+				$new_req = sanitize_textarea_field( $lead['requirement'] ?? '' );
+				$existing_req = $existing_lead['requirement'] ?? '';
+				if ( ! empty( $new_req ) && ! empty( $existing_req ) && false === strpos( $existing_req, $new_req ) ) {
+					$merged_req = $existing_req . "\n" . $new_req;
+				} else {
+					$merged_req = ! empty( $new_req ) ? $new_req : $existing_req;
+				}
+
+				$new_score = intval( $lead['score'] ?? 0 );
+				$merged_score = max( intval( $existing_lead['score'] ?? 0 ), $new_score );
+
+				$merged_data = [
+					'session_id'      => $session_id,
+					'name'            => $merged_name,
+					'email'           => $merged_email,
+					'phone'           => $merged_phone,
+					'company'         => $merged_company,
+					'company_size'    => $merged_size,
+					'budget'          => $merged_budget,
+					'timeline'        => $merged_timeline,
+					'interest'        => $merged_interest,
+					'requirement'     => $merged_req,
+					'source_url'      => ! empty( $lead['source_url'] ) ? esc_url_raw( $lead['source_url'] ) : ( $existing_lead['source_url'] ?? '' ),
+					'score'           => $merged_score,
+					'intent_level'    => ! empty( $lead['intent_level'] ) ? sanitize_key( $lead['intent_level'] ) : ( $existing_lead['intent_level'] ?? 'medium' ),
+					'score_breakdown' => is_array( $lead['score_breakdown'] ?? null ) ? wp_json_encode( $lead['score_breakdown'] ) : ( $lead['score_breakdown'] ?? ( $existing_lead['score_breakdown'] ?? '' ) ),
+					'status'          => ! empty( $lead['status'] ) ? sanitize_key( $lead['status'] ) : ( $existing_lead['status'] ?? 'new' ),
+					'consent'         => ! empty( $lead['consent'] ) ? 1 : ( ! empty( $existing_lead['consent'] ) ? 1 : 0 ),
+					'updated_at'      => $time,
+				];
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				$wpdb->update( $table, $merged_data, [ 'id' => $lead_id ] );
+				return $lead_id;
+			}
+		}
+
 		$data = [
-			'session_id'      => sanitize_text_field( $lead['session_id'] ?? '' ),
+			'session_id'      => $session_id,
 			'name'            => sanitize_text_field( $lead['name'] ?? '' ),
 			'email'           => sanitize_email( $lead['email'] ?? '' ),
 			'phone'           => sanitize_text_field( $lead['phone'] ?? '' ),
@@ -580,12 +661,14 @@ class DCTC_AI_DB {
 			'updated_at'      => $time,
 		];
 
-		if ( ! empty( $lead['id'] ) ) {
-			$wpdb->update( $table, $data, [ 'id' => absint( $lead['id'] ) ] );
-			return absint( $lead['id'] );
+		if ( ! empty( $lead_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->update( $table, $data, [ 'id' => $lead_id ] );
+			return $lead_id;
 		}
 
 		$data['created_at'] = $time;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->insert( $table, $data );
 		return $wpdb->insert_id;
 	}

@@ -833,74 +833,6 @@ export default function ChatWidget({ settings, inline }) {
 		};
 	}, []);
 
-	// Initial Session & Ticket Verification (Checks once on widget open/load without repeating)
-	useEffect(() => {
-		if (!isOpen || !sessionId) {
-			return;
-		}
-
-		let isCancelled = false;
-
-		const checkInitialSessionTicket = async () => {
-			try {
-				const res = await apiFetch({
-					path: `/dctc-ai/v1/chat/sync?session_id=${encodeURIComponent(sessionId)}`,
-					method: 'GET',
-				});
-
-				if (isCancelled || !res || !res.success) {
-					return;
-				}
-
-				if (res.has_ticket && res.ticket) {
-					const isClosed = ['resolved', 'closed'].includes(res.ticket.status);
-					setHasActiveTicket(!isClosed);
-					setActiveTicketInfo(res.ticket);
-					if (res.ticket.agent_name) {
-						setAssignedAgentName(res.ticket.agent_name);
-					}
-				} else {
-					setHasActiveTicket(false);
-				}
-
-				if (res.control_mode) {
-					setActiveControlMode(res.control_mode);
-				}
-
-				if (Array.isArray(res.messages)) {
-					const validServerMsgs = res.messages.filter(
-						(m) => m && m.role !== 'system' && m.sender_type !== 'system'
-					);
-
-					if (validServerMsgs.length > 0) {
-						setMessages((prev) => {
-							if (prev.length === 0 || validServerMsgs.length > prev.length) {
-								return validServerMsgs.map((m, idx) => ({
-									id: m.id || `srv_${idx}_${m.created_at || idx}`,
-									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
-									content: m.content || '',
-									sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
-									sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
-									is_agent: m.sender_type === 'agent',
-									created_at: m.created_at || '',
-									sources: m.sources || [],
-								}));
-							}
-							return prev;
-						});
-					}
-				}
-			} catch (err) {
-				// Silently ignore initial check errors
-			}
-		};
-
-		checkInitialSessionTicket();
-		return () => {
-			isCancelled = true;
-		};
-	}, [isOpen, sessionId]);
-
 	// Real-time Session Sync Polling for Live Agent Replies & State
 	useEffect(() => {
 		if (!isOpen || !sessionId) {
@@ -934,41 +866,84 @@ export default function ChatWidget({ settings, inline }) {
 					setHasActiveTicket(false);
 				}
 
-				if (res.control_mode) {
-					setActiveControlMode(res.control_mode);
-				}
+				const currentControlMode = res.control_mode || 'ai';
+				setActiveControlMode(currentControlMode);
 
 				if (Array.isArray(res.messages)) {
-					const validServerMsgs = res.messages.filter(
+					const rawServerMsgs = res.messages.filter(
 						(m) => m && m.role !== 'system' && m.sender_type !== 'system'
 					);
 
+					// Deduplicate consecutive identical customer messages
+					const validServerMsgs = [];
+					for (let i = 0; i < rawServerMsgs.length; i++) {
+						const curr = rawServerMsgs[i];
+						const prev = validServerMsgs[validServerMsgs.length - 1];
+						if (
+							prev &&
+							(curr.sender_type === 'customer' || curr.role === 'user') &&
+							(prev.sender_type === 'customer' || prev.role === 'user') &&
+							curr.content === prev.content
+						) {
+							continue;
+						}
+						validServerMsgs.push(curr);
+					}
+
 					if (validServerMsgs.length > 0) {
-						setMessages((prev) => {
-							const prevCleanCount = prev.filter((p) => p.role !== 'system').length;
-							const hasNewMessages = validServerMsgs.length > prevCleanCount;
-							const hasNewAgentReply = validServerMsgs.some(
-								(m) => m.sender_type === 'agent' && !prev.some((p) => p.content === m.content && p.created_at === m.created_at)
-							);
+						const lastMsg = validServerMsgs[validServerMsgs.length - 1];
+						const isCustomerLastMsg = lastMsg && (lastMsg.sender_type === 'customer' || lastMsg.role === 'user');
+						const hasAgentOrBotReply = lastMsg && (lastMsg.sender_type === 'agent' || lastMsg.role === 'assistant' || lastMsg.role === 'bot');
 
-							if (hasNewMessages || hasNewAgentReply) {
-								clearAgentWaitTimers();
-								setIsWaitingForAgent(false);
-								setWaitingAgentStatusText('');
-								setIsLoading(false);
+						if (currentControlMode === 'human' && isCustomerLastMsg) {
+							// In human control mode waiting for human agent reply: keep typing dots & waiting text alive
+							setIsWaitingForAgent(true);
+							setIsLoading(true);
 
-								return validServerMsgs.map((m, idx) => ({
-									id: m.id || `srv_${idx}_${m.created_at || idx}`,
-									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
-									content: m.content || '',
-									sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
-									sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
-									is_agent: m.sender_type === 'agent',
-									created_at: m.created_at || '',
-									sources: m.sources || [],
-								}));
+							if (!wait30sTimerRef.current) {
+								const waitingMsg = chatbot.human_agent_waiting_message || __('Sorry to keep you waiting...', 'dragwyb-click-to-chat');
+								wait30sTimerRef.current = setTimeout(() => {
+									if (isMountedRef.current) {
+										setWaitingAgentStatusText(waitingMsg);
+									}
+								}, 30000);
 							}
-							return prev;
+
+							if (!maxWaitTimeoutRef.current) {
+								const maxWaitSec = parseInt(chatbot.human_agent_max_wait_time, 10) || 60;
+								maxWaitTimeoutRef.current = setTimeout(() => {
+									if (isMountedRef.current) {
+										triggerAiFallback(lastMsg.content || '');
+									}
+								}, Math.max(10, maxWaitSec) * 1000);
+							}
+						} else if (hasAgentOrBotReply) {
+							clearAgentWaitTimers();
+							setIsWaitingForAgent(false);
+							setWaitingAgentStatusText('');
+							setIsLoading(false);
+						}
+
+						setMessages((prev) => {
+							const formattedMsgs = validServerMsgs.map((m, idx) => ({
+								id: m.id || `srv_${idx}_${m.created_at || idx}`,
+								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
+								content: m.content || '',
+								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+								is_agent: m.sender_type === 'agent',
+								created_at: m.created_at || '',
+								sources: m.sources || [],
+							}));
+
+							if (
+								prev.length === formattedMsgs.length &&
+								prev.every((p, i) => p.content === formattedMsgs[i].content && p.role === formattedMsgs[i].role && p.is_agent === formattedMsgs[i].is_agent)
+							) {
+								return prev;
+							}
+
+							return formattedMsgs;
 						});
 					}
 				}
@@ -977,12 +952,15 @@ export default function ChatWidget({ settings, inline }) {
 			}
 		};
 
+		// Initial check
+		pollSession();
+
 		const interval = setInterval(pollSession, 3500);
 		return () => {
 			isCancelled = true;
 			clearInterval(interval);
 		};
-	}, [isOpen, sessionId]);
+	}, [isOpen, sessionId, triggerAiFallback, clearAgentWaitTimers, chatbot.human_agent_waiting_message, chatbot.human_agent_max_wait_time]);
 
 	// Click outside to close attachment menu
 	useEffect(() => {

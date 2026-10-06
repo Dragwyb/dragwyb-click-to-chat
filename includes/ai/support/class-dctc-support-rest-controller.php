@@ -1151,18 +1151,62 @@ class DCTC_Support_REST_Controller {
 		$now     = current_time( 'timestamp' );
 		$user_id = get_current_user_id();
 
-		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing', $viewing );
-		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', $now );
-		if ( $user_id ) {
-			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing_user_id', $user_id );
+		// Fetch existing viewers map
+		$stored_viewers = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], '_agent_viewing_user_ids', true );
+		$active_viewers = array();
+
+		if ( is_array( $stored_viewers ) ) {
+			foreach ( $stored_viewers as $viewer ) {
+				if ( is_array( $viewer ) && ! empty( $viewer['user_id'] ) && ! empty( $viewer['last_seen'] ) ) {
+					// Prune if older than 35s
+					if ( ( $now - (int) $viewer['last_seen'] ) <= 35 ) {
+						$active_viewers[ (int) $viewer['user_id'] ] = $viewer;
+					}
+				}
+			}
 		}
+
+		if ( $user_id > 0 ) {
+			if ( $viewing ) {
+				$user         = get_userdata( $user_id );
+				$display_name = $user ? $user->display_name : 'Agent #' . $user_id;
+				$avatar       = get_avatar_url( $user_id, array( 'size' => 48 ) );
+
+				$initials = '';
+				$parts    = explode( ' ', trim( $display_name ) );
+				foreach ( $parts as $p ) {
+					if ( ! empty( $p ) ) {
+						$initials .= strtoupper( mb_substr( $p, 0, 1 ) );
+					}
+				}
+				$initials = substr( $initials, 0, 2 ) ?: 'AG';
+
+				$active_viewers[ $user_id ] = array(
+					'user_id'   => (int) $user_id,
+					'name'      => $display_name,
+					'initials'  => $initials,
+					'avatar'    => $avatar,
+					'last_seen' => $now,
+				);
+			} else {
+				unset( $active_viewers[ $user_id ] );
+			}
+		}
+
+		$is_anyone_viewing = ! empty( $active_viewers ) ? 1 : 0;
+		$viewers_list      = array_values( $active_viewers );
+
+		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing', $is_anyone_viewing );
+		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', $now );
+		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing_user_ids', $viewers_list );
 
 		return new WP_REST_Response(
 			array(
-				'success'    => true,
-				'ticket_id'  => (int) $ticket['id'],
-				'viewing'    => $viewing,
-				'updated_at' => $now,
+				'success'       => true,
+				'ticket_id'     => (int) $ticket['id'],
+				'viewing'       => $is_anyone_viewing,
+				'viewing_users' => $viewers_list,
+				'updated_at'    => $now,
 			),
 			200
 		);

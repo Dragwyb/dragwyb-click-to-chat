@@ -622,6 +622,14 @@ class DCTC_Support_Ticket_Service {
 		$now             = current_time( 'timestamp' );
 		$ticket['is_session_active'] = $session_row && ( ( $now - $session_updated ) < 90 );
 
+		// Active agent viewers list
+		$viewing_users = ! empty( $ticket_meta['_agent_viewing_user_ids'] ) && is_array( $ticket_meta['_agent_viewing_user_ids'] ) ? $ticket_meta['_agent_viewing_user_ids'] : array();
+		$active_viewers = array_values( array_filter( $viewing_users, function( $v ) use ( $now ) {
+			return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
+		} ) );
+		$ticket['viewing_users']    = $active_viewers;
+		$ticket['is_agent_viewing'] = ! empty( $active_viewers ) ? 1 : 0;
+
 		// Instantiate OOP model to load AI useful content & WC info
 		if ( class_exists( 'DCTC_Support_Ticket' ) ) {
 			$ticket_obj = new DCTC_Support_Ticket( $ticket );

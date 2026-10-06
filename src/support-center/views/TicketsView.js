@@ -420,6 +420,9 @@ export default function TicketsView({
 	const [starredTickets, setStarredTickets] = useState({});
 	const [flaggedTickets, setFlaggedTickets] = useState({});
 
+	// Active Ticket Viewers (Multi-agent presence)
+	const [activeViewers, setActiveViewers] = useState([]);
+
 	const timelineEndRef = useRef(null);
 
 	useEffect(() => {
@@ -448,16 +451,22 @@ export default function TicketsView({
 
 	// Agent Viewing Presence Tracker for active ticket
 	useEffect(() => {
-		if (!selectedTicketId) return;
+		if (!selectedTicketId) {
+			setActiveViewers([]);
+			return;
+		}
 		const ticketId = selectedTicketId;
 
-		const sendPresence = (isViewing) => {
+		const sendPresence = async (isViewing) => {
 			try {
-				apiFetch({
+				const res = await apiFetch({
 					path: `/dctc-ai/v1/support/tickets/${ticketId}/presence`,
 					method: 'POST',
 					data: { viewing: isViewing ? 1 : 0 },
-				}).catch(() => {});
+				});
+				if (res && Array.isArray(res.viewing_users)) {
+					setActiveViewers(res.viewing_users);
+				}
 			} catch (e) {}
 		};
 
@@ -466,14 +475,14 @@ export default function TicketsView({
 			sendPresence(1);
 		}
 
-		// Periodic pulse every 12s while open and visible
+		// Periodic pulse every 10s while open and visible
 		const presenceInterval = setInterval(() => {
 			if (typeof document !== 'undefined' && document.hidden) {
 				sendPresence(0);
 				return;
 			}
 			sendPresence(1);
-		}, 12000);
+		}, 10000);
 
 		// Handle visibility change (tab switch, minimize)
 		const handleVisibilityChange = () => {
@@ -500,10 +509,16 @@ export default function TicketsView({
 				document.removeEventListener('visibilitychange', handleVisibilityChange);
 				window.removeEventListener('beforeunload', handleBeforeUnload);
 			}
-			// When closing or switching away from ticket, mark as not in view
 			sendPresence(0);
 		};
 	}, [selectedTicketId]);
+
+	// Sync active viewers from selectedTicket if refreshed
+	useEffect(() => {
+		if (selectedTicket?.viewing_users && Array.isArray(selectedTicket.viewing_users)) {
+			setActiveViewers(selectedTicket.viewing_users);
+		}
+	}, [selectedTicket?.viewing_users]);
 
 	// Counts calculation for folders and views
 	const folderCounts = useMemo(() => {
@@ -2125,6 +2140,29 @@ export default function TicketsView({
 															<span className="dctc-sc-attached-count">
 																{replyAttachments.length} {__('file(s) attached', 'dragwyb-click-to-chat')}
 															</span>
+														)}
+														{activeViewers && activeViewers.length > 0 && (
+															<div className="dctc-sc-active-viewers-dock" title={__('Active agents viewing this ticket', 'dragwyb-click-to-chat')}>
+																<div className="dctc-sc-viewers-avatar-stack">
+																	{activeViewers.map((viewer) => (
+																		<div
+																			key={viewer.user_id}
+																			className="dctc-sc-viewer-avatar-circle"
+																			title={`${viewer.name} (Watching now)`}
+																		>
+																			{viewer.avatar ? (
+																				<img src={viewer.avatar} alt={viewer.name} />
+																			) : (
+																				<span>{viewer.initials || 'AG'}</span>
+																			)}
+																			<span className="dctc-sc-viewer-pulse-dot"></span>
+																		</div>
+																	))}
+																</div>
+																<span className="dctc-sc-viewers-text">
+																	{activeViewers.map((v) => v.name).join(', ')}
+																</span>
+															</div>
 														)}
 													</div>
 
