@@ -548,7 +548,7 @@ class DCTC_AI_Leads_Controller
 	 * @param array $lead
 	 * @return void
 	 */
-	private function maybe_send_lead_email(array $lead)
+	public function maybe_send_lead_email(array $lead)
 	{
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$bot = isset($settings['chatbot']) ? $settings['chatbot'] : [];
@@ -602,7 +602,7 @@ class DCTC_AI_Leads_Controller
 	 * @param array $lead
 	 * @return void
 	 */
-	private function maybe_dispatch_webhook(array $lead)
+	public function maybe_dispatch_webhook(array $lead)
 	{
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$webhook_url = !empty($settings['chatbot']['lead_webhook_url']) ? esc_url_raw($settings['chatbot']['lead_webhook_url']) : '';

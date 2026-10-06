@@ -774,28 +774,36 @@ export default function ChatWidget({ settings, inline }) {
 					if (res.ticket.agent_name) {
 						setAssignedAgentName(res.ticket.agent_name);
 					}
-					if (res.control_mode) {
-						setActiveControlMode(res.control_mode);
-					}
 				} else {
 					setHasActiveTicket(false);
 				}
 
-				if (Array.isArray(res.messages) && res.messages.length > 0) {
-					setMessages((prev) => {
-						if (prev.length === 0 || res.messages.length > prev.length) {
-							return res.messages.map((m, idx) => ({
-								id: m.id || `srv_${idx}_${m.created_at || idx}`,
-								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : m.role)),
-								content: m.content || '',
-								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
-								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
-								is_agent: m.sender_type === 'agent',
-								created_at: m.created_at || '',
-							}));
-						}
-						return prev;
-					});
+				if (res.control_mode) {
+					setActiveControlMode(res.control_mode);
+				}
+
+				if (Array.isArray(res.messages)) {
+					const validServerMsgs = res.messages.filter(
+						(m) => m && m.role !== 'system' && m.sender_type !== 'system'
+					);
+
+					if (validServerMsgs.length > 0) {
+						setMessages((prev) => {
+							if (prev.length === 0 || validServerMsgs.length > prev.length) {
+								return validServerMsgs.map((m, idx) => ({
+									id: m.id || `srv_${idx}_${m.created_at || idx}`,
+									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
+									content: m.content || '',
+									sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+									sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+									is_agent: m.sender_type === 'agent',
+									created_at: m.created_at || '',
+									sources: m.sources || [],
+								}));
+							}
+							return prev;
+						});
+					}
 				}
 			} catch (err) {
 				// Silently ignore initial check errors
@@ -808,9 +816,9 @@ export default function ChatWidget({ settings, inline }) {
 		};
 	}, [isOpen, sessionId]);
 
-	// Real-time Session Sync Polling for Live Agent Replies (Runs ONLY when ticket is active)
+	// Real-time Session Sync Polling for Live Agent Replies & State
 	useEffect(() => {
-		if (!isOpen || !sessionId || !hasActiveTicket) {
+		if (!isOpen || !sessionId) {
 			return;
 		}
 
@@ -830,47 +838,61 @@ export default function ChatWidget({ settings, inline }) {
 					return;
 				}
 
-				if (!res.has_ticket || (res.ticket && ['resolved', 'closed'].includes(res.ticket.status))) {
+				if (res.has_ticket && res.ticket) {
+					const isClosed = ['resolved', 'closed'].includes(res.ticket.status);
+					setHasActiveTicket(!isClosed);
+					setActiveTicketInfo(res.ticket);
+					if (res.ticket.agent_name) {
+						setAssignedAgentName(res.ticket.agent_name);
+					}
+				} else {
 					setHasActiveTicket(false);
 				}
 
 				if (res.control_mode) {
 					setActiveControlMode(res.control_mode);
 				}
-				if (res.ticket) {
-					setActiveTicketInfo(res.ticket);
-					if (res.ticket.agent_name) {
-						setAssignedAgentName(res.ticket.agent_name);
-					}
-				}
 
-				if (Array.isArray(res.messages) && res.messages.length > 0) {
-					setMessages((prev) => {
-						if (res.messages.length > prev.length) {
-							return res.messages.map((m, idx) => ({
-								id: m.id || `srv_${idx}_${m.created_at || idx}`,
-								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : m.role)),
-								content: m.content || '',
-								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
-								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
-								is_agent: m.sender_type === 'agent',
-								created_at: m.created_at || '',
-							}));
-						}
-						return prev;
-					});
+				if (Array.isArray(res.messages)) {
+					const validServerMsgs = res.messages.filter(
+						(m) => m && m.role !== 'system' && m.sender_type !== 'system'
+					);
+
+					if (validServerMsgs.length > 0) {
+						setMessages((prev) => {
+							const prevCleanCount = prev.filter((p) => p.role !== 'system').length;
+							const hasNewMessages = validServerMsgs.length > prevCleanCount;
+							const hasNewAgentReply = validServerMsgs.some(
+								(m) => m.sender_type === 'agent' && !prev.some((p) => p.content === m.content && p.created_at === m.created_at)
+							);
+
+							if (hasNewMessages || hasNewAgentReply) {
+								return validServerMsgs.map((m, idx) => ({
+									id: m.id || `srv_${idx}_${m.created_at || idx}`,
+									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
+									content: m.content || '',
+									sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+									sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+									is_agent: m.sender_type === 'agent',
+									created_at: m.created_at || '',
+									sources: m.sources || [],
+								}));
+							}
+							return prev;
+						});
+					}
 				}
 			} catch (err) {
 				// Silently catch background poll errors
 			}
 		};
 
-		const interval = setInterval(pollSession, 4000);
+		const interval = setInterval(pollSession, 3500);
 		return () => {
 			isCancelled = true;
 			clearInterval(interval);
 		};
-	}, [isOpen, sessionId, hasActiveTicket]);
+	}, [isOpen, sessionId]);
 
 	// Click outside to close attachment menu
 	useEffect(() => {

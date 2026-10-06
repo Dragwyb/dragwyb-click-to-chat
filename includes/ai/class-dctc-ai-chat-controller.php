@@ -1496,7 +1496,9 @@ CONVERSATION MEMORY:
 			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 			if ( $ticket && ! empty( $ticket['id'] ) ) {
 				global $wpdb;
-				$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+				$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
+				$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+
 				$ticket_updates = array(
 					'customer_last_seen_at' => current_time( 'mysql' ),
 					'updated_at'            => current_time( 'mysql' ),
@@ -1509,6 +1511,17 @@ CONVERSATION MEMORY:
 					$ticket_updates,
 					array( 'id' => (int) $ticket['id'] )
 				);
+
+				// Sync ticket messages meta from session table
+				$session_content = $wpdb->get_var(
+					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+				);
+				if ( ! empty( $session_content ) ) {
+					$all_msgs = json_decode( $session_content, true );
+					if ( is_array( $all_msgs ) ) {
+						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $all_msgs );
+					}
+				}
 			}
 		}
 	}
@@ -1988,6 +2001,18 @@ CONVERSATION MEMORY:
 		$messages = ! empty( $session['content'] ) ? json_decode( $session['content'], true ) : array();
 		$messages = is_array( $messages ) ? $messages : array();
 
+		// Clean internal system notices from client chat stream
+		$client_messages = array();
+		foreach ( $messages as $msg ) {
+			if ( ! is_array( $msg ) ) {
+				continue;
+			}
+			if ( ( isset( $msg['role'] ) && 'system' === $msg['role'] ) || ( isset( $msg['sender_type'] ) && 'system' === $msg['sender_type'] ) ) {
+				continue;
+			}
+			$client_messages[] = $msg;
+		}
+
 		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : ( ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai' );
 
 		return new \WP_REST_Response(
@@ -1995,7 +2020,7 @@ CONVERSATION MEMORY:
 				'success'      => true,
 				'session_id'   => $session_id,
 				'control_mode' => $control_mode,
-				'messages'     => $messages,
+				'messages'     => $client_messages,
 				'has_ticket'   => $has_ticket,
 				'ticket'       => $ticket_info,
 				'updated_at'   => $session['updated_at'] ?? current_time( 'mysql' ),
