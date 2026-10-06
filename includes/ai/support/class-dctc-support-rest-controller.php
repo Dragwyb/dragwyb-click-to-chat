@@ -87,6 +87,11 @@ class DCTC_Support_REST_Controller {
 					'permission_callback' => array( $this, 'permission_staff_view' ),
 				),
 				array(
+					'methods'             => WP_REST_Server::EDITABLE,
+					'callback'            => array( $this, 'update_ticket' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
 					'methods'             => WP_REST_Server::DELETABLE,
 					'callback'            => array( $this, 'delete_ticket' ),
 					'permission_callback' => array( $this, 'permission_staff_delete' ),
@@ -649,6 +654,20 @@ class DCTC_Support_REST_Controller {
 			return new WP_REST_Response( array( 'success' => false, 'message' => $ticket->get_error_message() ), 400 );
 		}
 		return new WP_REST_Response( array( 'success' => true, 'ticket' => $ticket ), 201 );
+	}
+
+	public function update_ticket( $request ) {
+		$id     = $request->get_param( 'id' );
+		$params = $request->get_json_params();
+
+		$user_id = get_current_user_id();
+		$result  = DCTC_Support_Ticket_Service::update_ticket_properties( $id, $params, 'agent', $user_id );
+
+		if ( is_wp_error( $result ) ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => $result->get_error_message() ), 400 );
+		}
+
+		return new WP_REST_Response( array( 'success' => true, 'ticket' => $result ), 200 );
 	}
 
 	public function change_status( $request ) {

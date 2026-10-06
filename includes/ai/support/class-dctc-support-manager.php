@@ -198,6 +198,9 @@ class DCTC_Support_Manager {
 		}
 
 		wp_enqueue_media();
+		if ( function_exists( 'wp_enqueue_editor' ) ) {
+			wp_enqueue_editor();
+		}
 
 		// Standalone Support CSS
 		$css_candidates = array(

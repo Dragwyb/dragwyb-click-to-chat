@@ -21,6 +21,7 @@ class DCTC_Support_Portal {
 	 * Init portal hooks.
 	 */
 	public static function init() {
+		add_shortcode( 'support_portal', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_shortcode( 'dragwyb_support', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_shortcode( 'dctc_support_portal', array( __CLASS__, 'render_portal_shortcode' ) );
 		add_action( 'wp_enqueue_scripts', array( __CLASS__, 'maybe_enqueue_portal_assets' ) );
@@ -31,7 +32,12 @@ class DCTC_Support_Portal {
 	 */
 	public static function maybe_enqueue_portal_assets() {
 		global $post;
-		if ( ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'dragwyb_support' ) ) || is_singular() ) {
+		$has_portal_shortcode = is_a( $post, 'WP_Post' ) && (
+			has_shortcode( $post->post_content, 'support_portal' ) ||
+			has_shortcode( $post->post_content, 'dragwyb_support' ) ||
+			has_shortcode( $post->post_content, 'dctc_support_portal' )
+		);
+		if ( $has_portal_shortcode || is_singular() ) {
 			self::enqueue_portal_styles();
 			self::enqueue_portal_scripts();
 		}
@@ -76,6 +82,13 @@ class DCTC_Support_Portal {
 			return;
 		}
 		$enqueued = true;
+
+		if ( function_exists( 'wp_enqueue_editor' ) ) {
+			wp_enqueue_editor();
+		}
+		if ( function_exists( 'wp_enqueue_media' ) ) {
+			wp_enqueue_media();
+		}
 
 		$handle = 'dctc-ai-frontend-script';
 
@@ -178,10 +191,12 @@ class DCTC_Support_Portal {
 					<p><?php esc_html_e( 'View your recent requests, check status updates, or start a new support conversation.', 'dragwyb-click-to-chat' ); ?></p>
 				</div>
 				<div class="dctc-portal-header-right">
-					<button type="button" id="dctc-portal-btn-new" class="dctc-portal-btn-primary">
-						<span class="dashicons dashicons-plus-alt2"></span>
-						<?php esc_html_e( 'New Support Request', 'dragwyb-click-to-chat' ); ?>
-					</button>
+					<?php if ( $user_id ) : ?>
+						<button type="button" id="dctc-portal-btn-new" class="dctc-portal-btn-primary">
+							<span class="dashicons dashicons-plus-alt2"></span>
+							<?php esc_html_e( 'New Support Request', 'dragwyb-click-to-chat' ); ?>
+						</button>
+					<?php endif; ?>
 					<button type="button" id="dctc-portal-btn-my-tickets" class="dctc-portal-btn-secondary" style="display:none;">
 						<span class="dashicons dashicons-arrow-left-alt"></span>
 						<?php esc_html_e( 'Back to My Tickets', 'dragwyb-click-to-chat' ); ?>
@@ -191,15 +206,37 @@ class DCTC_Support_Portal {
 
 			<!-- View 1: Ticket List -->
 			<div id="dctc-portal-view-list" class="dctc-portal-view active">
-				<div id="dctc-portal-filter-row" class="dctc-portal-filter-row" style="display:none;">
-					<input type="text" id="dctc-portal-search-input" placeholder="<?php esc_attr_e( 'Search your tickets by subject or number...', 'dragwyb-click-to-chat' ); ?>" class="dctc-portal-input" />
-				</div>
-				<div id="dctc-portal-tickets-container" class="dctc-portal-tickets-list">
-					<div class="dctc-portal-loading"><?php esc_html_e( 'Loading support tickets...', 'dragwyb-click-to-chat' ); ?></div>
-				</div>
+				<?php if ( $user_id ) : ?>
+					<div id="dctc-portal-filter-row" class="dctc-portal-filter-row" style="display:none;">
+						<input type="text" id="dctc-portal-search-input" placeholder="<?php esc_attr_e( 'Search your tickets by subject or number...', 'dragwyb-click-to-chat' ); ?>" class="dctc-portal-input" />
+					</div>
+					<div id="dctc-portal-tickets-container" class="dctc-portal-tickets-list">
+						<div class="dctc-portal-loading"><?php esc_html_e( 'Loading support tickets...', 'dragwyb-click-to-chat' ); ?></div>
+					</div>
+				<?php else : ?>
+					<div class="dctc-portal-auth-prompt">
+						<div class="dctc-portal-auth-icon">
+							<span class="dashicons dashicons-lock"></span>
+						</div>
+						<h3><?php esc_html_e( 'Customer Support Portal', 'dragwyb-click-to-chat' ); ?></h3>
+						<p><?php esc_html_e( 'Please log in to your account to submit new support requests and access your tickets.', 'dragwyb-click-to-chat' ); ?></p>
+						<div class="dctc-portal-auth-actions">
+							<a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="dctc-portal-btn-primary">
+								<span class="dashicons dashicons-admin-users"></span>
+								<?php esc_html_e( 'Log In to Submit Ticket', 'dragwyb-click-to-chat' ); ?>
+							</a>
+							<?php if ( get_option( 'users_can_register' ) ) : ?>
+								<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="dctc-portal-btn-secondary">
+									<?php esc_html_e( 'Register Account', 'dragwyb-click-to-chat' ); ?>
+								</a>
+							<?php endif; ?>
+						</div>
+					</div>
+				<?php endif; ?>
 			</div>
 
-			<!-- Popup Modal: Create a New Support Request -->
+			<?php if ( $user_id ) : ?>
+			<!-- Popup Modal: Create a New Support Request (Logged-in only) -->
 			<div id="dctc-portal-new-modal" class="dctc-portal-modal-backdrop" style="display:none;">
 				<div class="dctc-portal-modal-card" role="dialog" aria-modal="true" aria-labelledby="dctc-modal-title">
 					
@@ -222,24 +259,6 @@ class DCTC_Support_Portal {
 					<!-- Form Body -->
 					<form id="dctc-portal-new-ticket-form" class="dctc-portal-form">
 						<div class="dctc-portal-modal-body-scroll">
-							<?php if ( ! $user_id ) : ?>
-								<div class="dctc-form-grid-2">
-									<div class="dctc-form-group">
-										<label for="dctc-new-name">
-											<?php esc_html_e( 'Your Name', 'dragwyb-click-to-chat' ); ?>
-											<span class="dctc-portal-required">*</span>
-										</label>
-										<input type="text" id="dctc-new-name" required class="dctc-portal-input" placeholder="e.g. Jane Doe" />
-									</div>
-									<div class="dctc-form-group">
-										<label for="dctc-new-email">
-											<?php esc_html_e( 'Your Email', 'dragwyb-click-to-chat' ); ?>
-											<span class="dctc-portal-required">*</span>
-										</label>
-										<input type="email" id="dctc-new-email" required class="dctc-portal-input" placeholder="e.g. jane@example.com" />
-									</div>
-								</div>
-							<?php endif; ?>
 
 							<div class="dctc-form-group">
 								<label for="dctc-new-category">
@@ -273,23 +292,29 @@ class DCTC_Support_Portal {
 							</div>
 
 							<div class="dctc-form-group">
-								<label for="dctc-new-message">
+								<label for="dctcportalnewmessage">
 									<?php esc_html_e( 'Message', 'dragwyb-click-to-chat' ); ?>
 									<span class="dctc-portal-required">*</span>
 								</label>
-								<div class="dctc-portal-wysiwyg-container">
-									<div class="dctc-portal-wysiwyg-toolbar">
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="bold" title="<?php esc_attr_e( 'Bold', 'dragwyb-click-to-chat' ); ?>"><strong>B</strong></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="italic" title="<?php esc_attr_e( 'Italic', 'dragwyb-click-to-chat' ); ?>"><em>I</em></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="underline" title="<?php esc_attr_e( 'Underline', 'dragwyb-click-to-chat' ); ?>"><u>U</u></button>
-										<span class="dctc-portal-wysiwyg-divider"></span>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="link" title="<?php esc_attr_e( 'Insert Link', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-admin-links"></span></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="ul" title="<?php esc_attr_e( 'Bullet List', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-ul"></span></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="ol" title="<?php esc_attr_e( 'Numbered List', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-ol"></span></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="quote" title="<?php esc_attr_e( 'Blockquote', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-quote"></span></button>
-										<button type="button" class="dctc-portal-wysiwyg-btn" data-tag="code" title="<?php esc_attr_e( 'Code Block', 'dragwyb-click-to-chat' ); ?>"><span class="dashicons dashicons-editor-code"></span></button>
-									</div>
-									<textarea id="dctc-new-message" rows="5" required class="dctc-portal-textarea dctc-portal-wysiwyg-textarea" placeholder="<?php esc_attr_e( 'Briefly describe the problem details...', 'dragwyb-click-to-chat' ); ?>"></textarea>
+								<div class="dctc-portal-editor-wrapper">
+									<?php
+									$content   = '';
+									$editor_id = 'dctcportalnewmessage';
+									$settings  = array(
+										'textarea_name' => 'ticket_message',
+										'media_buttons' => true,
+										'textarea_rows' => 8,
+										'teeny'         => false,
+										'quicktags'     => false,
+										'tinymce'       => array(
+											'toolbar1' => 'bold,italic,underline,strikethrough,bullist,numlist,blockquote,link,unlink,undo,redo',
+											'toolbar2' => '',
+											'toolbar3' => '',
+											'toolbar4' => '',
+										),
+									);
+									wp_editor( $content, $editor_id, $settings );
+									?>
 								</div>
 							</div>
 						</div>
@@ -307,6 +332,7 @@ class DCTC_Support_Portal {
 					</form>
 				</div>
 			</div>
+			<?php endif; ?>
 
 			<!-- View 2: Single Ticket Conversation Detail -->
 			<div id="dctc-portal-view-detail" class="dctc-portal-view">
@@ -335,9 +361,29 @@ class DCTC_Support_Portal {
 
 				<!-- Reply Box -->
 				<form id="dctc-portal-reply-form" class="dctc-portal-reply-box">
-					<textarea id="dctc-portal-reply-text" rows="3" required placeholder="<?php esc_attr_e( 'Type your reply here...', 'dragwyb-click-to-chat' ); ?>" class="dctc-portal-textarea"></textarea>
+					<div class="dctc-portal-editor-wrapper">
+						<?php
+						$content   = '';
+						$editor_id = 'dctcportalreplymessage';
+						$settings  = array(
+							'textarea_name' => 'reply_message',
+							'media_buttons' => true,
+							'textarea_rows' => 5,
+							'teeny'         => false,
+							'quicktags'     => false,
+							'tinymce'       => array(
+								'toolbar1' => 'bold,italic,underline,strikethrough,bullist,numlist,blockquote,link,unlink,undo,redo',
+								'toolbar2' => '',
+								'toolbar3' => '',
+								'toolbar4' => '',
+							),
+						);
+						wp_editor( $content, $editor_id, $settings );
+						?>
+					</div>
 					<div class="dctc-portal-reply-actions">
 						<button type="submit" id="dctc-portal-send-reply-btn" class="dctc-portal-btn-primary">
+							<span class="dashicons dashicons-send" style="font-size:15px;line-height:1;margin-top:1px;"></span>
 							<?php esc_html_e( 'Send Reply', 'dragwyb-click-to-chat' ); ?>
 						</button>
 					</div>
@@ -681,9 +727,12 @@ class DCTC_Support_Portal {
 					}
 				}
 
-				// WYSIWYG Formatting Actions for Create Ticket Modal
-				function applyPortalFormatting(tagType) {
-					const textarea = document.getElementById("dctc-new-message");
+				// WYSIWYG Formatting Actions for Create Ticket Modal & Reply Form
+				function applyPortalFormatting(tagType, btnEl) {
+					let textarea = btnEl ? btnEl.closest(".dctc-portal-wysiwyg-container")?.querySelector("textarea") : null;
+					if (!textarea) {
+						textarea = document.getElementById("dctc-new-message") || document.getElementById("dctc-portal-reply-text");
+					}
 					if (!textarea) return;
 					const start = textarea.selectionStart || 0;
 					const end = textarea.selectionEnd || 0;
@@ -706,13 +755,23 @@ class DCTC_Support_Portal {
 					}, 40);
 				}
 
-				document.querySelectorAll(".dctc-portal-wysiwyg-btn").forEach(function(btn) {
-					btn.addEventListener("click", function(e) {
-						e.preventDefault();
-						const tag = this.getAttribute("data-tag");
-						if (tag) applyPortalFormatting(tag);
-					});
-				});
+				function getPortalEditorContent(id) {
+					if (window.tinymce && window.tinymce.get(id) && !window.tinymce.get(id).isHidden()) {
+						return window.tinymce.get(id).getContent();
+					}
+					const el = document.getElementById(id);
+					return el ? el.value : "";
+				}
+
+				function clearPortalEditorContent(id) {
+					if (window.tinymce && window.tinymce.get(id)) {
+						window.tinymce.get(id).setContent("");
+					}
+					const el = document.getElementById(id);
+					if (el) {
+						el.value = "";
+					}
+				}
 
 				// Submit New Ticket
 				if (newForm) {
@@ -728,7 +787,16 @@ class DCTC_Support_Portal {
 						const emailInput = document.getElementById("dctc-new-email");
 						const catInput = document.getElementById("dctc-new-category");
 						const subjectInput = document.getElementById("dctc-new-subject");
-						const msgInput = document.getElementById("dctc-new-message");
+						const msgContent = getPortalEditorContent("dctcportalnewmessage").trim();
+
+						if (!msgContent) {
+							alert("Please enter a ticket message.");
+							if (submitBtn) {
+								submitBtn.disabled = false;
+								submitBtn.textContent = "Submit Support Request";
+							}
+							return;
+						}
 
 						// Collect all dynamic subfield values
 						const tagsList = [];
@@ -747,7 +815,7 @@ class DCTC_Support_Portal {
 							subject: subjectInput ? subjectInput.value : "",
 							category_id: catInput ? Number(catInput.value) : 0,
 							tags: tagsList,
-							initial_message: msgInput ? msgInput.value : "",
+							initial_message: msgContent,
 							customer_name: nameInput ? nameInput.value : root.getAttribute("data-user-name"),
 							customer_email: emailInput ? emailInput.value : root.getAttribute("data-user-email"),
 						};
@@ -772,6 +840,7 @@ class DCTC_Support_Portal {
 									localStorage.setItem("dctc_guest_token", guestToken);
 								}
 								newForm.reset();
+								clearPortalEditorContent("dctcportalnewmessage");
 								closeNewModal();
 								loadTicketDetail(data.ticket.uuid);
 							} else {
@@ -794,9 +863,8 @@ class DCTC_Support_Portal {
 						e.preventDefault();
 						if (!currentTicketUuid) return;
 
-						const replyInput = document.getElementById("dctc-portal-reply-text");
 						const replyBtn = document.getElementById("dctc-portal-send-reply-btn");
-						const msgText = replyInput ? replyInput.value.trim() : "";
+						const msgText = getPortalEditorContent("dctcportalreplymessage").trim();
 						if (!msgText) return;
 
 						if (replyBtn) {
@@ -819,7 +887,7 @@ class DCTC_Support_Portal {
 							const data = await res.json();
 
 							if (data.success) {
-								if (replyInput) replyInput.value = "";
+								clearPortalEditorContent("dctcportalreplymessage");
 								loadTicketDetail(currentTicketUuid);
 							} else {
 								alert(data.message || "Could not send reply.");
@@ -1386,6 +1454,97 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-wysiwyg-textarea:focus {
 				box-shadow: none !important;
+			}
+
+			/* Clean WordPress wp_editor Styles */
+			.dctc-portal-editor-wrapper .wp-editor-tabs,
+			.dctc-portal-editor-wrapper .wp-switch-editor,
+			.dctc-portal-editor-wrapper .mce-btn[aria-label*="Fullscreen"],
+			.dctc-portal-editor-wrapper .mce-btn[aria-label*="Toolbar Toggle"],
+			.dctc-portal-editor-wrapper .mce-btn[aria-label*="Align"],
+			.dctc-portal-editor-wrapper .mce-btn[aria-label*="Read more"],
+			.dctc-portal-editor-wrapper .mce-listbox {
+				display: none !important;
+			}
+			.dctc-portal-editor-wrapper .wp-editor-container {
+				background: #ffffff;
+				border: 1px solid #CBD5E1;
+				border-radius: 8px;
+				overflow: hidden;
+			}
+			.dctc-portal-editor-wrapper .wp-editor-container:focus-within {
+				border-color: #4F46E5;
+				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+			}
+			.dctc-portal-editor-wrapper .mce-tinymce {
+				border: none !important;
+				box-shadow: none !important;
+			}
+			.dctc-portal-editor-wrapper .mce-top-part {
+				background: #F8FAFC !important;
+				border-bottom: 1px solid #E2E8F0 !important;
+			}
+			.dctc-portal-editor-wrapper .quicktags-toolbar {
+				background: #F8FAFC;
+				border-bottom: 1px solid #E2E8F0;
+				padding: 6px 8px;
+			}
+			.dctc-portal-editor-wrapper .wp-media-buttons {
+				margin-bottom: 8px;
+			}
+			
+			/* Auth / Login Requirement Prompt */
+			.dctc-portal-auth-prompt {
+				background: #ffffff;
+				border: 1px solid #E2E8F0;
+				border-radius: 14px;
+				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+				margin: 30px auto;
+				max-width: 500px;
+				padding: 40px 30px;
+				text-align: center;
+			}
+			.dctc-portal-auth-icon {
+				align-items: center;
+				background: #EEF2FF;
+				border-radius: 50%;
+				color: #4F46E5;
+				display: inline-flex;
+				height: 64px;
+				justify-content: center;
+				margin-bottom: 18px;
+				width: 64px;
+			}
+			.dctc-portal-auth-icon .dashicons {
+				font-size: 32px;
+				height: 32px;
+				width: 32px;
+			}
+			.dctc-portal-auth-prompt h3 {
+				color: #0F172A;
+				font-size: 20px;
+				font-weight: 800;
+				letter-spacing: -0.3px;
+				margin: 0 0 10px 0 !important;
+			}
+			.dctc-portal-auth-prompt p {
+				color: #64748B;
+				font-size: 14px;
+				line-height: 1.6;
+				margin: 0 0 24px 0 !important;
+			}
+			.dctc-portal-auth-actions {
+				align-items: center;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				justify-content: center;
+			}
+			.dctc-portal-auth-actions .dctc-portal-btn-primary,
+			.dctc-portal-auth-actions .dctc-portal-btn-secondary {
+				font-size: 13.5px;
+				padding: 9px 18px;
+				text-decoration: none !important;
 			}
 		';
 	}

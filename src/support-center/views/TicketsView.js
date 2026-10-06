@@ -26,11 +26,13 @@ export default function TicketsView({
 	selectedTicket,
 	ticketLoading = false,
 	categories = [],
+	products = [],
 	agents = [],
 	tags = [],
 	wcData = null,
 	wcLoading = false,
 	onRefreshTickets,
+	onManualRefresh,
 	onRefreshTicketDetails,
 	onShowNotice,
 	userPermissions = {},
@@ -43,6 +45,12 @@ export default function TicketsView({
 
 	// Left Folders & Views sidebar: Collapsed by default
 	const [isFoldersExpanded, setIsFoldersExpanded] = useState(false);
+
+	// Collapsible Left "All Tickets" Panel in Ticket Detail View: Collapsed by default
+	const [isLeftTicketsPanelExpanded, setIsLeftTicketsPanelExpanded] = useState(false);
+
+	// Manual refresh spinning indicator state
+	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	// Active View / Folder filter
 	const [activeFolder, setActiveFolder] = useState('all');
@@ -67,11 +75,16 @@ export default function TicketsView({
 	// Composer state
 	const [composerMode, setComposerMode] = useState('reply'); // 'reply' | 'note'
 	const [replyText, setReplyText] = useState('');
+	const [replyAttachments, setReplyAttachments] = useState([]);
 	const [noteText, setNoteText] = useState('');
 	const [isPinnedNote, setIsPinnedNote] = useState(false);
 	const [markAsResolved, setMarkAsResolved] = useState(false);
 	const [submitting, setSubmitting] = useState(false);
 	const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
+	const [replyEditorMode, setReplyEditorMode] = useState('visual'); // 'visual' | 'text'
+	const [modalEditorMode, setModalEditorMode] = useState('visual'); // 'visual' | 'text'
+
+	const replyTextareaRef = useRef(null);
 
 	// New Ticket Modal state
 	const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
@@ -353,6 +366,7 @@ export default function TicketsView({
 			});
 			if (data?.success) {
 				setReplyText('');
+				setReplyAttachments([]);
 				if (markAsResolved) {
 					await handleStatusChange('resolved');
 					setMarkAsResolved(false);
@@ -413,6 +427,86 @@ export default function TicketsView({
 			onShowNotice(__('Could not generate AI reply.', 'dragwyb-click-to-chat'), 'error');
 		} finally {
 			setAiSuggestLoading(false);
+		}
+	};
+
+	// Manual Refresh action for toolbar with timer reset
+	const handleManualRefreshTickets = async () => {
+		setIsRefreshing(true);
+		try {
+			if (onManualRefresh) {
+				await onManualRefresh();
+			} else if (onRefreshTickets) {
+				await onRefreshTickets();
+			}
+			onShowNotice(__('Support tickets refreshed.', 'dragwyb-click-to-chat'), 'success');
+		} catch (err) {
+			console.error('Refresh error:', err);
+		} finally {
+			setTimeout(() => setIsRefreshing(false), 500);
+		}
+	};
+
+	// WYSIWYG formatting helper for Conversation reply box
+	const applyReplyFormatting = (tagType) => {
+		const textarea = replyTextareaRef.current;
+		if (!textarea) return;
+		const start = textarea.selectionStart || 0;
+		const end = textarea.selectionEnd || 0;
+		const text = replyText || '';
+		const selected = text.substring(start, end) || 'text';
+		let replacement = '';
+		if (tagType === 'bold') replacement = `<strong>${selected}</strong>`;
+		else if (tagType === 'italic') replacement = `<em>${selected}</em>`;
+		else if (tagType === 'underline') replacement = `<u>${selected}</u>`;
+		else if (tagType === 'strike') replacement = `<s>${selected}</s>`;
+		else if (tagType === 'link') replacement = `<a href="https://example.com">${selected}</a>`;
+		else if (tagType === 'ul') replacement = `\n<ul>\n  <li>${selected}</li>\n</ul>\n`;
+		else if (tagType === 'ol') replacement = `\n<ol>\n  <li>${selected}</li>\n</ol>\n`;
+		else if (tagType === 'quote') replacement = `\n<blockquote>${selected}</blockquote>\n`;
+		else if (tagType === 'code') replacement = `<code>${selected}</code>`;
+
+		const updated = text.substring(0, start) + replacement + text.substring(end);
+		setReplyText(updated);
+		setTimeout(() => {
+			if (textarea) {
+				textarea.focus();
+				textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+			}
+		}, 50);
+	};
+
+	// File attachments helper for reply box
+	const handleAttachReplyFiles = () => {
+		if (window.wp && window.wp.media) {
+			const frame = window.wp.media({
+				title: __('Attach Media / Files to Reply', 'dragwyb-click-to-chat'),
+				button: { text: __('Insert into Reply', 'dragwyb-click-to-chat') },
+				multiple: true,
+			});
+			frame.on('select', () => {
+				const selection = frame.state().get('selection').toJSON();
+				setReplyAttachments((prev) => [...prev, ...selection]);
+				const fileLinks = selection.map((f) => {
+					if (f.type === 'image' || (f.mime && f.mime.startsWith('image/'))) {
+						return `<p><img src="${f.url}" alt="${f.alt || f.title}" style="max-width:100%;height:auto;border-radius:6px;" /></p>`;
+					}
+					return `<p><a href="${f.url}" target="_blank" rel="noopener noreferrer">📎 ${f.filename || f.title}</a></p>`;
+				}).join('\n');
+				setReplyText((prev) => (prev ? `${prev}\n${fileLinks}` : fileLinks));
+			});
+			frame.open();
+		} else {
+			const input = document.createElement('input');
+			input.type = 'file';
+			input.multiple = true;
+			input.onchange = (e) => {
+				const files = Array.from(e.target.files);
+				setReplyAttachments((prev) => [...prev, ...files]);
+				const names = files.map((f) => `📎 ${f.name}`).join(', ');
+				setReplyText((prev) => (prev ? `${prev} [${names}]` : `[${names}]`));
+			};
+			input.click();
 		}
 	};
 
@@ -644,227 +738,248 @@ export default function TicketsView({
 
 	return (
 		<div className="dctc-sc-enterprise-container">
-			{ /* TOP TOOLBAR */}
-			<div className={`dctc-sc-filter-toolbar-wrap ${isDatabaseEmpty ? 'dctc-sc-filter-toolbar-empty' : ''}`}>
-				{isDatabaseEmpty ? (
-					<div className="dctc-sc-filter-toolbar-main" style={{ justifyContent: 'space-between', width: '100%' }}>
-						<div className="dctc-sc-toolbar-brand-badge">
-							<span className="dashicons dashicons-tickets-alt" style={{ color: '#6366f1', fontSize: '20px', width: '20px', height: '20px' }}></span>
-							<strong style={{ fontSize: '14.5px', color: '#0f172a' }}>{__('Tickets Workspace', 'dragwyb-click-to-chat')}</strong>
-							<span style={{ fontSize: '12px', color: '#64748b', background: '#f1f5f9', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
-								{__('0 Tickets', 'dragwyb-click-to-chat')}
-							</span>
-						</div>
-						<div className="dctc-sc-toolbar-actions">
-							<button
-								type="button"
-								className="dctc-sc-new-ticket-btn"
-								onClick={() => setIsNewTicketModalOpen(true)}
-							>
-								<span className="dashicons dashicons-plus"></span>
-								{__('New Ticket', 'dragwyb-click-to-chat')}
-							</button>
-						</div>
-					</div>
-				) : (
-					<div className="dctc-sc-filter-toolbar-main">
-						{ /* Left Folders Toggle Button */}
-						<button
-							type="button"
-							className={`dctc-sc-toggle-folders-btn ${isFoldersExpanded ? 'active' : ''}`}
-							onClick={() => setIsFoldersExpanded((prev) => !prev)}
-							title={isFoldersExpanded ? __('Collapse Folders Sidebar', 'dragwyb-click-to-chat') : __('Expand Folders Sidebar', 'dragwyb-click-to-chat')}
-						>
-							<span className="dashicons dashicons-category"></span>
-							<span>{__('Folders', 'dragwyb-click-to-chat')}</span>
-							<span className={`dashicons ${isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
-						</button>
-
-						{ /* Search Bar */}
-						<div className="dctc-sc-toolbar-search">
-							<span className="dashicons dashicons-search"></span>
-							<input
-								type="text"
-								placeholder={__('Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat')}
-								value={searchQuery}
-								onChange={(e) => setSearchQuery(e.target.value)}
-							/>
-							{searchQuery && (
+			{ /* TOP TOOLBAR - Only show when viewing all tickets (hidden when viewing single ticket conversation) */ }
+			{!selectedTicketId && (
+				<div className={`dctc-sc-filter-toolbar-wrap ${isDatabaseEmpty ? 'dctc-sc-filter-toolbar-empty' : ''}`}>
+					{isDatabaseEmpty ? (
+						<div className="dctc-sc-filter-toolbar-main" style={{ justifyContent: 'space-between', width: '100%' }}>
+							<div className="dctc-sc-toolbar-brand-badge">
+								<span className="dashicons dashicons-tickets-alt" style={{ color: '#6366f1', fontSize: '20px', width: '20px', height: '20px' }}></span>
+								<strong style={{ fontSize: '14.5px', color: '#0f172a' }}>{__('Tickets Workspace', 'dragwyb-click-to-chat')}</strong>
+								<span style={{ fontSize: '12px', color: '#64748b', background: '#f1f5f9', padding: '3px 10px', borderRadius: '12px', fontWeight: 700 }}>
+									{__('0 Tickets', 'dragwyb-click-to-chat')}
+								</span>
+							</div>
+							<div className="dctc-sc-toolbar-actions">
 								<button
 									type="button"
-									className="dctc-sc-search-clear"
-									onClick={() => setSearchQuery('')}
+									className={`dctc-sc-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
+									onClick={handleManualRefreshTickets}
+									title={__('Refresh ticket data immediately (resets 1-minute auto-update timer)', 'dragwyb-click-to-chat')}
 								>
-									&times;
+									<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
+									<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
 								</button>
-							)}
-						</div>
-
-						{ /* Quick Status Pills */}
-						<div className="dctc-sc-quick-status-pills">
-							{[
-								{ id: 'all', label: __('All', 'dragwyb-click-to-chat') },
-								{ id: 'open', label: __('Open', 'dragwyb-click-to-chat') },
-								{ id: 'pending', label: __('Pending', 'dragwyb-click-to-chat') },
-								{ id: 'resolved', label: __('Resolved', 'dragwyb-click-to-chat') },
-								{ id: 'closed', label: __('Closed', 'dragwyb-click-to-chat') },
-							].map((tab) => (
 								<button
-									key={tab.id}
 									type="button"
-									className={`dctc-sc-status-pill-btn ${statusFilter === tab.id ? 'active' : ''}`}
-									onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+									className="dctc-sc-new-ticket-btn"
+									onClick={() => setIsNewTicketModalOpen(true)}
 								>
-									{tab.label}
+									<span className="dashicons dashicons-plus"></span>
+									{__('New Ticket', 'dragwyb-click-to-chat')}
 								</button>
-							))}
+							</div>
 						</div>
-
-						{ /* Expandable Filter Toggle */}
-						<button
-							type="button"
-							className={`dctc-sc-more-filters-btn ${showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : ''}`}
-							onClick={() => setShowMoreFilters((prev) => !prev)}
-							title={__('Toggle advanced filters', 'dragwyb-click-to-chat')}
-						>
-							<span className="dashicons dashicons-filter"></span>
-							<span>{__('Filter Options', 'dragwyb-click-to-chat')}</span>
-							{activeSecondaryFilterCount > 0 && (
-								<span className="dctc-sc-filter-active-count">{activeSecondaryFilterCount}</span>
-							)}
-							<span className={`dashicons ${showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '12px', width: '12px', height: '12px' }}></span>
-						</button>
-
-						{ /* New Ticket Action */}
-						<div className="dctc-sc-toolbar-actions">
+					) : (
+						<div className="dctc-sc-filter-toolbar-main">
+							{ /* Left Folders Toggle Button */}
 							<button
 								type="button"
-								className="dctc-sc-new-ticket-btn"
-								onClick={() => setIsNewTicketModalOpen(true)}
+								className={`dctc-sc-toggle-folders-btn ${isFoldersExpanded ? 'active' : ''}`}
+								onClick={() => setIsFoldersExpanded((prev) => !prev)}
+								title={isFoldersExpanded ? __('Collapse Folders Sidebar', 'dragwyb-click-to-chat') : __('Expand Folders Sidebar', 'dragwyb-click-to-chat')}
 							>
-								<span className="dashicons dashicons-plus"></span>
-								{__('New Ticket', 'dragwyb-click-to-chat')}
+								<span className="dashicons dashicons-category"></span>
+								<span>{__('Folders', 'dragwyb-click-to-chat')}</span>
+								<span className={`dashicons ${isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
 							</button>
-						</div>
-					</div>
-				)}
 
-				{ /* SECONDARY FILTER DRAWER (Collapsible on demand) */}
-				{showMoreFilters && (
-					<div className="dctc-sc-filter-drawer">
-						<div className="dctc-sc-drawer-dropdowns">
-							{ /* Priority */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Priority', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={priorityFilter}
-									onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
-								>
-									<option value="all">{__('All Priorities', 'dragwyb-click-to-chat')}</option>
-									<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
-									<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
-									<option value="normal">{__('Normal', 'dragwyb-click-to-chat')}</option>
-									<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
-								</select>
+							{ /* Search Bar */}
+							<div className="dctc-sc-toolbar-search">
+								<span className="dashicons dashicons-search"></span>
+								<input
+									type="text"
+									placeholder={__('Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat')}
+									value={searchQuery}
+									onChange={(e) => setSearchQuery(e.target.value)}
+								/>
+								{searchQuery && (
+									<button
+										type="button"
+										className="dctc-sc-search-clear"
+										onClick={() => setSearchQuery('')}
+									>
+										&times;
+									</button>
+								)}
 							</div>
 
-							{ /* Category */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Category', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={categoryFilter}
-									onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-								>
-									<option value="all">{__('All Categories', 'dragwyb-click-to-chat')}</option>
-									{categories.map((cat) => (
-										<option key={cat.id} value={cat.id}>{cat.name}</option>
-									))}
-								</select>
+							{ /* Quick Status Pills */}
+							<div className="dctc-sc-quick-status-pills">
+								{[
+									{ id: 'all', label: __('All', 'dragwyb-click-to-chat') },
+									{ id: 'open', label: __('Open', 'dragwyb-click-to-chat') },
+									{ id: 'pending', label: __('Pending', 'dragwyb-click-to-chat') },
+									{ id: 'resolved', label: __('Resolved', 'dragwyb-click-to-chat') },
+									{ id: 'closed', label: __('Closed', 'dragwyb-click-to-chat') },
+								].map((tab) => (
+									<button
+										key={tab.id}
+										type="button"
+										className={`dctc-sc-status-pill-btn ${statusFilter === tab.id ? 'active' : ''}`}
+										onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+									>
+										{tab.label}
+									</button>
+								))}
 							</div>
 
-							{ /* Assigned Agent */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Assigned Agent', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={assignedToFilter}
-									onChange={(e) => setAssignedToFilter(e.target.value)}
-								>
-									<option value="all">{__('All Agents', 'dragwyb-click-to-chat')}</option>
-									<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
-									{agents.map((ag) => (
-										<option key={ag.id} value={ag.id}>{ag.display_name}</option>
-									))}
-								</select>
-							</div>
-
-							{ /* Product */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Product', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={productFilter}
-									onChange={(e) => setProductFilter(e.target.value)}
-								>
-									<option value="all">{__('All Products', 'dragwyb-click-to-chat')}</option>
-									<option value="chatbot">{__('Chatbot Widget', 'dragwyb-click-to-chat')}</option>
-									<option value="portal">{__('Support Portal', 'dragwyb-click-to-chat')}</option>
-								</select>
-							</div>
-
-							{ /* Tags */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Tag', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={tagFilter}
-									onChange={(e) => setTagFilter(e.target.value)}
-								>
-									<option value="all">{__('All Tags', 'dragwyb-click-to-chat')}</option>
-									{tags.map((tg) => (
-										<option key={tg.id} value={tg.name}>{tg.name}</option>
-									))}
-								</select>
-							</div>
-
-							{ /* Date Range */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Date Range', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={dateRangeFilter}
-									onChange={(e) => setDateRangeFilter(e.target.value)}
-								>
-									<option value="all">{__('All Time', 'dragwyb-click-to-chat')}</option>
-									<option value="today">{__('Today', 'dragwyb-click-to-chat')}</option>
-									<option value="7days">{__('Last 7 Days', 'dragwyb-click-to-chat')}</option>
-									<option value="30days">{__('Last 30 Days', 'dragwyb-click-to-chat')}</option>
-								</select>
-							</div>
-
-							{ /* Customer Type */}
-							<div className="dctc-sc-drawer-field">
-								<label>{__('Customer Type', 'dragwyb-click-to-chat')}</label>
-								<select
-									value={customerTypeFilter}
-									onChange={(e) => setCustomerTypeFilter(e.target.value)}
-								>
-									<option value="all">{__('All Types', 'dragwyb-click-to-chat')}</option>
-									<option value="registered">{__('Registered User', 'dragwyb-click-to-chat')}</option>
-									<option value="guest">{__('Guest Visitor', 'dragwyb-click-to-chat')}</option>
-								</select>
-							</div>
-						</div>
-
-						<div className="dctc-sc-drawer-footer">
+							{ /* Expandable Filter Toggle */}
 							<button
 								type="button"
-								className="dctc-sc-reset-filters-btn"
-								onClick={handleResetFilters}
+								className={`dctc-sc-more-filters-btn ${showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : ''}`}
+								onClick={() => setShowMoreFilters((prev) => !prev)}
+								title={__('Toggle advanced filters', 'dragwyb-click-to-chat')}
 							>
-								<span className="dashicons dashicons-image-rotate"></span>
-								{__('Reset All Filters', 'dragwyb-click-to-chat')}
+								<span className="dashicons dashicons-filter"></span>
+								<span>{__('Filter Options', 'dragwyb-click-to-chat')}</span>
+								{activeSecondaryFilterCount > 0 && (
+									<span className="dctc-sc-filter-active-count">{activeSecondaryFilterCount}</span>
+								)}
+								<span className={`dashicons ${showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '12px', width: '12px', height: '12px' }}></span>
 							</button>
+
+							{ /* Refresh & New Ticket Actions */}
+							<div className="dctc-sc-toolbar-actions">
+								<button
+									type="button"
+									className={`dctc-sc-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
+									onClick={handleManualRefreshTickets}
+									title={__('Refresh ticket data immediately (resets 1-minute auto-update timer)', 'dragwyb-click-to-chat')}
+								>
+									<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
+									<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
+								</button>
+
+								<button
+									type="button"
+									className="dctc-sc-new-ticket-btn"
+									onClick={() => setIsNewTicketModalOpen(true)}
+								>
+									<span className="dashicons dashicons-plus"></span>
+									{__('New Ticket', 'dragwyb-click-to-chat')}
+								</button>
+							</div>
 						</div>
-					</div>
-				)}
-			</div>
+					)}
+
+					{ /* SECONDARY FILTER DRAWER (Collapsible on demand) */}
+					{showMoreFilters && (
+						<div className="dctc-sc-filter-drawer">
+							<div className="dctc-sc-drawer-dropdowns">
+								{ /* Priority */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Priority', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={priorityFilter}
+										onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
+									>
+										<option value="all">{__('All Priorities', 'dragwyb-click-to-chat')}</option>
+										<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
+										<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
+										<option value="normal">{__('Normal', 'dragwyb-click-to-chat')}</option>
+										<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								{ /* Category */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Category', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={categoryFilter}
+										onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+									>
+										<option value="all">{__('All Categories', 'dragwyb-click-to-chat')}</option>
+										{categories.map((cat) => (
+											<option key={cat.id} value={cat.id}>{cat.name}</option>
+										))}
+									</select>
+								</div>
+
+								{ /* Assigned Agent */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Assigned Agent', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={assignedToFilter}
+										onChange={(e) => setAssignedToFilter(e.target.value)}
+									>
+										<option value="all">{__('All Agents', 'dragwyb-click-to-chat')}</option>
+										<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
+										{agents.map((ag) => (
+											<option key={ag.id} value={ag.id}>{ag.display_name}</option>
+										))}
+									</select>
+								</div>
+
+								{ /* Product */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Product', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={productFilter}
+										onChange={(e) => setProductFilter(e.target.value)}
+									>
+										<option value="all">{__('All Products', 'dragwyb-click-to-chat')}</option>
+										<option value="chatbot">{__('Chatbot Widget', 'dragwyb-click-to-chat')}</option>
+										<option value="portal">{__('Support Portal', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								{ /* Tags */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Tag', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={tagFilter}
+										onChange={(e) => setTagFilter(e.target.value)}
+									>
+										<option value="all">{__('All Tags', 'dragwyb-click-to-chat')}</option>
+										{tags.map((tg) => (
+											<option key={tg.id} value={tg.name}>{tg.name}</option>
+										))}
+									</select>
+								</div>
+
+								{ /* Date Range */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Date Range', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={dateRangeFilter}
+										onChange={(e) => setDateRangeFilter(e.target.value)}
+									>
+										<option value="all">{__('All Time', 'dragwyb-click-to-chat')}</option>
+										<option value="today">{__('Today', 'dragwyb-click-to-chat')}</option>
+										<option value="7days">{__('Last 7 Days', 'dragwyb-click-to-chat')}</option>
+										<option value="30days">{__('Last 30 Days', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								{ /* Customer Type */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Customer Type', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={customerTypeFilter}
+										onChange={(e) => setCustomerTypeFilter(e.target.value)}
+									>
+										<option value="all">{__('All Types', 'dragwyb-click-to-chat')}</option>
+										<option value="registered">{__('Registered User', 'dragwyb-click-to-chat')}</option>
+										<option value="guest">{__('Guest Visitor', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+							</div>
+
+							<div className="dctc-sc-drawer-footer">
+								<button
+									type="button"
+									className="dctc-sc-reset-filters-btn"
+									onClick={handleResetFilters}
+								>
+									<span className="dashicons dashicons-image-rotate"></span>
+									{__('Reset All Filters', 'dragwyb-click-to-chat')}
+								</button>
+							</div>
+						</div>
+					)}
+				</div>
+			)}
 
 			{ /* WORKSPACE CONTAINER */}
 			<div className={`dctc-sc-workspace-layout ${isFoldersExpanded ? 'folders-open' : 'folders-closed'} ${selectedTicketId ? 'ticket-active' : 'no-ticket'}`}>
@@ -1155,10 +1270,96 @@ export default function TicketsView({
 					</section>
 				)}
 
-				{ /* IF A TICKET IS SELECTED: SHOW CENTER WORKSPACE & RIGHT DETAILS SIDEBAR */}
-				{ /* IF A TICKET IS SELECTED: SHOW CENTER WORKSPACE & RIGHT DETAILS SIDEBAR */}
 				{selectedTicketId && (
 					<>
+						{ /* COLLAPSIBLE LEFT "ALL TICKETS" PANEL (Collapsed by default, toggle to expand) */ }
+						<div className={`dctc-sc-left-tickets-panel-wrapper ${isLeftTicketsPanelExpanded ? 'is-expanded' : 'is-collapsed'}`}>
+							{isLeftTicketsPanelExpanded ? (
+								<aside className="dctc-sc-left-tickets-panel">
+									<div className="dctc-sc-left-panel-header">
+										<div className="dctc-sc-left-panel-title">
+											<span className="dashicons dashicons-tickets-alt"></span>
+											<strong>{__('All Tickets', 'dragwyb-click-to-chat')}</strong>
+											<span className="dctc-sc-left-panel-count">
+												{totalTickets || filteredTickets.length}
+											</span>
+										</div>
+										<button
+											type="button"
+											className="dctc-sc-left-panel-collapse-btn"
+											onClick={() => setIsLeftTicketsPanelExpanded(false)}
+											title={__('Collapse Tickets Sidebar', 'dragwyb-click-to-chat')}
+										>
+											<span className="dashicons dashicons-arrow-left-alt2"></span>
+										</button>
+									</div>
+
+									<div className="dctc-sc-left-panel-list">
+										{filteredTickets.length === 0 ? (
+											<div className="dctc-sc-left-panel-empty">
+												{__('No tickets found', 'dragwyb-click-to-chat')}
+											</div>
+										) : (
+											filteredTickets.map((t) => {
+												const isCurrent = t.id === selectedTicketId;
+												const subjectTrimmed = t.subject || __('Untitled Ticket', 'dragwyb-click-to-chat');
+												const excerptTrimmed = (t.excerpt || t.last_message || t.subject || '').replace(/<[^>]*>?/gm, '').trim();
+												const displayProduct = t.product || t.product_name;
+												const displayAgent = t.agent_name || (t.assigned_agent_id ? `Agent #${t.assigned_agent_id}` : __('Unassigned', 'dragwyb-click-to-chat'));
+
+												return (
+													<div
+														key={t.id}
+														className={`dctc-sc-left-panel-item ${isCurrent ? 'active' : ''}`}
+														onClick={() => handleOpenTicket(t.id)}
+													>
+														<div className="dctc-sc-left-panel-item-header">
+															<span className="dctc-sc-left-panel-id">#{t.ticket_number || t.id}</span>
+															<span className="dctc-sc-left-panel-subject" title={subjectTrimmed}>
+																{subjectTrimmed}
+															</span>
+														</div>
+
+														{excerptTrimmed && (
+															<div className="dctc-sc-left-panel-excerpt" title={excerptTrimmed}>
+																{excerptTrimmed}
+															</div>
+														)}
+
+														<div className="dctc-sc-left-panel-badges">
+															{displayProduct && (
+																<span className="dctc-sc-panel-badge-product">
+																	<span className="dashicons dashicons-products"></span>
+																	{displayProduct}
+																</span>
+															)}
+															<span className={`dctc-sc-panel-badge-agent ${!t.assigned_agent_id ? 'unassigned' : ''}`}>
+																<span className="dashicons dashicons-admin-users"></span>
+																{displayAgent}
+															</span>
+														</div>
+													</div>
+												);
+											})
+										)}
+									</div>
+								</aside>
+							) : (
+								<div className="dctc-sc-left-panel-collapsed-bar">
+									<button
+										type="button"
+										className="dctc-sc-left-panel-expand-btn"
+										onClick={() => setIsLeftTicketsPanelExpanded(true)}
+										title={__('Expand All Tickets list', 'dragwyb-click-to-chat')}
+									>
+										<span className="dashicons dashicons-arrow-right-alt2"></span>
+										<span className="dctc-sc-expand-label">{__('All Tickets', 'dragwyb-click-to-chat')}</span>
+										<span className="dctc-sc-expand-badge">{totalTickets || filteredTickets.length}</span>
+									</button>
+								</div>
+							)}
+						</div>
+
 						{ /* COLUMN 2/3: TICKET WORKSPACE & CONVERSATION */}
 						<main className="dctc-sc-col-main">
 							{ticketLoading && !selectedTicket ? (
@@ -1502,44 +1703,87 @@ export default function TicketsView({
 
 										{composerMode === 'reply' ? (
 											<form onSubmit={handleSendReply} className="dctc-sc-composer-main-form">
-												<textarea
-													rows="3"
-													placeholder={__('Write a response to the customer...', 'dragwyb-click-to-chat')}
-													value={replyText}
-													onChange={(e) => setReplyText(e.target.value)}
-													className="dctc-sc-composer-input"
-												/>
-
-												{ /* Rich formatting toolbar */}
-												<div className="dctc-sc-format-toolbar">
-													<div className="dctc-sc-format-buttons">
-														<button type="button" title="Bold"><strong>B</strong></button>
-														<button type="button" title="Italic"><em>I</em></button>
-														<button type="button" title="Underline"><u>U</u></button>
-														<button type="button" title="Link"><span className="dashicons dashicons-admin-links"></span></button>
-														<button type="button" title="Bullet List"><span className="dashicons dashicons-editor-ul"></span></button>
-														<button type="button" title="Numbered List"><span className="dashicons dashicons-editor-ol"></span></button>
-														<button type="button" title="Code">&lt;/&gt;</button>
-														<button type="button" title="Image"><span className="dashicons dashicons-format-image"></span></button>
-														<button type="button" title="Emoji"><span className="dashicons dashicons-smiley"></span></button>
-														<button type="button" title="Attachment"><span className="dashicons dashicons-paperclip"></span></button>
+												<div className="dctc-sc-wysiwyg-wrapper">
+													<div className="dctc-sc-wysiwyg-header-tabs">
+														<div className="dctc-sc-wysiwyg-mode-switch">
+															<button
+																type="button"
+																className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'visual' ? 'active' : ''}`}
+																onClick={() => setReplyEditorMode('visual')}
+															>
+																{__('Visual', 'dragwyb-click-to-chat')}
+															</button>
+															<button
+																type="button"
+																className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'text' ? 'active' : ''}`}
+																onClick={() => setReplyEditorMode('text')}
+															>
+																{__('Text', 'dragwyb-click-to-chat')}
+															</button>
+														</div>
+														<div className="dctc-sc-wysiwyg-media-action">
+															<button
+																type="button"
+																className="dctc-sc-add-media-btn"
+																onClick={handleAttachReplyFiles}
+																title={__('Add Media / Files', 'dragwyb-click-to-chat')}
+															>
+																<span className="dashicons dashicons-admin-media"></span>
+																<span>{__('Add Media', 'dragwyb-click-to-chat')}</span>
+															</button>
+														</div>
 													</div>
-													<button type="button" className="dctc-sc-fullscreen-icon" title="Expand">
-														<span className="dashicons dashicons-editor-expand"></span>
-													</button>
+
+													{replyEditorMode === 'visual' && (
+														<div className="dctc-sc-wysiwyg-toolbar">
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
+																<strong>B</strong>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
+																<em>I</em>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
+																<u>U</u>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('strike')} title={__('Strikethrough', 'dragwyb-click-to-chat')}>
+																<s>S</s>
+															</button>
+															<span className="dctc-sc-wysiwyg-divider"></span>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-admin-links"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-ul"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-ol"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-quote"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-code"></span>
+															</button>
+														</div>
+													)}
+
+													<textarea
+														ref={replyTextareaRef}
+														rows="4"
+														placeholder={__('Write a standard formatted response to the customer...', 'dragwyb-click-to-chat')}
+														value={replyText}
+														onChange={(e) => setReplyText(e.target.value)}
+														className={`dctc-sc-composer-input ${replyEditorMode === 'text' ? 'text-mode-font' : ''}`}
+													/>
 												</div>
 
-												{ /* Bottom submission bar */}
 												<div className="dctc-sc-composer-bottom-bar">
 													<div className="dctc-sc-bottom-left">
-														<button type="button" className="dctc-sc-composer-pill-btn">
-															<span className="dashicons dashicons-layout"></span>
-															{__('Templates', 'dragwyb-click-to-chat')}
-														</button>
-														<button type="button" className="dctc-sc-composer-pill-btn">
-															<span className="dashicons dashicons-paperclip"></span>
-															{__('Attach Files', 'dragwyb-click-to-chat')}
-														</button>
+														{replyAttachments.length > 0 && (
+															<span className="dctc-sc-attached-count">
+																{replyAttachments.length} {__('file(s) attached', 'dragwyb-click-to-chat')}
+															</span>
+														)}
 													</div>
 
 													<div className="dctc-sc-bottom-right">
@@ -1655,22 +1899,6 @@ export default function TicketsView({
 
 									{showCustomerSession && (
 										<div className="dctc-sc-expanded-section">
-											{selectedTicket?.session_id && (
-												<div className="dctc-sc-info-row">
-													<span className="dashicons dashicons-key"></span>
-													<span className="dctc-sc-info-text monospace" title={selectedTicket.session_id}>
-														{selectedTicket.session_id}
-													</span>
-													<button
-														type="button"
-														className="dctc-sc-copy-btn"
-														onClick={() => handleCopySession(selectedTicket.session_id)}
-														title={__('Copy Session ID', 'dragwyb-click-to-chat')}
-													>
-														<span className="dashicons dashicons-admin-page"></span>
-													</button>
-												</div>
-											)}
 											<div className="dctc-sc-stat-item">
 												<span className="stat-name">{__('First Seen', 'dragwyb-click-to-chat')}</span>
 												<span className="stat-data">{selectedTicket?.created_at || 'Oct 04, 2026'}</span>
@@ -1682,6 +1910,10 @@ export default function TicketsView({
 											<div className="dctc-sc-stat-item">
 												<span className="stat-name">{__('Total Tickets', 'dragwyb-click-to-chat')}</span>
 												<span className="stat-data">1</span>
+											</div>
+											<div className="dctc-sc-stat-item">
+												<span className="stat-name">{__('Origin Surface', 'dragwyb-click-to-chat')}</span>
+												<span className="stat-data">{selectedTicket?.reply_surface === 'chatbot_widget' ? 'Chatbot Widget' : 'Support Portal'}</span>
 											</div>
 										</div>
 									)}
@@ -1762,26 +1994,27 @@ export default function TicketsView({
 												<div className="dctc-sc-field-row">
 													<label>{__('Category', 'dragwyb-click-to-chat')}</label>
 													<select
-														value={selectedTicket?.category_id || ''}
+														value={selectedTicket?.category_id || 0}
 														onChange={async (e) => {
-															const val = e.target.value;
+															const val = Number(e.target.value);
 															if (!selectedTicket?.id) return;
 															try {
 																await apiFetch({
 																	path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
 																	method: 'PUT',
-																	data: { category_id: val ? Number(val) : 0 },
+																	data: { category_id: val },
 																});
 																onRefreshTicketDetails(selectedTicket.id);
 																onRefreshTickets();
 																onShowNotice(__('Category updated.', 'dragwyb-click-to-chat'), 'success');
 															} catch (err) {
 																console.error(err);
+																onShowNotice(__('Failed to update category.', 'dragwyb-click-to-chat'), 'error');
 															}
 														}}
 														className="dctc-sc-detail-select"
 													>
-														<option value="">{__('Technical & Bugs', 'dragwyb-click-to-chat')}</option>
+														<option value="0">{__('-- Select Category --', 'dragwyb-click-to-chat')}</option>
 														{categories.map((cat) => (
 															<option key={cat.id} value={cat.id}>{cat.name}</option>
 														))}
@@ -1791,18 +2024,111 @@ export default function TicketsView({
 												{ /* Product */}
 												<div className="dctc-sc-field-row">
 													<label>{__('Product', 'dragwyb-click-to-chat')}</label>
-													<select className="dctc-sc-detail-select">
-														<option>{__('Chatbot Widget', 'dragwyb-click-to-chat')}</option>
-														<option>{__('Support Portal', 'dragwyb-click-to-chat')}</option>
+													<select
+														value={selectedTicket?.product || ''}
+														onChange={async (e) => {
+															const val = e.target.value;
+															if (!selectedTicket?.id) return;
+															try {
+																await apiFetch({
+																	path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
+																	method: 'PUT',
+																	data: { product: val },
+																});
+																onRefreshTicketDetails(selectedTicket.id);
+																onRefreshTickets();
+																onShowNotice(__('Product updated.', 'dragwyb-click-to-chat'), 'success');
+															} catch (err) {
+																console.error(err);
+																onShowNotice(__('Failed to update product.', 'dragwyb-click-to-chat'), 'error');
+															}
+														}}
+														className="dctc-sc-detail-select"
+													>
+														<option value="">{__('-- Select Product (Optional) --', 'dragwyb-click-to-chat')}</option>
+														{products.map((prod) => (
+															<option key={prod.id || prod.name} value={prod.name || prod.title}>
+																{prod.name || prod.title}
+															</option>
+														))}
 													</select>
 												</div>
 
 												{ /* Tags */}
 												<div className="dctc-sc-field-row">
 													<label>{__('Tags', 'dragwyb-click-to-chat')}</label>
-													<div className="dctc-sc-tags-inline">
-														<span className="dctc-sc-tag-empty">{__('No tags', 'dragwyb-click-to-chat')}</span>
-														<button type="button" className="dctc-sc-tag-add-btn">+</button>
+													<div className="dctc-sc-tags-manager-wrap">
+														<div className="dctc-sc-tags-list">
+															{(Array.isArray(selectedTicket?.tags) && selectedTicket.tags.length > 0) ? (
+																selectedTicket.tags.map((tg, idx) => {
+																	const tagName = typeof tg === 'object' ? tg.name : tg;
+																	return (
+																		<span key={idx} className="dctc-sc-tag-pill">
+																			{tagName}
+																			<button
+																				type="button"
+																				className="dctc-sc-tag-remove"
+																				onClick={async () => {
+																					const updatedTags = (selectedTicket.tags || []).filter((item) => (typeof item === 'object' ? item.name : item) !== tagName);
+																					try {
+																						await apiFetch({
+																							path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
+																							method: 'PUT',
+																							data: { tags: updatedTags },
+																						});
+																						onRefreshTicketDetails(selectedTicket.id);
+																						onRefreshTickets();
+																					} catch (err) {
+																						console.error(err);
+																					}
+																				}}
+																				title={__('Remove tag', 'dragwyb-click-to-chat')}
+																			>
+																				&times;
+																			</button>
+																		</span>
+																	);
+																})
+															) : (
+																<span className="dctc-sc-tag-empty">{__('No tags assigned', 'dragwyb-click-to-chat')}</span>
+															)}
+														</div>
+
+														<div className="dctc-sc-add-tag-row">
+															<select
+																value=""
+																onChange={async (e) => {
+																	const selectedTag = e.target.value;
+																	if (!selectedTag || !selectedTicket?.id) return;
+																	const currentTags = Array.isArray(selectedTicket.tags)
+																		? selectedTicket.tags.map((item) => (typeof item === 'object' ? item.name : item))
+																		: [];
+																	if (!currentTags.includes(selectedTag)) {
+																		const updatedTags = [...currentTags, selectedTag];
+																		try {
+																			await apiFetch({
+																				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
+																				method: 'PUT',
+																				data: { tags: updatedTags },
+																			});
+																			onRefreshTicketDetails(selectedTicket.id);
+																			onRefreshTickets();
+																			onShowNotice(__('Tag added.', 'dragwyb-click-to-chat'), 'success');
+																		} catch (err) {
+																			console.error(err);
+																		}
+																	}
+																}}
+																className="dctc-sc-add-tag-select"
+															>
+																<option value="">{__('+ Add Tag...', 'dragwyb-click-to-chat')}</option>
+																{tags.map((tg) => (
+																	<option key={tg.id || tg.name} value={tg.name}>
+																		{tg.name}
+																	</option>
+																))}
+															</select>
+														</div>
 													</div>
 												</div>
 
@@ -1991,40 +2317,67 @@ export default function TicketsView({
 								</div>
 
 								<div className="dctc-sc-modal-form-group">
-									<label>{__('Message *', 'dragwyb-click-to-chat')}</label>
-									<div className="dctc-sc-wysiwyg-container">
-										<div className="dctc-sc-wysiwyg-toolbar">
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
-												<strong>B</strong>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
-												<em>I</em>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
-												<u>U</u>
-											</button>
-											<span className="dctc-sc-wysiwyg-divider"></span>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-admin-links"></span>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-editor-ul"></span>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-editor-ol"></span>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-editor-quote"></span>
-											</button>
-											<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-editor-code"></span>
-											</button>
-											<span className="dctc-sc-wysiwyg-divider"></span>
-											<button type="button" className="dctc-sc-wysiwyg-btn attach-btn" onClick={handleAttachFiles} title={__('Attach Files / Media', 'dragwyb-click-to-chat')}>
-												<span className="dashicons dashicons-paperclip"></span>
-												<span>{__('Attach Files', 'dragwyb-click-to-chat')}</span>
-											</button>
+									<div className="dctc-sc-wysiwyg-wrapper">
+										<div className="dctc-sc-wysiwyg-header-tabs">
+											<label style={{ fontWeight: 600, color: '#334155', margin: 0 }}>{__('Message *', 'dragwyb-click-to-chat')}</label>
+											<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+												<div className="dctc-sc-wysiwyg-mode-switch">
+													<button
+														type="button"
+														className={`dctc-sc-editor-mode-btn ${modalEditorMode === 'visual' ? 'active' : ''}`}
+														onClick={() => setModalEditorMode('visual')}
+													>
+														{__('Visual', 'dragwyb-click-to-chat')}
+													</button>
+													<button
+														type="button"
+														className={`dctc-sc-editor-mode-btn ${modalEditorMode === 'text' ? 'active' : ''}`}
+														onClick={() => setModalEditorMode('text')}
+													>
+														{__('Text', 'dragwyb-click-to-chat')}
+													</button>
+												</div>
+												<button
+													type="button"
+													className="dctc-sc-add-media-btn"
+													onClick={handleAttachFiles}
+													title={__('Add Media / Files', 'dragwyb-click-to-chat')}
+												>
+													<span className="dashicons dashicons-admin-media"></span>
+													<span>{__('Add Media', 'dragwyb-click-to-chat')}</span>
+												</button>
+											</div>
 										</div>
+
+										{modalEditorMode === 'visual' && (
+											<div className="dctc-sc-wysiwyg-toolbar">
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
+													<strong>B</strong>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
+													<em>I</em>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
+													<u>U</u>
+												</button>
+												<span className="dctc-sc-wysiwyg-divider"></span>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
+													<span className="dashicons dashicons-admin-links"></span>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
+													<span className="dashicons dashicons-editor-ul"></span>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
+													<span className="dashicons dashicons-editor-ol"></span>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
+													<span className="dashicons dashicons-editor-quote"></span>
+												</button>
+												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
+													<span className="dashicons dashicons-editor-code"></span>
+												</button>
+											</div>
+										)}
 
 										<textarea
 											ref={modalMessageInputRef}
@@ -2033,7 +2386,7 @@ export default function TicketsView({
 											placeholder={__('Briefly describe the problem details...', 'dragwyb-click-to-chat')}
 											value={newTicketData.message}
 											onChange={(e) => setNewTicketData({ ...newTicketData, message: e.target.value })}
-											className="dctc-sc-wysiwyg-textarea"
+											className={`dctc-sc-wysiwyg-textarea ${modalEditorMode === 'text' ? 'text-mode-font' : ''}`}
 										/>
 
 										{newTicketData.attachments && newTicketData.attachments.length > 0 && (

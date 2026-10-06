@@ -422,6 +422,63 @@ class DCTC_AI_Chat_Controller {
 			self::log_debug( 'Dragwyb AI AI Memory Optimization Error: ' . $e->getMessage() );
 		}
 
+		// Feature: Session-Aware Once-Only Polite Email Request
+		try {
+			$known_user_email = '';
+			if ( is_user_logged_in() ) {
+				$u = wp_get_current_user();
+				if ( $u && ! empty( $u->user_email ) ) {
+					$known_user_email = $u->user_email;
+				}
+			}
+			if ( empty( $known_user_email ) && ! empty( $email ) ) {
+				$known_user_email = $email;
+			}
+
+			$email_already_requested = false;
+			if ( ! empty( $session_id ) ) {
+				global $wpdb;
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$session_row = $wpdb->get_row(
+					$wpdb->prepare(
+						"SELECT content, user_email FROM {$wpdb->prefix}dctc_ai_sessions WHERE session_id = %s ORDER BY id DESC LIMIT 1",
+						$session_id
+					)
+				);
+				if ( $session_row ) {
+					if ( empty( $known_user_email ) && ! empty( $session_row->user_email ) ) {
+						$known_user_email = $session_row->user_email;
+					}
+					if ( ! empty( $session_row->content ) ) {
+						$msg_history = json_decode( $session_row->content, true );
+						if ( is_array( $msg_history ) ) {
+							foreach ( $msg_history as $m ) {
+								$m_text = ! empty( $m['content'] ) ? $m['content'] : '';
+								if ( empty( $known_user_email ) && preg_match( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $m_text, $m_matches ) ) {
+									$known_user_email = $m_matches[0];
+								}
+								if ( ! empty( $m['role'] ) && $m['role'] === 'assistant' ) {
+									if ( preg_match( '/\b(comfortable.*email|share.*email|provide.*email|your email address|follow up.*email)\b/i', $m_text ) ) {
+										$email_already_requested = true;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			if ( ! empty( $known_user_email ) ) {
+				$system_message .= "\n\nCRITICAL EMAIL RULE: The user's email is ALREADY KNOWN ({$known_user_email}). Do NOT ask for their email address under any circumstances.\n";
+			} elseif ( $email_already_requested ) {
+				$system_message .= "\n\nCRITICAL EMAIL RULE: You have ALREADY politely asked for the user's email in a previous message in this session. Do NOT ask for their email again. Continue assisting them normally.\n";
+			} else {
+				$system_message .= "\n\nPOLITE EMAIL GUIDANCE: If you detect support, quotation, pricing, or custom follow-up intent from the user, after answering their question, you may politely ask ONCE: 'If you are comfortable sharing your email address with us, please feel free to provide it so our team can follow up with you directly.' Ask for their email only ONCE in the conversation.\n";
+			}
+		} catch ( Exception $e ) {
+			self::log_debug( 'Dragwyb AI Session-Aware Email Check Error: ' . $e->getMessage() );
+		}
+
 		/**
 		 * Filters the final compiled system prompt before sending to AI provider.
 		 *
@@ -1050,10 +1107,12 @@ LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-CONVERSATIONAL LEAD CAPTURE & DYNAMIC INTENT:
-- If the visitor expresses interest in buying, purchasing, ordering products, pricing, custom quotes, or hiring services:
-  1. Warmly and helpfully answer their inquiry with relevant store catalog/pricing details.
-  2. If the visitor has not yet provided their email address in this conversation, invite them naturally to share their email (e.g., \"Could you please share your email address so our team can send you the full details / follow up with you?\").
+CONVERSATIONAL LEAD CAPTURE & POLITE EMAIL SHARING:
+- When a user shows interest in buying, pricing, quotes, support assistance, or custom inquiries:
+  1. Warmly and helpfully answer their questions directly using available knowledge base facts.
+  2. If the user's email has NOT been provided AND has NOT been requested in any prior message in this session:
+     Politely and respectfully ask them ONCE: \"If you are comfortable sharing your email address with us, please feel free to provide it so our team can follow up with you directly.\"
+  3. STRICT RULE: Ask for their email ONLY ONCE during the entire conversation. If you have already asked previously or if their email is known, NEVER ask again.
 - At the very end of your response, always append a hidden intent metadata tag in this exact format:
 <!--INTENT:{\"intent\":\"lead_generation|support_ticket|human_handoff|order_tracking|general_qa\",\"email\":\"extracted_email_or_empty\",\"phone\":\"extracted_phone_or_empty\"}-->
 

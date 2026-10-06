@@ -67,9 +67,11 @@ export default function App() {
 	// Metadata
 	const [categories, setCategories] = useState([]);
 	const [tags, setTags] = useState([]);
+	const [products, setProducts] = useState([]);
 	const [agents, setAgents] = useState([]);
 	const [supportSettings, setSupportSettings] = useState({});
 	const [permissionsMatrix, setPermissionsMatrix] = useState(null);
+	const [autoRefreshTrigger, setAutoRefreshTrigger] = useState(0);
 
 	// WooCommerce context
 	const [wcData, setWcData] = useState(null);
@@ -101,14 +103,16 @@ export default function App() {
 			const promises = [
 				apiFetch({ path: '/dctc-ai/v1/support/categories' }),
 				apiFetch({ path: '/dctc-ai/v1/support/tags' }),
+				apiFetch({ path: '/dctc-ai/v1/support/products' }),
 				apiFetch({ path: '/dctc-ai/v1/support/agents' }),
 				apiFetch({ path: '/dctc-ai/v1/support/settings' }),
 				apiFetch({ path: '/dctc-ai/v1/support/permissions' }),
 			];
-			const [catRes, tagRes, agentRes, setRes, permRes] = await Promise.allSettled(promises);
+			const [catRes, tagRes, prodRes, agentRes, setRes, permRes] = await Promise.allSettled(promises);
 
 			if (catRes.status === 'fulfilled' && catRes.value?.success) setCategories(catRes.value.categories || []);
 			if (tagRes.status === 'fulfilled' && tagRes.value?.success) setTags(tagRes.value.tags || []);
+			if (prodRes.status === 'fulfilled' && prodRes.value?.success) setProducts(prodRes.value.products || []);
 			if (agentRes.status === 'fulfilled' && agentRes.value?.success) setAgents(agentRes.value.agents || []);
 			if (setRes.status === 'fulfilled' && setRes.value?.success) setSupportSettings(setRes.value.settings || {});
 			if (permRes.status === 'fulfilled' && permRes.value?.success) {
@@ -300,6 +304,11 @@ export default function App() {
 		fetchTickets();
 	}, [fetchTickets]);
 
+	const handleManualRefresh = useCallback(() => {
+		fetchTickets();
+		setAutoRefreshTrigger((prev) => prev + 1);
+	}, [fetchTickets]);
+
 	// 1-minute active polling to check for new tickets when viewing all tickets (and NOT inside a specific ticket conversation)
 	useEffect(() => {
 		if (activeTab !== 'tickets' || selectedTicketId) {
@@ -313,7 +322,7 @@ export default function App() {
 		}, 60000); // Every 1 minute (60 seconds)
 
 		return () => clearInterval(interval);
-	}, [activeTab, selectedTicketId, fetchTickets]);
+	}, [activeTab, selectedTicketId, fetchTickets, autoRefreshTrigger]);
 
 	useEffect(() => {
 		if (selectedTicketId) {
@@ -459,11 +468,13 @@ export default function App() {
 						selectedTicket={selectedTicket}
 						ticketLoading={ticketLoading}
 						categories={categories}
+						products={products}
 						agents={agents}
 						tags={tags}
 						wcData={wcData}
 						wcLoading={wcLoading}
 						onRefreshTickets={fetchTickets}
+						onManualRefresh={handleManualRefresh}
 						onRefreshTicketDetails={fetchTicketDetails}
 						onShowNotice={showNotice}
 						userPermissions={userPermissions}

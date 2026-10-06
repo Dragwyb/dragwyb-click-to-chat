@@ -450,7 +450,8 @@ class DCTC_Support_Ticket_Service {
 					$row['agent_avatar']     = '';
 				}
 
-				$row['tags'] = DCTC_Support_Tag_Service::get_ticket_tags( $row['id'] );
+				$row['tags']    = DCTC_Support_Tag_Service::get_ticket_tags( $row['id'] );
+				$row['product'] = ! empty( $t_meta['product'] ) ? (string) $t_meta['product'] : ( ! empty( $t_meta['product_name'] ) ? (string) $t_meta['product_name'] : '' );
 
 				// Chat and session count
 				$session_rec          = isset( $sessions_map[ $t_id ] ) ? $sessions_map[ $t_id ] : null;
@@ -458,6 +459,18 @@ class DCTC_Support_Ticket_Service {
 				$session_messages     = ( $session_rec && ! empty( $session_rec['content'] ) ) ? json_decode( $session_rec['content'], true ) : array();
 				$row['chat_count']    = is_array( $session_messages ) ? count( $session_messages ) : 0;
 				$row['message_count'] = $row['chat_count'];
+
+				// Message excerpt extraction
+				$first_content = '';
+				$last_content  = '';
+				if ( ! empty( $session_messages ) && is_array( $session_messages ) ) {
+					$first_item    = reset( $session_messages );
+					$last_item     = end( $session_messages );
+					$first_content = ! empty( $first_item['content'] ) ? wp_strip_all_tags( $first_item['content'] ) : '';
+					$last_content  = ! empty( $last_item['content'] ) ? wp_strip_all_tags( $last_item['content'] ) : '';
+				}
+				$row['excerpt']      = $first_content ? $first_content : ( $last_content ? $last_content : $row['subject'] );
+				$row['last_message'] = $last_content ? $last_content : $row['subject'];
 			}
 		} else {
 			$rows = array();
@@ -512,6 +525,7 @@ class DCTC_Support_Ticket_Service {
 		$ticket['reply_surface']                = ! empty( $ticket_meta['reply_surface'] ) ? (string) $ticket_meta['reply_surface'] : 'chatbot_widget';
 		$ticket['interaction_type']             = ! empty( $ticket_meta['interaction_type'] ) ? (string) $ticket_meta['interaction_type'] : 'SUPPORT_TICKET';
 		$ticket['category_id']                  = ! empty( $ticket_meta['category_id'] ) ? absint( $ticket_meta['category_id'] ) : 0;
+		$ticket['product']                      = ! empty( $ticket_meta['product'] ) ? (string) $ticket_meta['product'] : ( ! empty( $ticket_meta['product_name'] ) ? (string) $ticket_meta['product_name'] : '' );
 		$ticket['assigned_agent_id']            = ! empty( $ticket_meta['assigned_agent_id'] ) ? absint( $ticket_meta['assigned_agent_id'] ) : 0;
 		$ticket['assigned_team_id']             = ! empty( $ticket_meta['assigned_team_id'] ) ? absint( $ticket_meta['assigned_team_id'] ) : 0;
 		$ticket['ai_classification_confidence'] = isset( $ticket_meta['ai_classification_confidence'] ) ? floatval( $ticket_meta['ai_classification_confidence'] ) : 0.0;
@@ -1439,6 +1453,99 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Update general ticket properties (status, priority, subject, category_id, product, tags, assigned_agent_id).
+	 *
+	 * @param int|string $ticket_id_or_uuid Ticket ID or UUID.
+	 * @param array      $data Key-value pairs to update.
+	 * @param string     $actor_type Actor type ('agent', 'customer', 'system').
+	 * @param int        $actor_id Actor WordPress user ID.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function update_ticket_properties( $ticket_id_or_uuid, $data = array(), $actor_type = 'agent', $actor_id = 0 ) {
+		global $wpdb;
+		$ticket = self::get_ticket( $ticket_id_or_uuid );
+		if ( ! $ticket ) {
+			return new WP_Error( 'not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$core_updates  = array();
+		$actor_name    = 'Staff';
+
+		if ( $actor_id ) {
+			$u = get_userdata( $actor_id );
+			if ( $u ) {
+				$actor_name = $u->display_name;
+			}
+		}
+
+		if ( isset( $data['status'] ) && ! empty( $data['status'] ) ) {
+			$new_status = sanitize_key( $data['status'] );
+			if ( $new_status !== $ticket['status'] ) {
+				$core_updates['status'] = $new_status;
+				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+					DCTC_Support_Event_Service::log_event( $ticket['id'], 'status_changed', $ticket['status'], $new_status, $actor_type, $actor_id, $actor_name );
+				}
+			}
+		}
+
+		if ( isset( $data['priority'] ) && ! empty( $data['priority'] ) ) {
+			$new_priority = sanitize_key( $data['priority'] );
+			if ( $new_priority !== $ticket['priority'] ) {
+				$core_updates['priority'] = $new_priority;
+				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+					DCTC_Support_Event_Service::log_event( $ticket['id'], 'priority_changed', $ticket['priority'], $new_priority, $actor_type, $actor_id, $actor_name );
+				}
+			}
+		}
+
+		if ( isset( $data['subject'] ) && ! empty( $data['subject'] ) ) {
+			$core_updates['subject'] = sanitize_text_field( $data['subject'] );
+		}
+
+		if ( ! empty( $core_updates ) ) {
+			$core_updates['updated_at'] = current_time( 'mysql' );
+			$wpdb->update( $table_tickets, $core_updates, array( 'id' => $ticket['id'] ) );
+		}
+
+		// Update metadata properties
+		if ( isset( $data['category_id'] ) ) {
+			$cat_id = absint( $data['category_id'] );
+			self::update_ticket_meta( $ticket['id'], 'category_id', $cat_id );
+			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'category_changed', (string) $ticket['category_id'], (string) $cat_id, $actor_type, $actor_id, $actor_name );
+			}
+		}
+
+		if ( isset( $data['product'] ) ) {
+			$product_val = sanitize_text_field( $data['product'] );
+			self::update_ticket_meta( $ticket['id'], 'product', $product_val );
+			self::update_ticket_meta( $ticket['id'], 'product_name', $product_val );
+			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+				$prev_product = isset( $ticket['product'] ) ? $ticket['product'] : '';
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'product_changed', $prev_product, $product_val, $actor_type, $actor_id, $actor_name );
+			}
+		}
+
+		if ( isset( $data['assigned_agent_id'] ) ) {
+			$agent_id = absint( $data['assigned_agent_id'] );
+			self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
+			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'agent_assigned', (string) $ticket['assigned_agent_id'], (string) $agent_id, $actor_type, $actor_id, $actor_name );
+			}
+		}
+
+		if ( isset( $data['tags'] ) && is_array( $data['tags'] ) ) {
+			if ( class_exists( 'DCTC_Support_Tag_Service' ) ) {
+				DCTC_Support_Tag_Service::set_ticket_tags( $ticket['id'], $data['tags'] );
+			}
+			self::update_ticket_meta( $ticket['id'], 'tags', $data['tags'] );
+		}
+
+		return self::get_ticket( $ticket['id'] );
 	}
 }
 
