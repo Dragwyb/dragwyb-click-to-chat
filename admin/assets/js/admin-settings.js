@@ -156,15 +156,9 @@
                 const $card = $(this);
                 const isChecked = $card.find('input[type="checkbox"]').is(':checked');
                 if (isChecked) {
-                    $card.css({
-                        'border-color': '#cbd5e1',
-                        'background': '#ffffff'
-                    });
+                    $card.addClass('is-selected');
                 } else {
-                    $card.css({
-                        'border-color': '#e2e8f0',
-                        'background': '#f8fafc'
-                    });
+                    $card.removeClass('is-selected');
                 }
             });
         },
