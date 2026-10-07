@@ -66,7 +66,6 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 		<nav class="dctc-sc-top-nav" role="tablist" aria-label="<?php esc_attr_e( 'Settings categories', 'dragwyb-click-to-chat' ); ?>">
 			<button type="button"
 				role="tab"
-				aria-selected="<?php echo 'general' === $dctc_active_tab ? 'true' : 'false'; ?>"
 				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'general' === $dctc_active_tab ? 'active' : ''; ?>"
 				data-tab="general">
 				<span class="dashicons dashicons-admin-settings" aria-hidden="true"></span>
@@ -75,7 +74,6 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 
 			<button type="button"
 				role="tab"
-				aria-selected="<?php echo 'import-export' === $dctc_active_tab ? 'true' : 'false'; ?>"
 				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'import-export' === $dctc_active_tab ? 'active' : ''; ?>"
 				data-tab="import-export">
 				<span class="dashicons dashicons-database-export" aria-hidden="true"></span>
@@ -84,7 +82,6 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 
 			<button type="button"
 				role="tab"
-				aria-selected="<?php echo 'privacy' === $dctc_active_tab ? 'true' : 'false'; ?>"
 				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'privacy' === $dctc_active_tab ? 'active' : ''; ?>"
 				data-tab="privacy">
 				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
