@@ -288,6 +288,17 @@ class DCTC_Support_Manager {
 				'is_admin'     => current_user_can( 'manage_options' ),
 			);
 
+		$saved_filters = array();
+		if ( $user_id ) {
+			$saved_filters = get_option( 'dctc_support_user_filters_' . $user_id, null );
+			if ( null === $saved_filters || false === $saved_filters ) {
+				$saved_filters = get_user_meta( $user_id, 'dctc_support_saved_filters', true );
+			}
+		}
+		if ( empty( $saved_filters ) || ! is_array( $saved_filters ) ) {
+			$saved_filters = new stdClass();
+		}
+
 		wp_localize_script(
 			$handle,
 			'dctc_support_data',
@@ -296,6 +307,7 @@ class DCTC_Support_Manager {
 				'nonce'                 => wp_create_nonce( 'wp_rest' ),
 				'user_id'               => $user_id,
 				'permissions'           => $permissions,
+				'saved_filters'         => $saved_filters,
 				'current_page'          => $page,
 				'is_woocommerce_active' => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
 			)

@@ -39,8 +39,26 @@ export default function TicketsView({
 	products = [],
 	agents = [],
 	tags = [],
+	taxonomies = [],
 	wcData = null,
 	wcLoading = false,
+	ticketTypeFilter = 'all',
+	setTicketTypeFilter,
+	productFilter = 'all',
+	setProductFilter,
+	tagFilter = 'all',
+	setTagFilter,
+	customerTypeFilter = 'all',
+	setCustomerTypeFilter,
+	dateRangeFilter = 'all',
+	setDateRangeFilter,
+	assignedToFilter = 'all',
+	setAssignedToFilter,
+	taxFilters = {},
+	setTaxFilters,
+	sortBy = 'newest',
+	setSortBy,
+	onResetFilters,
 	onRefreshTickets,
 	onManualRefresh,
 	onRefreshTicketDetails,
@@ -62,14 +80,6 @@ export default function TicketsView({
 
 	// Expandable filter toggle state
 	const [showMoreFilters, setShowMoreFilters] = useState(false);
-
-	// Filter toolbar secondary states
-	const [assignedToFilter, setAssignedToFilter] = useState('all');
-	const [productFilter, setProductFilter] = useState('all');
-	const [tagFilter, setTagFilter] = useState('all');
-	const [dateRangeFilter, setDateRangeFilter] = useState('all');
-	const [customerTypeFilter, setCustomerTypeFilter] = useState('all');
-	const [sortBy, setSortBy] = useState('newest');
 
 	// Composer state
 	const [replyText, setReplyText] = useState('');
@@ -220,14 +230,18 @@ export default function TicketsView({
 	const activeSecondaryFilterCount = useMemo(() => {
 		let count = 0;
 		if (priorityFilter !== 'all') count++;
+		if (ticketTypeFilter !== 'all') count++;
 		if (categoryFilter !== 'all') count++;
 		if (productFilter !== 'all') count++;
 		if (assignedToFilter !== 'all') count++;
 		if (tagFilter !== 'all') count++;
 		if (dateRangeFilter !== 'all') count++;
 		if (customerTypeFilter !== 'all') count++;
+		Object.values(taxFilters || {}).forEach((val) => {
+			if (val && val !== 'all') count++;
+		});
 		return count;
-	}, [priorityFilter, categoryFilter, productFilter, assignedToFilter, tagFilter, dateRangeFilter, customerTypeFilter]);
+	}, [priorityFilter, ticketTypeFilter, categoryFilter, productFilter, assignedToFilter, tagFilter, dateRangeFilter, customerTypeFilter, taxFilters]);
 
 	// Customer initials helper
 	const getInitials = (name, email) => {
@@ -260,13 +274,16 @@ export default function TicketsView({
 	const handleSelectFolder = (folderKey) => {
 		setActiveFolder(folderKey);
 		setActiveView(null);
-		setCurrentPage(1);
+		if (setCurrentPage) setCurrentPage(1);
 		if (folderKey === 'all') {
-			setStatusFilter('all');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
 		} else if (['open', 'pending', 'resolved', 'closed', 'trash', 'ai_bot'].includes(folderKey)) {
-			setStatusFilter(folderKey);
+			if (setStatusFilter) setStatusFilter(folderKey);
+			if (setAssignedToFilter) setAssignedToFilter('all');
 		} else if (folderKey === 'unassigned') {
-			setStatusFilter('all');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('0');
 		}
 	};
 
@@ -487,15 +504,21 @@ export default function TicketsView({
 
 	// Reset all filters
 	const handleResetFilters = () => {
-		if (setStatusFilter) setStatusFilter('all');
-		if (setPriorityFilter) setPriorityFilter('all');
-		if (setCategoryFilter) setCategoryFilter('all');
-		setAssignedToFilter('all');
-		setProductFilter('all');
-		setTagFilter('all');
-		setDateRangeFilter('all');
-		setCustomerTypeFilter('all');
-		if (setSearchQuery) setSearchQuery('');
+		if (onResetFilters) {
+			onResetFilters();
+		} else {
+			if (setStatusFilter) setStatusFilter('all');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setCategoryFilter) setCategoryFilter('all');
+			if (setTicketTypeFilter) setTicketTypeFilter('all');
+			if (setTaxFilters) setTaxFilters({});
+			if (setAssignedToFilter) setAssignedToFilter('all');
+			if (setProductFilter) setProductFilter('all');
+			if (setTagFilter) setTagFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+			if (setCustomerTypeFilter) setCustomerTypeFilter('all');
+			if (setSearchQuery) setSearchQuery('');
+		}
 		setActiveFolder('all');
 		setActiveView(null);
 		if (setCurrentPage) setCurrentPage(1);
@@ -547,36 +570,15 @@ export default function TicketsView({
 		);
 	};
 
-	// Filter tickets client-side
-	const filteredTickets = useMemo(() => {
-		let list = [...tickets];
-		if (activeFolder === 'unassigned') {
-			list = list.filter((t) => !t.assigned_agent_id || t.assigned_agent_id === 0);
-		} else if (activeFolder === 'trash') {
-			list = list.filter((t) => t.status === 'trash');
-		}
-		if (activeView === 'high_priority') {
-			list = list.filter((t) => t.priority === 'high' || t.priority === 'urgent');
-		} else if (activeView === 'waiting_reply') {
-			list = list.filter((t) => t.status === 'pending' || t.status === 'waiting_customer');
-		}
-		if (assignedToFilter !== 'all') {
-			list = list.filter((t) => String(t.assigned_agent_id) === String(assignedToFilter));
-		}
-		if (sortBy === 'oldest') {
-			list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-		} else if (sortBy === 'priority') {
-			const pOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
-			list.sort((a, b) => (pOrder[b.priority] || 0) - (pOrder[a.priority] || 0));
-		}
-		return list;
-	}, [tickets, activeFolder, activeView, assignedToFilter, sortBy]);
+	// Filtered tickets from server results
+	const filteredTickets = tickets || [];
 
 	const hasActiveSearchOrFilters = Boolean(
 		searchQuery ||
 		statusFilter !== 'all' ||
 		priorityFilter !== 'all' ||
 		categoryFilter !== 'all' ||
+		ticketTypeFilter !== 'all' ||
 		activeSecondaryFilterCount > 0 ||
 		(activeFolder && activeFolder !== 'all') ||
 		activeView
@@ -604,6 +606,11 @@ export default function TicketsView({
 					activeSecondaryFilterCount={activeSecondaryFilterCount}
 					priorityFilter={priorityFilter}
 					setPriorityFilter={setPriorityFilter}
+					ticketTypeFilter={ticketTypeFilter}
+					setTicketTypeFilter={setTicketTypeFilter}
+					taxFilters={taxFilters}
+					setTaxFilters={setTaxFilters}
+					taxonomies={taxonomies}
 					categoryFilter={categoryFilter}
 					setCategoryFilter={setCategoryFilter}
 					assignedToFilter={assignedToFilter}
@@ -619,6 +626,7 @@ export default function TicketsView({
 					categories={categories}
 					agents={agents}
 					tags={tags}
+					products={products}
 					onResetFilters={handleResetFilters}
 				/>
 			)}

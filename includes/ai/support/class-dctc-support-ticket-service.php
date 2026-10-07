@@ -303,11 +303,15 @@ class DCTC_Support_Ticket_Service {
 			$where .= $wpdb->prepare( ' AND t.priority = %s', sanitize_key( $args['priority'] ) );
 		}
 
-		if ( ! empty( $args['control_mode'] ) && 'all' !== $args['control_mode'] ) {
-			if ( 'human' === $args['control_mode'] ) {
-				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode' AND meta_value = %s)", 'human' );
-			} else {
-				$where .= $wpdb->prepare( " AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode' AND meta_value = 'human')" );
+		$table_rel = $wpdb->prefix . 'dctc_support_term_relationships';
+
+		// Ticket Type filter: human vs ai
+		$mode_val = ! empty( $args['ticket_type'] ) ? $args['ticket_type'] : ( ! empty( $args['control_mode'] ) ? $args['control_mode'] : '' );
+		if ( ! empty( $mode_val ) && 'all' !== $mode_val ) {
+			if ( 'human' === $mode_val ) {
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode' AND meta_value = %s) OR (t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode') AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant'))))", 'human' );
+			} elseif ( in_array( $mode_val, array( 'ai', 'ai_bot', 'bot', 'chatbot' ), true ) ) {
+				$where .= " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant')) OR (meta_key = 'control_mode' AND meta_value = 'ai') OR (meta_key = 'session_id' AND meta_value != '' AND meta_value IS NOT NULL)))";
 			}
 		}
 
@@ -315,15 +319,88 @@ class DCTC_Support_Ticket_Service {
 			$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value = %s)", sanitize_key( $args['origin_type'] ) );
 		}
 
-		if ( ! empty( $args['category_id'] ) ) {
-			$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_id' AND meta_value = %d)", absint( $args['category_id'] ) );
+		// Category filter
+		$cat_val = ! empty( $args['category_id'] ) ? $args['category_id'] : ( ! empty( $args['category'] ) ? $args['category'] : '' );
+		if ( ! empty( $cat_val ) && 'all' !== $cat_val ) {
+			if ( is_numeric( $cat_val ) ) {
+				$cat_id = absint( $cat_val );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_id' AND meta_value = %d) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id = %d))", $cat_id, $cat_id );
+			} else {
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_name' AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s))))", sanitize_text_field( $cat_val ), sanitize_title( $cat_val ), sanitize_text_field( $cat_val ) );
+			}
 		}
 
-		if ( isset( $args['assigned_agent_id'] ) && '' !== $args['assigned_agent_id'] ) {
-			if ( 'unassigned' === $args['assigned_agent_id'] || 0 === (int) $args['assigned_agent_id'] ) {
+		// Product filter
+		$prod_val = ! empty( $args['product_id'] ) ? $args['product_id'] : ( ! empty( $args['product'] ) ? $args['product'] : '' );
+		if ( ! empty( $prod_val ) && 'all' !== $prod_val ) {
+			if ( is_numeric( $prod_val ) ) {
+				$prod_id = absint( $prod_val );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'product_id' AND meta_value = %s) OR (meta_key = 'product' AND meta_value = %s)) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id = %d))", (string) $prod_id, (string) $prod_id, $prod_id );
+			} else {
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key IN ('product', 'product_name') AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s))))", sanitize_text_field( $prod_val ), sanitize_title( $prod_val ), sanitize_text_field( $prod_val ) );
+			}
+		}
+
+		// Tag filter
+		$tag_val = ! empty( $args['tag_id'] ) ? $args['tag_id'] : ( ! empty( $args['tag'] ) ? $args['tag'] : '' );
+		if ( ! empty( $tag_val ) && 'all' !== $tag_val ) {
+			if ( is_numeric( $tag_val ) ) {
+				$tag_id = absint( $tag_val );
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id = %d)", $tag_id );
+			} else {
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'tag' AND (slug = %s OR name = %s)))", sanitize_title( $tag_val ), sanitize_text_field( $tag_val ) );
+			}
+		}
+
+		// Customer Type filter
+		if ( ! empty( $args['customer_type'] ) && 'all' !== $args['customer_type'] ) {
+			$cust_type = sanitize_key( $args['customer_type'] );
+			if ( 'registered' === $cust_type ) {
+				$where .= ' AND (t.customer_wp_user_id IS NOT NULL AND t.customer_wp_user_id > 0)';
+			} elseif ( 'guest' === $cust_type ) {
+				$where .= ' AND (t.customer_wp_user_id IS NULL OR t.customer_wp_user_id = 0)';
+			}
+		}
+
+		// Date Range filter
+		if ( ! empty( $args['date_range'] ) && 'all' !== $args['date_range'] ) {
+			$range = sanitize_key( $args['date_range'] );
+			if ( 'today' === $range ) {
+				$where .= ' AND DATE(t.created_at) = CURDATE()';
+			} elseif ( 'yesterday' === $range ) {
+				$where .= ' AND DATE(t.created_at) = SUBDATE(CURDATE(), 1)';
+			} elseif ( in_array( $range, array( '7days', '7d', 'week' ), true ) ) {
+				$where .= ' AND t.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
+			} elseif ( in_array( $range, array( '30days', '30d', 'month' ), true ) ) {
+				$where .= ' AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
+			} elseif ( 'this_month' === $range ) {
+				$where .= ' AND YEAR(t.created_at) = YEAR(CURDATE()) AND MONTH(t.created_at) = MONTH(CURDATE())';
+			}
+		}
+
+		// Support custom taxonomies filter array
+		if ( ! empty( $args['tax_terms'] ) ) {
+			$tax_terms = is_string( $args['tax_terms'] ) ? json_decode( stripslashes( $args['tax_terms'] ), true ) : $args['tax_terms'];
+			if ( is_array( $tax_terms ) ) {
+				foreach ( $tax_terms as $tax_slug => $term_val ) {
+					if ( ! empty( $term_val ) && 'all' !== $term_val ) {
+						if ( is_numeric( $term_val ) ) {
+							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id = %d)", sanitize_title( $tax_slug ), absint( $term_val ) );
+						} else {
+							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)))", sanitize_title( $tax_slug ), sanitize_title( $tax_slug ), sanitize_title( $term_val ), sanitize_text_field( $term_val ) );
+						}
+					}
+				}
+			}
+		}
+
+		// Assigned Agent filter
+		$agent_arg = isset( $args['assigned_agent_id'] ) ? $args['assigned_agent_id'] : ( isset( $args['assigned_to'] ) ? $args['assigned_to'] : '' );
+		if ( '' !== $agent_arg && 'all' !== $agent_arg ) {
+			if ( 'unassigned' === $agent_arg || 0 === (int) $agent_arg || '0' === (string) $agent_arg ) {
 				$where .= " AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value != '0' AND meta_value != '')";
 			} else {
-				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value = %s)", (string) absint( $args['assigned_agent_id'] ) );
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value = %s)", (string) absint( $agent_arg ) );
 			}
 		}
 

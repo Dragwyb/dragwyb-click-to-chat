@@ -2,7 +2,7 @@
  * Support Center — Standalone Tickets Workspace Entry Point
  */
 import apiFetch from '@wordpress/api-fetch';
-import { useState, useEffect, useCallback, createRoot, render } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback, createRoot, render } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import SupportHeader from './components/SupportHeader';
 import TicketsView from './views/TicketsView';
@@ -37,19 +37,39 @@ function TicketsApp() {
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [ticketLoading, setTicketLoading] = useState(false);
 
-	// Filters from URL
+	// Saved Filters from bootstrap / options table
+	const savedFilters = window.dctc_support_data?.saved_filters && typeof window.dctc_support_data.saved_filters === 'object'
+		? window.dctc_support_data.saved_filters
+		: {};
+
+	// Filters from URL or Saved preferences
 	const searchParams = new URLSearchParams(window.location.search);
-	const initialStatus = searchParams.get('status') || 'all';
+	const urlStatus = searchParams.get('status');
+	const initialStatus = urlStatus || savedFilters.status || 'all';
+
 	const [statusFilter, setStatusFilter] = useState(initialStatus);
-	const [priorityFilter, setPriorityFilter] = useState('all');
-	const [categoryFilter, setCategoryFilter] = useState('all');
-	const [searchQuery, setSearchQuery] = useState('');
+	const [priorityFilter, setPriorityFilter] = useState(savedFilters.priority || 'all');
+	const [categoryFilter, setCategoryFilter] = useState(savedFilters.category_id || savedFilters.category || 'all');
+	const [ticketTypeFilter, setTicketTypeFilter] = useState(savedFilters.ticket_type || 'all');
+	const [productFilter, setProductFilter] = useState(savedFilters.product_id || savedFilters.product || 'all');
+	const [tagFilter, setTagFilter] = useState(savedFilters.tag_id || savedFilters.tag || 'all');
+	const [customerTypeFilter, setCustomerTypeFilter] = useState(savedFilters.customer_type || 'all');
+	const [dateRangeFilter, setDateRangeFilter] = useState(savedFilters.date_range || 'all');
+	const [assignedToFilter, setAssignedToFilter] = useState(savedFilters.assigned_agent_id || savedFilters.assigned_to || 'all');
+	const [taxFilters, setTaxFilters] = useState(savedFilters.tax_filters || {});
+	const [sortBy, setSortBy] = useState(savedFilters.sort_by || 'newest');
+	const [searchQuery, setSearchQuery] = useState(savedFilters.search || '');
+
+	// Debounce and Auto-save state tracker
+	const isInitialMount = useRef(true);
+	const saveTimeoutRef = useRef(null);
 
 	// Metadata
 	const [categories, setCategories] = useState([]);
 	const [tags, setTags] = useState([]);
 	const [products, setProducts] = useState([]);
 	const [agents, setAgents] = useState([]);
+	const [taxonomies, setTaxonomies] = useState([]);
 	const [supportSettings, setSupportSettings] = useState({});
 
 	// WooCommerce context
@@ -71,6 +91,114 @@ function TicketsApp() {
 		window.history.pushState({}, '', newUrl);
 	};
 
+	// Auto-save user filters to database (option / user meta table)
+	useEffect(() => {
+		if (isInitialMount.current) {
+			isInitialMount.current = false;
+			return;
+		}
+
+		if (saveTimeoutRef.current) {
+			clearTimeout(saveTimeoutRef.current);
+		}
+
+		saveTimeoutRef.current = setTimeout(async () => {
+			try {
+				const currentFilters = {
+					status: statusFilter,
+					priority: priorityFilter,
+					category_id: categoryFilter,
+					ticket_type: ticketTypeFilter,
+					product_id: productFilter,
+					tag_id: tagFilter,
+					customer_type: customerTypeFilter,
+					date_range: dateRangeFilter,
+					assigned_agent_id: assignedToFilter,
+					tax_filters: taxFilters,
+					sort_by: sortBy,
+					search: searchQuery,
+				};
+
+				const isDefault =
+					statusFilter === 'all' &&
+					priorityFilter === 'all' &&
+					categoryFilter === 'all' &&
+					ticketTypeFilter === 'all' &&
+					productFilter === 'all' &&
+					tagFilter === 'all' &&
+					customerTypeFilter === 'all' &&
+					dateRangeFilter === 'all' &&
+					assignedToFilter === 'all' &&
+					sortBy === 'newest' &&
+					!searchQuery &&
+					(!taxFilters || Object.keys(taxFilters).length === 0);
+
+				await apiFetch({
+					path: '/dctc-ai/v1/support/user-filters',
+					method: 'POST',
+					data: isDefault ? { reset: true } : { filters: currentFilters },
+				});
+			} catch (err) {
+				console.warn('Failed to auto-save user filter options:', err);
+			}
+		}, 500);
+
+		return () => {
+			if (saveTimeoutRef.current) {
+				clearTimeout(saveTimeoutRef.current);
+			}
+		};
+	}, [
+		statusFilter,
+		priorityFilter,
+		categoryFilter,
+		ticketTypeFilter,
+		productFilter,
+		tagFilter,
+		customerTypeFilter,
+		dateRangeFilter,
+		assignedToFilter,
+		taxFilters,
+		sortBy,
+		searchQuery,
+	]);
+
+	// Reset All Filters and Delete from Database
+	const handleResetFilters = useCallback(async () => {
+		setStatusFilter('all');
+		setPriorityFilter('all');
+		setCategoryFilter('all');
+		setTicketTypeFilter('all');
+		setProductFilter('all');
+		setTagFilter('all');
+		setCustomerTypeFilter('all');
+		setDateRangeFilter('all');
+		setAssignedToFilter('all');
+		setTaxFilters({});
+		setSortBy('newest');
+		setSearchQuery('');
+		setCurrentPage(1);
+
+		if (typeof window !== 'undefined' && window.history?.replaceState) {
+			const url = new URL(window.location.href);
+			url.searchParams.delete('status');
+			url.searchParams.delete('priority');
+			url.searchParams.delete('category_id');
+			url.searchParams.delete('search');
+			window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+		}
+
+		try {
+			await apiFetch({
+				path: '/dctc-ai/v1/support/user-filters',
+				method: 'POST',
+				data: { reset: true },
+			});
+		} catch (err) {
+			console.warn('Failed to delete saved filters option:', err);
+		}
+	}, []);
+
 	// Fetch Metadata
 	const fetchMetaData = useCallback(async () => {
 		try {
@@ -80,20 +208,22 @@ function TicketsApp() {
 				apiFetch({ path: '/dctc-ai/v1/support/products' }),
 				apiFetch({ path: '/dctc-ai/v1/support/agents' }),
 				apiFetch({ path: '/dctc-ai/v1/support/settings' }),
+				apiFetch({ path: '/dctc-ai/v1/support/taxonomies' }),
 			];
-			const [catRes, tagRes, prodRes, agentRes, setRes] = await Promise.allSettled(promises);
+			const [catRes, tagRes, prodRes, agentRes, setRes, taxRes] = await Promise.allSettled(promises);
 
 			if (catRes.status === 'fulfilled' && catRes.value?.success) setCategories(catRes.value.categories || []);
 			if (tagRes.status === 'fulfilled' && tagRes.value?.success) setTags(tagRes.value.tags || []);
 			if (prodRes.status === 'fulfilled' && prodRes.value?.success) setProducts(prodRes.value.products || []);
 			if (agentRes.status === 'fulfilled' && agentRes.value?.success) setAgents(agentRes.value.agents || []);
 			if (setRes.status === 'fulfilled' && setRes.value?.success) setSupportSettings(setRes.value.settings || {});
+			if (taxRes.status === 'fulfilled' && taxRes.value?.success) setTaxonomies(taxRes.value.taxonomies || []);
 		} catch (err) {
 			console.error('Error fetching support metadata:', err);
 		}
 	}, []);
 
-	// Fetch Tickets List
+	// Fetch Tickets List with all active filters
 	const fetchTickets = useCallback(async () => {
 		setLoading(true);
 		try {
@@ -103,8 +233,29 @@ function TicketsApp() {
 				status: statusFilter,
 				priority: priorityFilter,
 				category_id: categoryFilter !== 'all' ? categoryFilter : '',
+				ticket_type: ticketTypeFilter !== 'all' ? ticketTypeFilter : '',
+				product_id: productFilter !== 'all' ? productFilter : '',
+				tag_id: tagFilter !== 'all' ? tagFilter : '',
+				customer_type: customerTypeFilter !== 'all' ? customerTypeFilter : '',
+				date_range: dateRangeFilter !== 'all' ? dateRangeFilter : '',
+				assigned_agent_id: assignedToFilter !== 'all' ? assignedToFilter : '',
 				search: searchQuery,
 			});
+
+			if (sortBy === 'oldest') {
+				queryParams.set('orderby', 'created_at');
+				queryParams.set('order', 'ASC');
+			} else if (sortBy === 'priority') {
+				queryParams.set('orderby', 'priority');
+				queryParams.set('order', 'DESC');
+			} else {
+				queryParams.set('orderby', 'created_at');
+				queryParams.set('order', 'DESC');
+			}
+
+			if (taxFilters && Object.keys(taxFilters).length > 0) {
+				queryParams.set('tax_terms', JSON.stringify(taxFilters));
+			}
 
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets?${queryParams.toString()}`,
@@ -119,7 +270,21 @@ function TicketsApp() {
 		} finally {
 			setLoading(false);
 		}
-	}, [currentPage, statusFilter, priorityFilter, categoryFilter, searchQuery]);
+	}, [
+		currentPage,
+		statusFilter,
+		priorityFilter,
+		categoryFilter,
+		ticketTypeFilter,
+		productFilter,
+		tagFilter,
+		customerTypeFilter,
+		dateRangeFilter,
+		assignedToFilter,
+		taxFilters,
+		sortBy,
+		searchQuery,
+	]);
 
 	// Fetch Single Ticket Details with silent polling and change detection
 	const fetchTicketDetails = useCallback(async (ticketId, isSilent = false) => {
@@ -456,9 +621,26 @@ function TicketsApp() {
 					tags={tags}
 					products={products}
 					agents={agents}
+					taxonomies={taxonomies}
 					supportSettings={supportSettings}
 					wcData={wcData}
-					wcLoading={wcLoading}
+					ticketTypeFilter={ticketTypeFilter}
+					setTicketTypeFilter={setTicketTypeFilter}
+					productFilter={productFilter}
+					setProductFilter={setProductFilter}
+					tagFilter={tagFilter}
+					setTagFilter={setTagFilter}
+					customerTypeFilter={customerTypeFilter}
+					setCustomerTypeFilter={setCustomerTypeFilter}
+					dateRangeFilter={dateRangeFilter}
+					setDateRangeFilter={setDateRangeFilter}
+					assignedToFilter={assignedToFilter}
+					setAssignedToFilter={setAssignedToFilter}
+					taxFilters={taxFilters}
+					setTaxFilters={setTaxFilters}
+					sortBy={sortBy}
+					setSortBy={setSortBy}
+					onResetFilters={handleResetFilters}
 					onUpdateTicketProperty={handleUpdateTicketProperty}
 					onTakeControl={handleTakeControl}
 					onReleaseControl={handleReleaseControl}

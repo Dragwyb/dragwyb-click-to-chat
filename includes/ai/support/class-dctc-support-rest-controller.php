@@ -515,6 +515,24 @@ class DCTC_Support_REST_Controller {
 				'permission_callback' => '__return_true',
 			)
 		);
+
+		// Staff: User Saved Filters
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/user-filters',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_user_filters' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_user_filters' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+			)
+		);
 	}
 
 	// -------------------------------------------------------------
@@ -1363,6 +1381,11 @@ class DCTC_Support_REST_Controller {
 	// Dynamic Taxonomies & Terms
 	public function get_taxonomies() {
 		$taxonomies = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_taxonomies() : array();
+		if ( is_array( $taxonomies ) ) {
+			foreach ( $taxonomies as &$tax ) {
+				$tax['terms'] = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_terms( $tax['slug'] ) : array();
+			}
+		}
 		return new WP_REST_Response(
 			array(
 				'success'    => true,
@@ -1794,6 +1817,89 @@ class DCTC_Support_REST_Controller {
 			array(
 				'success' => true,
 				'status'  => 'closed',
+			),
+			200
+		);
+	}
+
+	/**
+	 * Get current user's saved filter preferences.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function get_user_filters( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new WP_REST_Response( array( 'success' => false, 'filters' => new stdClass() ), 401 );
+		}
+
+		$filters = get_option( 'dctc_support_user_filters_' . $user_id, null );
+		if ( null === $filters || false === $filters ) {
+			$filters = get_user_meta( $user_id, 'dctc_support_saved_filters', true );
+		}
+
+		if ( empty( $filters ) || ! is_array( $filters ) ) {
+			$filters = new stdClass();
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'filters' => $filters,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Save or reset current user's filter preferences in option/meta table.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function save_user_filters( $request ) {
+		$user_id = get_current_user_id();
+		if ( ! $user_id ) {
+			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Unauthorized.', 'dragwyb-click-to-chat' ) ), 401 );
+		}
+
+		$params  = $request->get_json_params();
+		$reset   = ! empty( $params['reset'] );
+		$filters = isset( $params['filters'] ) && is_array( $params['filters'] ) ? $params['filters'] : array();
+
+		if ( $reset || empty( $filters ) ) {
+			delete_option( 'dctc_support_user_filters_' . $user_id );
+			delete_user_meta( $user_id, 'dctc_support_saved_filters' );
+			return new WP_REST_Response(
+				array(
+					'success' => true,
+					'message' => __( 'Saved filters reset successfully.', 'dragwyb-click-to-chat' ),
+					'filters' => new stdClass(),
+				),
+				200
+			);
+		}
+
+		// Sanitize filter map
+		$clean = array();
+		foreach ( $filters as $k => $v ) {
+			$clean_key = sanitize_key( $k );
+			if ( is_array( $v ) ) {
+				$clean[ $clean_key ] = array_map( 'sanitize_text_field', $v );
+			} else {
+				$clean[ $clean_key ] = sanitize_text_field( (string) $v );
+			}
+		}
+
+		update_option( 'dctc_support_user_filters_' . $user_id, $clean );
+		update_user_meta( $user_id, 'dctc_support_saved_filters', $clean );
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'message' => __( 'User filters saved.', 'dragwyb-click-to-chat' ),
+				'filters' => $clean,
 			),
 			200
 		);

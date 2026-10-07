@@ -440,7 +440,6 @@ class DCTC_Support_DB {
 				array( 'name' => 'Bug', 'slug' => 'bug', 'color' => '#F59E0B' ),
 				array( 'name' => 'Refund', 'slug' => 'refund', 'color' => '#DC2626' ),
 				array( 'name' => 'Feature Request', 'slug' => 'feature-request', 'color' => '#3B82F6' ),
-				array( 'name' => 'AI Escalation', 'slug' => 'ai-escalation', 'color' => '#10B981' ),
 			);
 
 			foreach ( $default_tags as $idx => $tag ) {

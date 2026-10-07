@@ -2,8 +2,6 @@ import { __ } from '@wordpress/i18n';
 
 export default function TicketFilterBar({
 	isDatabaseEmpty,
-	isRefreshing,
-	onManualRefresh,
 	isFoldersExpanded,
 	setIsFoldersExpanded,
 	searchQuery,
@@ -16,6 +14,11 @@ export default function TicketFilterBar({
 	activeSecondaryFilterCount,
 	priorityFilter,
 	setPriorityFilter,
+	ticketTypeFilter = 'all',
+	setTicketTypeFilter,
+	taxFilters = {},
+	setTaxFilters,
+	taxonomies = [],
 	categoryFilter,
 	setCategoryFilter,
 	assignedToFilter,
@@ -29,10 +32,14 @@ export default function TicketFilterBar({
 	customerTypeFilter,
 	setCustomerTypeFilter,
 	categories = [],
+	products = [],
 	agents = [],
 	tags = [],
 	onResetFilters,
 }) {
+	// Helper to determine if we should render taxonomies dynamically
+	const hasDynamicTaxonomies = Array.isArray(taxonomies) && taxonomies.length > 0;
+
 	return (
 		<div className={`dctc-sc-filter-toolbar-wrap ${isDatabaseEmpty ? 'dctc-sc-filter-toolbar-empty' : ''}`}>
 			{isDatabaseEmpty ? (
@@ -83,6 +90,223 @@ export default function TicketFilterBar({
 						</button>
 					</div>
 
+					{/* EXPANDABLE FILTER DRAWER - Placed above Folders & Tags row */}
+					{showMoreFilters && (
+						<div className="dctc-sc-filter-drawer">
+							<div className="dctc-sc-drawer-dropdowns">
+								{/* 1. Priority */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Priority', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={priorityFilter}
+										onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
+									>
+										<option value="all">{__('All Priorities', 'dragwyb-click-to-chat')}</option>
+										<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
+										<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
+										<option value="normal">{__('Normal', 'dragwyb-click-to-chat')}</option>
+										<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								{/* 2. Ticket Type: Human vs AI Bot */}
+								{setTicketTypeFilter && (
+									<div className="dctc-sc-drawer-field">
+										<label>{__('Ticket Type', 'dragwyb-click-to-chat')}</label>
+										<select
+											value={ticketTypeFilter}
+											onChange={(e) => { setTicketTypeFilter(e.target.value); setCurrentPage(1); }}
+										>
+											<option value="all">{__('All Types', 'dragwyb-click-to-chat')}</option>
+											<option value="human">{__('Human Agent', 'dragwyb-click-to-chat')}</option>
+											<option value="ai">{__('AI Bot', 'dragwyb-click-to-chat')}</option>
+										</select>
+									</div>
+								)}
+
+								{/* 3. Dynamic Taxonomies (Only shown if configured terms list is NOT empty) */}
+								{hasDynamicTaxonomies ? (
+									taxonomies.map((tax) => {
+										const termsList = Array.isArray(tax.terms) ? tax.terms : [];
+										if (termsList.length === 0) return null; // Hide if empty
+
+										let currentVal = 'all';
+										let onChangeHandler = (e) => {
+											if (setTaxFilters) {
+												setTaxFilters((prev) => ({ ...prev, [tax.slug]: e.target.value }));
+											}
+											setCurrentPage(1);
+										};
+
+										if (tax.slug === 'category') {
+											currentVal = categoryFilter;
+											onChangeHandler = (e) => {
+												setCategoryFilter(e.target.value);
+												if (setTaxFilters) {
+													setTaxFilters((prev) => ({ ...prev, category: e.target.value }));
+												}
+												setCurrentPage(1);
+											};
+										} else if (tax.slug === 'product') {
+											currentVal = productFilter;
+											onChangeHandler = (e) => {
+												setProductFilter(e.target.value);
+												if (setTaxFilters) {
+													setTaxFilters((prev) => ({ ...prev, product: e.target.value }));
+												}
+												setCurrentPage(1);
+											};
+										} else if (tax.slug === 'tag') {
+											currentVal = tagFilter;
+											onChangeHandler = (e) => {
+												setTagFilter(e.target.value);
+												if (setTaxFilters) {
+													setTaxFilters((prev) => ({ ...prev, tag: e.target.value }));
+												}
+												setCurrentPage(1);
+											};
+										} else if (taxFilters && taxFilters[tax.slug]) {
+											currentVal = taxFilters[tax.slug];
+										}
+
+										return (
+											<div key={tax.slug || tax.id} className="dctc-sc-drawer-field">
+												<label>{tax.name || tax.singular_name || __('Taxonomy', 'dragwyb-click-to-chat')}</label>
+												<select
+													value={currentVal}
+													onChange={onChangeHandler}
+												>
+													<option value="all">
+														{__('All', 'dragwyb-click-to-chat')} {tax.name || ''}
+													</option>
+													{termsList.map((term) => (
+														<option key={term.id} value={term.id || term.slug || term.name}>
+															{term.name}
+														</option>
+													))}
+												</select>
+											</div>
+										);
+									})
+								) : (
+									<>
+										{/* Fallback 3a: Category (Only show if categories list is NOT empty) */}
+										{Array.isArray(categories) && categories.length > 0 && (
+											<div className="dctc-sc-drawer-field">
+												<label>{__('Category', 'dragwyb-click-to-chat')}</label>
+												<select
+													value={categoryFilter}
+													onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+												>
+													<option value="all">{__('All Categories', 'dragwyb-click-to-chat')}</option>
+													{categories.map((cat) => (
+														<option key={cat.id} value={cat.id}>{cat.name}</option>
+													))}
+												</select>
+											</div>
+										)}
+
+										{/* Fallback 3b: Product (Only show if products list is NOT empty) */}
+										{Array.isArray(products) && products.length > 0 && (
+											<div className="dctc-sc-drawer-field">
+												<label>{__('Product', 'dragwyb-click-to-chat')}</label>
+												<select
+													value={productFilter}
+													onChange={(e) => { setProductFilter(e.target.value); setCurrentPage(1); }}
+												>
+													<option value="all">{__('All Products', 'dragwyb-click-to-chat')}</option>
+													{products.map((prod) => (
+														<option key={prod.id} value={prod.id}>{prod.name}</option>
+													))}
+												</select>
+											</div>
+										)}
+
+										{/* Fallback 3c: Tag (Only show if tags list is NOT empty) */}
+										{Array.isArray(tags) && tags.length > 0 && (
+											<div className="dctc-sc-drawer-field">
+												<label>{__('Tag', 'dragwyb-click-to-chat')}</label>
+												<select
+													value={tagFilter}
+													onChange={(e) => { setTagFilter(e.target.value); setCurrentPage(1); }}
+												>
+													<option value="all">{__('All Tags', 'dragwyb-click-to-chat')}</option>
+													{tags.map((tg) => (
+														<option key={tg.id} value={tg.name}>{tg.name}</option>
+													))}
+												</select>
+											</div>
+										)}
+									</>
+								)}
+
+								{/* 4. Assigned Agent (Only show if agents list is NOT empty) */}
+								{Array.isArray(agents) && agents.length > 0 && (
+									<div className="dctc-sc-drawer-field">
+										<label>{__('Assigned Agent', 'dragwyb-click-to-chat')}</label>
+										<select
+											value={assignedToFilter}
+											onChange={(e) => {
+												setAssignedToFilter(e.target.value);
+												if (setCurrentPage) setCurrentPage(1);
+											}}
+										>
+											<option value="all">{__('All Agents', 'dragwyb-click-to-chat')}</option>
+											<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
+											{agents.map((ag) => (
+												<option key={ag.id} value={ag.id}>{ag.display_name}</option>
+											))}
+										</select>
+									</div>
+								)}
+
+								{/* 5. Date Range */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Date Range', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={dateRangeFilter}
+										onChange={(e) => {
+											setDateRangeFilter(e.target.value);
+											if (setCurrentPage) setCurrentPage(1);
+										}}
+									>
+										<option value="all">{__('All Time', 'dragwyb-click-to-chat')}</option>
+										<option value="today">{__('Today', 'dragwyb-click-to-chat')}</option>
+										<option value="7days">{__('Last 7 Days', 'dragwyb-click-to-chat')}</option>
+										<option value="30days">{__('Last 30 Days', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+
+								{/* 6. Customer Type */}
+								<div className="dctc-sc-drawer-field">
+									<label>{__('Customer Type', 'dragwyb-click-to-chat')}</label>
+									<select
+										value={customerTypeFilter}
+										onChange={(e) => {
+											setCustomerTypeFilter(e.target.value);
+											if (setCurrentPage) setCurrentPage(1);
+										}}
+									>
+										<option value="all">{__('All Types', 'dragwyb-click-to-chat')}</option>
+										<option value="registered">{__('Registered User', 'dragwyb-click-to-chat')}</option>
+										<option value="guest">{__('Guest Visitor', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+							</div>
+
+							<div className="dctc-sc-drawer-footer">
+								<button
+									type="button"
+									className="dctc-sc-reset-filters-btn"
+									onClick={onResetFilters}
+								>
+									<span className="dashicons dashicons-image-rotate"></span>
+									{__('Reset All Filters', 'dragwyb-click-to-chat')}
+								</button>
+							</div>
+						</div>
+					)}
+
 					{/* ROW 2: Folders Button + Tags / Status Pills */}
 					<div className="dctc-sc-filter-row-bottom">
 						<button
@@ -115,122 +339,6 @@ export default function TicketFilterBar({
 								</button>
 							))}
 						</div>
-					</div>
-				</div>
-			)}
-
-			{/* SECONDARY FILTER DRAWER */}
-			{showMoreFilters && (
-				<div className="dctc-sc-filter-drawer">
-					<div className="dctc-sc-drawer-dropdowns">
-						{/* Priority */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Priority', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={priorityFilter}
-								onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
-							>
-								<option value="all">{__('All Priorities', 'dragwyb-click-to-chat')}</option>
-								<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
-								<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
-								<option value="normal">{__('Normal', 'dragwyb-click-to-chat')}</option>
-								<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</div>
-
-						{/* Category */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Category', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={categoryFilter}
-								onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-							>
-								<option value="all">{__('All Categories', 'dragwyb-click-to-chat')}</option>
-								{categories.map((cat) => (
-									<option key={cat.id} value={cat.id}>{cat.name}</option>
-								))}
-							</select>
-						</div>
-
-						{/* Assigned Agent */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Assigned Agent', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={assignedToFilter}
-								onChange={(e) => setAssignedToFilter(e.target.value)}
-							>
-								<option value="all">{__('All Agents', 'dragwyb-click-to-chat')}</option>
-								<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
-								{agents.map((ag) => (
-									<option key={ag.id} value={ag.id}>{ag.display_name}</option>
-								))}
-							</select>
-						</div>
-
-						{/* Product */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Product', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={productFilter}
-								onChange={(e) => setProductFilter(e.target.value)}
-							>
-								<option value="all">{__('All Products', 'dragwyb-click-to-chat')}</option>
-								<option value="chatbot">{__('Chatbot Widget', 'dragwyb-click-to-chat')}</option>
-								<option value="portal">{__('Support Portal', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</div>
-
-						{/* Tags */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Tag', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={tagFilter}
-								onChange={(e) => setTagFilter(e.target.value)}
-							>
-								<option value="all">{__('All Tags', 'dragwyb-click-to-chat')}</option>
-								{tags.map((tg) => (
-									<option key={tg.id} value={tg.name}>{tg.name}</option>
-								))}
-							</select>
-						</div>
-
-						{/* Date Range */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Date Range', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={dateRangeFilter}
-								onChange={(e) => setDateRangeFilter(e.target.value)}
-							>
-								<option value="all">{__('All Time', 'dragwyb-click-to-chat')}</option>
-								<option value="today">{__('Today', 'dragwyb-click-to-chat')}</option>
-								<option value="7days">{__('Last 7 Days', 'dragwyb-click-to-chat')}</option>
-								<option value="30days">{__('Last 30 Days', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</div>
-
-						{/* Customer Type */}
-						<div className="dctc-sc-drawer-field">
-							<label>{__('Customer Type', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={customerTypeFilter}
-								onChange={(e) => setCustomerTypeFilter(e.target.value)}
-							>
-								<option value="all">{__('All Types', 'dragwyb-click-to-chat')}</option>
-								<option value="registered">{__('Registered User', 'dragwyb-click-to-chat')}</option>
-								<option value="guest">{__('Guest Visitor', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</div>
-					</div>
-
-					<div className="dctc-sc-drawer-footer">
-						<button
-							type="button"
-							className="dctc-sc-reset-filters-btn"
-							onClick={onResetFilters}
-						>
-							<span className="dashicons dashicons-image-rotate"></span>
-							{__('Reset All Filters', 'dragwyb-click-to-chat')}
-						</button>
 					</div>
 				</div>
 			)}
