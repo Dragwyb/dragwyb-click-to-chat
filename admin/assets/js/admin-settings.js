@@ -77,6 +77,17 @@
             // Save Privacy & Uninstall Settings via AJAX
             $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').on('click', this.savePrivacySettings.bind(this));
 
+            // Top Header Save Settings Button
+            $('#dctc-save-settings-top-btn').on('click', (e) => {
+                e.preventDefault();
+                const currentTab = $('.dctc-settings-tab-btn.active').data('tab');
+                if (currentTab === 'privacy') {
+                    this.savePrivacySettings(e);
+                } else {
+                    this.saveGeneralSettings(e);
+                }
+            });
+
             // Privacy Bulk Selection
             $('#dctc-privacy-recommended').on('click', function (e) {
                 e.preventDefault();

@@ -493,3 +493,159 @@
   background: #f1f5f9;
   color: #64748b;
 }
+
+/* ==========================================================================
+   Global Sticky Top Header Bar (Shared across Support Center, AI Assistant, Channels)
+   ========================================================================== */
+.dctc-sc-header-bar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #dbe3ee;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  justify-content: space-between;
+  margin: 0 -20px 16px;
+  padding: 10px 22px;
+  position: sticky;
+  top: 32px;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 782px) {
+  .dctc-sc-header-bar {
+    top: 46px;
+    margin: 0 -10px 14px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+}
+
+.dctc-sc-brand {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.dctc-sc-brand-icon {
+  align-items: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.18);
+  color: #ffffff;
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+  flex-shrink: 0;
+}
+
+.dctc-sc-brand-icon .dashicons {
+  font-size: 20px;
+  height: 20px;
+  width: 20px;
+  color: #ffffff;
+}
+
+.dctc-sc-app-title {
+  color: #0f172a !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.dctc-sc-app-tagline {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+}
+
+.dctc-sc-top-nav {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.dctc-sc-nav-link {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px !important;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12.5px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 6px 12px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1.4;
+  outline: none;
+}
+
+.dctc-sc-nav-link:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.dctc-sc-nav-link.active {
+  background: #3730a3 !important;
+  border-color: #3730a3 !important;
+  box-shadow: 0 4px 12px rgba(55, 48, 163, 0.22);
+  color: #ffffff !important;
+}
+
+.dctc-sc-nav-link.active .dashicons {
+  color: #ffffff !important;
+}
+
+.dctc-sc-header-right {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.dctc-ai-guide-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+
+.dctc-ai-guide-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+.dctc-ai-guide-btn .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #6366f1;
+}

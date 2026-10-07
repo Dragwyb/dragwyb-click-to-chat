@@ -28,165 +28,152 @@ if (isset($dctc_post_types['attachment'])) {
 }
 ?>
 
-<h2 class="dctc-section-title">
-    <?php esc_html_e('Triggers and Targeting', 'dragwyb-click-to-chat'); ?>
-</h2>
-
-<p style="color:#6b7280; margin-bottom:30px;">
-    <?php esc_html_e(
-        'Control when and where your chat widget appears on your website.',
-        'dragwyb-click-to-chat'
-    ); ?>
-</p>
-
-<!-- Display Rules -->
-<div class="dctc-form-group">
-    <label>
-        <?php esc_html_e('Display Rules', 'dragwyb-click-to-chat'); ?>
-    </label>
-
-    <p style="color:#9ca3af; font-size:13px; margin-bottom:20px;">
-        <?php esc_html_e(
-            'Choose where the chat widget should appear.',
-            'dragwyb-click-to-chat'
-        ); ?>
-    </p>
-
-    <div style="display:flex; flex-direction:column; gap:15px;">
-
-        <!-- All Pages -->
-        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
-            <input type="radio"
-                name="dctc_display_mode"
-                value="all"
-                <?php checked($dctc_display_mode, 'all'); ?>
-                style="margin-top:4px;">
-            <div>
-                <span style="display:block; font-weight:500; font-size:14px; color:#374151;">
-                    <?php esc_html_e('All Pages', 'dragwyb-click-to-chat'); ?>
-                </span>
-                <span style="font-size:13px; color:#6b7280;">
-                    <?php esc_html_e(
-                        'Show on every page of your website',
-                        'dragwyb-click-to-chat'
-                    ); ?>
-                </span>
+<!-- Card 1: Display Rules -->
+<div class="dctc-ai-card dctc-section-card">
+    <div class="dctc-ai-card__header">
+        <div class="dctc-ai-card__header-left">
+            <div class="dctc-ai-card-icon" style="background: #eef2ff; color: #4f46e5;">
+                <span class="dashicons dashicons-admin-site-alt3" style="font-size: 16px; width: 16px; height: 16px;"></span>
             </div>
-        </label>
-
-        <!-- Specific Post Types -->
-        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer;">
-            <input type="radio"
-                name="dctc_display_mode"
-                value="post_types"
-                <?php checked($dctc_display_mode, 'post_types'); ?>
-                style="margin-top:4px;">
             <div>
-                <span style="display:block; font-weight:500; font-size:14px; color:#374151;">
-                    <?php esc_html_e('Specific Post Types', 'dragwyb-click-to-chat'); ?>
-                </span>
-                <span style="font-size:13px; color:#6b7280;">
-                    <?php esc_html_e(
-                        'Show only on selected content types',
-                        'dragwyb-click-to-chat'
-                    ); ?>
-                </span>
+                <h2 class="dctc-card-title"><?php esc_html_e('Display Rules & Site Scope', 'dragwyb-click-to-chat'); ?></h2>
+                <p class="dctc-card-subtitle"><?php esc_html_e('Choose where the chat widget should appear across your public site content.', 'dragwyb-click-to-chat'); ?></p>
             </div>
-        </label>
+        </div>
+    </div>
 
-        <!-- Post Types List -->
-        <div id="dctc-post-types-list"
-            style="margin-left:25px; padding:15px; background:#f9fafb; border-radius:6px; border:1px solid #e5e7eb; display:<?php echo $dctc_display_mode === 'post_types' ? 'block' : 'none'; ?>;">
-            <?php foreach ($dctc_post_types as $dctc_pt_slug => $dctc_pt_obj) : ?>
-                <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px;">
-                    <input type="checkbox"
-                        name="dctc_display_post_types[]"
-                        value="<?php echo esc_attr($dctc_pt_slug); ?>"
-                        <?php checked(in_array($dctc_pt_slug, $dctc_display_post_types, true)); ?>>
-                    <?php echo esc_html($dctc_pt_obj->labels->name); ?>
-                </label>
-            <?php endforeach; ?>
+    <div class="dctc-card-body">
+        <div class="dctc-radio-cards-group">
+            <!-- All Pages -->
+            <label class="dctc-radio-card <?php echo $dctc_display_mode === 'all' ? 'is-selected' : ''; ?>">
+                <input type="radio"
+                    name="dctc_display_mode"
+                    value="all"
+                    <?php checked($dctc_display_mode, 'all'); ?>>
+                <div class="dctc-radio-card-content">
+                    <span class="dctc-radio-card-title">🌐 <?php esc_html_e('All Pages (Site-Wide)', 'dragwyb-click-to-chat'); ?></span>
+                    <span class="dctc-radio-card-desc"><?php esc_html_e('Show the floating channels widget on every public page and post of your website.', 'dragwyb-click-to-chat'); ?></span>
+                </div>
+            </label>
+
+            <!-- Specific Post Types -->
+            <label class="dctc-radio-card <?php echo $dctc_display_mode === 'post_types' ? 'is-selected' : ''; ?>">
+                <input type="radio"
+                    name="dctc_display_mode"
+                    value="post_types"
+                    <?php checked($dctc_display_mode, 'post_types'); ?>>
+                <div class="dctc-radio-card-content">
+                    <span class="dctc-radio-card-title">📑 <?php esc_html_e('Specific Post Types Only', 'dragwyb-click-to-chat'); ?></span>
+                    <span class="dctc-radio-card-desc"><?php esc_html_e('Limit widget visibility to selected custom post types or specific content.', 'dragwyb-click-to-chat'); ?></span>
+                </div>
+            </label>
         </div>
 
-    </div>
-</div>
-
-<!-- Device Visibility -->
-<div class="dctc-form-group">
-    <label>
-        <?php esc_html_e('Device Visibility', 'dragwyb-click-to-chat'); ?>
-    </label>
-
-    <p style="color:#9ca3af; font-size:13px; margin-bottom:15px;">
-        <?php esc_html_e(
-            'Choose which devices should display the chat widget',
-            'dragwyb-click-to-chat'
-        ); ?>
-    </p>
-
-    <div style="display:flex; flex-direction:column; gap:15px;">
-
-        <label class="dctc-toggle">
-            <div class="dctc-switch">
-                <input type="checkbox"
-                    id="dctc_show_on_desktop"
-                    name="dctc_show_on_desktop"
-                    value="1"
-                    <?php checked($dctc_show_on_desktop, '1'); ?>>
-                <span class="dctc-slider"></span>
+        <!-- Post Types List Drawer -->
+        <div id="dctc-post-types-list"
+            class="dctc-drawer-card"
+            style="margin-top: 15px; display:<?php echo $dctc_display_mode === 'post_types' ? 'block' : 'none'; ?>;">
+            <p class="dctc-field-label" style="margin-bottom: 10px;"><?php esc_html_e('Select Allowed Post Types:', 'dragwyb-click-to-chat'); ?></p>
+            <div class="dctc-checkboxes-grid">
+                <?php foreach ($dctc_post_types as $dctc_pt_slug => $dctc_pt_obj) : ?>
+                    <label class="dctc-checkbox-pill">
+                        <input type="checkbox"
+                            name="dctc_display_post_types[]"
+                            value="<?php echo esc_attr($dctc_pt_slug); ?>"
+                            <?php checked(in_array($dctc_pt_slug, $dctc_display_post_types, true)); ?>>
+                        <span><?php echo esc_html($dctc_pt_obj->labels->name); ?> <small style="color:#94a3b8;">(<?php echo esc_html($dctc_pt_slug); ?>)</small></span>
+                    </label>
+                <?php endforeach; ?>
             </div>
-            <span style="margin-left:10px;">
-                <?php esc_html_e('Show on Desktop', 'dragwyb-click-to-chat'); ?>
-            </span>
-        </label>
+        </div>
+    </div>
+</div>
 
-        <label class="dctc-toggle">
-            <div class="dctc-switch">
-                <input type="checkbox"
-                    id="dctc_show_on_mobile"
-                    name="dctc_show_on_mobile"
-                    value="1"
-                    <?php checked($dctc_show_on_mobile, '1'); ?>>
-                <span class="dctc-slider"></span>
+<!-- Card 2: Device Visibility -->
+<div class="dctc-ai-card dctc-section-card" style="margin-top: 20px;">
+    <div class="dctc-ai-card__header">
+        <div class="dctc-ai-card__header-left">
+            <div class="dctc-ai-card-icon" style="background: #fdf2f8; color: #db2777;">
+                <span class="dashicons dashicons-smartphone" style="font-size: 16px; width: 16px; height: 16px;"></span>
             </div>
-            <span style="margin-left:10px;">
-                <?php esc_html_e('Show on Mobile', 'dragwyb-click-to-chat'); ?>
-            </span>
-        </label>
+            <div>
+                <h3 class="dctc-card-title"><?php esc_html_e('Device Target Visibility', 'dragwyb-click-to-chat'); ?></h3>
+                <p class="dctc-card-subtitle"><?php esc_html_e('Independently toggle widget visibility for desktop computers and mobile devices.', 'dragwyb-click-to-chat'); ?></p>
+            </div>
+        </div>
+    </div>
 
+    <div class="dctc-card-body">
+        <div class="dctc-grid-2-col">
+            <!-- Desktop -->
+            <div class="dctc-toggle-row">
+                <label class="dctc-ios-switch">
+                    <input type="checkbox"
+                        id="dctc_show_on_desktop"
+                        name="dctc_show_on_desktop"
+                        value="1"
+                        <?php checked($dctc_show_on_desktop, '1'); ?>>
+                    <span class="dctc-ios-slider"></span>
+                </label>
+                <div>
+                    <span class="dctc-toggle-label"><span class="dashicons dashicons-desktop" style="font-size: 16px; width: 16px; height: 16px;"></span> <?php esc_html_e('Show on Desktop', 'dragwyb-click-to-chat'); ?></span>
+                    <p class="dctc-field-hint"><?php esc_html_e('Display widget on laptops and desktop screens.', 'dragwyb-click-to-chat'); ?></p>
+                </div>
+            </div>
+
+            <!-- Mobile -->
+            <div class="dctc-toggle-row">
+                <label class="dctc-ios-switch">
+                    <input type="checkbox"
+                        id="dctc_show_on_mobile"
+                        name="dctc_show_on_mobile"
+                        value="1"
+                        <?php checked($dctc_show_on_mobile, '1'); ?>>
+                    <span class="dctc-ios-slider"></span>
+                </label>
+                <div>
+                    <span class="dctc-toggle-label"><span class="dashicons dashicons-smartphone" style="font-size: 16px; width: 16px; height: 16px;"></span> <?php esc_html_e('Show on Mobile Devices', 'dragwyb-click-to-chat'); ?></span>
+                    <p class="dctc-field-hint"><?php esc_html_e('Optimize touch targets for smartphones and tablets.', 'dragwyb-click-to-chat'); ?></p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Time Delay -->
-<div class="dctc-form-group">
-    <label for="dctc_time_delay">
-        <?php esc_html_e('Time Delay', 'dragwyb-click-to-chat'); ?>
-    </label>
-
-    <p style="color:#9ca3af; font-size:13px; margin-bottom:15px;">
-        <?php esc_html_e(
-            'Delay widget appearance after page load (in seconds)',
-            'dragwyb-click-to-chat'
-        ); ?>
-    </p>
-
-    <div style="display:flex; align-items:center; gap:15px;">
-        <input type="number"
-            id="dctc_time_delay"
-            name="dctc_time_delay"
-            min="0"
-            max="60"
-            value="<?php echo esc_attr($dctc_time_delay); ?>"
-            style="width:100px;">
-        <span style="color:#6b7280;">
-            <?php esc_html_e('seconds', 'dragwyb-click-to-chat'); ?>
-        </span>
+<!-- Card 3: Time Delay -->
+<div class="dctc-ai-card dctc-section-card" style="margin-top: 20px;">
+    <div class="dctc-ai-card__header">
+        <div class="dctc-ai-card__header-left">
+            <div class="dctc-ai-card-icon" style="background: #f0fdf4; color: #16a34a;">
+                <span class="dashicons dashicons-clock" style="font-size: 16px; width: 16px; height: 16px;"></span>
+            </div>
+            <div>
+                <h3 class="dctc-card-title"><?php esc_html_e('Display Time Delay', 'dragwyb-click-to-chat'); ?></h3>
+                <p class="dctc-card-subtitle"><?php esc_html_e('Delay widget appearance after page load in seconds.', 'dragwyb-click-to-chat'); ?></p>
+            </div>
+        </div>
     </div>
 
-    <p style="color:#9ca3af; font-size:12px; margin-top:8px;">
-        <?php esc_html_e(
-            'Set to 0 for immediate display. Recommended: 2–5 seconds for better user experience.',
-            'dragwyb-click-to-chat'
-        ); ?>
-    </p>
+    <div class="dctc-card-body">
+        <div class="dctc-field-group">
+            <label for="dctc_time_delay" class="dctc-field-label">
+                <?php esc_html_e('Delay Duration (Seconds)', 'dragwyb-click-to-chat'); ?>
+            </label>
+            <div class="dctc-input-unit-wrap" style="max-width: 200px;">
+                <input type="number"
+                    id="dctc_time_delay"
+                    name="dctc_time_delay"
+                    min="0"
+                    max="60"
+                    value="<?php echo esc_attr($dctc_time_delay); ?>"
+                    class="dctc-modern-input"
+                    style="width: 100px;">
+                <span style="font-size: 13px; font-weight: 600; color: #64748b;"><?php esc_html_e('seconds', 'dragwyb-click-to-chat'); ?></span>
+            </div>
+            <p class="dctc-field-hint">
+                <?php esc_html_e('Set to 0 for immediate display. Recommended: 2–5 seconds for optimal visitor engagement without blocking hero content.', 'dragwyb-click-to-chat'); ?>
+            </p>
+        </div>
+    </div>
 </div>
+v>

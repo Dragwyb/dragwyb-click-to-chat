@@ -5,7 +5,7 @@
  * 3. System Persona & Instructions
  * 4. Model Parameters & Accuracy
  */
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
@@ -58,6 +58,16 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 	const setField = (key, value) => {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
+
+	useEffect(() => {
+		const handleTriggerSave = () => {
+			onSubmit();
+		};
+		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		return () => {
+			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		};
+	}, [form, settings]);
 
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
@@ -334,38 +344,6 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 					maxTokens={form.max_tokens}
 					onMaxTokensChange={(val) => setField('max_tokens', val)}
 				/>
-
-				{/* FORM FOOTER */}
-				<footer className="dctc-ai-form-footer">
-					<div className="dctc-ai-form-footer__status">
-						{dirty ? (
-							<span className="dctc-ai-unsaved-badge">
-								<span className="dctc-ai-dot is-warning" />
-								{__('Unsaved changes', 'dragwyb-click-to-chat')}
-							</span>
-						) : (
-							<span className="dctc-ai-saved-badge">
-								<span className="dctc-ai-dot is-success" />
-								{__('All settings saved', 'dragwyb-click-to-chat')}
-							</span>
-						)}
-					</div>
-
-					<button
-						type="submit"
-						className="dctc-ai-btn dctc-ai-btn-primary"
-						disabled={saving || !dirty}
-					>
-						{saving ? (
-							<>
-								<span className="dctc-ai-spinner" aria-hidden="true" />
-								{__('Saving Settings…', 'dragwyb-click-to-chat')}
-							</>
-						) : (
-							__('Save Settings', 'dragwyb-click-to-chat')
-						)}
-					</button>
-				</footer>
 			</form>
 
 			<ConfirmModal

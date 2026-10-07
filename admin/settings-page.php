@@ -51,34 +51,58 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 	<!-- Success / Notice Toast -->
 	<div class="dctc-success-message"></div>
 
-	<!-- Header with 3 Tabs -->
-	<div class="dctc-header dctc-settings-header">
-		<div class="dctc-settings-tabs-wrapper">
-			<ul class="dctc-tabs dctc-settings-two-tabs">
-				<li>
-					<a href="#general"
-						class="dctc-tab dctc-settings-tab-btn <?php echo 'general' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="general">
-						<span>⚙️ <?php esc_html_e( '1. General', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-				<li>
-					<a href="#import-export"
-						class="dctc-tab dctc-settings-tab-btn <?php echo 'import-export' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="import-export">
-						<span>📦 <?php esc_html_e( '2. Import / Export', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-				<li>
-					<a href="#privacy"
-						class="dctc-tab dctc-settings-tab-btn <?php echo 'privacy' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="privacy">
-						<span>🔒 <?php esc_html_e( '3. Privacy & Uninstall', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-			</ul>
+	<!-- Full-Size Sticky Top Header Bar matching Support Center -->
+	<header class="dctc-sc-header-bar dctc-settings-top-header">
+		<div class="dctc-sc-brand">
+			<div class="dctc-sc-brand-icon">
+				<span class="dashicons dashicons-admin-generic"></span>
+			</div>
+			<div>
+				<h1 class="dctc-sc-app-title"><?php esc_html_e( 'Click to Chat Settings', 'dragwyb-click-to-chat' ); ?></h1>
+				<span class="dctc-sc-app-tagline"><?php esc_html_e( 'Global Modules, Backup & Privacy Control', 'dragwyb-click-to-chat' ); ?></span>
+			</div>
 		</div>
-	</div>
+
+		<nav class="dctc-sc-top-nav" role="tablist" aria-label="<?php esc_attr_e( 'Settings categories', 'dragwyb-click-to-chat' ); ?>">
+			<button type="button"
+				role="tab"
+				aria-selected="<?php echo 'general' === $dctc_active_tab ? 'true' : 'false'; ?>"
+				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'general' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="general">
+				<span class="dashicons dashicons-admin-settings" aria-hidden="true"></span>
+				<?php esc_html_e( '1. General', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button type="button"
+				role="tab"
+				aria-selected="<?php echo 'import-export' === $dctc_active_tab ? 'true' : 'false'; ?>"
+				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'import-export' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="import-export">
+				<span class="dashicons dashicons-database-export" aria-hidden="true"></span>
+				<?php esc_html_e( '2. Import / Export', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button type="button"
+				role="tab"
+				aria-selected="<?php echo 'privacy' === $dctc_active_tab ? 'true' : 'false'; ?>"
+				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'privacy' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="privacy">
+				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
+				<?php esc_html_e( '3. Privacy & Uninstall', 'dragwyb-click-to-chat' ); ?>
+			</button>
+		</nav>
+
+		<div class="dctc-sc-header-right" style="display:flex; align-items:center; gap:10px;">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-guide' ) ); ?>" class="dctc-ai-guide-btn" title="<?php esc_attr_e( 'View plugin documentation', 'dragwyb-click-to-chat' ); ?>">
+				<span class="dashicons dashicons-book"></span>
+				<?php esc_html_e( 'User Guide', 'dragwyb-click-to-chat' ); ?>
+			</a>
+			<button type="button" id="dctc-save-settings-top-btn" class="dctc-ai-btn dctc-ai-btn-primary">
+				<span class="dashicons dashicons-saved" style="margin-right:4px; font-size:16px; width:16px; height:16px;"></span>
+				<?php esc_html_e( 'Save Settings', 'dragwyb-click-to-chat' ); ?>
+			</button>
+		</div>
+	</header>
 
 	<!-- Main Container -->
 	<div class="dctc-settings-main-container">

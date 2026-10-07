@@ -14,301 +14,301 @@ import ConfirmModal from '../components/ConfirmModal';
 import { formatProviderLabel } from '../utils/providers';
 import SessionTranscriptModal from './chat-sessions/SessionTranscriptModal';
 
-function parseMessages( content ) {
-	if ( ! content ) {
+function parseMessages(content) {
+	if (!content) {
 		return [];
 	}
 	try {
-		const parsed = typeof content === 'string' ? JSON.parse( content ) : content;
-		return Array.isArray( parsed ) ? parsed : [];
+		const parsed = typeof content === 'string' ? JSON.parse(content) : content;
+		return Array.isArray(parsed) ? parsed : [];
 	} catch {
 		return [];
 	}
 }
 
-function sessionEmail( session ) {
+function sessionEmail(session) {
 	return session.email
 		? session.email
-		: __( 'Guest User', 'dragwyb-click-to-chat' );
+		: __('Guest User', 'dragwyb-click-to-chat');
 }
 
-function sessionMeta( session ) {
+function sessionMeta(session) {
 	return {
 		provider: session?.provider
-			? formatProviderLabel( session.provider )
-			: __( 'Unknown', 'dragwyb-click-to-chat' ),
-		model: session?.model || __( 'Unknown', 'dragwyb-click-to-chat' ),
+			? formatProviderLabel(session.provider)
+			: __('Unknown', 'dragwyb-click-to-chat'),
+		model: session?.model || __('Unknown', 'dragwyb-click-to-chat'),
 	};
 }
 
-function escapeHtml( value ) {
-	return String( value ?? '' )
-		.replace( /&/g, '&amp;' )
-		.replace( /</g, '&lt;' )
-		.replace( />/g, '&gt;' );
+function escapeHtml(value) {
+	return String(value ?? '')
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;');
 }
 
-function getSentimentBadge( sentiment ) {
-	switch ( sentiment ) {
+function getSentimentBadge(sentiment) {
+	switch (sentiment) {
 		case 'positive':
-			return { label: __( '😊 Positive', 'dragwyb-click-to-chat' ), bg: '#ecfdf5', color: '#065f46', border: '#a7f3d0' };
+			return { label: __('😊 Positive', 'dragwyb-click-to-chat'), bg: '#ecfdf5', color: '#065f46', border: '#a7f3d0' };
 		case 'frustrated':
-			return { label: __( '😤 Frustrated', 'dragwyb-click-to-chat' ), bg: '#fef2f2', color: '#991b1b', border: '#fecaca' };
+			return { label: __('😤 Frustrated', 'dragwyb-click-to-chat'), bg: '#fef2f2', color: '#991b1b', border: '#fecaca' };
 		case 'neutral':
 		default:
-			return { label: __( '😐 Neutral', 'dragwyb-click-to-chat' ), bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' };
+			return { label: __('😐 Neutral', 'dragwyb-click-to-chat'), bg: '#f8fafc', color: '#64748b', border: '#e2e8f0' };
 	}
 }
 
-function getIntentTagBadge( intent ) {
-	switch ( intent ) {
+function getIntentTagBadge(intent) {
+	switch (intent) {
 		case 'inquiry':
-			return { label: __( 'Inquiry', 'dragwyb-click-to-chat' ), bg: '#eff6ff', color: '#1e40af' };
+			return { label: __('Inquiry', 'dragwyb-click-to-chat'), bg: '#eff6ff', color: '#1e40af' };
 		case 'support':
-			return { label: __( 'Support', 'dragwyb-click-to-chat' ), bg: '#fdf4ff', color: '#86198f' };
+			return { label: __('Support', 'dragwyb-click-to-chat'), bg: '#fdf4ff', color: '#86198f' };
 		case 'purchase':
-			return { label: __( 'Purchase', 'dragwyb-click-to-chat' ), bg: '#ecfdf5', color: '#065f46' };
+			return { label: __('Purchase', 'dragwyb-click-to-chat'), bg: '#ecfdf5', color: '#065f46' };
 		case 'feedback':
-			return { label: __( 'Feedback', 'dragwyb-click-to-chat' ), bg: '#fffbeb', color: '#92400e' };
+			return { label: __('Feedback', 'dragwyb-click-to-chat'), bg: '#fffbeb', color: '#92400e' };
 		default:
 			return null;
 	}
 }
 
-function parseSummary( summary ) {
-	if ( ! summary ) return null;
-	if ( typeof summary === 'object' ) return summary;
+function parseSummary(summary) {
+	if (!summary) return null;
+	if (typeof summary === 'object') return summary;
 	try {
-		return JSON.parse( summary );
+		return JSON.parse(summary);
 	} catch {
 		return null;
 	}
 }
 
-function lastMessagePreview( session ) {
-	const msgs = parseMessages( session.content );
-	if ( ! msgs.length ) {
+function lastMessagePreview(session) {
+	const msgs = parseMessages(session.content);
+	if (!msgs.length) {
 		return '';
 	}
-	const last = msgs[ msgs.length - 1 ];
-	const text = ( last?.content || '' ).replace( /\s+/g, ' ' ).trim();
-	if ( ! text ) {
+	const last = msgs[msgs.length - 1];
+	const text = (last?.content || '').replace(/\s+/g, ' ').trim();
+	if (!text) {
 		return '';
 	}
-	return `"${ text.length > 72 ? `${ text.slice( 0, 72 ) }…` : text }"`;
+	return `"${text.length > 72 ? `${text.slice(0, 72)}…` : text}"`;
 }
 
-function formatDate( value ) {
-	if ( ! value ) {
+function formatDate(value) {
+	if (!value) {
 		return '';
 	}
-	const iso = String( value ).includes( 'T' )
+	const iso = String(value).includes('T')
 		? value
-		: String( value ).replace( ' ', 'T' );
-	const date = new Date( iso );
-	if ( Number.isNaN( date.getTime() ) ) {
+		: String(value).replace(' ', 'T');
+	const date = new Date(iso);
+	if (Number.isNaN(date.getTime())) {
 		return value;
 	}
 	const now = new Date();
 	const opts = {
 		month: 'short',
 		day: 'numeric',
-		...( date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {} ),
+		...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
 	};
-	return `${ date.toLocaleDateString( undefined, opts ) } · ${ date.toLocaleTimeString(
+	return `${date.toLocaleDateString(undefined, opts)} · ${date.toLocaleTimeString(
 		undefined,
 		{ hour: 'numeric', minute: '2-digit' }
-	) }`;
+	)}`;
 }
 
-function pageNumbers( current, total ) {
-	if ( total <= 7 ) {
-		return Array.from( { length: total }, ( _, i ) => i + 1 );
+function pageNumbers(current, total) {
+	if (total <= 7) {
+		return Array.from({ length: total }, (_, i) => i + 1);
 	}
-	const set = new Set( [ 1, total, current ] );
-	if ( current > 2 ) {
-		set.add( current - 1 );
+	const set = new Set([1, total, current]);
+	if (current > 2) {
+		set.add(current - 1);
 	}
-	if ( current < total - 1 ) {
-		set.add( current + 1 );
+	if (current < total - 1) {
+		set.add(current + 1);
 	}
-	const sorted = [ ...set ].sort( ( a, b ) => a - b );
+	const sorted = [...set].sort((a, b) => a - b);
 	const out = [];
-	for ( let i = 0; i < sorted.length; i++ ) {
-		if ( i > 0 && sorted[ i ] - sorted[ i - 1 ] > 1 ) {
-			out.push( '…' );
+	for (let i = 0; i < sorted.length; i++) {
+		if (i > 0 && sorted[i] - sorted[i - 1] > 1) {
+			out.push('…');
 		}
-		out.push( sorted[ i ] );
+		out.push(sorted[i]);
 	}
 	return out;
 }
 
-export default function ChatSessions( { showNotice } ) {
-	const [ sessions, setSessions ] = useState( [] );
-	const [ analytics, setAnalytics ] = useState( null );
-	const [ summarizing, setSummarizing ] = useState( false );
-	const [ loading, setLoading ] = useState( true );
-	const [ search, setSearch ] = useState( '' );
-	const [ providerFilter, setProviderFilter ] = useState( 'all' );
-	const [ page, setPage ] = useState( 1 );
-	const [ perPage, setPerPage ] = useState( 10 );
-	const [ viewing, setViewing ] = useState( null );
-	const [ modalVisible, setModalVisible ] = useState( false );
-	const [ deletingId, setDeletingId ] = useState( null );
-	const [ confirmDelete, setConfirmDelete ] = useState( null );
-	const [ filterOpen, setFilterOpen ] = useState( false );
-	const filterRef = useRef( null );
-	const [ loadLimit, setLoadLimit ] = useState(
+export default function ChatSessions({ showNotice }) {
+	const [sessions, setSessions] = useState([]);
+	const [analytics, setAnalytics] = useState(null);
+	const [summarizing, setSummarizing] = useState(false);
+	const [loading, setLoading] = useState(true);
+	const [search, setSearch] = useState('');
+	const [providerFilter, setProviderFilter] = useState('all');
+	const [page, setPage] = useState(1);
+	const [perPage, setPerPage] = useState(10);
+	const [viewing, setViewing] = useState(null);
+	const [modalVisible, setModalVisible] = useState(false);
+	const [deletingId, setDeletingId] = useState(null);
+	const [confirmDelete, setConfirmDelete] = useState(null);
+	const [filterOpen, setFilterOpen] = useState(false);
+	const filterRef = useRef(null);
+	const [loadLimit, setLoadLimit] = useState(
 		window.dctc_ai_data?.load_limit || '100'
 	);
-	const [ loadLimitDraft, setLoadLimitDraft ] = useState( loadLimit );
-	const [ sortOrder, setSortOrder ] = useState(
+	const [loadLimitDraft, setLoadLimitDraft] = useState(loadLimit);
+	const [sortOrder, setSortOrder] = useState(
 		window.dctc_ai_data?.sort_order || 'desc'
 	);
-	const [ perPageDraft, setPerPageDraft ] = useState( String( perPage ) );
+	const [perPageDraft, setPerPageDraft] = useState(String(perPage));
 
-	const fetchAnalytics = useCallback( async () => {
+	const fetchAnalytics = useCallback(async () => {
 		try {
-			const res = await apiFetch( { path: '/dctc-ai/v1/analytics' } );
-			if ( res?.success && res.analytics ) {
-				setAnalytics( res.analytics );
+			const res = await apiFetch({ path: '/dctc-ai/v1/analytics' });
+			if (res?.success && res.analytics) {
+				setAnalytics(res.analytics);
 			}
-		} catch {}
-	}, [] );
+		} catch { }
+	}, []);
 
-	useEffect( () => {
+	useEffect(() => {
 		fetchAnalytics();
-	}, [ fetchAnalytics ] );
+	}, [fetchAnalytics]);
 
-	const handleSummarize = async ( sessionId ) => {
-		setSummarizing( true );
+	const handleSummarize = async (sessionId) => {
+		setSummarizing(true);
 		try {
-			const res = await apiFetch( {
-				path: `/dctc-ai/v1/sessions/${ sessionId }/summarize`,
+			const res = await apiFetch({
+				path: `/dctc-ai/v1/sessions/${sessionId}/summarize`,
 				method: 'POST',
-			} );
-			if ( res?.success && res.summary ) {
-				setSessions( ( prev ) =>
-					prev.map( ( s ) =>
+			});
+			if (res?.success && res.summary) {
+				setSessions((prev) =>
+					prev.map((s) =>
 						s.session_id === sessionId
 							? { ...s, summary: res.summary, sentiment: res.summary.sentiment, intent_tag: res.summary.intent_tag }
 							: s
 					)
 				);
-				if ( viewing && viewing.session_id === sessionId ) {
-					setViewing( ( prev ) => ( {
+				if (viewing && viewing.session_id === sessionId) {
+					setViewing((prev) => ({
 						...prev,
 						summary: res.summary,
 						sentiment: res.summary.sentiment,
 						intent_tag: res.summary.intent_tag,
-					} ) );
+					}));
 				}
 				fetchAnalytics();
-				if ( showNotice ) {
-					showNotice( __( 'AI Conversation Summary generated successfully.', 'dragwyb-click-to-chat' ), 'success' );
+				if (showNotice) {
+					showNotice(__('AI Conversation Summary generated successfully.', 'dragwyb-click-to-chat'), 'success');
 				}
 			}
-		} catch ( err ) {
-			if ( showNotice ) {
-				showNotice( err.message || __( 'Failed to generate summary.', 'dragwyb-click-to-chat' ), 'error' );
+		} catch (err) {
+			if (showNotice) {
+				showNotice(err.message || __('Failed to generate summary.', 'dragwyb-click-to-chat'), 'error');
 			}
 		} finally {
-			setSummarizing( false );
+			setSummarizing(false);
 		}
 	};
 
-	useEffect( () => {
-		setLoadLimitDraft( loadLimit );
-	}, [ loadLimit ] );
+	useEffect(() => {
+		setLoadLimitDraft(loadLimit);
+	}, [loadLimit]);
 
-	useEffect( () => {
-		setPerPageDraft( String( perPage ) );
-	}, [ perPage ] );
+	useEffect(() => {
+		setPerPageDraft(String(perPage));
+	}, [perPage]);
 
-	const commitLimit = ( raw ) => {
+	const commitLimit = (raw) => {
 		const trimmed = raw.trim();
-		if ( trimmed === '' ) {
-			setLoadLimit( 'all' );
+		if (trimmed === '') {
+			setLoadLimit('all');
 		} else {
-			const n = parseInt( trimmed, 10 );
-			if ( ! isNaN( n ) && n > 0 ) {
-				setLoadLimit( String( n ) );
+			const n = parseInt(trimmed, 10);
+			if (!isNaN(n) && n > 0) {
+				setLoadLimit(String(n));
 			} else {
-				setLoadLimitDraft( loadLimit );
+				setLoadLimitDraft(loadLimit);
 			}
 		}
 	};
 
-	const commitPerPage = ( raw ) => {
-		const n = parseInt( raw.trim(), 10 );
-		if ( ! isNaN( n ) && n > 0 ) {
-			setPerPage( n );
+	const commitPerPage = (raw) => {
+		const n = parseInt(raw.trim(), 10);
+		if (!isNaN(n) && n > 0) {
+			setPerPage(n);
 		} else {
-			setPerPageDraft( String( perPage ) );
+			setPerPageDraft(String(perPage));
 		}
 	};
 
-	const providers = useMemo( () => {
+	const providers = useMemo(() => {
 		const set = new Set();
-		sessions.forEach( ( s ) => {
-			if ( s.provider ) {
-				set.add( s.provider );
+		sessions.forEach((s) => {
+			if (s.provider) {
+				set.add(s.provider);
 			}
-		} );
-		return [ ...set ].sort();
-	}, [ sessions ] );
+		});
+		return [...set].sort();
+	}, [sessions]);
 
-	const filtered = useMemo( () => {
+	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		return sessions.filter( ( s ) => {
-			if ( providerFilter !== 'all' && ( s.provider || '' ) !== providerFilter ) {
+		return sessions.filter((s) => {
+			if (providerFilter !== 'all' && (s.provider || '') !== providerFilter) {
 				return false;
 			}
-			if ( ! q ) {
+			if (!q) {
 				return true;
 			}
-			const email = sessionEmail( s );
-			const preview = lastMessagePreview( s ).toLowerCase();
+			const email = sessionEmail(s);
+			const preview = lastMessagePreview(s).toLowerCase();
 			return (
-				s.session_id?.toLowerCase().includes( q ) ||
-				email.toLowerCase().includes( q ) ||
-				( s.provider || '' ).toLowerCase().includes( q ) ||
-				( s.model || '' ).toLowerCase().includes( q ) ||
-				preview.includes( q )
+				s.session_id?.toLowerCase().includes(q) ||
+				email.toLowerCase().includes(q) ||
+				(s.provider || '').toLowerCase().includes(q) ||
+				(s.model || '').toLowerCase().includes(q) ||
+				preview.includes(q)
 			);
-		} );
-	}, [ sessions, search, providerFilter ] );
+		});
+	}, [sessions, search, providerFilter]);
 
 	const totalPages = useMemo(
-		() => Math.max( 1, Math.ceil( filtered.length / perPage ) ),
-		[ filtered.length, perPage ]
+		() => Math.max(1, Math.ceil(filtered.length / perPage)),
+		[filtered.length, perPage]
 	);
 
-	const pageRows = useMemo( () => {
-		const start = ( Math.min( page, totalPages ) - 1 ) * perPage;
-		return filtered.slice( start, start + perPage );
-	}, [ filtered, page, totalPages, perPage ] );
+	const pageRows = useMemo(() => {
+		const start = (Math.min(page, totalPages) - 1) * perPage;
+		return filtered.slice(start, start + perPage);
+	}, [filtered, page, totalPages, perPage]);
 
-	useEffect( () => {
+	useEffect(() => {
 		let cancelled = false;
-		( async () => {
-			setLoading( true );
+		(async () => {
+			setLoading(true);
 			try {
-				const res = await apiFetch( {
-					path: `/dctc-ai/v1/sessions?limit=${ loadLimit }&order=${ sortOrder }`,
-				} );
-				if ( ! cancelled ) {
-					setSessions( Array.isArray( res?.sessions ) ? res.sessions : [] );
-					if ( res?.load_limit ) {
-						setLoadLimit( res.load_limit );
+				const res = await apiFetch({
+					path: `/dctc-ai/v1/sessions?limit=${loadLimit}&order=${sortOrder}`,
+				});
+				if (!cancelled) {
+					setSessions(Array.isArray(res?.sessions) ? res.sessions : []);
+					if (res?.load_limit) {
+						setLoadLimit(res.load_limit);
 					}
-					if ( res?.sort_order ) {
-						setSortOrder( res.sort_order );
+					if (res?.sort_order) {
+						setSortOrder(res.sort_order);
 					}
 				}
 			} catch {
-				if ( ! cancelled ) {
-					setSessions( [] );
+				if (!cancelled) {
+					setSessions([]);
 					showNotice?.(
 						__(
 							'Could not load chat sessions. Please refresh the page.',
@@ -318,96 +318,96 @@ export default function ChatSessions( { showNotice } ) {
 					);
 				}
 			} finally {
-				if ( ! cancelled ) {
-					setLoading( false );
+				if (!cancelled) {
+					setLoading(false);
 				}
 			}
-		} )();
+		})();
 		return () => {
 			cancelled = true;
 		};
-	}, [ showNotice, loadLimit, sortOrder ] );
+	}, [showNotice, loadLimit, sortOrder]);
 
-	useEffect( () => {
-		setPage( 1 );
-	}, [ search, providerFilter, perPage, loadLimit, sortOrder ] );
+	useEffect(() => {
+		setPage(1);
+	}, [search, providerFilter, perPage, loadLimit, sortOrder]);
 
-	useEffect( () => {
-		if ( ! filterOpen ) {
+	useEffect(() => {
+		if (!filterOpen) {
 			return;
 		}
-		const onDown = ( e ) => {
-			if ( filterRef.current && ! filterRef.current.contains( e.target ) ) {
-				setFilterOpen( false );
+		const onDown = (e) => {
+			if (filterRef.current && !filterRef.current.contains(e.target)) {
+				setFilterOpen(false);
 			}
 		};
-		const onKey = ( e ) => {
-			if ( e.key === 'Escape' ) {
-				setFilterOpen( false );
+		const onKey = (e) => {
+			if (e.key === 'Escape') {
+				setFilterOpen(false);
 			}
 		};
-		document.addEventListener( 'mousedown', onDown );
-		document.addEventListener( 'keydown', onKey );
+		document.addEventListener('mousedown', onDown);
+		document.addEventListener('keydown', onKey);
 		return () => {
-			document.removeEventListener( 'mousedown', onDown );
-			document.removeEventListener( 'keydown', onKey );
+			document.removeEventListener('mousedown', onDown);
+			document.removeEventListener('keydown', onKey);
 		};
-	}, [ filterOpen ] );
+	}, [filterOpen]);
 
-	useEffect( () => {
-		if ( page > totalPages ) {
-			setPage( totalPages );
+	useEffect(() => {
+		if (page > totalPages) {
+			setPage(totalPages);
 		}
-	}, [ page, totalPages ] );
+	}, [page, totalPages]);
 
-	useEffect( () => {
-		if ( viewing ) {
-			setModalVisible( true );
-			document.body.classList.add( 'dctc-ai-modal-open' );
+	useEffect(() => {
+		if (viewing) {
+			setModalVisible(true);
+			document.body.classList.add('dctc-ai-modal-open');
 		} else {
-			setModalVisible( false );
-			document.body.classList.remove( 'dctc-ai-modal-open' );
+			setModalVisible(false);
+			document.body.classList.remove('dctc-ai-modal-open');
 		}
-		return () => document.body.classList.remove( 'dctc-ai-modal-open' );
-	}, [ viewing ] );
+		return () => document.body.classList.remove('dctc-ai-modal-open');
+	}, [viewing]);
 
 	const providerOptions = useMemo(
 		() => [
 			{
 				value: 'all',
-				label: __( 'All providers', 'dragwyb-click-to-chat' ),
+				label: __('All providers', 'dragwyb-click-to-chat'),
 			},
-			...providers.map( ( p ) => ( {
+			...providers.map((p) => ({
 				value: p,
-				label: formatProviderLabel( p ),
-			} ) ),
+				label: formatProviderLabel(p),
+			})),
 		],
-		[ providers ]
+		[providers]
 	);
 
 	const filterLabel =
-		providerOptions.find( ( o ) => o.value === providerFilter )?.label ||
-		__( 'All providers', 'dragwyb-click-to-chat' );
+		providerOptions.find((o) => o.value === providerFilter)?.label ||
+		__('All providers', 'dragwyb-click-to-chat');
 
-	const closeView = useCallback( () => setViewing( null ), [] );
+	const closeView = useCallback(() => setViewing(null), []);
 
 	const deleteSession = useCallback(
-		async ( session ) => {
-			setDeletingId( session.session_id );
+		async (session) => {
+			setDeletingId(session.session_id);
 			try {
-				await apiFetch( {
+				await apiFetch({
 					path: '/dctc-ai/v1/delete-session',
 					method: 'POST',
 					data: { session_id: session.session_id },
-				} );
-				setSessions( ( prev ) =>
-					prev.filter( ( s ) => s.session_id !== session.session_id )
+				});
+				setSessions((prev) =>
+					prev.filter((s) => s.session_id !== session.session_id)
 				);
-				if ( viewing?.session_id === session.session_id ) {
+				if (viewing?.session_id === session.session_id) {
 					closeView();
 				}
 				showNotice?.(
-					__( 'Session deleted.', 'dragwyb-click-to-chat' ),
+					__('Session deleted.', 'dragwyb-click-to-chat'),
 					'success'
 				);
 			} catch {
@@ -419,59 +419,59 @@ export default function ChatSessions( { showNotice } ) {
 					'error'
 				);
 			} finally {
-				setDeletingId( null );
+				setDeletingId(null);
 			}
 		},
-		[ viewing, closeView, showNotice ]
+		[viewing, closeView, showNotice]
 	);
 
-	const exportCsv = useCallback( () => {
-		if ( ! filtered.length ) {
+	const exportCsv = useCallback(() => {
+		if (!filtered.length) {
 			showNotice?.(
-				__( 'No sessions to export.', 'dragwyb-click-to-chat' ),
+				__('No sessions to export.', 'dragwyb-click-to-chat'),
 				'error'
 			);
 			return;
 		}
-		const cell = ( v ) => `"${ String( v ?? '' ).replace( /"/g, '""' ) }"`;
-		const rows = filtered.map( ( s ) =>
+		const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+		const rows = filtered.map((s) =>
 			[
-				sessionEmail( s ),
+				sessionEmail(s),
 				s.provider || '',
 				s.model || '',
-				lastMessagePreview( s ).replace( /^"|"$/g, '' ),
+				lastMessagePreview(s).replace(/^"|"$/g, ''),
 				s.created_at || '',
 				s.updated_at || '',
 			]
-				.map( cell )
-				.join( ',' )
+				.map(cell)
+				.join(',')
 		);
 		const csv = [
-			[ 'Email', 'Provider', 'Model', 'Last Message', 'Created', 'Updated' ]
-				.map( cell )
-				.join( ',' ),
+			['Email', 'Provider', 'Model', 'Last Message', 'Created', 'Updated']
+				.map(cell)
+				.join(','),
 			...rows,
-		].join( '\n' );
-		const blob = new Blob( [ csv ], { type: 'text/csv;charset=utf-8;' } );
-		const url = URL.createObjectURL( blob );
-		const a = document.createElement( 'a' );
+		].join('\n');
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
 		a.href = url;
-		a.download = `dctc-ai-chat-sessions-${ new Date()
+		a.download = `dctc-ai-chat-sessions-${new Date()
 			.toISOString()
-			.slice( 0, 10 ) }.csv`;
+			.slice(0, 10)}.csv`;
 		a.click();
-		URL.revokeObjectURL( url );
-	}, [ filtered, showNotice ] );
+		URL.revokeObjectURL(url);
+	}, [filtered, showNotice]);
 
-	const printTranscript = useCallback( () => {
-		if ( ! viewing ) {
+	const printTranscript = useCallback(() => {
+		if (!viewing) {
 			return;
 		}
-		const email = sessionEmail( viewing );
-		const meta = sessionMeta( viewing );
-		const msgs = parseMessages( viewing.content );
-		const win = window.open( '', '_blank', 'width=720,height=900' );
-		if ( ! win ) {
+		const email = sessionEmail(viewing);
+		const meta = sessionMeta(viewing);
+		const msgs = parseMessages(viewing.content);
+		const win = window.open('', '_blank', 'width=720,height=900');
+		if (!win) {
 			showNotice?.(
 				__(
 					'Allow pop-ups to download or print the transcript.',
@@ -481,10 +481,10 @@ export default function ChatSessions( { showNotice } ) {
 			);
 			return;
 		}
-		win.document.write( `<!DOCTYPE html><html><head><title>${ __(
+		win.document.write(`<!DOCTYPE html><html><head><title>${__(
 			'Session Transcript',
 			'dragwyb-click-to-chat'
-		) }</title>
+		)}</title>
 			<style>
 				body { font-family: system-ui, sans-serif; padding: 2rem; color: #111827; line-height: 1.5; }
 				h1 { font-size: 1.25rem; margin-bottom: 0.25rem; }
@@ -494,39 +494,39 @@ export default function ChatSessions( { showNotice } ) {
 				.time { color: #9ca3af; font-size: 0.75rem; font-weight: 400; margin-left: 0.5rem; }
 				.body { margin-top: 0.35rem; white-space: pre-wrap; }
 			</style></head><body>
-			<h1>${ __( 'Session Transcript', 'dragwyb-click-to-chat' ) }</h1>
-			<p class="meta">${ escapeHtml( email ) }</p>
-			<p class="meta"><strong>${ __( 'Provider', 'dragwyb-click-to-chat' ) }:</strong> ${ escapeHtml(
+			<h1>${__('Session Transcript', 'dragwyb-click-to-chat')}</h1>
+			<p class="meta">${escapeHtml(email)}</p>
+			<p class="meta"><strong>${__('Provider', 'dragwyb-click-to-chat')}:</strong> ${escapeHtml(
 			meta.provider
-		) } · <strong>${ __( 'Model', 'dragwyb-click-to-chat' ) }:</strong> ${ escapeHtml(
+		)} · <strong>${__('Model', 'dragwyb-click-to-chat')}:</strong> ${escapeHtml(
 			meta.model
-		) }</p>
-			${ msgs
+		)}</p>
+			${msgs
 				.map(
-					( m ) =>
-						`<div class="msg"><div class="role">${ escapeHtml(
+					(m) =>
+						`<div class="msg"><div class="role">${escapeHtml(
 							m.role === 'user'
 								? email
-								: __( 'Assistant', 'dragwyb-click-to-chat' )
-						) }<span class="time">${ formatDate(
+								: __('Assistant', 'dragwyb-click-to-chat')
+						)}<span class="time">${formatDate(
 							m.created_at
-						) }</span></div><div class="body">${ escapeHtml(
+						)}</span></div><div class="body">${escapeHtml(
 							m.content
-						) }</div></div>`
+						)}</div></div>`
 				)
-				.join( '' ) }
+				.join('')}
 			</body></html>` );
 		win.document.close();
 		win.focus();
 		win.print();
-	}, [ viewing, showNotice ] );
+	}, [viewing, showNotice]);
 
-	const pages = pageNumbers( Math.min( page, totalPages ), totalPages );
+	const pages = pageNumbers(Math.min(page, totalPages), totalPages);
 	const rangeStart = filtered.length
-		? ( Math.min( page, totalPages ) - 1 ) * perPage + 1
+		? (Math.min(page, totalPages) - 1) * perPage + 1
 		: 0;
 	const rangeEnd = Math.min(
-		Math.min( page, totalPages ) * perPage,
+		Math.min(page, totalPages) * perPage,
 		filtered.length
 	);
 
@@ -565,59 +565,59 @@ export default function ChatSessions( { showNotice } ) {
 				</div>
 			</header>
 
-			{ /* Top Conversation Analytics Metrics */ }
-			{ analytics && (
+			{ /* Top Conversation Analytics Metrics */}
+			{analytics && (
 				<div className="dctc-ai-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
 					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>
-							{ __( 'Total Conversations', 'dragwyb-click-to-chat' ) }
+							{__('Total Conversations', 'dragwyb-click-to-chat')}
 						</span>
 						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#0f172a', marginTop: '0.25rem' }}>
-							{ Number( analytics.total_conversations || 0 ).toLocaleString() }
-							{ analytics.today_conversations > 0 && (
+							{Number(analytics.total_conversations || 0).toLocaleString()}
+							{analytics.today_conversations > 0 && (
 								<span style={{ fontSize: '0.85rem', fontWeight: 500, color: '#10b981', marginLeft: '0.5rem' }}>
-									(+{ analytics.today_conversations } { __( 'today', 'dragwyb-click-to-chat' ) })
+									(+{analytics.today_conversations} {__('today', 'dragwyb-click-to-chat')})
 								</span>
-							) }
+							)}
 						</div>
 					</div>
 
 					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#10b981', textTransform: 'uppercase' }}>
-							{ __( 'AI Resolution Rate', 'dragwyb-click-to-chat' ) }
+							{__('AI Resolution Rate', 'dragwyb-click-to-chat')}
 						</span>
 						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#065f46', marginTop: '0.25rem' }}>
-							{ analytics.resolution_rate || 100 }%
+							{analytics.resolution_rate || 100}%
 						</div>
 					</div>
 
 					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#6366f1', textTransform: 'uppercase' }}>
-							{ __( 'Lead Conversion Rate', 'dragwyb-click-to-chat' ) }
+							{__('Lead Conversion Rate', 'dragwyb-click-to-chat')}
 						</span>
 						<div style={{ fontSize: '1.8rem', fontWeight: 700, color: '#4338ca', marginTop: '0.25rem' }}>
-							{ analytics.conversion_rate || 0 }%
+							{analytics.conversion_rate || 0}%
 						</div>
 					</div>
 
 					<div style={{ background: '#ffffff', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
 						<span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase' }}>
-							{ __( 'Visitor Sentiment', 'dragwyb-click-to-chat' ) }
+							{__('Visitor Sentiment', 'dragwyb-click-to-chat')}
 						</span>
 						<div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', fontSize: '0.85rem' }}>
 							<span style={{ background: '#ecfdf5', color: '#065f46', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
-								😊 { analytics.sentiments?.positive || 0 }
+								😊 {analytics.sentiments?.positive || 0}
 							</span>
 							<span style={{ background: '#f8fafc', color: '#475569', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
-								😐 { analytics.sentiments?.neutral || 0 }
+								😐 {analytics.sentiments?.neutral || 0}
 							</span>
 							<span style={{ background: '#fef2f2', color: '#991b1b', padding: '0.2rem 0.5rem', borderRadius: '6px', fontWeight: 600 }}>
-								😤 { analytics.sentiments?.frustrated || 0 }
+								😤 {analytics.sentiments?.frustrated || 0}
 							</span>
 						</div>
 					</div>
 				</div>
-			) }
+			)}
 
 			<div className="dctc-ai-sessions-toolbar">
 				<div className="dctc-ai-sessions-toolbar__left">
@@ -626,108 +626,108 @@ export default function ChatSessions( { showNotice } ) {
 						<input
 							type="search"
 							className="dctc-ai-sessions-search__input"
-							placeholder={ __(
+							placeholder={__(
 								'Search sessions…',
 								'dragwyb-click-to-chat'
-							) }
-							value={ search }
-							onChange={ ( e ) => setSearch( e.target.value ) }
-							aria-label={ __( 'Search sessions', 'dragwyb-click-to-chat' ) }
+							)}
+							value={search}
+							onChange={(e) => setSearch(e.target.value)}
+							aria-label={__('Search sessions', 'dragwyb-click-to-chat')}
 						/>
 					</div>
 
 					<div
-						ref={ filterRef }
+						ref={filterRef}
 						className={
-							'dctc-ai-sessions-filter ' + ( filterOpen ? 'is-open' : '' )
+							'dctc-ai-sessions-filter ' + (filterOpen ? 'is-open' : '')
 						}
 					>
 						<button
 							type="button"
 							className="dctc-ai-sessions-filter__trigger"
-							onClick={ () => setFilterOpen( ( v ) => ! v ) }
-							aria-expanded={ filterOpen }
+							onClick={() => setFilterOpen((v) => !v)}
+							aria-expanded={filterOpen}
 							aria-haspopup="listbox"
-							aria-label={ __(
+							aria-label={__(
 								'Filter by provider',
 								'dragwyb-click-to-chat'
-							) }
+							)}
 						>
 							<span
 								className="dashicons dashicons-filter"
 								aria-hidden="true"
 							/>
 							<span className="dctc-ai-sessions-filter__label">
-								{ filterLabel }
+								{filterLabel}
 							</span>
 							<span
 								className={
 									'dashicons dashicons-arrow-down-alt2 dctc-ai-sessions-filter__chevron ' +
-									( filterOpen ? 'is-open' : '' )
+									(filterOpen ? 'is-open' : '')
 								}
 								aria-hidden="true"
 							/>
 						</button>
-						{ filterOpen && (
+						{filterOpen && (
 							<ul
 								className="dctc-ai-sessions-filter__menu"
 								role="listbox"
-								aria-label={ __( 'Providers', 'dragwyb-click-to-chat' ) }
+								aria-label={__('Providers', 'dragwyb-click-to-chat')}
 							>
-								{ providerOptions.map( ( opt ) => (
-									<li key={ opt.value } role="presentation">
+								{providerOptions.map((opt) => (
+									<li key={opt.value} role="presentation">
 										<button
 											type="button"
 											role="option"
-											aria-selected={ providerFilter === opt.value }
+											aria-selected={providerFilter === opt.value}
 											className={
 												'dctc-ai-sessions-filter__option ' +
-												( providerFilter === opt.value
+												(providerFilter === opt.value
 													? 'is-selected'
-													: '' )
+													: '')
 											}
-											onClick={ () => {
-												setProviderFilter( opt.value );
-												setFilterOpen( false );
-											} }
+											onClick={() => {
+												setProviderFilter(opt.value);
+												setFilterOpen(false);
+											}}
 										>
-											{ opt.label }
+											{opt.label}
 										</button>
 									</li>
-								) ) }
+								))}
 							</ul>
-						) }
+						)}
 					</div>
 
 					<div className="dctc-ai-sessions-limit">
 						<span className="dashicons dashicons-database" aria-hidden="true" />
 						<span className="dctc-ai-sessions-limit__label">
-							{ __( 'Limit:', 'dragwyb-click-to-chat' ) }
+							{__('Limit:', 'dragwyb-click-to-chat')}
 						</span>
 						<input
 							type="text"
 							pattern="[0-9]*"
 							inputMode="numeric"
 							className="dctc-ai-sessions-limit__input"
-							placeholder={ __( 'All', 'dragwyb-click-to-chat' ) }
-							value={ loadLimitDraft === 'all' ? '' : loadLimitDraft }
-							onChange={ ( e ) => setLoadLimitDraft( e.target.value ) }
-							onBlur={ () => commitLimit( loadLimitDraft ) }
-							onKeyDown={ ( e ) => {
-								if ( e.key === 'Enter' ) {
+							placeholder={__('All', 'dragwyb-click-to-chat')}
+							value={loadLimitDraft === 'all' ? '' : loadLimitDraft}
+							onChange={(e) => setLoadLimitDraft(e.target.value)}
+							onBlur={() => commitLimit(loadLimitDraft)}
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') {
 									e.preventDefault();
-									commitLimit( loadLimitDraft );
+									commitLimit(loadLimitDraft);
 									e.target.blur();
 								}
-							} }
-							title={ __(
+							}}
+							title={__(
 								'Sessions load limit (empty for all)',
 								'dragwyb-click-to-chat'
-							) }
-							aria-label={ __(
+							)}
+							aria-label={__(
 								'Sessions load limit',
 								'dragwyb-click-to-chat'
-							) }
+							)}
 						/>
 					</div>
 
@@ -736,29 +736,29 @@ export default function ChatSessions( { showNotice } ) {
 							type="button"
 							className={
 								'dctc-ai-sessions-switcher__btn ' +
-								( sortOrder === 'desc' ? 'is-active' : '' )
+								(sortOrder === 'desc' ? 'is-active' : '')
 							}
-							onClick={ () => setSortOrder( 'desc' ) }
-							aria-label={ __(
+							onClick={() => setSortOrder('desc')}
+							aria-label={__(
 								'Sort by newest first',
 								'dragwyb-click-to-chat'
-							) }
+							)}
 						>
-							{ __( 'Newest', 'dragwyb-click-to-chat' ) }
+							{__('Newest', 'dragwyb-click-to-chat')}
 						</button>
 						<button
 							type="button"
 							className={
 								'dctc-ai-sessions-switcher__btn ' +
-								( sortOrder === 'asc' ? 'is-active' : '' )
+								(sortOrder === 'asc' ? 'is-active' : '')
 							}
-							onClick={ () => setSortOrder( 'asc' ) }
-							aria-label={ __(
+							onClick={() => setSortOrder('asc')}
+							aria-label={__(
 								'Sort by oldest first',
 								'dragwyb-click-to-chat'
-							) }
+							)}
 						>
-							{ __( 'Oldest', 'dragwyb-click-to-chat' ) }
+							{__('Oldest', 'dragwyb-click-to-chat')}
 						</button>
 					</div>
 				</div>
@@ -767,20 +767,20 @@ export default function ChatSessions( { showNotice } ) {
 					<button
 						type="button"
 						className="dctc-ai-sessions-export"
-						onClick={ exportCsv }
+						onClick={exportCsv}
 					>
-						{ __( 'Export CSV', 'dragwyb-click-to-chat' ) }
+						{__('Export CSV', 'dragwyb-click-to-chat')}
 					</button>
 				</div>
 			</div>
 
-			{ loading ? (
+			{loading ? (
 				<div className="dctc-ai-sessions-empty">
 					<span
 						className="dctc-ai-spinner dctc-ai-spinner--muted"
 						aria-hidden="true"
 					/>
-					<h3>{ __( 'Loading sessions…', 'dragwyb-click-to-chat' ) }</h3>
+					<h3>{__('Loading sessions…', 'dragwyb-click-to-chat')}</h3>
 				</div>
 			) : sessions.length === 0 ? (
 				<div className="dctc-ai-sessions-empty">
@@ -788,23 +788,23 @@ export default function ChatSessions( { showNotice } ) {
 						className="dashicons dashicons-format-chat"
 						aria-hidden="true"
 					/>
-					<h3>{ __( 'No sessions yet', 'dragwyb-click-to-chat' ) }</h3>
+					<h3>{__('No sessions yet', 'dragwyb-click-to-chat')}</h3>
 					<p>
-						{ __(
+						{__(
 							'Conversations will show up here once visitors start chatting with your bot.',
 							'dragwyb-click-to-chat'
-						) }
+						)}
 					</p>
 				</div>
 			) : filtered.length === 0 ? (
 				<div className="dctc-ai-sessions-empty dctc-ai-sessions-empty--compact">
 					<span className="dashicons dashicons-search" aria-hidden="true" />
-					<h3>{ __( 'No matching sessions', 'dragwyb-click-to-chat' ) }</h3>
+					<h3>{__('No matching sessions', 'dragwyb-click-to-chat')}</h3>
 					<p>
-						{ __(
+						{__(
 							'Try a different search term or filter.',
 							'dragwyb-click-to-chat'
-						) }
+						)}
 					</p>
 				</div>
 			) : (
@@ -813,84 +813,84 @@ export default function ChatSessions( { showNotice } ) {
 						<table className="dctc-ai-sessions-table">
 							<thead>
 								<tr>
-									<th>{ __( 'Email', 'dragwyb-click-to-chat' ) }</th>
-									<th>{ __( 'Provider', 'dragwyb-click-to-chat' ) }</th>
-									<th>{ __( 'Created', 'dragwyb-click-to-chat' ) }</th>
-									<th>{ __( 'Last message', 'dragwyb-click-to-chat' ) }</th>
+									<th>{__('Email', 'dragwyb-click-to-chat')}</th>
+									<th>{__('Provider', 'dragwyb-click-to-chat')}</th>
+									<th>{__('Created', 'dragwyb-click-to-chat')}</th>
+									<th>{__('Last message', 'dragwyb-click-to-chat')}</th>
 									<th className="dctc-ai-sessions-table__actions-col">
-										{ __( 'Actions', 'dragwyb-click-to-chat' ) }
+										{__('Actions', 'dragwyb-click-to-chat')}
 									</th>
 								</tr>
 							</thead>
 							<tbody>
-								{ pageRows.map( ( session ) => {
-									const email = sessionEmail( session );
-									const preview = lastMessagePreview( session );
+								{pageRows.map((session) => {
+									const email = sessionEmail(session);
+									const preview = lastMessagePreview(session);
 									const busy = deletingId === session.session_id;
 									return (
-										<tr key={ session.session_id }>
+										<tr key={session.session_id}>
 											<td>
 												<span className="dctc-ai-sessions-user__name">
-													{ email }
+													{email}
 												</span>
-												{ ( session.sentiment || session.intent_tag ) && (
+												{(session.sentiment || session.intent_tag) && (
 													<div style={{ display: 'flex', gap: '0.35rem', marginTop: '0.35rem' }}>
-														{ session.sentiment && (
-															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getSentimentBadge( session.sentiment ).bg, color: getSentimentBadge( session.sentiment ).color }}>
-																{ getSentimentBadge( session.sentiment ).label }
+														{session.sentiment && (
+															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getSentimentBadge(session.sentiment).bg, color: getSentimentBadge(session.sentiment).color }}>
+																{getSentimentBadge(session.sentiment).label}
 															</span>
-														) }
-														{ session.intent_tag && getIntentTagBadge( session.intent_tag ) && (
-															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getIntentTagBadge( session.intent_tag ).bg, color: getIntentTagBadge( session.intent_tag ).color }}>
-																{ getIntentTagBadge( session.intent_tag ).label }
+														)}
+														{session.intent_tag && getIntentTagBadge(session.intent_tag) && (
+															<span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '999px', background: getIntentTagBadge(session.intent_tag).bg, color: getIntentTagBadge(session.intent_tag).color }}>
+																{getIntentTagBadge(session.intent_tag).label}
 															</span>
-														) }
+														)}
 													</div>
-												) }
+												)}
 											</td>
 											<td className="dctc-ai-sessions-provider">
-												{ session.provider ? (
+												{session.provider ? (
 													<span className="dctc-ai-sessions-provider__badge">
-														{ formatProviderLabel( session.provider ) }
+														{formatProviderLabel(session.provider)}
 													</span>
 												) : (
 													<span className="dctc-ai-sessions-last-msg--empty">
-														{ __( 'Unknown', 'dragwyb-click-to-chat' ) }
+														{__('Unknown', 'dragwyb-click-to-chat')}
 													</span>
-												) }
+												)}
 											</td>
 											<td className="dctc-ai-sessions-date">
-												{ session.created_at ? (
-													<span>{ formatDate( session.created_at ) }</span>
+												{session.created_at ? (
+													<span>{formatDate(session.created_at)}</span>
 												) : (
 													<span className="dctc-ai-sessions-last-msg--empty">
-														{ __( 'Unknown', 'dragwyb-click-to-chat' ) }
+														{__('Unknown', 'dragwyb-click-to-chat')}
 													</span>
-												) }
+												)}
 											</td>
 											<td className="dctc-ai-sessions-last-msg">
-												{ preview || (
+												{preview || (
 													<span className="dctc-ai-sessions-last-msg--empty">
-														{ __(
+														{__(
 															'No messages',
 															'dragwyb-click-to-chat'
-														) }
+														)}
 													</span>
-												) }
+												)}
 											</td>
 											<td className="dctc-ai-sessions-table__actions">
 												<button
 													type="button"
 													className="dctc-ai-sessions-icon-btn"
-													onClick={ () => setViewing( session ) }
-													title={ __(
+													onClick={() => setViewing(session)}
+													title={__(
 														'View session',
 														'dragwyb-click-to-chat'
-													) }
-													aria-label={ __(
+													)}
+													aria-label={__(
 														'View session',
 														'dragwyb-click-to-chat'
-													) }
+													)}
 												>
 													<span
 														className="dashicons dashicons-visibility"
@@ -900,19 +900,19 @@ export default function ChatSessions( { showNotice } ) {
 												<button
 													type="button"
 													className="dctc-ai-sessions-icon-btn dctc-ai-sessions-icon-btn--danger"
-													onClick={ ( e ) => {
+													onClick={(e) => {
 														e.stopPropagation();
-														setConfirmDelete( session );
-													} }
-													disabled={ busy }
-													title={ __(
+														setConfirmDelete(session);
+													}}
+													disabled={busy}
+													title={__(
 														'Delete session',
 														'dragwyb-click-to-chat'
-													) }
-													aria-label={ __(
+													)}
+													aria-label={__(
 														'Delete session',
 														'dragwyb-click-to-chat'
-													) }
+													)}
 												>
 													<span
 														className="dashicons dashicons-trash"
@@ -922,151 +922,40 @@ export default function ChatSessions( { showNotice } ) {
 											</td>
 										</tr>
 									);
-								} ) }
+								})}
 							</tbody>
 						</table>
 					</div>
-
-					<footer className="dctc-ai-sessions-footer">
-						<p className="dctc-ai-sessions-footer__count">
-							{ filtered.length
-								? sprintf(
-										/* translators: 1: start index, 2: end index, 3: total count */
-										__(
-											'Showing %1$d–%2$d of %3$d sessions',
-											'dragwyb-click-to-chat'
-										),
-										rangeStart,
-										rangeEnd,
-										filtered.length
-								  )
-								: __( 'No sessions', 'dragwyb-click-to-chat' ) }
-						</p>
-						<div className="dctc-ai-sessions-footer__right">
-							<div className="dctc-ai-sessions-per-page-input-wrap">
-								<span className="dctc-ai-sessions-per-page-input__label">
-									{ __( 'Rows per page:', 'dragwyb-click-to-chat' ) }
-								</span>
-								<input
-									type="text"
-									pattern="[0-9]*"
-									inputMode="numeric"
-									className="dctc-ai-sessions-per-page-input__field"
-									value={ perPageDraft }
-									onChange={ ( e ) => setPerPageDraft( e.target.value ) }
-									onBlur={ () => commitPerPage( perPageDraft ) }
-									onKeyDown={ ( e ) => {
-										if ( e.key === 'Enter' ) {
-											e.preventDefault();
-											commitPerPage( perPageDraft );
-											e.target.blur();
-										}
-									} }
-									aria-label={ __(
-										'Sessions per page',
-										'dragwyb-click-to-chat'
-									) }
-								/>
-							</div>
-							{ totalPages > 1 && (
-								<nav
-									className="dctc-ai-sessions-pagination"
-									aria-label={ __(
-										'Sessions pagination',
-										'dragwyb-click-to-chat'
-									) }
-								>
-									<button
-										type="button"
-										className="dctc-ai-sessions-page-btn"
-										disabled={ page <= 1 }
-										onClick={ () =>
-											setPage( ( p ) => Math.max( 1, p - 1 ) )
-										}
-										aria-label={ __(
-											'Previous page',
-											'dragwyb-click-to-chat'
-										) }
-									>
-										<span
-											className="dashicons dashicons-arrow-left-alt2"
-											aria-hidden="true"
-										/>
-									</button>
-									{ pages.map( ( n, i ) =>
-										n === '…' ? (
-											<span
-												key={ `ellipsis-${ i }` }
-												className="dctc-ai-sessions-page-ellipsis"
-											>
-												…
-											</span>
-										) : (
-											<button
-												key={ n }
-												type="button"
-												className={
-													'dctc-ai-sessions-page-num ' +
-													( page === n ? 'is-active' : '' )
-												}
-												onClick={ () => setPage( n ) }
-												aria-current={ page === n ? 'page' : undefined }
-											>
-												{ n }
-											</button>
-										)
-									) }
-									<button
-										type="button"
-										className="dctc-ai-sessions-page-btn"
-										disabled={ page >= totalPages }
-										onClick={ () =>
-											setPage( ( p ) => Math.min( totalPages, p + 1 ) )
-										}
-										aria-label={ __(
-											'Next page',
-											'dragwyb-click-to-chat'
-										) }
-									>
-										<span
-											className="dashicons dashicons-arrow-right-alt2"
-											aria-hidden="true"
-										/>
-									</button>
-								</nav>
-							) }
-						</div>
-					</footer>
 				</>
-			) }
+			)}
 
 			<SessionTranscriptModal
-				session={ viewing }
-				isOpen={ !! viewing }
-				onClose={ closeView }
-				onPrint={ printTranscript }
-				onSummarize={ handleSummarize }
-				summarizing={ summarizing }
+				session={viewing}
+				isOpen={!!viewing}
+				onClose={closeView}
+				onPrint={printTranscript}
+				onSummarize={handleSummarize}
+				summarizing={summarizing}
 			/>
 
 
 			<ConfirmModal
-				open={ !! confirmDelete }
-				title={ __( 'Delete chat session', 'dragwyb-click-to-chat' ) }
-				message={ __(
+				open={!!confirmDelete}
+				title={__('Delete chat session', 'dragwyb-click-to-chat')}
+				message={__(
 					'Delete this chat session permanently? This cannot be undone.',
 					'dragwyb-click-to-chat'
-				) }
-				confirmLabel={ __( 'Delete Session', 'dragwyb-click-to-chat' ) }
+				)}
+				confirmLabel={__('Delete Session', 'dragwyb-click-to-chat')}
 				busy={
-					!! deletingId && confirmDelete?.session_id === deletingId
+					!!deletingId && confirmDelete?.session_id === deletingId
 				}
-				onCancel={ () => setConfirmDelete( null ) }
-				onConfirm={ () => {
+				onCancel={() => setConfirmDelete(null)}
+				onConfirm={() => {
 					const session = confirmDelete;
-					setConfirmDelete( null );
-					deleteSession( session );
-				} }
+					setConfirmDelete(null);
+					deleteSession(session);
+				}}
 			/>
 		</div>
 	);

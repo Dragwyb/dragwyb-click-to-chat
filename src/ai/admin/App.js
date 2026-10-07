@@ -253,66 +253,96 @@ export default function App({ settings: initialSettings }) {
 
 	// Normal Main Menu Page (dragwyb-click-to-chat):
 	return (
-		<div className="dctc-ai-dashboard-wrapper">
+		<div className="dctc-ai-app-wrapper">
 			{notice && <Toast message={notice.message} type={notice.type} />}
-			<header className="dctc-ai-dashboard-header">
-				<div className="dctc-ai-brand">
-					<div className="dctc-ai-brand__icon-wrap" aria-hidden="true">
+
+			{/* Full-Size Sticky Top Header Bar matching Support Center */}
+			<header className="dctc-sc-header-bar dctc-ai-top-header">
+				<div className="dctc-sc-brand">
+					<div className="dctc-sc-brand-icon">
 						<span className="dashicons dashicons-format-chat" />
 					</div>
-					<div className="dctc-ai-brand__text-wrap">
-						<span className="dctc-ai-brand__title">{__('AI Assistant', 'dragwyb-click-to-chat')}</span>
-						<span className="dctc-ai-brand__badge">{__('PRO', 'dragwyb-click-to-chat')}</span>
+					<div>
+						<h1 className="dctc-sc-app-title">{__('AI Assistant', 'dragwyb-click-to-chat')}</h1>
+						<span className="dctc-sc-app-tagline">{__('Autonomous AI Agent & Knowledge Base', 'dragwyb-click-to-chat')}</span>
 					</div>
 				</div>
-				<nav
-					className="dctc-ai-tabs"
-					role="tablist"
-					aria-label={__('Settings sections', 'dragwyb-click-to-chat')}
-				>
-					{NAV_GROUPS.map((group) => (
-						<div className="dctc-ai-nav-group" key={group.label}>
-							<span className="dctc-ai-nav-group__label">{group.label}</span>
-							{group.items.map((itemId) => {
-								const tab = visibleTabs.find((t) => t.id === itemId);
-								if (!tab) {
-									return null;
-								}
-								return (
-									<button
-										key={tab.id}
-										type="button"
-										role="tab"
-										id={`tab-${tab.id}`}
-										aria-controls={`panel-${tab.id}`}
-										aria-selected={activeTab === tab.id}
-										className={`dctc-ai-tab ${activeTab === tab.id ? 'active' : ''}`}
-										onClick={goToTab(tab.id)}
-									>
-										<span className={`dashicons ${tab.icon}`} aria-hidden="true" />
-										<span className="dctc-ai-tab__label">{tab.label}</span>
-									</button>
-								);
-							})}
-						</div>
-					))}
-				</nav>
+
+				<div className="dctc-sc-header-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+					<a
+						href="admin.php?page=dragwyb-click-to-chat-guide"
+						className="dctc-ai-guide-btn"
+						title={__('View AI Assistant documentation', 'dragwyb-click-to-chat')}
+					>
+						<span className="dashicons dashicons-book" />
+						{__('User Guide', 'dragwyb-click-to-chat')}
+					</a>
+
+					<button
+						type="button"
+						id="dctc-global-save-btn"
+						className="dctc-ai-btn dctc-ai-btn-primary"
+						onClick={() => {
+							window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
+						}}
+					>
+						<span className="dashicons dashicons-saved" style={{ fontSize: '16px', width: '16px', height: '16px', marginRight: '4px' }} />
+						{__('Save Settings', 'dragwyb-click-to-chat')}
+					</button>
+				</div>
 			</header>
 
-			<main
-				className="dctc-ai-dashboard-body"
-				id={`panel-${current?.id}`}
-				role="tabpanel"
-				aria-labelledby={`tab-${current?.id}`}
-			>
-				{Panel && (
-					<Panel
-						settings={settings}
-						onSave={onSave}
-						showNotice={showNotice}
-					/>
-				)}
-			</main>
+			<div className="dctc-ai-dashboard-wrapper">
+				<aside className="dctc-ai-dashboard-header">
+					<nav
+						className="dctc-ai-tabs"
+						role="tablist"
+						aria-label={__('Settings sections', 'dragwyb-click-to-chat')}
+					>
+						{NAV_GROUPS.map((group) => (
+							<div className="dctc-ai-nav-group" key={group.label}>
+								<span className="dctc-ai-nav-group__label">{group.label}</span>
+								{group.items.map((itemId) => {
+									const tab = visibleTabs.find((t) => t.id === itemId);
+									if (!tab) {
+										return null;
+									}
+									return (
+										<button
+											key={tab.id}
+											type="button"
+											role="tab"
+											id={`tab-${tab.id}`}
+											aria-controls={`panel-${tab.id}`}
+											aria-selected={activeTab === tab.id}
+											className={`dctc-ai-tab ${activeTab === tab.id ? 'active' : ''}`}
+											onClick={goToTab(tab.id)}
+										>
+											<span className={`dashicons ${tab.icon}`} aria-hidden="true" />
+											<span className="dctc-ai-tab__label">{tab.label}</span>
+										</button>
+									);
+								})}
+							</div>
+						))}
+					</nav>
+				</aside>
+
+				<main
+					className="dctc-ai-dashboard-body"
+					id={`panel-${current?.id}`}
+					role="tabpanel"
+					aria-labelledby={`tab-${current?.id}`}
+				>
+					{Panel && (
+						<Panel
+							settings={settings}
+							onSave={onSave}
+							showNotice={showNotice}
+						/>
+					)}
+				</main>
+			</div>
 		</div>
 	);
 }

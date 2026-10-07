@@ -168,7 +168,7 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 	};
 
 	const onSubmit = async (e) => {
-		e.preventDefault();
+		if (e) e.preventDefault();
 		setSaving(true);
 		try {
 			await apiFetch({
@@ -190,6 +190,16 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 			setSaving(false);
 		}
 	};
+
+	useEffect(() => {
+		const handleTriggerSave = () => {
+			onSubmit();
+		};
+		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		return () => {
+			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		};
+	}, [form, display]);
 
 	const renderLauncherIcon = () => {
 		if (form.assistant_icon) {
@@ -824,39 +834,6 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 						)}
 					</div>
 				</section>
-
-				{ /* Save Footer */}
-				<footer className="dctc-ai-form-footer">
-					<div className="dctc-ai-form-footer__status">
-						{dirty ? (
-							<span className="dctc-ai-unsaved-badge">
-								<span className="dctc-ai-dot is-warning" />
-								{__('Unsaved changes', 'dragwyb-click-to-chat')}
-							</span>
-						) : (
-							<span className="dctc-ai-saved-badge">
-								<span className="dctc-ai-dot is-success" />
-								{__('All settings saved', 'dragwyb-click-to-chat')}
-							</span>
-						)}
-					</div>
-					<button
-						type="submit"
-						className="dctc-ai-btn dctc-ai-btn-primary"
-						disabled={saving || !dirty}
-					>
-						{saving ? (
-							<>
-								<span className="dctc-ai-spinner" aria-hidden="true" />{' '}
-								{__('Saving Changes…', 'dragwyb-click-to-chat')}
-							</>
-						) : (
-							<>
-								{__('Save', 'dragwyb-click-to-chat')}
-							</>
-						)}
-					</button>
-				</footer>
 			</form>
 		</div>
 	);

@@ -11,6 +11,7 @@ export default function VectorDbSubtab({
 	autoUpdate,
 	setAutoUpdate,
 	indexing,
+	startIndex,
 	indexStatus,
 	progressPct,
 	progressLabel,
@@ -97,8 +98,27 @@ export default function VectorDbSubtab({
 							</span>
 						</label>
 					</div>
+					<div className="dctc-ai-kb-sync-actions" style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+						{selectedPostTypes.length > 0 && startIndex && (
+							<button
+								type="button"
+								className="dctc-ai-btn dctc-ai-btn-secondary"
+								onClick={startIndex}
+								disabled={indexing}
+							>
+								<span
+									className={`dashicons dashicons-update ${indexing ? 'dctc-ai-spin' : ''}`}
+									aria-hidden="true"
+								/>{' '}
+								{indexing
+									? __('Indexing Content…', 'dragwyb-click-to-chat')
+									: __('Index Content Now', 'dragwyb-click-to-chat')}
+							</button>
+						)}
+					</div>
+
 					{indexing && indexStatus && (
-						<div className="dctc-ai-kb-index-progress" role="status">
+						<div className="dctc-ai-kb-index-progress" role="status" style={{ marginTop: '16px' }}>
 							<div className="dctc-ai-kb-index-progress__bar">
 								<div
 									className="dctc-ai-kb-index-progress__fill"

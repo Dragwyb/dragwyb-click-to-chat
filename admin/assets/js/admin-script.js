@@ -25,11 +25,10 @@
             $('#dctc-next-btn').on('click', this.nextStep.bind(this));
             $('#dctc-back-btn').on('click', this.prevStep.bind(this));
 
-            // Save button
-            $('#dctc-save-btn').on('click', this.saveSettings.bind(this));
+            // Save buttons (Footer and Header)
+            $('#dctc-save-btn, #dctc-header-save-btn').on('click', this.saveSettings.bind(this));
 
             // Listen for changes on all inputs that affect the preview
-            // Note: section-channels.php has its own click handler for cards, 
             $(document).on('change input',
                 'input[name^="dctc_"], select[name^="dctc_"]',
                 this.updatePreview.bind(this)
@@ -40,6 +39,7 @@
                 setTimeout(() => {
                     this.updatePreview();
                     this.updateShowWidgetHint();
+                    this.updateChannelsCountBadge();
                 }, 50);
             });
 
@@ -271,8 +271,8 @@
 
             currentStep = step;
 
-            // Update tabs
-            $('.dctc-tab').removeClass('active').eq(step).addClass('active');
+            // Update tabs and accessibility
+            $('.dctc-tab').removeClass('active').attr('aria-selected', 'false').eq(step).addClass('active').attr('aria-selected', 'true');
 
             // Update sections
             $('.dctc-section').removeClass('active').eq(step).addClass('active');
@@ -324,6 +324,11 @@
             } else {
                 $hint.hide();
             }
+        },
+
+        updateChannelsCountBadge: function () {
+            const count = $('.dctc-channel-card.active').length;
+            $('#dctc-active-channels-badge').text(count + ' Channels Enabled');
         },
 
         // Removed toggleChannel logic as it is handled in section-channels.php 

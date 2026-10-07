@@ -578,6 +578,14 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		}
 	};
 
+	useEffect(() => {
+		const handleTriggerSave = () => {
+			onSubmit();
+		};
+		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		return () => window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
+	}, [onSubmit]);
+
 	const getBubbleRadiusStyle = () => {
 		if (form.bubble_style === 'square') return '4px';
 		if (form.bubble_style === 'pill') return '20px';
@@ -769,39 +777,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 						isWcActive={isWcActive}
 					/>
 				)}
-
-				{/* Save Footer */}
-				<footer className="dctc-ai-form-footer">
-					<div className="dctc-ai-form-footer__status">
-						{dirty ? (
-							<span className="dctc-ai-unsaved-badge">
-								<span className="dctc-ai-dot is-warning" />
-								{__('Unsaved changes', 'dragwyb-click-to-chat')}
-							</span>
-						) : (
-							<span className="dctc-ai-saved-badge">
-								<span className="dctc-ai-dot is-success" />
-								{__('All settings saved', 'dragwyb-click-to-chat')}
-							</span>
-						)}
-					</div>
-					<button
-						type="submit"
-						className="dctc-ai-btn dctc-ai-btn-primary"
-						disabled={saving || !dirty}
-					>
-						{saving ? (
-							<>
-								<span className="dctc-ai-spinner" aria-hidden="true" />{' '}
-								{__('Saving Changes…', 'dragwyb-click-to-chat')}
-							</>
-						) : (
-							<>
-								{__('Save', 'dragwyb-click-to-chat')}
-							</>
-						)}
-					</button>
-				</footer>
 			</form>
 		</div>
 	);

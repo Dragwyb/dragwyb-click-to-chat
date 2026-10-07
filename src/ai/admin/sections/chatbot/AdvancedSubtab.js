@@ -526,7 +526,7 @@ export default function AdvancedSubtab({
 									{__('If a live human agent takes longer than this duration without replying and is not actively viewing the ticket, automatically fallback to AI assistant and resume AI control mode.', 'dragwyb-click-to-chat')}
 								</span>
 							</div>
-							<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '150px' }}>
+							<div style={{ display: 'flex', alignItems: 'center', flexDirection: 'column', textWrap: 'nowrap', gap: '0.5rem' }}>
 								<input
 									type="number"
 									id="human_agent_max_wait_time"
