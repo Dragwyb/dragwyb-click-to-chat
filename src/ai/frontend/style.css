@@ -1,7 +1,6 @@
 .dctc-ai-chat-wrapper {
   --dctc-ai-primary: #6366f1;
   --dctc-ai-primary-glow: rgba(99, 102, 241, 0.25);
-  --dctc-ai-bg: #fff;
   --dctc-ai-bg-glass: hsla(0, 0%, 100%, 0.88);
   --dctc-ai-text: #0f172a;
   --dctc-ai-text-muted: #64748b;
@@ -851,7 +850,7 @@
 }
 .dctc-ai-email-capture-container {
   align-items: center;
-  background: var(--dctc-ai-bg);
+  background: var(--dctc-bg);
   border-top: 1px solid var(--dctc-ai-border);
   box-sizing: border-box;
   display: flex;

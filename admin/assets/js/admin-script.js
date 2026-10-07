@@ -491,7 +491,7 @@
             }
 
             let btnHtml = '';
-            if (isSingleChannel || showLauncher) {
+            if ((isSingleChannel || showLauncher) && activeChannels.length > 0) {
                 btnHtml = `
                     <div class="dctc-widget-btn-preview${isSingleChannel ? ' dctc-single-channel-preview' : ''}" style="${btnCss}">
                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
@@ -512,7 +512,7 @@
                         overflow: hidden;
                         background-color: #fff; 
                         border: 1px solid #e5e7eb;
-                        height: 400px;
+                        height: 100%;
                     }
                     .dctc-widget-btn-preview svg { fill: currentColor; width: 100%; height: 100%; }
                     .dctc-widget-btn-preview.dctc-single-channel-preview svg { fill: #fff; width: 24px; height: 24px; }

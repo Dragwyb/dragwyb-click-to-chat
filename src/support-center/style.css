@@ -12,7 +12,7 @@
 
 .dctc-sc-app-wrapper,
 .dctc-sc-app-wrap {
-  background: #f6f8fb;
+  background: var(--dctc-bg);
   box-sizing: border-box;
   color: #111827;
   display: flex;
