@@ -7,7 +7,7 @@
  * @package Dragwyb_Click_To_Chat
  */
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
@@ -20,8 +20,8 @@ require_once __DIR__ . '/class-dctc-ai-provider-openrouter.php';
 require_once __DIR__ . '/class-dctc-ai-provider-groq.php';
 require_once __DIR__ . '/class-dctc-ai-provider-deepseek.php';
 
-class DCTC_AI_Provider_Manager
-{
+class DCTC_AI_Provider_Manager {
+
 	/**
 	 * Singleton instance
 	 *
@@ -34,30 +34,29 @@ class DCTC_AI_Provider_Manager
 	 *
 	 * @var array<string, DCTC_AI_Provider_Interface>
 	 */
-	private $providers = [];
+	private $providers = array();
 
 	/**
 	 * Supported provider IDs.
 	 *
 	 * @var string[]
 	 */
-	public static $supported_providers = [
+	public static $supported_providers = array(
 		'openai',
 		'google',
 		'anthropic',
 		'openrouter',
 		'groq',
 		'deepseek',
-	];
+	);
 
 	/**
 	 * Get singleton instance.
 	 *
 	 * @return self
 	 */
-	public static function get_instance()
-	{
-		if (null === self::$instance) {
+	public static function get_instance() {
+		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 		return self::$instance;
@@ -66,14 +65,13 @@ class DCTC_AI_Provider_Manager
 	/**
 	 * Constructor.
 	 */
-	private function __construct()
-	{
-		$this->register_provider(new DCTC_AI_Provider_OpenAI());
-		$this->register_provider(new DCTC_AI_Provider_Google());
-		$this->register_provider(new DCTC_AI_Provider_Anthropic());
-		$this->register_provider(new DCTC_AI_Provider_OpenRouter());
-		$this->register_provider(new DCTC_AI_Provider_Groq());
-		$this->register_provider(new DCTC_AI_Provider_DeepSeek());
+	private function __construct() {
+		$this->register_provider( new DCTC_AI_Provider_OpenAI() );
+		$this->register_provider( new DCTC_AI_Provider_Google() );
+		$this->register_provider( new DCTC_AI_Provider_Anthropic() );
+		$this->register_provider( new DCTC_AI_Provider_OpenRouter() );
+		$this->register_provider( new DCTC_AI_Provider_Groq() );
+		$this->register_provider( new DCTC_AI_Provider_DeepSeek() );
 	}
 
 	/**
@@ -82,9 +80,8 @@ class DCTC_AI_Provider_Manager
 	 * @param DCTC_AI_Provider_Interface $provider
 	 * @return void
 	 */
-	public function register_provider(DCTC_AI_Provider_Interface $provider)
-	{
-		$this->providers[$provider->get_id()] = $provider;
+	public function register_provider( DCTC_AI_Provider_Interface $provider ) {
+		$this->providers[ $provider->get_id() ] = $provider;
 	}
 
 	/**
@@ -93,10 +90,9 @@ class DCTC_AI_Provider_Manager
 	 * @param string $id
 	 * @return DCTC_AI_Provider_Interface|null
 	 */
-	public function get_provider($id)
-	{
-		$id = sanitize_key($id);
-		return isset($this->providers[$id]) ? $this->providers[$id] : null;
+	public function get_provider( $id ) {
+		$id = sanitize_key( $id );
+		return isset( $this->providers[ $id ] ) ? $this->providers[ $id ] : null;
 	}
 
 	/**
@@ -104,8 +100,7 @@ class DCTC_AI_Provider_Manager
 	 *
 	 * @return array<string, DCTC_AI_Provider_Interface>
 	 */
-	public function get_providers()
-	{
+	public function get_providers() {
 		return $this->providers;
 	}
 
@@ -114,12 +109,11 @@ class DCTC_AI_Provider_Manager
 	 *
 	 * @return string[]
 	 */
-	public function get_configured_provider_ids()
-	{
-		$configured = [];
-		foreach ($this->providers as $id => $provider) {
-			$key = DCTC_AI_Key_Store::get_provider_key($id);
-			if (!empty($key)) {
+	public function get_configured_provider_ids() {
+		$configured = array();
+		foreach ( $this->providers as $id => $provider ) {
+			$key = DCTC_AI_Key_Store::get_provider_key( $id );
+			if ( ! empty( $key ) ) {
 				$configured[] = $id;
 			}
 		}
@@ -144,88 +138,90 @@ class DCTC_AI_Provider_Manager
 		$system_message,
 		$primary_provider,
 		$primary_model,
-		array $options = [],
+		array $options = array(),
 		$fallback_provider = '',
 		$fallback_model = ''
 	) {
-		$primary_adapter = $this->get_provider($primary_provider);
+		$primary_adapter = $this->get_provider( $primary_provider );
 
-		if (!$primary_adapter) {
-			throw new \Exception(sprintf(
+		if ( ! $primary_adapter ) {
+			throw new \Exception(
+				sprintf(
 				/* translators: %s: Provider ID */
-				esc_html__('Unsupported primary AI provider: %s', 'dragwyb-click-to-chat'),
-				esc_html($primary_provider)
-			));
+					esc_html__( 'Unsupported primary AI provider: %s', 'dragwyb-click-to-chat' ),
+					esc_html( $primary_provider )
+				)
+			);
 		}
 
 		$primary_error = null;
 
 		// 1. Try Primary Provider
 		try {
-			$result_text = $primary_adapter->chat($prompt, $system_message, $primary_model, $options);
-			if (!empty($result_text)) {
-				return [
+			$result_text = $primary_adapter->chat( $prompt, $system_message, $primary_model, $options );
+			if ( ! empty( $result_text ) ) {
+				return array(
 					'message'     => $result_text,
 					'provider'    => $primary_provider,
 					'model'       => $primary_model,
 					'failed_over' => false,
-				];
+				);
 			}
-			throw new \Exception(esc_html__('Primary provider returned an empty response.', 'dragwyb-click-to-chat'));
-		} catch (\Throwable $e) {
+			throw new \Exception( esc_html__( 'Primary provider returned an empty response.', 'dragwyb-click-to-chat' ) );
+		} catch ( \Throwable $e ) {
 			$primary_error = $e;
 
-			if (class_exists('DCTC_Error_Logger')) {
+			if ( class_exists( 'DCTC_Error_Logger' ) ) {
 				DCTC_Error_Logger::log_ai_error(
 					$primary_provider,
 					$primary_model,
 					$prompt,
 					$e->getMessage(),
-					[
+					array(
 						'type'    => 'Primary Provider Failure',
 						'code'    => (string) $e->getCode(),
 						'context' => 'Chat Completion with Failover',
-					]
+					)
 				);
 			}
 		}
 
 		// 2. Check if a valid fallback provider is available
 		$can_fallback = false;
-		if (!empty($fallback_provider)) {
-			$fallback_key = DCTC_AI_Key_Store::get_provider_key($fallback_provider);
-			if (!empty($fallback_key)) {
+		if ( ! empty( $fallback_provider ) ) {
+			$fallback_key = DCTC_AI_Key_Store::get_provider_key( $fallback_provider );
+			if ( ! empty( $fallback_key ) ) {
 				$can_fallback = true;
 			}
 		}
 
 		// Auto-discover another configured provider if none explicitly set as fallback
-		if (!$can_fallback) {
+		if ( ! $can_fallback ) {
 			$configured = $this->get_configured_provider_ids();
-			foreach ($configured as $c_id) {
-				if ($c_id !== $primary_provider) {
+			foreach ( $configured as $c_id ) {
+				if ( $c_id !== $primary_provider ) {
 					$fallback_provider = $c_id;
-					$can_fallback = true;
+					$can_fallback      = true;
 					break;
 				}
 			}
 		}
 
-		if ($can_fallback && !empty($fallback_provider)) {
-			$fallback_adapter = $this->get_provider($fallback_provider);
+		if ( $can_fallback && ! empty( $fallback_provider ) ) {
+			$fallback_adapter = $this->get_provider( $fallback_provider );
 
-			if ($fallback_adapter) {
+			if ( $fallback_adapter ) {
 				// Resolve fallback model default if empty
-				if (empty($fallback_model)) {
-					$models = DCTC_AI_Key_Store::get_models($fallback_provider);
-					$fallback_model = !empty($models) ? array_key_first($models) : '';
+				if ( empty( $fallback_model ) ) {
+					$models         = DCTC_AI_Key_Store::get_models( $fallback_provider );
+					$fallback_model = ! empty( $models ) ? array_key_first( $models ) : '';
 				}
 
 				try {
-					$fallback_text = $fallback_adapter->chat($prompt, $system_message, $fallback_model, $options);
+					$fallback_text = $fallback_adapter->chat( $prompt, $system_message, $fallback_model, $options );
 
-					if (!empty($fallback_text)) {
-						if (class_exists('DCTC_Error_Logger')) {
+					if ( ! empty( $fallback_text ) ) {
+						if ( class_exists( 'DCTC_Error_Logger' ) ) {
 							DCTC_Error_Logger::log_ai_error(
 								$primary_provider,
 								$primary_model,
@@ -238,32 +234,32 @@ class DCTC_AI_Provider_Manager
 									$fallback_provider,
 									$fallback_model
 								),
-								[
+								array(
 									'type'    => 'Failover Successful',
 									'context' => 'Automatic Failover Handler',
-								]
+								)
 							);
 						}
 
-						return [
+						return array(
 							'message'     => $fallback_text,
 							'provider'    => $fallback_provider,
 							'model'       => $fallback_model,
 							'failed_over' => true,
-						];
+						);
 					}
-				} catch (\Throwable $fe) {
-					if (class_exists('DCTC_Error_Logger')) {
+				} catch ( \Throwable $fe ) {
+					if ( class_exists( 'DCTC_Error_Logger' ) ) {
 						DCTC_Error_Logger::log_ai_error(
 							$fallback_provider,
 							$fallback_model,
 							$prompt,
 							$fe->getMessage(),
-							[
+							array(
 								'type'    => 'Fallback Provider Failure',
 								'code'    => (string) $fe->getCode(),
 								'context' => 'Failover Fallback Attempt',
-							]
+							)
 						);
 					}
 				}
@@ -271,6 +267,6 @@ class DCTC_AI_Provider_Manager
 		}
 
 		// Re-throw primary exception if fallback was unavailable or also failed
-		throw new \Exception($primary_error ? $primary_error->getMessage() : esc_html__('AI service is currently unavailable.', 'dragwyb-click-to-chat'));
+		throw new \Exception( $primary_error ? $primary_error->getMessage() : esc_html__( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
 	}
 }
