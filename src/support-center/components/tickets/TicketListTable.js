@@ -20,6 +20,8 @@ export default function TicketListTable({
 	setCurrentPage,
 	getInitials,
 	formatRelativeTime,
+	onManualRefresh,
+	isRefreshing = false,
 }) {
 	return (
 		<section className="dctc-sc-col-list fullwidth">
@@ -87,15 +89,28 @@ export default function TicketListTable({
 								{totalTickets || filteredTickets.length} {__('tickets found', 'dragwyb-click-to-chat')}
 							</span>
 						</div>
-						<div className="dctc-sc-list-sort">
-							<select
-								value={sortBy}
-								onChange={(e) => setSortBy(e.target.value)}
-							>
-								<option value="newest">{__('Newest First', 'dragwyb-click-to-chat')}</option>
-								<option value="oldest">{__('Oldest First', 'dragwyb-click-to-chat')}</option>
-								<option value="priority">{__('Priority High-Low', 'dragwyb-click-to-chat')}</option>
-							</select>
+						<div className="dctc-sc-list-header-right">
+							{onManualRefresh && (
+								<button
+									type="button"
+									className={`dctc-sc-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
+									onClick={onManualRefresh}
+									title={__('Refresh ticket data immediately', 'dragwyb-click-to-chat')}
+								>
+									<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
+									<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
+								</button>
+							)}
+							<div className="dctc-sc-list-sort">
+								<select
+									value={sortBy}
+									onChange={(e) => setSortBy(e.target.value)}
+								>
+									<option value="newest">{__('Newest First', 'dragwyb-click-to-chat')}</option>
+									<option value="oldest">{__('Oldest First', 'dragwyb-click-to-chat')}</option>
+									<option value="priority">{__('Priority High-Low', 'dragwyb-click-to-chat')}</option>
+								</select>
+							</div>
 						</div>
 					</div>
 

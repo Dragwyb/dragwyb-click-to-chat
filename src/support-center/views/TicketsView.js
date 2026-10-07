@@ -200,14 +200,17 @@ export default function TicketsView({
 		};
 
 		tickets.forEach((t) => {
-			if (t.status === 'open') counts.open++;
-			if (t.status === 'pending' || t.status === 'waiting_customer') counts.pending++;
+			if (t.status !== 'resolved' && t.status !== 'closed' && t.status !== 'trash') counts.open++;
+			if (t.status === 'pending' || t.status === 'waiting_customer' || t.status === 'waiting_agent' || t.status === 'hold') counts.pending++;
 			if (t.status === 'resolved') counts.resolved++;
 			if (t.status === 'closed') counts.closed++;
 			if (t.status === 'trash') counts.trash++;
 			if (!t.assigned_agent_id || t.assigned_agent_id === 0) counts.unassigned++;
 			if (t.priority === 'high' || t.priority === 'urgent') counts.high_priority++;
 			if (t.status === 'pending') counts.waiting_reply++;
+			if (t.control_mode === 'ai' || t.origin_type === 'chatbot' || t.origin_type === 'ai' || (t.session_id && t.session_id !== '')) {
+				counts.ai_suggested++;
+			}
 		});
 
 		return counts;
@@ -260,7 +263,7 @@ export default function TicketsView({
 		setCurrentPage(1);
 		if (folderKey === 'all') {
 			setStatusFilter('all');
-		} else if (['open', 'pending', 'resolved', 'closed', 'trash'].includes(folderKey)) {
+		} else if (['open', 'pending', 'resolved', 'closed', 'trash', 'ai_bot'].includes(folderKey)) {
 			setStatusFilter(folderKey);
 		} else if (folderKey === 'unassigned') {
 			setStatusFilter('all');
@@ -277,6 +280,8 @@ export default function TicketsView({
 			setStatusFilter('all');
 		} else if (viewKey === 'waiting_reply') {
 			setStatusFilter('pending');
+		} else if (viewKey === 'ai_suggested') {
+			setStatusFilter('ai_bot');
 		}
 	};
 
@@ -653,6 +658,8 @@ export default function TicketsView({
 						setCurrentPage={setCurrentPage}
 						getInitials={getInitials}
 						formatRelativeTime={formatRelativeTime}
+						onManualRefresh={handleManualRefreshTickets}
+						isRefreshing={isRefreshing}
 					/>
 				)}
 

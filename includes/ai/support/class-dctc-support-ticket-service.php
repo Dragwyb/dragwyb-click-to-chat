@@ -286,9 +286,12 @@ class DCTC_Support_Ticket_Service {
 			if ( 'pending' === $status_val ) {
 				$where .= " AND t.status IN ('pending', 'waiting_customer', 'waiting_agent', 'hold')";
 			} elseif ( 'open' === $status_val ) {
-				$where .= " AND t.status IN ('open', 'new')";
+				// Show all active tickets that are not closed / resolved
+				$where .= " AND t.status NOT IN ('resolved', 'closed', 'trash')";
 			} elseif ( 'resolved' === $status_val ) {
 				$where .= " AND t.status IN ('resolved', 'closed')";
+			} elseif ( in_array( $status_val, array( 'ai_bot', 'ai', 'bot', 'chatbot' ), true ) ) {
+				$where .= " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant')) OR (meta_key = 'control_mode' AND meta_value = 'ai') OR (meta_key = 'session_id' AND meta_value != '' AND meta_value IS NOT NULL))) AND t.status != 'trash'";
 			} else {
 				$where .= $wpdb->prepare( ' AND t.status = %s', $status_val );
 			}
@@ -1138,13 +1141,24 @@ class DCTC_Support_Ticket_Service {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total_tickets = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status != 'trash'" );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$total_open = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'open'" );
+		$total_open = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status NOT IN ('resolved', 'closed', 'trash')" );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$total_pending = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer')" );
+		$total_pending = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer', 'waiting_agent', 'hold')" );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total_resolved = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('resolved', 'closed')" );
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$today_created = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today ) );
+
+		// AI Bot Tickets Count
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_ai_bot = (int) $wpdb->get_var(
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
+			 INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id 
+			 WHERE ((tm.meta_key = 'origin_type' AND tm.meta_value IN ('chatbot', 'ai', 'ai_assistant'))
+			    OR (tm.meta_key = 'session_id' AND tm.meta_value != '' AND tm.meta_value IS NOT NULL)
+			    OR (tm.meta_key = 'control_mode' AND tm.meta_value = 'ai')) 
+			   AND t.status != 'trash'"
+		);
 
 		// Assigned to me metrics
 		$agent_ids_check = array_filter( array_unique( array( $agent_id, $user_id ) ) );
@@ -1164,8 +1178,8 @@ class DCTC_Support_Ticket_Service {
 		);
 
 		// If user is admin and has no individual assigned tickets, show site active open/pending
-		if ( $is_admin && 0 === $my_active && ( $total_open + $total_pending ) > 0 ) {
-			$my_active = $total_open + $total_pending;
+		if ( $is_admin && 0 === $my_active && $total_open > 0 ) {
+			$my_active = $total_open;
 			$my_today_assigned = $today_created;
 		} elseif ( 0 === $my_today_assigned && $my_active > 0 ) {
 			// If active tickets exist for agent, display active count so hero/card is meaningful
@@ -1175,9 +1189,9 @@ class DCTC_Support_Ticket_Service {
 		// Control mode breakdown
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$human_controlled = (int) $wpdb->get_var(
-			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status IN ('open', 'pending', 'waiting_customer')"
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status NOT IN ('resolved', 'closed', 'trash')"
 		);
-		$ai_controlled = max( 0, ( $total_open + $total_pending ) - $human_controlled );
+		$ai_controlled = max( 0, $total_open - $human_controlled );
 
 		// Agent info
 		$agent_profile = array(
@@ -1201,11 +1215,63 @@ class DCTC_Support_Ticket_Service {
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$recent_events = $wpdb->get_results( $recent_sql, ARRAY_A );
 
+		// Detailed status breakdown
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_new = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'new'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_closed = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'closed'" );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_resolved_only = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'resolved'" );
+
+		$status_breakdown = array(
+			'new'      => $count_new,
+			'open'     => $total_open,
+			'pending'  => $total_pending,
+			'resolved' => $count_resolved_only,
+			'closed'   => $count_closed,
+		);
+
+		// 7-day daily trend calculations
+		$daily_trends = array();
+		for ( $i = 6; $i >= 0; $i-- ) {
+			$day_ts   = strtotime( "-{$i} days", current_time( 'timestamp' ) );
+			$day_date = date( 'Y-m-d', $day_ts );
+			$day_lbl  = date( 'M d', $day_ts );
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$day_new = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $day_date )
+			);
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$day_open = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status NOT IN ('resolved', 'closed', 'trash')", $day_date )
+			);
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$day_pending = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status IN ('pending', 'waiting_customer')", $day_date )
+			);
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$day_resolved = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(updated_at) = %s AND status IN ('resolved', 'closed')", $day_date )
+			);
+
+			$daily_trends[] = array(
+				'date'      => $day_lbl,
+				'full_date' => $day_date,
+				'new'       => $day_new,
+				'open'      => $day_open,
+				'pending'   => $day_pending,
+				'resolved'  => $day_resolved,
+			);
+		}
+
 		return array(
 			'total_tickets'            => $total_tickets,
 			'total_open'               => $total_open,
 			'total_pending'            => $total_pending,
 			'total_resolved'           => $total_resolved,
+			'total_ai_bot'             => $total_ai_bot,
+			'ai_bot_tickets'           => $total_ai_bot,
 			'today_created'            => $today_created,
 			'today_assigned_tickets'   => $my_today_assigned,
 			'my_active_tickets'        => $my_active,
@@ -1213,6 +1279,8 @@ class DCTC_Support_Ticket_Service {
 			'human_controlled_tickets' => $human_controlled,
 			'agent'                    => $agent_profile,
 			'recent_activity'          => is_array( $recent_events ) ? $recent_events : array(),
+			'status_breakdown'         => $status_breakdown,
+			'daily_trends'             => $daily_trends,
 		);
 	}
 

@@ -44,98 +44,77 @@ export default function TicketFilterBar({
 							{__('0 Tickets', 'dragwyb-click-to-chat')}
 						</span>
 					</div>
-					<div className="dctc-sc-toolbar-actions">
-						<button
-							type="button"
-							className={`dctc-sc-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
-							onClick={onManualRefresh}
-							title={__('Refresh ticket data immediately (resets 1-minute auto-update timer)', 'dragwyb-click-to-chat')}
-						>
-							<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
-							<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
-						</button>
-					</div>
 				</div>
 			) : (
-				<div className="dctc-sc-filter-toolbar-main">
-					{/* Left Folders Toggle Button */}
-					<button
-						type="button"
-						className={`dctc-sc-toggle-folders-btn ${isFoldersExpanded ? 'active' : ''}`}
-						onClick={() => setIsFoldersExpanded((prev) => !prev)}
-						title={isFoldersExpanded ? __('Collapse Folders Sidebar', 'dragwyb-click-to-chat') : __('Expand Folders Sidebar', 'dragwyb-click-to-chat')}
-					>
-						<span className="dashicons dashicons-category"></span>
-						<span>{__('Folders', 'dragwyb-click-to-chat')}</span>
-						<span className={`dashicons ${isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
-					</button>
+				<div className="dctc-sc-filter-toolbar-stack">
+					{/* ROW 1: Search Bar + Filter Options Button */}
+					<div className="dctc-sc-filter-row-top">
+						<div className="dctc-sc-toolbar-search">
+							<span className="dashicons dashicons-search"></span>
+							<input
+								type="text"
+								placeholder={__('Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat')}
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+							/>
+							{searchQuery && (
+								<button
+									type="button"
+									className="dctc-sc-search-clear"
+									onClick={() => setSearchQuery('')}
+								>
+									&times;
+								</button>
+							)}
+						</div>
 
-					{/* Search Bar */}
-					<div className="dctc-sc-toolbar-search">
-						<span className="dashicons dashicons-search"></span>
-						<input
-							type="text"
-							placeholder={__('Search tickets by subject, customer, email, ID...', 'dragwyb-click-to-chat')}
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-						/>
-						{searchQuery && (
-							<button
-								type="button"
-								className="dctc-sc-search-clear"
-								onClick={() => setSearchQuery('')}
-							>
-								&times;
-							</button>
-						)}
-					</div>
-
-					{/* Quick Status Pills */}
-					<div className="dctc-sc-quick-status-pills">
-						{[
-							{ id: 'all', label: __('All', 'dragwyb-click-to-chat') },
-							{ id: 'open', label: __('Open', 'dragwyb-click-to-chat') },
-							{ id: 'pending', label: __('Pending', 'dragwyb-click-to-chat') },
-							{ id: 'resolved', label: __('Resolved', 'dragwyb-click-to-chat') },
-							{ id: 'closed', label: __('Closed', 'dragwyb-click-to-chat') },
-						].map((tab) => (
-							<button
-								key={tab.id}
-								type="button"
-								className={`dctc-sc-status-pill-btn ${statusFilter === tab.id ? 'active' : ''}`}
-								onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
-							>
-								{tab.label}
-							</button>
-						))}
-					</div>
-
-					{/* Expandable Filter Toggle */}
-					<button
-						type="button"
-						className={`dctc-sc-more-filters-btn ${showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : ''}`}
-						onClick={() => setShowMoreFilters((prev) => !prev)}
-						title={__('Toggle advanced filters', 'dragwyb-click-to-chat')}
-					>
-						<span className="dashicons dashicons-filter"></span>
-						<span>{__('Filter Options', 'dragwyb-click-to-chat')}</span>
-						{activeSecondaryFilterCount > 0 && (
-							<span className="dctc-sc-filter-active-count">{activeSecondaryFilterCount}</span>
-						)}
-						<span className={`dashicons ${showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '12px', width: '12px', height: '12px' }}></span>
-					</button>
-
-					{/* Refresh & Actions */}
-					<div className="dctc-sc-toolbar-actions">
 						<button
 							type="button"
-							className={`dctc-sc-refresh-btn ${isRefreshing ? 'is-spinning' : ''}`}
-							onClick={onManualRefresh}
-							title={__('Refresh ticket data immediately (resets 1-minute auto-update timer)', 'dragwyb-click-to-chat')}
+							className={`dctc-sc-more-filters-btn ${showMoreFilters || activeSecondaryFilterCount > 0 ? 'active' : ''}`}
+							onClick={() => setShowMoreFilters((prev) => !prev)}
+							title={__('Toggle advanced filters', 'dragwyb-click-to-chat')}
 						>
-							<span className={`dashicons dashicons-image-rotate ${isRefreshing ? 'spin-anim' : ''}`}></span>
-							<span>{__('Refresh', 'dragwyb-click-to-chat')}</span>
+							<span className="dashicons dashicons-filter"></span>
+							<span>{__('Filter Options', 'dragwyb-click-to-chat')}</span>
+							{activeSecondaryFilterCount > 0 && (
+								<span className="dctc-sc-filter-active-count">{activeSecondaryFilterCount}</span>
+							)}
+							<span className={`dashicons ${showMoreFilters ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '12px', width: '12px', height: '12px' }}></span>
 						</button>
+					</div>
+
+					{/* ROW 2: Folders Button + Tags / Status Pills */}
+					<div className="dctc-sc-filter-row-bottom">
+						<button
+							type="button"
+							className={`dctc-sc-toggle-folders-btn ${isFoldersExpanded ? 'active' : ''}`}
+							onClick={() => setIsFoldersExpanded((prev) => !prev)}
+							title={isFoldersExpanded ? __('Collapse Folders Sidebar', 'dragwyb-click-to-chat') : __('Expand Folders Sidebar', 'dragwyb-click-to-chat')}
+						>
+							<span className="dashicons dashicons-category"></span>
+							<span>{__('Folders', 'dragwyb-click-to-chat')}</span>
+							<span className={`dashicons ${isFoldersExpanded ? 'dashicons-arrow-left-alt2' : 'dashicons-arrow-right-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
+						</button>
+
+						<div className="dctc-sc-quick-status-pills">
+							{[
+								{ id: 'all', label: __('All', 'dragwyb-click-to-chat') },
+								{ id: 'open', label: __('Open', 'dragwyb-click-to-chat') },
+								{ id: 'pending', label: __('Pending', 'dragwyb-click-to-chat') },
+								{ id: 'resolved', label: __('Resolved', 'dragwyb-click-to-chat') },
+								{ id: 'closed', label: __('Closed', 'dragwyb-click-to-chat') },
+								{ id: 'ai_bot', label: __('AI Bot', 'dragwyb-click-to-chat') },
+							].map((tab) => (
+								<button
+									key={tab.id}
+									type="button"
+									className={`dctc-sc-status-pill-btn ${statusFilter === tab.id ? 'active' : ''}`}
+									onClick={() => { setStatusFilter(tab.id); setCurrentPage(1); }}
+								>
+									{tab.label}
+								</button>
+							))}
+						</div>
 					</div>
 				</div>
 			)}
