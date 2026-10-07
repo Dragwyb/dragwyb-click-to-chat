@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import Toast from './components/Toast';
+import GlobalHeader from '../../common/components/GlobalHeader';
 import OnboardingWizard from './onboarding/OnboardingWizard';
 import ChatbotSettings from './sections/ChatbotSettings';
 import AiEngineSettings from './sections/AiEngineSettings';
@@ -256,41 +257,40 @@ export default function App({ settings: initialSettings }) {
 		<div className="dctc-ai-app-wrapper">
 			{notice && <Toast message={notice.message} type={notice.type} />}
 
-			{/* Full-Size Sticky Top Header Bar matching Support Center */}
-			<header className="dctc-sc-header-bar dctc-ai-top-header">
-				<div className="dctc-sc-brand">
-					<div className="dctc-sc-brand-icon">
-						<span className="dashicons dashicons-format-chat" />
-					</div>
-					<div>
-						<h1 className="dctc-sc-app-title">{__('AI Assistant', 'dragwyb-click-to-chat')}</h1>
-						<span className="dctc-sc-app-tagline">{__('Autonomous AI Agent & Knowledge Base', 'dragwyb-click-to-chat')}</span>
-					</div>
-				</div>
+			{/* Full-Size Sticky Top Header Bar using shared GlobalHeader */}
+			<GlobalHeader
+				className="dctc-ai-top-header"
+				icon="dashicons-format-chat"
+				title={__('AI Assistant', 'dragwyb-click-to-chat')}
+				subheading={__('Autonomous AI Agent & Knowledge Base', 'dragwyb-click-to-chat')}
+				rightActions={
+					<>
+						<a
+							href="admin.php?page=dragwyb-click-to-chat-guide"
+							className="dctc-ai-guide-btn"
+							title={__('View AI Assistant documentation', 'dragwyb-click-to-chat')}
+						>
+							<span className="dashicons dashicons-book" />
+							{__('User Guide', 'dragwyb-click-to-chat')}
+						</a>
 
-				<div className="dctc-sc-header-right" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-					<a
-						href="admin.php?page=dragwyb-click-to-chat-guide"
-						className="dctc-ai-guide-btn"
-						title={__('View AI Assistant documentation', 'dragwyb-click-to-chat')}
-					>
-						<span className="dashicons dashicons-book" />
-						{__('User Guide', 'dragwyb-click-to-chat')}
-					</a>
-
-					<button
-						type="button"
-						id="dctc-global-save-btn"
-						className="dctc-ai-btn dctc-ai-btn-primary"
-						onClick={() => {
-							window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
-						}}
-					>
-						<span className="dashicons dashicons-saved" style={{ fontSize: '16px', width: '16px', height: '16px', marginRight: '4px' }} />
-						{__('Save Settings', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
+						<button
+							type="button"
+							id="dctc-global-save-btn"
+							className="dctc-ai-btn dctc-ai-btn-primary"
+							onClick={() => {
+								window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
+							}}
+						>
+							<span
+								className="dashicons dashicons-saved"
+								style={{ fontSize: '16px', width: '16px', height: '16px', marginRight: '4px' }}
+							/>
+							{__('Save Settings', 'dragwyb-click-to-chat')}
+						</button>
+					</>
+				}
+			/>
 
 			<div className="dctc-ai-dashboard-wrapper">
 				<aside className="dctc-ai-dashboard-header">

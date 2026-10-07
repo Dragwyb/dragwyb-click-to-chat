@@ -173,38 +173,6 @@ export default function AdminCopilot( { showNotice } ) {
 
 	return (
 		<div className="dctc-ai-copilot-container">
-			<header className="dctc-ai-section-header">
-				<div className="dctc-ai-section-header__left">
-					<div className="dctc-ai-section-header__icon-box">
-						<span className="dashicons dashicons-superhero" />
-					</div>
-					<div>
-						<div className="dctc-ai-section-header__title-row">
-							<h1 className="dctc-ai-section-header__title">
-								{__('AI Copilot & Business Intelligence', 'dragwyb-click-to-chat')}
-							</h1>
-							<span className="dctc-ai-status-pill is-active">
-								{__('Live AI Analytics Active', 'dragwyb-click-to-chat')}
-							</span>
-						</div>
-						<p className="dctc-ai-section-header__desc">
-							{__('Ask your AI Copilot anything about visitor questions, unanswered gaps, lead analytics, and content recommendations.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div className="dctc-ai-section-header__right">
-					<button
-						type="button"
-						className="dctc-ai-btn dctc-ai-btn-secondary"
-						onClick={handleClearChat}
-					>
-						<span className="dashicons dashicons-trash" />
-						{__('Clear Chat', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
-
 			{ /* Header Metric Cards */ }
 			<div className="dctc-ai-copilot-metrics">
 				<div className="dctc-ai-copilot-metric-card">

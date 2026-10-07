@@ -659,43 +659,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 
 	return (
 		<div className="dctc-ai-bot-settings">
-			{/* Header Banner */}
-			<header className="dctc-ai-section-header">
-				<div className="dctc-ai-section-header__left">
-					<div className="dctc-ai-section-header__icon-box">
-						<span className="dashicons dashicons-admin-settings" />
-					</div>
-					<div>
-						<div className="dctc-ai-section-header__title-row">
-							<h1 className="dctc-ai-section-header__title">
-								{__('Chatbot Settings & Customizer', 'dragwyb-click-to-chat')}
-							</h1>
-							<span className={`dctc-ai-status-pill ${form.entire_site ? 'is-active' : ''}`}>
-								{form.entire_site ? __('Widget Active Site-Wide', 'dragwyb-click-to-chat') : __('Shortcode Only', 'dragwyb-click-to-chat')}
-							</span>
-						</div>
-						<p className="dctc-ai-section-header__desc">
-							{subtab === 'general' && __('Configure bot identity, site visibility rules, chat session retention, and language support.', 'dragwyb-click-to-chat')}
-							{subtab === 'advanced' && __('Fine-tune auto triggers, rate limits, monthly request budget, lead qualification, and tools.', 'dragwyb-click-to-chat')}
-							{subtab === 'style' && __('Design the circular launcher, custom bot avatars, branding colors, and screen positioning.', 'dragwyb-click-to-chat')}
-							{subtab === 'messages' && __('Customize welcome greetings, starter question pills, action header buttons, and fallback notices.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div className="dctc-ai-section-header__right">
-					<button
-						type="button"
-						className="dctc-ai-btn dctc-ai-btn-primary dctc-ai-btn-header-save"
-						onClick={onSubmit}
-						disabled={saving || !dirty}
-					>
-						<span className={`dashicons ${saving ? 'dashicons-update spin-anim' : 'dashicons-saved'}`} />
-						{saving ? __('Saving…', 'dragwyb-click-to-chat') : dirty ? __('Save Changes', 'dragwyb-click-to-chat') : __('Saved', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
-
 			{/* Subtabs Navigation Bar */}
 			<nav
 				className="dctc-ai-subtab-nav"

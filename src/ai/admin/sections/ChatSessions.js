@@ -532,39 +532,6 @@ export default function ChatSessions({ showNotice }) {
 
 	return (
 		<div className="dctc-ai-sessions">
-			<header className="dctc-ai-section-header">
-				<div className="dctc-ai-section-header__left">
-					<div className="dctc-ai-section-header__icon-box">
-						<span className="dashicons dashicons-format-chat" />
-					</div>
-					<div>
-						<div className="dctc-ai-section-header__title-row">
-							<h1 className="dctc-ai-section-header__title">
-								{__('Chat Sessions & Transcripts', 'dragwyb-click-to-chat')}
-							</h1>
-							<span className="dctc-ai-status-pill is-active">
-								{sprintf(__('%d Stored Sessions', 'dragwyb-click-to-chat'), sessions.length)}
-							</span>
-						</div>
-						<p className="dctc-ai-section-header__desc">
-							{__('Review, inspect transcripts, filter by provider, evaluate customer sentiment, and export conversation records.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div className="dctc-ai-section-header__right">
-					<button
-						type="button"
-						className="dctc-ai-btn dctc-ai-btn-secondary"
-						onClick={exportAllCsv}
-						disabled={sessions.length === 0}
-					>
-						<span className="dashicons dashicons-download" />
-						{__('Export All CSV', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
-
 			{ /* Top Conversation Analytics Metrics */}
 			{analytics && (
 				<div className="dctc-ai-analytics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>

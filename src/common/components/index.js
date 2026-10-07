@@ -15,3 +15,4 @@ export { default as RangeField } from './RangeField';
 export { default as StatusPill } from './StatusPill';
 export { default as Toast } from './Toast';
 export { default as NoticeBanner } from './NoticeBanner';
+export { default as GlobalHeader } from './GlobalHeader';

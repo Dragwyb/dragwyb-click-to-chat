@@ -461,41 +461,6 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 
 	return (
 		<div className="dctc-ai-kb-settings">
-			<header className="dctc-ai-section-header">
-				<div className="dctc-ai-section-header__left">
-					<div className="dctc-ai-section-header__icon-box">
-						<span className="dashicons dashicons-database" />
-					</div>
-					<div>
-						<div className="dctc-ai-section-header__title-row">
-							<h1 className="dctc-ai-section-header__title">
-								{__('Knowledge Base & Content Indexer', 'dragwyb-click-to-chat')}
-							</h1>
-							<span className="dctc-ai-status-pill is-active">
-								{stats?.total_indexed ? sprintf(__('%d Documents Indexed', 'dragwyb-click-to-chat'), stats.total_indexed) : __('Vector Store Active', 'dragwyb-click-to-chat')}
-							</span>
-						</div>
-						<p className="dctc-ai-section-header__desc">
-							{subtab === 'sources'
-								? __('Provide direct factual text, crawlable web URLs, and training documents for your chatbot to learn from.', 'dragwyb-click-to-chat')
-								: __('Configure vector database storage (SQLite / Pinecone), chunk sizing, embedding models, and auto-sync.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div className="dctc-ai-section-header__right">
-					<button
-						type="button"
-						className="dctc-ai-btn dctc-ai-btn-primary dctc-ai-btn-header-save"
-						onClick={onSubmit}
-						disabled={saving || !dirty}
-					>
-						<span className={`dashicons ${saving ? 'dashicons-update spin-anim' : 'dashicons-saved'}`} />
-						{saving ? __('Saving…', 'dragwyb-click-to-chat') : dirty ? __('Save Changes', 'dragwyb-click-to-chat') : __('Saved', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
-
 			<nav
 				className="dctc-ai-subtab-nav"
 				role="tablist"

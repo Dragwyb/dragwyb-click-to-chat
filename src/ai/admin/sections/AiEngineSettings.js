@@ -215,41 +215,6 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 
 	return (
 		<div className="dctc-ai-engine-settings">
-			<header className="dctc-ai-section-header">
-				<div className="dctc-ai-section-header__left">
-					<div className="dctc-ai-section-header__icon-box">
-						<span className="dashicons dashicons-rest-api" />
-					</div>
-					<div>
-						<div className="dctc-ai-section-header__title-row">
-							<h1 className="dctc-ai-section-header__title">
-								{__('AI Engine & Prompt Configuration', 'dragwyb-click-to-chat')}
-							</h1>
-							<span className={`dctc-ai-status-pill ${hasConfiguredKeys ? 'is-active' : ''}`}>
-								{hasConfiguredKeys
-									? sprintf(__('Active: %s', 'dragwyb-click-to-chat'), activeProviderMeta?.name || formatProviderLabel(form.default_provider))
-									: __('No Provider Configured', 'dragwyb-click-to-chat')}
-							</span>
-						</div>
-						<p className="dctc-ai-section-header__desc">
-							{__('Connect your AI provider API keys, select your primary intelligence model, define system instructions, and configure fallback failover.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div className="dctc-ai-section-header__right">
-					<button
-						type="button"
-						className="dctc-ai-btn dctc-ai-btn-primary dctc-ai-btn-header-save"
-						onClick={onSubmit}
-						disabled={saving || !dirty}
-					>
-						<span className={`dashicons ${saving ? 'dashicons-update spin-anim' : 'dashicons-saved'}`} />
-						{saving ? __('Saving…', 'dragwyb-click-to-chat') : dirty ? __('Save Changes', 'dragwyb-click-to-chat') : __('Saved', 'dragwyb-click-to-chat')}
-					</button>
-				</div>
-			</header>
-
 			<form onSubmit={onSubmit}>
 				{/* SECTION 1: AI Providers & API Keys (Multi-Provider Grid) */}
 				<section className="dctc-ai-card">
