@@ -857,7 +857,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 							<div class="dctc-shortcode-copy-box">
 								<code>[dctc_support_portal]</code>
 								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal]">
-									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Primary Shortcode', 'dragwyb-click-to-chat' ); ?></span>
+									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Shortcode', 'dragwyb-click-to-chat' ); ?></span>
 								</button>
 							</div>
 							<p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">
