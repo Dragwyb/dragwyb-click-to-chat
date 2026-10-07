@@ -44,41 +44,67 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 	<!-- Success Toast -->
 	<div class="dctc-success-message"></div>
 
-	<!-- Header with 4 Feature Tabs -->
-	<div class="dctc-header dctc-settings-header">
-		<div class="dctc-settings-tabs-wrapper">
-			<ul class="dctc-tabs dctc-guide-four-tabs">
-				<li>
-					<a href="#channels"
-						class="dctc-tab dctc-guide-tab-btn <?php echo 'channels' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="channels">
-						<span>📱 <?php esc_html_e( '1. Social Channels', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-				<li>
-					<a href="#ai"
-						class="dctc-tab dctc-guide-tab-btn <?php echo 'ai' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="ai">
-						<span>🤖 <?php esc_html_e( '2. AI Assistant', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-				<li>
-					<a href="#support"
-						class="dctc-tab dctc-guide-tab-btn <?php echo 'support' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="support">
-						<span>🛡️ <?php esc_html_e( '3. Support Center', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-				<li>
-					<a href="#setup"
-						class="dctc-tab dctc-guide-tab-btn <?php echo 'setup' === $dctc_active_tab ? 'active' : ''; ?>"
-						data-tab="setup">
-						<span>⚡ <?php esc_html_e( '4. Setup Wizard', 'dragwyb-click-to-chat' ); ?></span>
-					</a>
-				</li>
-			</ul>
+	<!-- Full-Size Sticky Top Header Bar matching Support Center, AI Assistant, Channels & Settings -->
+	<header class="dctc-sc-header-bar dctc-guide-top-header">
+		<div class="dctc-sc-brand">
+			<div class="dctc-sc-brand-icon">
+				<span class="dashicons dashicons-book-alt"></span>
+			</div>
+			<div>
+				<h1 class="dctc-sc-app-title"><?php esc_html_e( 'Click to Chat Guide', 'dragwyb-click-to-chat' ); ?></h1>
+				<span class="dctc-sc-app-tagline"><?php esc_html_e( 'Documentation, Feature Walkthroughs & Setup Wizard', 'dragwyb-click-to-chat' ); ?></span>
+			</div>
 		</div>
-	</div>
+
+		<nav class="dctc-sc-top-nav" role="tablist" aria-label="<?php esc_attr_e( 'Guide topics', 'dragwyb-click-to-chat' ); ?>">
+			<button
+				type="button"
+				role="tab"
+				class="dctc-sc-nav-link dctc-tab dctc-guide-tab-btn <?php echo 'channels' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="channels">
+				<span class="dashicons dashicons-smartphone" aria-hidden="true"></span>
+				<?php esc_html_e( '1. Channels', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button 
+				type="button"
+				role="tab"
+				class="dctc-sc-nav-link dctc-tab dctc-guide-tab-btn <?php echo 'ai' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="ai">
+				<span class="dashicons dashicons-format-chat" aria-hidden="true"></span>
+				<?php esc_html_e( '2. AI Assistant', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button
+				type="button"
+				role="tab"
+				class="dctc-sc-nav-link dctc-tab dctc-guide-tab-btn <?php echo 'support' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="support">
+				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
+				<?php esc_html_e( '3. Support Center', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button 
+				type="button"
+				role="tab"
+				class="dctc-sc-nav-link dctc-tab dctc-guide-tab-btn <?php echo 'setup' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="setup">
+				<span class="dashicons dashicons-superhero" aria-hidden="true"></span>
+				<?php esc_html_e( '4. Setup Wizard', 'dragwyb-click-to-chat' ); ?>
+			</button>
+		</nav>
+
+		<div class="dctc-sc-header-right" style="display:flex; align-items:center; gap:10px;">
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-settings' ) ); ?>" class="dctc-ai-guide-btn" title="<?php esc_attr_e( 'Plugin Global Settings', 'dragwyb-click-to-chat' ); ?>">
+				<span class="dashicons dashicons-admin-generic"></span>
+				<?php esc_html_e( 'Settings', 'dragwyb-click-to-chat' ); ?>
+			</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ); ?>" class="dctc-ai-btn dctc-ai-btn-primary">
+				<span class="dashicons dashicons-dashboard" style="margin-right:4px; font-size:16px; width:16px; height:16px;"></span>
+				<?php esc_html_e( 'AI Assistant', 'dragwyb-click-to-chat' ); ?>
+			</a>
+		</div>
+	</header>
 
 	<!-- Main Content Container -->
 	<div class="dctc-guide-container">

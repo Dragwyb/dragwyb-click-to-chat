@@ -95,20 +95,6 @@ body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #dctc-ai-admin-root {
   box-sizing: border-box;
 }
 
-.dctc-sc-header-bar.dctc-ai-top-header {
-  margin: 0 !important;
-  padding: 10px 22px !important;
-  position: sticky !important;
-  top: 32px !important;
-  z-index: 1000 !important;
-}
-
-@media screen and (max-width: 782px) {
-  .dctc-sc-header-bar.dctc-ai-top-header {
-    top: 46px !important;
-  }
-}
-
 .dctc-ai-dashboard-wrapper {
   display: flex;
   flex-direction: row;
