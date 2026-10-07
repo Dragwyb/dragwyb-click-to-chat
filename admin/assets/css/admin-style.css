@@ -1152,10 +1152,6 @@
 /* ==========================================================================
    Dedicated Settings Page Modules & Cards
    ========================================================================== */
-.dctc-settings-wrap {
-  margin: 16px 20px 40px 0;
-}
-
 .dctc-settings-card-box {
   background: #ffffff;
   border: 1px solid var(--dctc-border);
