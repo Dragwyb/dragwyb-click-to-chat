@@ -2,8 +2,9 @@
  * Error log table for plugin and AI REST errors.
  */
 import { useCallback, useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
+import { Modal, EmptyState } from '../components';
 
 function formatDate( value ) {
 	if ( ! value ) {
@@ -373,105 +374,66 @@ export default function ErrorLogs( { showNotice } ) {
 			) }
 
 			{ selectedLog && (
-				<div
-					className="dctc-ai-modal-overlay"
-					role="dialog"
-					aria-modal="true"
-					onClick={ () => setSelectedLog( null ) }
+				<Modal
+					open={ !! selectedLog }
+					title={ __( 'Error Log Details', 'dragwyb-click-to-chat' ) }
+					icon="dashicons-warning"
+					onClose={ () => setSelectedLog( null ) }
+					maxWidth="680px"
 				>
-					<div
-						className="dctc-ai-modal-content dctc-ai-error-log-modal"
-						onClick={ ( e ) => e.stopPropagation() }
-					>
-						<div className="dctc-ai-modal-header">
-							<div className="dctc-ai-modal-title">
-								<span className="dashicons dashicons-warning" aria-hidden="true" />
-								<h3>{ __( 'Error Log Details', 'dragwyb-click-to-chat' ) }</h3>
-							</div>
-							<button
-								type="button"
-								className="dctc-ai-modal-close"
-								onClick={ () => setSelectedLog( null ) }
-								aria-label={ __( 'Close', 'dragwyb-click-to-chat' ) }
-							>
-								✕
-							</button>
+					<div className="dctc-ai-error-detail-grid">
+						<div className="dctc-ai-error-detail-item">
+							<label>{ __( 'Timestamp', 'dragwyb-click-to-chat' ) }</label>
+							<div>{ formatDate( selectedLog.created_at ) } ({ selectedLog.created_at })</div>
 						</div>
-
-						<div className="dctc-ai-modal-body">
-							<div className="dctc-ai-error-detail-grid">
-								<div className="dctc-ai-error-detail-item">
-									<label>{ __( 'Timestamp', 'dragwyb-click-to-chat' ) }</label>
-									<div>{ formatDate( selectedLog.created_at ) } ({ selectedLog.created_at })</div>
-								</div>
-								<div className="dctc-ai-error-detail-item">
-									<label>{ __( 'Error Type', 'dragwyb-click-to-chat' ) }</label>
-									<div>
-										<span className="dctc-ai-error-logs-badge">
-											{ selectedLog.error_type || selectedLog.type }
-										</span>
-									</div>
-								</div>
-								{ selectedLog.provider && (
-									<div className="dctc-ai-error-detail-item">
-										<label>{ __( 'Provider', 'dragwyb-click-to-chat' ) }</label>
-										<div>{ providerLabel( selectedLog.provider ) }</div>
-									</div>
-								) }
-								{ selectedLog.model && (
-									<div className="dctc-ai-error-detail-item">
-										<label>{ __( 'Model', 'dragwyb-click-to-chat' ) }</label>
-										<div><code>{ selectedLog.model }</code></div>
-									</div>
-								) }
-								{ selectedLog.user_message && (
-									<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
-										<label>{ __( 'User Message to Bot', 'dragwyb-click-to-chat' ) }</label>
-										<div className="dctc-ai-error-detail-code">
-											{ selectedLog.user_message }
-										</div>
-									</div>
-								) }
-								<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
-									<label>{ __( 'Model / Error Message', 'dragwyb-click-to-chat' ) }</label>
-									<div className="dctc-ai-error-detail-error">
-										{ selectedLog.model_error || selectedLog.message }
-									</div>
-								</div>
-								{ logLocation( selectedLog ) && (
-									<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
-										<label>{ __( 'File Location', 'dragwyb-click-to-chat' ) }</label>
-										<div><code>{ logLocation( selectedLog ) }</code></div>
-									</div>
-								) }
-								{ logContext( selectedLog ) && (
-									<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
-										<label>{ __( 'Context / Code', 'dragwyb-click-to-chat' ) }</label>
-										<div>{ logContext( selectedLog ) }</div>
-									</div>
-								) }
+						<div className="dctc-ai-error-detail-item">
+							<label>{ __( 'Error Type', 'dragwyb-click-to-chat' ) }</label>
+							<div>
+								<span className="dctc-ai-error-logs-badge">
+									{ selectedLog.error_type || selectedLog.type }
+								</span>
 							</div>
 						</div>
-
-						<div className="dctc-ai-modal-footer">
-							<button
-								type="button"
-								className="dctc-ai-btn dctc-ai-btn-danger dctc-ai-btn-sm"
-								onClick={ () => deleteSingleLog( selectedLog.id ) }
-							>
-								<span className="dashicons dashicons-trash" />
-								{ __( 'Delete Entry', 'dragwyb-click-to-chat' ) }
-							</button>
-							<button
-								type="button"
-								className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm"
-								onClick={ () => setSelectedLog( null ) }
-							>
-								{ __( 'Close', 'dragwyb-click-to-chat' ) }
-							</button>
+						{ selectedLog.provider && (
+							<div className="dctc-ai-error-detail-item">
+								<label>{ __( 'Provider', 'dragwyb-click-to-chat' ) }</label>
+								<div>{ providerLabel( selectedLog.provider ) }</div>
+							</div>
+						) }
+						{ selectedLog.model && (
+							<div className="dctc-ai-error-detail-item">
+								<label>{ __( 'Model', 'dragwyb-click-to-chat' ) }</label>
+								<div><code>{ selectedLog.model }</code></div>
+							</div>
+						) }
+						{ selectedLog.user_message && (
+							<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
+								<label>{ __( 'User Message to Bot', 'dragwyb-click-to-chat' ) }</label>
+								<div className="dctc-ai-error-detail-code">
+									{ selectedLog.user_message }
+								</div>
+							</div>
+						) }
+						<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
+							<label>{ __( 'Model / Error Message', 'dragwyb-click-to-chat' ) }</label>
+							<div className="dctc-ai-error-detail-error">
+								{ selectedLog.model_error || selectedLog.message }
+							</div>
 						</div>
+						{ logLocation( selectedLog ) && (
+							<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
+								<label>{ __( 'File Location', 'dragwyb-click-to-chat' ) }</label>
+								<div><code>{ logLocation( selectedLog ) }</code></div>
+							</div>
+						) }
+						{ logContext( selectedLog ) && (
+							<div className="dctc-ai-error-detail-item dctc-ai-error-detail-full">
+								<label>{ __( 'Context / Code', 'dragwyb-click-to-chat' ) }</label>
+								<div>{ logContext( selectedLog ) }</div>
+							</div>
+						) }
 					</div>
-				</div>
+				</Modal>
 			) }
 		</div>
 	);

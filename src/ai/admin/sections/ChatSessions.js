@@ -12,6 +12,7 @@ import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatProviderLabel } from '../utils/providers';
+import SessionTranscriptModal from './chat-sessions/SessionTranscriptModal';
 
 function parseMessages( content ) {
 	if ( ! content ) {
@@ -1039,168 +1040,15 @@ export default function ChatSessions( { showNotice } ) {
 				</>
 			) }
 
-			{ viewing && (
-				<div
-					className={
-						'dctc-ai-modal dctc-ai-sessions-modal ' +
-						( modalVisible ? 'is-visible' : '' )
-					}
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="dctc-ai-session-modal-title"
-				>
-					<div className="dctc-ai-modal-overlay" onClick={ closeView } />
-					<div className="dctc-ai-modal-content">
-						<div className="dctc-ai-modal-header">
-							<div className="dctc-ai-modal-title">
-								<span
-									className="dctc-ai-modal-title-icon"
-									aria-hidden="true"
-								>
-									<span className="dashicons dashicons-format-chat" />
-								</span>
-								<h3 id="dctc-ai-session-modal-title">
-									{ __( 'Session Transcript', 'dragwyb-click-to-chat' ) }
-								</h3>
-							</div>
-							<button
-								type="button"
-								className="dctc-ai-modal-close"
-								onClick={ closeView }
-								aria-label={ __( 'Close', 'dragwyb-click-to-chat' ) }
-							>
-								<span
-									className="dashicons dashicons-no-alt"
-									aria-hidden="true"
-								/>
-							</button>
-						</div>
-						{ ( () => {
-							const meta = sessionMeta( viewing );
-							return (
-								<div className="dctc-ai-sessions-modal-meta">
-									<div className="dctc-ai-sessions-modal-meta__item">
-										<span className="dctc-ai-sessions-modal-meta__label">
-											{ __( 'Provider', 'dragwyb-click-to-chat' ) }
-										</span>
-										<span className="dctc-ai-sessions-modal-meta__value">
-											{ meta.provider }
-										</span>
-									</div>
-									<div className="dctc-ai-sessions-modal-meta__item">
-										<span className="dctc-ai-sessions-modal-meta__label">
-											{ __( 'Model', 'dragwyb-click-to-chat' ) }
-										</span>
-										<span className="dctc-ai-sessions-modal-meta__value">
-											{ meta.model }
-										</span>
-									</div>
-								</div>
-							);
-						} )() }
-						<div className="dctc-ai-modal-body">
-							{ /* AI Executive Summary Section */ }
-							{ ( () => {
-								const summ = parseSummary( viewing.summary );
-								return (
-									<div style={{ marginBottom: '1.25rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
-										<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-											<strong style={{ fontSize: '0.9rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-												✨ { __( 'AI Executive Summary', 'dragwyb-click-to-chat' ) }
-											</strong>
-											<button
-												type="button"
-												className="button button-small button-secondary"
-												disabled={ summarizing }
-												onClick={ () => handleSummarize( viewing.session_id ) }
-												style={{ borderRadius: '6px', fontSize: '0.8rem' }}
-											>
-												{ summarizing ? __( 'Analyzing...', 'dragwyb-click-to-chat' ) : ( summ ? __( 'Regenerate', 'dragwyb-click-to-chat' ) : __( 'Generate Summary', 'dragwyb-click-to-chat' ) ) }
-											</button>
-										</div>
+			<SessionTranscriptModal
+				session={ viewing }
+				isOpen={ !! viewing }
+				onClose={ closeView }
+				onPrint={ printTranscript }
+				onSummarize={ handleSummarize }
+				summarizing={ summarizing }
+			/>
 
-										{ summ ? (
-											<div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem' }}>
-												<div>
-													<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Goal / Intent', 'dragwyb-click-to-chat' ) }:</strong>
-													<div style={{ color: '#0f172a', marginTop: '0.1rem' }}>{ summ.goal }</div>
-												</div>
-												{ Array.isArray( summ.questions ) && summ.questions.length > 0 && (
-													<div>
-														<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Key Questions', 'dragwyb-click-to-chat' ) }:</strong>
-														<ul style={{ margin: '0.2rem 0 0 1.2rem', color: '#334155' }}>
-															{ summ.questions.map( ( q, qIdx ) => <li key={ qIdx }>{ q }</li> ) }
-														</ul>
-													</div>
-												) }
-												{ summ.next_action && (
-													<div>
-														<strong style={{ color: '#475569', fontSize: '0.75rem', textTransform: 'uppercase' }}>{ __( 'Next Action', 'dragwyb-click-to-chat' ) }:</strong>
-														<div style={{ color: '#1e40af', fontWeight: 500, marginTop: '0.1rem' }}>👉 { summ.next_action }</div>
-													</div>
-												) }
-											</div>
-										) : (
-											<p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
-												{ __( 'Generate a structured executive summary with customer goals, key questions, and sentiment analysis for this chat.', 'dragwyb-click-to-chat' ) }
-											</p>
-										) }
-									</div>
-								);
-							} )() }
-
-							{ ( () => {
-								const msgs = parseMessages( viewing.content );
-								return msgs.length ? (
-									msgs.map( ( msg, i ) => (
-										<div
-											key={ i }
-											className={
-												'dctc-ai-modal-msg ' +
-												( msg.role === 'user'
-													? 'dctc-ai-modal-msg-user'
-													: 'dctc-ai-modal-msg-assistant' )
-											}
-										>
-											<div className="dctc-ai-modal-msg-content">
-												{ msg.content }
-											</div>
-											{ msg.created_at && (
-												<div className="dctc-ai-modal-msg-time">
-													{ formatDate( msg.created_at ) }
-												</div>
-											) }
-										</div>
-									) )
-								) : (
-									<p className="dctc-ai-text-muted">
-										{ __(
-											'No messages in this session.',
-											'dragwyb-click-to-chat'
-										) }
-									</p>
-								);
-							} )() }
-						</div>
-						<div className="dctc-ai-modal-footer">
-							<button
-								type="button"
-								className="dctc-ai-modal-footer-link"
-								onClick={ printTranscript }
-							>
-								{ __( 'Print Chat Transcript', 'dragwyb-click-to-chat' ) }
-							</button>
-							<button
-								type="button"
-								className="dctc-ai-btn dctc-ai-btn-primary"
-								onClick={ closeView }
-							>
-								{ __( 'Return to Sessions', 'dragwyb-click-to-chat' ) }
-							</button>
-						</div>
-					</div>
-				</div>
-			) }
 
 			<ConfirmModal
 				open={ !! confirmDelete }

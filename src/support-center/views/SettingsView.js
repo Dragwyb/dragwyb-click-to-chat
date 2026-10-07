@@ -4,6 +4,12 @@
 import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
+import {
+	Card,
+	SettingCard,
+	FormField,
+	NoticeBanner,
+} from '../components';
 
 const PERMISSION_DEFINITIONS = [
 	{
@@ -177,13 +183,15 @@ export default function SettingsView( {
 	return (
 		<form onSubmit={ handleSubmit } className="dctc-sc-settings-wrap">
 			{ localNotice && (
-				<div className={ `dctc-sc-settings-banner ${ localNotice.type }` }>
-					<span className={ `dashicons ${ localNotice.type === 'success' ? 'dashicons-yes-alt' : 'dashicons-warning' }` }></span>
-					<span>{ localNotice.message }</span>
-				</div>
+				<NoticeBanner
+					type={ localNotice.type }
+					message={ localNotice.message }
+					onDismiss={ () => setLocalNotice( null ) }
+					className="dctc-sc-settings-banner"
+				/>
 			) }
 
-			{ /* Section 1: Staff Roles & Access Permissions Matrix (Displayed First) */ }
+			{ /* Section 1: Staff Roles & Access Permissions Matrix */ }
 			<div className="dctc-sc-panel-box">
 				<div className="dctc-sc-panel-header">
 					<div className="dctc-sc-panel-icon-wrap icon-purple">
@@ -272,38 +280,37 @@ export default function SettingsView( {
 
 					<div className="dctc-sc-settings-form-body">
 						{ /* Toggle: Enable Support */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Enable Support Center', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Activate hybrid ticketing, agent routing, customer portal, and bot takeover.', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ !! supportSettings.enabled }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, enabled: e.target.checked } ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-enable-support"
+							title={ __( 'Enable Support Center', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Activate hybrid ticketing, agent routing, customer portal, and bot takeover.', 'dragwyb-click-to-chat' ) }
+							checked={ !! supportSettings.enabled }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( { ...prev, enabled: val } ) ) }
+						/>
 
 						{ /* Ticket Prefix */ }
-						<div className="dctc-sc-setting-field">
-							<label>{ __( 'Ticket Number Prefix', 'dragwyb-click-to-chat' ) }</label>
+						<FormField
+							id="dctc-sc-prefix"
+							label={ __( 'Ticket Number Prefix', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Prefix added to generated ticket reference codes (e.g. TCK-1001, SUP-2045).', 'dragwyb-click-to-chat' ) }
+						>
 							<input
+								id="dctc-sc-prefix"
 								type="text"
 								className="regular-text"
 								placeholder="TCK-"
 								value={ supportSettings.ticket_prefix || 'TCK-' }
 								onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, ticket_prefix: e.target.value } ) ) }
 							/>
-							<p className="description">{ __( 'Prefix added to generated ticket reference codes (e.g. TCK-1001, SUP-2045).', 'dragwyb-click-to-chat' ) }</p>
-						</div>
+						</FormField>
 
 						{ /* Default Priority */ }
-						<div className="dctc-sc-setting-field">
-							<label>{ __( 'Default Ticket Priority', 'dragwyb-click-to-chat' ) }</label>
+						<FormField
+							id="dctc-sc-default-priority"
+							label={ __( 'Default Ticket Priority', 'dragwyb-click-to-chat' ) }
+						>
 							<select
+								id="dctc-sc-default-priority"
 								value={ supportSettings.default_priority || 'normal' }
 								onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, default_priority: e.target.value } ) ) }
 							>
@@ -312,12 +319,16 @@ export default function SettingsView( {
 								<option value="high">{ __( 'High', 'dragwyb-click-to-chat' ) }</option>
 								<option value="urgent">{ __( 'Urgent', 'dragwyb-click-to-chat' ) }</option>
 							</select>
-						</div>
+						</FormField>
 
 						{ /* Assignment Algorithm */ }
-						<div className="dctc-sc-setting-field">
-							<label>{ __( 'Auto-Assignment Strategy', 'dragwyb-click-to-chat' ) }</label>
+						<FormField
+							id="dctc-sc-algorithm"
+							label={ __( 'Auto-Assignment Strategy', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Algorithm used when incoming tickets are routed to active staff agents.', 'dragwyb-click-to-chat' ) }
+						>
 							<select
+								id="dctc-sc-algorithm"
 								value={ supportSettings.assignment_algorithm || 'least_loaded' }
 								onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, assignment_algorithm: e.target.value } ) ) }
 							>
@@ -326,40 +337,25 @@ export default function SettingsView( {
 								<option value="skill_match">{ __( 'Skill & Category Matching Only', 'dragwyb-click-to-chat' ) }</option>
 								<option value="manual">{ __( 'Manual Assignment Only (No Auto-Assign)', 'dragwyb-click-to-chat' ) }</option>
 							</select>
-							<p className="description">{ __( 'Algorithm used when incoming tickets are routed to active staff agents.', 'dragwyb-click-to-chat' ) }</p>
-						</div>
+						</FormField>
 
 						{ /* Toggle: Respect Availability */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Respect Agent Availability', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Only assign new tickets to agents with status set to "Available" (skips Away & Offline).', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ supportSettings.respect_availability !== false }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, respect_availability: e.target.checked } ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-respect-availability"
+							title={ __( 'Respect Agent Availability', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Only assign new tickets to agents with status set to "Available" (skips Away & Offline).', 'dragwyb-click-to-chat' ) }
+							checked={ supportSettings.respect_availability !== false }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( { ...prev, respect_availability: val } ) ) }
+						/>
 
 						{ /* Toggle: Auto Pause AI on Staff Reply */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Auto-Pause AI on Staff Reply', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Automatically pause chatbot AI when a human agent replies to a ticket.', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ supportSettings.auto_pause_ai !== false }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, auto_pause_ai: e.target.checked } ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-auto-pause-ai"
+							title={ __( 'Auto-Pause AI on Staff Reply', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Automatically pause chatbot AI when a human agent replies to a ticket.', 'dragwyb-click-to-chat' ) }
+							checked={ supportSettings.auto_pause_ai !== false }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( { ...prev, auto_pause_ai: val } ) ) }
+						/>
 					</div>
 				</div>
 
@@ -377,58 +373,37 @@ export default function SettingsView( {
 
 					<div className="dctc-sc-settings-form-body">
 						{ /* Customer Email Enabled */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Customer Email Notifications', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Send email updates to customers when tickets are created, updated, or replied to.', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ supportSettings.notifications?.customer_email_enabled !== false }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( {
-										...prev,
-										notifications: { ...( prev.notifications || {} ), customer_email_enabled: e.target.checked },
-									} ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-customer-email"
+							title={ __( 'Customer Email Notifications', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Send email updates to customers when tickets are created, updated, or replied to.', 'dragwyb-click-to-chat' ) }
+							checked={ supportSettings.notifications?.customer_email_enabled !== false }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( {
+								...prev,
+								notifications: { ...( prev.notifications || {} ), customer_email_enabled: val },
+							} ) ) }
+						/>
 
 						{ /* Agent Assignment Notification */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Staff Agent Assignment Alerts', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Notify the agent via email when a new ticket is assigned to them.', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ supportSettings.notifications?.agent_assignment !== false }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( {
-										...prev,
-										notifications: { ...( prev.notifications || {} ), agent_assignment: e.target.checked },
-									} ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-agent-assignment-alert"
+							title={ __( 'Staff Agent Assignment Alerts', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Notify the agent via email when a new ticket is assigned to them.', 'dragwyb-click-to-chat' ) }
+							checked={ supportSettings.notifications?.agent_assignment !== false }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( {
+								...prev,
+								notifications: { ...( prev.notifications || {} ), agent_assignment: val },
+							} ) ) }
+						/>
 
 						{ /* Allow Guest Tickets */ }
-						<div className="dctc-sc-setting-field-toggle">
-							<div className="dctc-sc-toggle-info">
-								<label className="dctc-sc-toggle-label">{ __( 'Allow Guest Ticket Submissions', 'dragwyb-click-to-chat' ) }</label>
-								<span className="dctc-sc-toggle-desc">{ __( 'Permit non-logged-in visitors to submit support tickets with their email.', 'dragwyb-click-to-chat' ) }</span>
-							</div>
-							<label className="dctc-sc-switch">
-								<input
-									type="checkbox"
-									checked={ supportSettings.allow_guest_tickets !== false }
-									onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, allow_guest_tickets: e.target.checked } ) ) }
-								/>
-								<span className="dctc-sc-slider"></span>
-							</label>
-						</div>
+						<SettingCard
+							id="dctc-sc-guest-tickets"
+							title={ __( 'Allow Guest Ticket Submissions', 'dragwyb-click-to-chat' ) }
+							desc={ __( 'Permit non-logged-in visitors to submit support tickets with their email.', 'dragwyb-click-to-chat' ) }
+							checked={ supportSettings.allow_guest_tickets !== false }
+							onChange={ ( val ) => setSupportSettings( ( prev ) => ( { ...prev, allow_guest_tickets: val } ) ) }
+						/>
 					</div>
 				</div>
 			</div>
@@ -456,4 +431,3 @@ export default function SettingsView( {
 		</form>
 	);
 }
-
