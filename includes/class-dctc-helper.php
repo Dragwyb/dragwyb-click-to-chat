@@ -27,7 +27,27 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		public static function init() {
 			if ( is_admin() ) {
 				add_action( 'admin_print_scripts', array( __CLASS__, 'hide_unrelated_admin_notices' ) );
+				add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_common_assets' ), 5 );
 			}
+		}
+
+		/**
+		 * Enqueue common styles and design tokens across all plugin admin pages.
+		 *
+		 * @return void
+		 */
+		public static function enqueue_common_assets() {
+			if ( ! self::is_plugin_admin_page() ) {
+				return;
+			}
+
+			wp_enqueue_style( 'dashicons' );
+			wp_enqueue_style(
+				'dctc-common-style',
+				DCTC_PLUGIN_URL . 'assets/css/common.css',
+				array( 'dashicons' ),
+				DCTC_VERSION
+			);
 		}
 
 		/**

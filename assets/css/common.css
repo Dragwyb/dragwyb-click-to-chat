@@ -1,6 +1,11 @@
 /**
- * Dragwyb Click-to-Chat - Common Global Stylesheet
- * Optimized shared design tokens, typography, modals, toggles, empty states, pagination & alerts.
+ * Dragwyb Click-to-Chat - Global Common Stylesheet
+ * Shared design tokens, typography, modals, toggles, empty states, pagination, alerts & sticky top header bar.
+ *
+ * Loaded globally on all plugin admin screens:
+ * Support Center, AI Assistant, Channels, User Guide, and Settings.
+ *
+ * @package Dragwyb_Click_To_Chat
  */
 
 :root {
@@ -33,9 +38,292 @@
   --dctc-radius-sm: 6px;
   --dctc-radius: 10px;
   --dctc-radius-lg: 14px;
+  --dctc-radius-full: 9999px;
+
+  --dctc-shadow-sm: 0 1px 3px 0 rgba(15, 23, 42, 0.05), 0 1px 2px 0 rgba(15, 23, 42, 0.03);
+  --dctc-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+  --dctc-shadow-md: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+  --dctc-shadow-lg: 0 20px 25px -5px rgba(15, 23, 42, 0.1), 0 8px 10px -6px rgba(15, 23, 42, 0.05);
 
   --dctc-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   --dctc-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+
+/* ==========================================================================
+   Full-Size Sticky Top Header Bar (Shared across all plugin pages)
+   ========================================================================== */
+.dctc-sc-header-bar,
+.dctc-admin-wrap .dctc-sc-header-bar {
+  align-items: center;
+  background: #ffffff;
+  border-bottom: 1px solid #dbe3ee;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 14px;
+  justify-content: space-between;
+  margin: 0 -22px 20px -22px;
+  padding: 10px 22px;
+  position: sticky;
+  top: 32px;
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+@media screen and (max-width: 782px) {
+  .dctc-sc-header-bar,
+  .dctc-admin-wrap .dctc-sc-header-bar {
+    top: 46px;
+    margin: 0 -12px 16px -12px;
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+}
+
+.dctc-sc-brand {
+  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.dctc-sc-brand-icon {
+  align-items: center;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  border-radius: 8px;
+  box-shadow: 0 8px 18px rgba(79, 70, 229, 0.18);
+  color: #ffffff;
+  display: flex !important;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+  flex-shrink: 0;
+}
+
+.dctc-sc-brand-icon .dashicons {
+  font-size: 20px;
+  height: 20px;
+  width: 20px;
+  color: #ffffff !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dctc-sc-app-title {
+  color: #0f172a !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.dctc-sc-app-tagline {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+}
+
+.dctc-sc-top-nav {
+  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.dctc-sc-nav-link {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px !important;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex !important;
+  font-size: 12.5px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 6px 12px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1.4;
+  outline: none;
+  box-shadow: none;
+}
+
+.dctc-sc-nav-link:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  text-decoration: none;
+}
+
+.dctc-sc-nav-link.active,
+.dctc-sc-nav-link[aria-selected="true"] {
+  background: #3730a3 !important;
+  border-color: #3730a3 !important;
+  box-shadow: 0 4px 12px rgba(55, 48, 163, 0.22) !important;
+  color: #ffffff !important;
+}
+
+.dctc-sc-nav-link .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.dctc-sc-nav-link.active .dashicons,
+.dctc-sc-nav-link[aria-selected="true"] .dashicons {
+  color: #ffffff !important;
+}
+
+.dctc-sc-nav-badge {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  font-size: 11px;
+  padding: 1px 6px;
+  margin-left: 4px;
+}
+
+.dctc-sc-nav-link.active .dctc-sc-nav-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.dctc-sc-header-right {
+  align-items: center;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-shrink: 0;
+  gap: 10px;
+}
+
+.dctc-sc-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 30px;
+  padding: 4px 12px 4px 5px;
+}
+
+.dctc-sc-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dctc-sc-user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.dctc-sc-user-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.dctc-sc-user-role {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.1;
+}
+
+.dctc-ai-guide-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dctc-ai-guide-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+  text-decoration: none;
+}
+
+.dctc-ai-guide-btn .dashicons {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  color: #6366f1;
+}
+
+.dctc-ai-btn {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 15px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.dctc-ai-btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25) !important;
+  padding: 7px 15px !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  text-decoration: none !important;
+}
+
+.dctc-ai-btn-primary:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+  color: #ffffff !important;
+  text-decoration: none !important;
 }
 
 /* ==========================================================================
@@ -163,20 +451,23 @@
 }
 
 /* ==========================================================================
-   Global Toggle Switch Styles
+   Global Toggle & iOS Switch Styles
    ========================================================================== */
 .dctc-ai-toggle,
-.dctc-sc-switch {
+.dctc-sc-switch,
+.dctc-ios-switch {
   position: relative;
   display: inline-block;
   width: 44px;
   height: 24px;
   flex-shrink: 0;
   cursor: pointer;
+  margin: 0;
 }
 
 .dctc-ai-toggle input,
-.dctc-sc-switch input {
+.dctc-sc-switch input,
+.dctc-ios-switch input {
   opacity: 0;
   width: 0;
   height: 0;
@@ -184,7 +475,8 @@
 }
 
 .dctc-ai-toggle-slider,
-.dctc-sc-slider {
+.dctc-sc-slider,
+.dctc-ios-slider {
   position: absolute;
   cursor: pointer;
   inset: 0;
@@ -194,7 +486,8 @@
 }
 
 .dctc-ai-toggle-slider:before,
-.dctc-sc-slider:before {
+.dctc-sc-slider:before,
+.dctc-ios-slider:before {
   position: absolute;
   content: "";
   height: 18px;
@@ -208,22 +501,26 @@
 }
 
 .dctc-ai-toggle input:checked + .dctc-ai-toggle-slider,
-.dctc-sc-switch input:checked + .dctc-sc-slider {
+.dctc-sc-switch input:checked + .dctc-sc-slider,
+.dctc-ios-switch input:checked + .dctc-ios-slider {
   background-color: var(--dctc-primary);
 }
 
 .dctc-ai-toggle input:focus + .dctc-ai-toggle-slider,
-.dctc-sc-switch input:focus + .dctc-sc-slider {
+.dctc-sc-switch input:focus + .dctc-sc-slider,
+.dctc-ios-switch input:focus + .dctc-ios-slider {
   box-shadow: 0 0 0 3px var(--dctc-primary-glow);
 }
 
 .dctc-ai-toggle input:checked + .dctc-ai-toggle-slider:before,
-.dctc-sc-switch input:checked + .dctc-sc-slider:before {
+.dctc-sc-switch input:checked + .dctc-sc-slider:before,
+.dctc-ios-switch input:checked + .dctc-ios-slider:before {
   transform: translateX(20px);
 }
 
 .dctc-ai-toggle input:disabled + .dctc-ai-toggle-slider,
-.dctc-sc-switch input:disabled + .dctc-sc-slider {
+.dctc-sc-switch input:disabled + .dctc-sc-slider,
+.dctc-ios-switch input:disabled + .dctc-ios-slider {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -431,7 +728,8 @@
 /* ==========================================================================
    Global Status Pills & Badges
    ========================================================================== */
-.dctc-ai-status-pill {
+.dctc-ai-status-pill,
+.dctc-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -452,25 +750,31 @@
 }
 
 .dctc-ai-status-pill.is-active,
-.dctc-ai-status-pill.is-success {
+.dctc-ai-status-pill.is-success,
+.dctc-status-pill.is-active {
   background: #ecfdf5;
   color: #059669;
+  border: 1px solid #a7f3d0;
 }
 
 .dctc-ai-status-pill.is-inactive,
-.dctc-ai-status-pill.is-error {
+.dctc-ai-status-pill.is-error,
+.dctc-status-pill.is-inactive {
   background: #fef2f2;
   color: #dc2626;
+  border: 1px solid #fecaca;
 }
 
 .dctc-ai-status-pill.is-warning {
   background: #fffbeb;
   color: #d97706;
+  border: 1px solid #fde68a;
 }
 
 .dctc-ai-status-pill.is-info {
   background: #f0f9ff;
   color: #0284c7;
+  border: 1px solid #bae6fd;
 }
 
 .dctc-ai-status-pill.is-open {
