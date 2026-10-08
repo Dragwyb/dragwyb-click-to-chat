@@ -562,7 +562,12 @@ class DCTC_AI_Chat_Controller {
 			$lead_trigger_type     = ! empty( $bot['lead_trigger_type'] ) ? $bot['lead_trigger_type'] : 'manual';
 			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
 
-			$is_active_lead_intent = ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) )
+			$rule_class  = self::classify_user_intent( $prompt );
+			$is_greeting = ( ! empty( $rule_class['category'] ) && 'greeting' === $rule_class['category'] );
+
+			// Strictly disallow greetings and support/order tracking from being classified as active lead intent
+			$is_active_lead_intent = ! $is_greeting
+				&& ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) )
 				&& 'support_ticket' !== $detected_intent
 				&& 'order_tracking' !== $detected_intent
 				&& 'human_handoff' !== $detected_intent;
@@ -572,7 +577,8 @@ class DCTC_AI_Chat_Controller {
 				$ai_message            = __( 'Please fill out the form below so our team will connect with you.', 'dragwyb-click-to-chat' );
 			}
 
-			if ( $is_active_lead_intent || ( ! empty( $detected_email ) && 'support_ticket' !== $detected_intent && 'order_tracking' !== $detected_intent && 'human_handoff' !== $detected_intent ) ) {
+			// Conversational lead capture only when user explicitly provided contact info in prompt AND had non-greeting lead intent
+			if ( ! $is_greeting && $is_active_lead_intent && ! empty( $detected_email ) && 'support_ticket' !== $detected_intent && 'order_tracking' !== $detected_intent && 'human_handoff' !== $detected_intent ) {
 				if ( class_exists( 'DCTC_AI_DB' ) ) {
 					$score = 75;
 					if ( ! empty( $detected_email ) ) {
@@ -582,15 +588,15 @@ class DCTC_AI_Chat_Controller {
 						$score += 10;
 					}
 
-					$lead_email = ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' );
-					$lead_name  = is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor';
+					$lead_email = $detected_email;
+					$lead_name  = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor' );
 
-					if ( ! empty( $lead_email ) || ! empty( $bot['enable_lead_capture'] ) ) {
+					if ( ! empty( $lead_email ) && ! empty( $bot['enable_lead_capture'] ) ) {
 						$lead_id = DCTC_AI_DB::save_lead(
 							array(
 								'session_id'   => $session_id,
 								'name'         => $lead_name,
-								'email'        => $lead_email ?: 'visitor_' . substr( $session_id, 0, 8 ) . '@lead.local',
+								'email'        => $lead_email,
 								'phone'        => $detected_phone,
 								'requirement'  => $prompt,
 								'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
@@ -600,7 +606,7 @@ class DCTC_AI_Chat_Controller {
 							)
 						);
 
-						if ( $lead_id && ! empty( $lead_email ) && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
+						if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
 							$leads_controller = new DCTC_AI_Leads_Controller();
 							$leads_controller->maybe_send_lead_email(
 								array(
@@ -616,40 +622,8 @@ class DCTC_AI_Chat_Controller {
 						}
 					}
 				}
-
-				// Auto-create/sync connected Lead ticket in Support Center
-				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
-					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-					if ( ! $existing_ticket ) {
-						DCTC_Support_Ticket_Service::create_ticket(
-							array(
-								'subject'          => '[Lead Inquiry] ' . ( ! empty( $email ) ? $email : wp_trim_words( $prompt, 8, '...' ) ),
-								'session_id'       => $session_id,
-								'customer_email'   => $email,
-								'origin_type'      => 'chatbot',
-								'reply_surface'    => 'chatbot_widget',
-								'interaction_type' => 'LEAD_GENERATION',
-								'control_mode'     => 'ai',
-								'initial_message'  => $prompt,
-							)
-						);
-					} else {
-						$ticket_id  = (int) $existing_ticket['id'];
-						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
-						if ( $ticket_obj && $ticket_obj->is_valid() ) {
-							if ( ! empty( $email ) ) {
-								$ticket_obj->update_email( $email );
-							}
-							if ( ! empty( $detected_phone ) ) {
-								$ticket_obj->update_phone( $detected_phone );
-							}
-							$ticket_obj->update_meta( 'detected_intent', $detected_intent, 'auto' );
-							$ticket_obj->update_meta( 'last_customer_inquiry', $prompt, 'textarea' );
-						}
-					}
-				}
-			} elseif ( in_array( $detected_intent, array( 'support_ticket', 'human_handoff' ), true ) ) {
-				// Auto-create/sync Support Ticket in Support Center
+			} elseif ( ! $is_greeting && 'human_handoff' === $detected_intent ) {
+				// Auto-create/sync Support Ticket in Support Center only for explicit human handoff requests
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
@@ -729,7 +703,7 @@ class DCTC_AI_Chat_Controller {
 			$formatted_messages = array();
 		}
 
-		$wc_products = array();
+		$wc_products                  = array();
 		$is_support_or_tracking_query = in_array( $detected_intent, array( 'support_ticket', 'human_handoff', 'order_tracking' ), true )
 			|| preg_match( '/\b(issue|problem|bug|glitch|error|broken|not working|conflict|defect|trouble|refund|damage|support|ticket|help me|how to fix|facing|face a)\b/i', $prompt );
 
@@ -1517,15 +1491,21 @@ CONVERSATION MEMORY:
 			);
 
 			if ( ! empty( $conversation_history ) ) {
+				$classification    = self::classify_user_intent( $prompt );
+				$is_fresh_greeting = ( ! empty( $classification['category'] ) && 'greeting' === $classification['category'] );
 
 				$system_message .= "\n\nCONVERSATION HISTORY:\n";
 				$system_message .= $conversation_history;
 
-				$system_message .= "\n\nFOLLOW-UP RULES:
+				if ( $is_fresh_greeting ) {
+					$system_message .= "\n\nCURRENT USER INTENT: The user just sent a greeting ('" . esc_html( $prompt ) . "'). Greet them pleasantly and ask how you can help them today. Do NOT assume they are continuing a previous purchase, quotation, or support ticket inquiry.\n";
+				} else {
+					$system_message .= "\n\nFOLLOW-UP RULES:
 - If user asks 'why', 'how', 'who', 'when', 'where', 'which', 'what about', 'tell me more', 'continue', 'can you explain', assume they are referring to the previous topic.
 - Resolve pronouns such as 'it', 'that', 'this', 'they' using the conversation history.
 - Never ignore previous messages in the same session.
 ";
+				}
 			}
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Memory Build Context Error: ' . $e->getMessage() );

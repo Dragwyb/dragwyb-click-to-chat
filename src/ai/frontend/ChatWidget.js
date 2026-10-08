@@ -1820,6 +1820,14 @@ export default function ChatWidget({ settings, inline }) {
 				setEmailDraft('');
 				setPendingPrompt('');
 				setClearAllowed(true);
+				setShowLeadForm(false);
+				setHasActiveTicket(false);
+				setActiveTicketInfo(null);
+				setActiveControlMode('ai');
+				setAssignedAgentName('');
+				setIsWaitingForAgent(false);
+				setWaitingAgentStatusText('');
+				clearAgentWaitTimers();
 			}
 		} catch (err) {
 			setMessages([]);
@@ -1830,6 +1838,14 @@ export default function ChatWidget({ settings, inline }) {
 				'sess_' + Math.random().toString(36).substr(2, 9);
 			setSessionId(newId);
 			setClearAllowed(true);
+			setShowLeadForm(false);
+			setHasActiveTicket(false);
+			setActiveTicketInfo(null);
+			setActiveControlMode('ai');
+			setAssignedAgentName('');
+			setIsWaitingForAgent(false);
+			setWaitingAgentStatusText('');
+			clearAgentWaitTimers();
 		}
 	};
 
