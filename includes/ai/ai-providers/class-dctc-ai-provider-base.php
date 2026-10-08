@@ -32,6 +32,24 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	}
 
 	/**
+	 * Convenience wrapper for chat completion returning array structure.
+	 *
+	 * @param string $prompt User prompt.
+	 * @param string $system_message System instruction.
+	 * @param string $model Model identifier.
+	 * @param array  $options Additional options.
+	 * @return array ['message' => string]
+	 * @throws \Exception On failure.
+	 */
+	public function chat_completion($prompt, $system_message = '', $model = '', array $options = [])
+	{
+		$response_text = $this->chat($prompt, $system_message, $model, $options);
+		return [
+			'message' => $response_text,
+		];
+	}
+
+	/**
 	 * Send an HTTP POST request.
 	 *
 	 * @param string $url Endpoint URL.

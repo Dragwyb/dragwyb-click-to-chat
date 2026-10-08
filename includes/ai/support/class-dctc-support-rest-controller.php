@@ -619,6 +619,8 @@ class DCTC_Support_REST_Controller {
 	 * @return WP_REST_Response
 	 */
 	public function session_heartbeat( $request ) {
+		global $wpdb;
+
 		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
 		if ( empty( $session_id ) ) {
 			return new WP_REST_Response(

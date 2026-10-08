@@ -124,20 +124,24 @@ class DCTC_Support_AI_Assist_Service {
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-data-sanitizer.php';
 		$manager = DCTC_AI_Provider_Manager::get_instance();
 
-		$provider_name = ! empty( $bot['active_provider'] ) ? $bot['active_provider'] : 'google';
-		$provider      = $manager->get_provider( $provider_name );
-
-		if ( ! $provider ) {
-			return new WP_Error( 'no_provider', __( 'No active AI provider configured.', 'dragwyb-click-to-chat' ) );
-		}
-
-		$model_id = ! empty( $models[ $provider_name ]['model'] ) ? $models[ $provider_name ]['model'] : '';
+		$provider_name     = ! empty( $bot['active_provider'] ) ? $bot['active_provider'] : 'google';
+		$model_id          = ! empty( $models[ $provider_name ]['model'] ) ? $models[ $provider_name ]['model'] : '';
+		$fallback_provider = ! empty( $bot['fallback_provider'] ) ? $bot['fallback_provider'] : '';
+		$fallback_model    = ! empty( $models[ $fallback_provider ]['model'] ) ? $models[ $fallback_provider ]['model'] : '';
 
 		$clean_user_prompt   = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $user_prompt );
 		$clean_system_prompt = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $system_prompt );
 
 		try {
-			$result = $provider->chat_completion( $clean_user_prompt, $clean_system_prompt, $model_id );
+			$result = $manager->chat_with_fallback(
+				$clean_user_prompt,
+				$clean_system_prompt,
+				$provider_name,
+				$model_id,
+				array( 'temperature' => 0.4, 'max_tokens' => 500 ),
+				$fallback_provider,
+				$fallback_model
+			);
 			if ( ! empty( $result['message'] ) ) {
 				return DCTC_AI_Data_Sanitizer::sanitize_ai_response( $result['message'] );
 			}
