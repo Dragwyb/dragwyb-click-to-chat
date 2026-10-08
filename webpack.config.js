@@ -28,6 +28,10 @@ module.exports = {
 			__dirname,
 			'src/support-center/taxonomies.js'
 		),
+		'support/dctc-support-portal': path.resolve(
+			__dirname,
+			'src/support-center/portal.js'
+		),
 		'support/dctc-support-settings': path.resolve(
 			__dirname,
 			'src/support-center/settings.js'

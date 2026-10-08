@@ -443,6 +443,23 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/support/portal-settings',
+			array(
+				array(
+					'methods'             => WP_REST_Server::READABLE,
+					'callback'            => array( $this, 'get_portal_settings' ),
+					'permission_callback' => array( $this, 'permission_staff_view' ),
+				),
+				array(
+					'methods'             => WP_REST_Server::CREATABLE,
+					'callback'            => array( $this, 'save_portal_settings' ),
+					'permission_callback' => array( $this, 'permission_staff_settings' ),
+				),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/support/permissions',
 			array(
 				array(
@@ -1555,6 +1572,42 @@ class DCTC_Support_REST_Controller {
 			array(
 				'success'  => true,
 				'settings' => $data,
+			),
+			200
+		);
+	}
+
+	public function get_portal_settings() {
+		$settings = class_exists( 'DCTC_Support_Portal' )
+			? DCTC_Support_Portal::get_settings()
+			: get_option( 'dctc_support_portal_settings', array() );
+
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'settings' => $settings,
+			),
+			200
+		);
+	}
+
+	public function save_portal_settings( $request ) {
+		$data = $request->get_json_params();
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
+
+		$sanitized = class_exists( 'DCTC_Support_Portal' )
+			? DCTC_Support_Portal::sanitize_settings( $data )
+			: $data;
+
+		update_option( 'dctc_support_portal_settings', $sanitized );
+
+		return new WP_REST_Response(
+			array(
+				'success'  => true,
+				'settings' => $sanitized,
+				'message'  => __( 'Support portal styling and configuration saved successfully.', 'dragwyb-click-to-chat' ),
 			),
 			200
 		);

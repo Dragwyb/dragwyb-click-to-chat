@@ -51,6 +51,12 @@ export default function SupportHeader({ activeTab, userPermissions, notice }) {
 		...(canManageSettings
 			? [
 					{
+						id: 'portal',
+						label: __('Support Portal', 'dragwyb-click-to-chat'),
+						icon: 'dashicons-desktop',
+						href: 'admin.php?page=dragwyb-support-portal',
+					},
+					{
 						id: 'settings',
 						label: __('Support Settings', 'dragwyb-click-to-chat'),
 						icon: 'dashicons-admin-generic',

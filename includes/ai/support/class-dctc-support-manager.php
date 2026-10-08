@@ -159,7 +159,19 @@ class DCTC_Support_Manager {
 			);
 		}
 
-		// Submenu 5: Support Settings (Requires manage_settings permission)
+		// Submenu 5: Support Portal Customizer (Requires manage_settings permission)
+		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+			add_submenu_page(
+				'dragwyb-support-center',
+				esc_html__( 'Support Portal', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Support Portal', 'dragwyb-click-to-chat' ),
+				$support_cap,
+				'dragwyb-support-portal',
+				array( $this, 'render_support_admin_page' )
+			);
+		}
+
+		// Submenu 6: Support Settings (Requires manage_settings permission)
 		if ( DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
 			add_submenu_page(
 				'dragwyb-support-center',
@@ -189,8 +201,8 @@ class DCTC_Support_Manager {
 			wp_die( esc_html__( 'You do not have sufficient permissions to access Categories & Tags.', 'dragwyb-click-to-chat' ), 403 );
 		}
 
-		if ( 'dragwyb-support-settings' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
-			wp_die( esc_html__( 'You do not have sufficient permissions to access Support Settings.', 'dragwyb-click-to-chat' ), 403 );
+		if ( ( 'dragwyb-support-settings' === $page || 'dragwyb-support-portal' === $page ) && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to access Support Portal or Settings.', 'dragwyb-click-to-chat' ), 403 );
 		}
 
 		require_once DCTC_PLUGIN_DIR . 'admin/support/dctc-support-dashboard.php';
@@ -221,7 +233,7 @@ class DCTC_Support_Manager {
 		if ( 'dragwyb-support-taxonomies' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_categories' ) && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_tags' ) ) {
 			return;
 		}
-		if ( 'dragwyb-support-settings' === $page && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
+		if ( ( 'dragwyb-support-settings' === $page || 'dragwyb-support-portal' === $page ) && ! DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) ) {
 			return;
 		}
 
@@ -254,6 +266,8 @@ class DCTC_Support_Manager {
 			$script_slug = 'dctc-support-taxonomies';
 		} elseif ( 'dragwyb-support-settings' === $page ) {
 			$script_slug = 'dctc-support-settings';
+		} elseif ( 'dragwyb-support-portal' === $page ) {
+			$script_slug = 'dctc-support-portal';
 		}
 
 		// Fallback to legacy/all-in-one bundle if split bundle doesn't exist
