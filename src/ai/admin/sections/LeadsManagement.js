@@ -518,7 +518,8 @@ export default function LeadsManagement({ showNotice }) {
 			<Modal
 				isOpen={!!activeLead}
 				onClose={() => setActiveLead(null)}
-				title={activeLead?.name || __('Lead Details', 'dragwyb-click-to-chat')}
+				maxWidth="720px"
+				title={activeLead?.name || __('Chat Visitor', 'dragwyb-click-to-chat')}
 				subtitle={activeLead ? `${__('Captured on', 'dragwyb-click-to-chat')} ${formatDate(activeLead.created_at)}` : ''}
 				footer={
 					activeLead && (
@@ -551,102 +552,265 @@ export default function LeadsManagement({ showNotice }) {
 					)
 				}
 			>
-				{activeLead && (
-					<div>
-						<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Email', 'dragwyb-click-to-chat')}</strong>
-								{activeLead.email ? (
-									<a href={`mailto:${activeLead.email}`} style={{ fontSize: '0.85rem', color: '#2563eb' }}>{activeLead.email}</a>
-								) : '—'}
-							</div>
+				{activeLead && (() => {
+					const conversation = Array.isArray(activeLead.conversation) ? activeLead.conversation : [];
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Phone', 'dragwyb-click-to-chat')}</strong>
-								{activeLead.phone ? (
-									<a href={`tel:${activeLead.phone}`} style={{ fontSize: '0.85rem', color: '#2563eb' }}>{activeLead.phone}</a>
-								) : '—'}
-							</div>
+					return (
+						<div>
+							{/* Contact Information & AI Intent Details Grid */}
+							<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem', background: '#f8fafc', padding: '1rem', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Email', 'dragwyb-click-to-chat')}</strong>
+									{activeLead.email ? (
+										<a href={`mailto:${activeLead.email}`} style={{ fontSize: '0.85rem', color: '#2563eb', wordBreak: 'break-all' }}>{activeLead.email}</a>
+									) : '—'}
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Company / Org', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.company || '—'}</span>
-							</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Phone', 'dragwyb-click-to-chat')}</strong>
+									{activeLead.phone ? (
+										<a href={`tel:${activeLead.phone}`} style={{ fontSize: '0.85rem', color: '#2563eb' }}>{activeLead.phone}</a>
+									) : '—'}
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Company Size', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.company_size || '—'}</span>
-							</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Company / Org', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.company || '—'}</span>
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Budget Range', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: 600 }}>{activeLead.budget || '—'}</span>
-							</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Company Size', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.company_size || '—'}</span>
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Timeline', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.timeline || '—'}</span>
-							</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Budget Range', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', color: '#0f766e', fontWeight: 600 }}>{activeLead.budget || '—'}</span>
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Interest', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.interest || '—'}</span>
-							</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Timeline', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.timeline || '—'}</span>
+								</div>
 
-							<div>
-								<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('AI Intent', 'dragwyb-click-to-chat')}</strong>
-								<span style={{ fontSize: '0.85rem', fontWeight: 600, color: getIntentBadge(activeLead.intent_level).color }}>
-									{getIntentBadge(activeLead.intent_level).label}
-								</span>
-							</div>
-						</div>
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('Interest', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', color: '#1e293b' }}>{activeLead.interest || '—'}</span>
+								</div>
 
-						{/* Explainable Score Breakdown */}
-						{parseScoreBreakdown(activeLead.score_breakdown).length > 0 && (
-							<div style={{ marginBottom: '1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
-								<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-									<strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
-										{__('Explainable Qualification Score Breakdown', 'dragwyb-click-to-chat')}
-									</strong>
-									<span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#065f46' }}>
-										{activeLead.score || 0} / 100
+								<div>
+									<strong style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>{__('AI Intent', 'dragwyb-click-to-chat')}</strong>
+									<span style={{ fontSize: '0.85rem', fontWeight: 600, color: getIntentBadge(activeLead.intent_level).color }}>
+										{getIntentBadge(activeLead.intent_level).label}
 									</span>
 								</div>
-								<div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
-									{parseScoreBreakdown(activeLead.score_breakdown).map((f, fIdx) => (
-										<div key={fIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '0.35rem 0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
-											<div>
-												<span style={{ fontWeight: 600, color: '#334155' }}>{f.factor}</span>
-												{f.detail && <span style={{ color: '#64748b', marginLeft: '0.4rem' }}>({f.detail})</span>}
+							</div>
+
+							{/* Explainable Score Breakdown */}
+							{parseScoreBreakdown(activeLead.score_breakdown).length > 0 && (
+								<div style={{ marginBottom: '1.25rem', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem' }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+										<strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>
+											{__('Explainable Qualification Score Breakdown', 'dragwyb-click-to-chat')}
+										</strong>
+										<span style={{ fontSize: '0.9rem', fontWeight: 700, color: '#065f46' }}>
+											{activeLead.score || 0} / 100
+										</span>
+									</div>
+									<div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+										{parseScoreBreakdown(activeLead.score_breakdown).map((f, fIdx) => (
+											<div key={fIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', padding: '0.35rem 0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
+												<div>
+													<span style={{ fontWeight: 600, color: '#334155' }}>{f.factor}</span>
+													{f.detail && <span style={{ color: '#64748b', marginLeft: '0.4rem' }}>({f.detail})</span>}
+												</div>
+												<span style={{ fontWeight: 700, color: f.points > 0 ? '#10b981' : '#94a3b8' }}>
+													+{f.points} / {f.max}
+												</span>
 											</div>
-											<span style={{ fontWeight: 700, color: f.points > 0 ? '#10b981' : '#94a3b8' }}>
-												+{f.points} / {f.max}
+										))}
+									</div>
+								</div>
+							)}
+
+							{/* Full Conversation History Stream between User, Human Agent, and AI Response */}
+							<div style={{ marginBottom: '1.25rem' }}>
+								<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+									<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+										<strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+											<span className="dashicons dashicons-format-chat" style={{ color: '#2563eb', fontSize: '18px', lineHeight: '18px' }} />
+											{__('Full Conversation History', 'dragwyb-click-to-chat')}
+										</strong>
+										{conversation.length > 0 && (
+											<span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.15rem 0.5rem', background: '#e2e8f0', color: '#475569', borderRadius: '999px' }}>
+												{sprintf(__('%d messages', 'dragwyb-click-to-chat'), conversation.length)}
 											</span>
+										)}
+									</div>
+									<div style={{ display: 'flex', gap: '0.6rem', fontSize: '0.75rem', flexWrap: 'wrap' }}>
+										<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#1e40af' }}>
+											<span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3b82f6' }} />
+											{__('User / Visitor', 'dragwyb-click-to-chat')}
+										</span>
+										<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#6b21a8' }}>
+											<span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#a855f7' }} />
+											{__('AI Response', 'dragwyb-click-to-chat')}
+										</span>
+										<span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', color: '#15803d' }}>
+											<span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }} />
+											{__('Human Agent', 'dragwyb-click-to-chat')}
+										</span>
+									</div>
+								</div>
+
+								<div
+									style={{
+										background: '#f8fafc',
+										border: '1px solid #e2e8f0',
+										borderRadius: '10px',
+										padding: '0.85rem',
+										maxHeight: '380px',
+										overflowY: 'auto',
+										display: 'flex',
+										flexDirection: 'column',
+										gap: '0.75rem',
+									}}
+								>
+									{conversation.length === 0 ? (
+										<div style={{ textAlign: 'center', padding: '2rem 1rem', color: '#64748b' }}>
+											<span className="dashicons dashicons-format-chat" style={{ fontSize: '32px', width: '32px', height: '32px', color: '#cbd5e1', marginBottom: '0.5rem' }} />
+											<div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>
+												{__('No chat messages recorded', 'dragwyb-click-to-chat')}
+											</div>
+											<div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+												{__('The visitor submitted this inquiry directly.', 'dragwyb-click-to-chat')}
+											</div>
 										</div>
-									))}
+									) : (
+										conversation.map((msg, idx) => {
+											const isUser = msg.sender_type === 'customer' || msg.role === 'user';
+											const isHuman = msg.sender_type === 'human_agent' || msg.sender_type === 'agent' || msg.sender_type === 'support';
+											const isAI = !isUser && !isHuman;
+
+											let bubbleBg = '#ffffff';
+											let bubbleBorder = '#e2e8f0';
+											let tagBg = '#f1f5f9';
+											let tagColor = '#475569';
+											let tagLabel = __('System', 'dragwyb-click-to-chat');
+											let icon = '👤';
+											let defaultName = __('Visitor', 'dragwyb-click-to-chat');
+
+											if (isUser) {
+												bubbleBg = '#eff6ff';
+												bubbleBorder = '#bfdbfe';
+												tagBg = '#dbeafe';
+												tagColor = '#1e40af';
+												tagLabel = __('User / Visitor', 'dragwyb-click-to-chat');
+												icon = '👤';
+												defaultName = activeLead.name || __('Visitor', 'dragwyb-click-to-chat');
+											} else if (isHuman) {
+												bubbleBg = '#f0fdf4';
+												bubbleBorder = '#bbf7d0';
+												tagBg = '#dcfce7';
+												tagColor = '#15803d';
+												tagLabel = __('Support Agent (Human)', 'dragwyb-click-to-chat');
+												icon = '👨‍💼';
+												defaultName = __('Support Agent', 'dragwyb-click-to-chat');
+											} else if (isAI) {
+												bubbleBg = '#ffffff';
+												bubbleBorder = '#e2e8f0';
+												tagBg = '#ede9fe';
+												tagColor = '#6b21a8';
+												tagLabel = __('AI Response', 'dragwyb-click-to-chat');
+												icon = '🤖';
+												defaultName = __('AI Assistant', 'dragwyb-click-to-chat');
+											}
+
+											return (
+												<div
+													key={idx}
+													style={{
+														background: bubbleBg,
+														border: `1px solid ${bubbleBorder}`,
+														borderRadius: '8px',
+														padding: '0.75rem 0.85rem',
+														boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+													}}
+												>
+													<div
+														style={{
+															display: 'flex',
+															justifyContent: 'space-between',
+															alignItems: 'center',
+															marginBottom: '0.4rem',
+															flexWrap: 'wrap',
+															gap: '0.35rem',
+														}}
+													>
+														<div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+															<span style={{ fontSize: '1rem' }}>{icon}</span>
+															<strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>
+																{msg.sender_name || defaultName}
+															</strong>
+															<span
+																style={{
+																	fontSize: '0.7rem',
+																	fontWeight: 600,
+																	padding: '0.1rem 0.45rem',
+																	borderRadius: '999px',
+																	background: tagBg,
+																	color: tagColor,
+																}}
+															>
+																{tagLabel}
+															</span>
+														</div>
+														{msg.created_at && (
+															<span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+																{formatDate(msg.created_at)}
+															</span>
+														)}
+													</div>
+													<div
+														style={{
+															fontSize: '0.88rem',
+															color: '#1e293b',
+															lineHeight: 1.55,
+															whiteSpace: 'pre-wrap',
+															wordBreak: 'break-word',
+														}}
+													>
+														{msg.content}
+													</div>
+												</div>
+											);
+										})
+									)}
 								</div>
 							</div>
-						)}
 
-						<div style={{ marginBottom: '1.25rem' }}>
-							<strong style={{ display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>
-								{__('Requirement / Message', 'dragwyb-click-to-chat')}
-							</strong>
-							<div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem', fontSize: '0.9rem', color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-								{activeLead.requirement || __('No message provided.', 'dragwyb-click-to-chat')}
-							</div>
+							{activeLead.requirement && conversation.length > 1 && (
+								<div style={{ marginBottom: '1.25rem' }}>
+									<strong style={{ display: 'block', fontSize: '0.85rem', color: '#475569', marginBottom: '0.35rem' }}>
+										{__('Submitted Requirement Summary', 'dragwyb-click-to-chat')}
+									</strong>
+									<div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.85rem', fontSize: '0.88rem', color: '#1e293b', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+										{activeLead.requirement}
+									</div>
+								</div>
+							)}
+
+							{activeLead.source_url && (
+								<div style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+									<strong style={{ color: '#64748b' }}>{__('Source URL: ', 'dragwyb-click-to-chat')}</strong>
+									<a href={activeLead.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>
+										{activeLead.source_url}
+									</a>
+								</div>
+							)}
 						</div>
-
-						{activeLead.source_url && (
-							<div style={{ marginBottom: '1.25rem', fontSize: '0.85rem' }}>
-								<strong style={{ color: '#64748b' }}>{__('Source URL: ', 'dragwyb-click-to-chat')}</strong>
-								<a href={activeLead.source_url} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb' }}>
-									{activeLead.source_url}
-								</a>
-							</div>
-						)}
-					</div>
-				)}
+					);
+				})()}
 			</Modal>
 
 			{/* Delete Confirmation Modal */}

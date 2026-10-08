@@ -713,7 +713,200 @@ class DCTC_AI_DB {
 		}
 
 		$results = $wpdb->get_results( $query, ARRAY_A );
-		return is_array( $results ) ? $results : [];
+		if ( ! is_array( $results ) ) {
+			return [];
+		}
+
+		return self::enrich_leads_with_conversation( $results );
+	}
+
+	/**
+	 * Get a single lead by ID with conversation history.
+	 *
+	 * @param int $id
+	 * @return array|null
+	 */
+	public static function get_lead( $id ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'dctc_ai_leads';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE id = %d LIMIT 1", absint( $id ) ), ARRAY_A );
+		if ( ! $row ) {
+			return null;
+		}
+
+		$enriched = self::enrich_leads_with_conversation( [ $row ] );
+		return ! empty( $enriched[0] ) ? $enriched[0] : $row;
+	}
+
+	/**
+	 * Attach full conversation transcripts to lead records.
+	 *
+	 * @param array $leads
+	 * @return array
+	 */
+	public static function enrich_leads_with_conversation( $leads ) {
+		if ( empty( $leads ) || ! is_array( $leads ) ) {
+			return [];
+		}
+
+		global $wpdb;
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+
+		$session_ids = [];
+		$lead_ids    = [];
+
+		foreach ( $leads as $l ) {
+			if ( ! empty( $l['session_id'] ) ) {
+				$session_ids[] = sanitize_text_field( $l['session_id'] );
+			}
+			if ( ! empty( $l['id'] ) ) {
+				$lead_ids[] = (int) $l['id'];
+			}
+		}
+
+		$session_map = [];
+
+		if ( ! empty( $session_ids ) ) {
+			$unique_sessions = array_unique( $session_ids );
+			$placeholders    = implode( ',', array_fill( 0, count( $unique_sessions ), '%s' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$session_rows = $wpdb->get_results(
+				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE session_id IN ({$placeholders})", ...$unique_sessions ),
+				ARRAY_A
+			);
+
+			if ( is_array( $session_rows ) ) {
+				foreach ( $session_rows as $srow ) {
+					$raw_content = $srow['content'] ?? '';
+					$decoded     = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : [];
+					if ( is_array( $decoded ) ) {
+						$session_map[ $srow['session_id'] ] = [
+							'messages'          => $decoded,
+							'support_ticket_id' => ! empty( $srow['support_ticket_id'] ) ? (int) $srow['support_ticket_id'] : 0,
+						];
+					}
+				}
+			}
+		}
+
+		// Also check by lead_id in session table for sessions that didn't have session_id match
+		if ( ! empty( $lead_ids ) ) {
+			$unique_leads = array_unique( $lead_ids );
+			$placeholders = implode( ',', array_fill( 0, count( $unique_leads ), '%d' ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$lead_session_rows = $wpdb->get_results(
+				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE lead_id IN ({$placeholders})", ...$unique_leads ),
+				ARRAY_A
+			);
+
+			if ( is_array( $lead_session_rows ) ) {
+				foreach ( $lead_session_rows as $lsrow ) {
+					$lid         = (int) $lsrow['lead_id'];
+					$raw_content = $lsrow['content'] ?? '';
+					$decoded     = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : [];
+					if ( is_array( $decoded ) && ! empty( $decoded ) ) {
+						if ( empty( $session_map[ $lsrow['session_id'] ] ) ) {
+							$session_map[ $lsrow['session_id'] ] = [
+								'messages'          => $decoded,
+								'support_ticket_id' => ! empty( $lsrow['support_ticket_id'] ) ? (int) $lsrow['support_ticket_id'] : 0,
+							];
+						}
+						$session_map[ "lead_{$lid}" ] = [
+							'messages'          => $decoded,
+							'support_ticket_id' => ! empty( $lsrow['support_ticket_id'] ) ? (int) $lsrow['support_ticket_id'] : 0,
+						];
+					}
+				}
+			}
+		}
+
+		foreach ( $leads as &$lead ) {
+			$sid = $lead['session_id'] ?? '';
+			$lid = (int) ( $lead['id'] ?? 0 );
+
+			$session_data = null;
+			if ( ! empty( $sid ) && isset( $session_map[ $sid ] ) ) {
+				$session_data = $session_map[ $sid ];
+			} elseif ( isset( $session_map[ "lead_{$lid}" ] ) ) {
+				$session_data = $session_map[ "lead_{$lid}" ];
+			}
+
+			$raw_messages = $session_data['messages'] ?? [];
+			$ticket_id    = $session_data['support_ticket_id'] ?? 0;
+
+			// If ticket exists and session table has empty messages, check ticket messages meta
+			if ( empty( $raw_messages ) && $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_dctc_ticket_messages', true );
+				if ( is_array( $ticket_meta_msgs ) && ! empty( $ticket_meta_msgs ) ) {
+					$raw_messages = $ticket_meta_msgs;
+				}
+			}
+
+			// Clean and standardize conversation messages for the admin view
+			$clean_conversation = [];
+			if ( is_array( $raw_messages ) ) {
+				foreach ( $raw_messages as $m ) {
+					if ( ! is_array( $m ) ) {
+						continue;
+					}
+
+					// Filter out internal system logs if any
+					$role        = sanitize_key( $m['role'] ?? ( ( isset( $m['type'] ) && 'user' === $m['type'] ) ? 'user' : 'assistant' ) );
+					$sender_type = sanitize_key( $m['sender_type'] ?? ( 'user' === $role ? 'customer' : 'ai_agent' ) );
+
+					if ( 'system' === $role || 'system' === $sender_type ) {
+						continue;
+					}
+
+					$content = isset( $m['content'] ) ? (string) $m['content'] : ( $m['text'] ?? ( $m['message'] ?? '' ) );
+					// Remove internal intent comments and AI thinking tokens
+					$content = preg_replace( '/<!--INTENT:.*?-->/s', '', $content );
+					$content = preg_replace( '/<think>.*?<\/think>/s', '', $content );
+					$content = trim( $content );
+
+					if ( empty( $content ) ) {
+						continue;
+					}
+
+					// Determine clean sender type: 'customer' (visitor/user), 'human_agent' (human support), 'ai_agent' (AI response)
+					if ( 'human_agent' === $sender_type || 'agent' === $sender_type || 'support' === $sender_type ) {
+						$normalized_type = 'human_agent';
+						$sender_name     = ! empty( $m['sender_name'] ) ? $m['sender_name'] : __( 'Support Agent', 'dragwyb-click-to-chat' );
+					} elseif ( 'user' === $role || 'customer' === $sender_type || 'visitor' === $sender_type ) {
+						$normalized_type = 'customer';
+						$sender_name     = ! empty( $m['sender_name'] ) ? $m['sender_name'] : ( ! empty( $lead['name'] ) ? $lead['name'] : __( 'Visitor', 'dragwyb-click-to-chat' ) );
+					} else {
+						$normalized_type = 'ai_agent';
+						$sender_name     = ! empty( $m['sender_name'] ) ? $m['sender_name'] : __( 'AI Assistant', 'dragwyb-click-to-chat' );
+					}
+
+					$clean_conversation[] = [
+						'role'        => ( 'customer' === $normalized_type ) ? 'user' : 'assistant',
+						'sender_type' => $normalized_type,
+						'sender_name' => sanitize_text_field( $sender_name ),
+						'content'     => $content,
+						'created_at'  => ! empty( $m['created_at'] ) ? $m['created_at'] : ( ! empty( $m['timestamp'] ) ? $m['timestamp'] : '' ),
+					];
+				}
+			}
+
+			// Fallback: If no session history existed, but requirement message was recorded, construct initial visitor message
+			if ( empty( $clean_conversation ) && ! empty( $lead['requirement'] ) ) {
+				$clean_conversation[] = [
+					'role'        => 'user',
+					'sender_type' => 'customer',
+					'sender_name' => ! empty( $lead['name'] ) ? $lead['name'] : __( 'Visitor', 'dragwyb-click-to-chat' ),
+					'content'     => $lead['requirement'],
+					'created_at'  => $lead['created_at'] ?? '',
+				];
+			}
+
+			$lead['conversation'] = $clean_conversation;
+		}
+		unset( $lead );
+
+		return $leads;
 	}
 
 	/**

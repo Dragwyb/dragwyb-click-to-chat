@@ -436,6 +436,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'session_id'    => $session_id,
 					'clear_allowed' => $is_allowed,
 					'is_logged_in'  => is_user_logged_in(),
+					'user_name'     => is_user_logged_in() ? ( wp_get_current_user()->display_name ) : '',
 					'user_email'    => is_user_logged_in() ? ( wp_get_current_user()->user_email ) : '',
 					'page_context'  => $page_context,
 				)

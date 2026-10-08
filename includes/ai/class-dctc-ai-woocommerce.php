@@ -56,18 +56,6 @@ class DCTC_AI_WooCommerce {
 
 		$wc_products = function_exists( 'wc_get_products' ) ? wc_get_products( $args ) : array();
 
-		// Fallback if search returned no results, try general keyword query
-		if ( empty( $wc_products ) && ! empty( $query ) ) {
-			$wc_products = wc_get_products(
-				array(
-					'status'  => 'publish',
-					'limit'   => $limit,
-					'orderby' => 'popularity',
-					'order'   => 'DESC',
-				)
-			);
-		}
-
 		foreach ( $wc_products as $product ) {
 			if ( ! $product instanceof WC_Product ) {
 				continue;
@@ -133,8 +121,8 @@ class DCTC_AI_WooCommerce {
 		$sale_price    = $product->get_sale_price();
 		$is_on_sale    = $product->is_on_sale();
 
-		$currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
-		$formatted_price = function_exists( 'wc_price' ) ? wp_strip_all_tags( wc_price( $price ) ) : ( $currency_symbol . $price );
+		$currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : '$';
+		$formatted_price = function_exists( 'wc_price' ) ? html_entity_decode( wp_strip_all_tags( wc_price( $price ) ), ENT_QUOTES, 'UTF-8' ) : ( $currency_symbol . $price );
 
 		$short_desc = wp_strip_all_tags( $product->get_short_description() );
 		if ( empty( $short_desc ) ) {

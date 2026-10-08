@@ -287,7 +287,7 @@ export default function AdvancedSubtab({
 				disabledNotice={__('Enable lead capture to collect contact inquiries, notify sales via email, and sync with webhooks.', 'dragwyb-click-to-chat')}
 			>
 				<div className="dctc-ai-grid-2col">
-					<div className="dctc-ai-bot-field">
+					<div className="dctc-ai-bot-field" style={{ gridColumn: 'span 2' }}>
 						<label htmlFor="lead_trigger_type">
 							{__('Lead Capture Trigger Mode', 'dragwyb-click-to-chat')}
 						</label>
@@ -297,59 +297,13 @@ export default function AdvancedSubtab({
 							value={form.lead_trigger_type}
 							onChange={(e) => setField('lead_trigger_type', e.target.value)}
 						>
-							<option value="manual">{__('Manual Button in Chat Header / Menu', 'dragwyb-click-to-chat')}</option>
-							<option value="time_delay">{__('Auto-Prompt After Time Delay', 'dragwyb-click-to-chat')}</option>
-							<option value="message_count">{__('Auto-Prompt After Message Count', 'dragwyb-click-to-chat')}</option>
+							<option value="manual">{__('Chat Header / Menu Manual Button', 'dragwyb-click-to-chat')}</option>
 							<option value="intent">{__('Auto-Prompt on AI Purchase / Contact Intent', 'dragwyb-click-to-chat')}</option>
 						</select>
 						<p className="dctc-ai-bot-hint">
-							{__('Decide when the lead capture card should be presented to visitors.', 'dragwyb-click-to-chat')}
+							{__('Choose whether visitors can manually open the lead form from the chat header or if the AI automatically prompts it when sales/contact intent is detected.', 'dragwyb-click-to-chat')}
 						</p>
 					</div>
-
-					{form.lead_trigger_type === 'time_delay' && (
-						<div className="dctc-ai-bot-field">
-							<label htmlFor="lead_trigger_delay">
-								{__('Trigger Time Delay (Seconds)', 'dragwyb-click-to-chat')}
-							</label>
-							<div className="dctc-ai-inline-input-row">
-								<input
-									type="number"
-									id="lead_trigger_delay"
-									className="dctc-ai-bot-input dctc-ai-input--narrow"
-									min="5"
-									max="300"
-									value={form.lead_trigger_delay}
-									onChange={(e) =>
-										setField('lead_trigger_delay', parseInt(e.target.value, 10) || 30)
-									}
-								/>
-								<span className="dctc-ai-input-unit-label">{__('seconds', 'dragwyb-click-to-chat')}</span>
-							</div>
-						</div>
-					)}
-
-					{form.lead_trigger_type === 'message_count' && (
-						<div className="dctc-ai-bot-field">
-							<label htmlFor="lead_trigger_message_count">
-								{__('Trigger After Visitor Messages', 'dragwyb-click-to-chat')}
-							</label>
-							<div className="dctc-ai-inline-input-row">
-								<input
-									type="number"
-									id="lead_trigger_message_count"
-									className="dctc-ai-bot-input dctc-ai-input--narrow"
-									min="1"
-									max="20"
-									value={form.lead_trigger_message_count}
-									onChange={(e) =>
-										setField('lead_trigger_message_count', parseInt(e.target.value, 10) || 3)
-									}
-								/>
-								<span className="dctc-ai-input-unit-label">{__('messages', 'dragwyb-click-to-chat')}</span>
-							</div>
-						</div>
-					)}
 				</div>
 
 				<div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>

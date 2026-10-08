@@ -460,6 +460,27 @@ class DCTC_AI_Leads_Controller
 	}
 
 	/**
+	 * REST callback: Get single lead details with full conversation transcript.
+	 *
+	 * @param \WP_REST_Request $request
+	 * @return \WP_REST_Response
+	 */
+	public function get_lead($request)
+	{
+		$id   = absint($request->get_param('id'));
+		$lead = DCTC_AI_DB::get_lead($id);
+
+		if (!$lead) {
+			return $this->error_response(__('Lead not found.', 'dragwyb-click-to-chat'), 404);
+		}
+
+		return new \WP_REST_Response([
+			'success' => true,
+			'lead'    => $lead,
+		], 200);
+	}
+
+	/**
 	 * REST callback: Update status of a lead.
 	 *
 	 * @param \WP_REST_Request $request

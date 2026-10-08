@@ -557,15 +557,22 @@ class DCTC_AI_Chat_Controller {
 				);
 			}
 
-			// Dynamic Integration: Auto-connect with Lead System if purchase/lead intent or email provided
+			// Dynamic Integration: Auto-connect with Lead System if AI response or prompt indicates lead_generation in 'intent' trigger mode
 			$should_show_lead_form = false;
+			$lead_trigger_type     = ! empty( $bot['lead_trigger_type'] ) ? $bot['lead_trigger_type'] : 'manual';
 			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
 
-			if ( 'lead_generation' === $detected_intent || ! empty( $detected_email ) ) {
-				if ( ! empty( $bot['enable_lead_capture'] ) ) {
-					$should_show_lead_form = true;
-				}
+			$is_active_lead_intent = ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) )
+				&& 'support_ticket' !== $detected_intent
+				&& 'order_tracking' !== $detected_intent
+				&& 'human_handoff' !== $detected_intent;
 
+			if ( $is_active_lead_intent && 'intent' === $lead_trigger_type && ! empty( $bot['enable_lead_capture'] ) ) {
+				$should_show_lead_form = true;
+				$ai_message            = __( 'Please fill out the form below so our team will connect with you.', 'dragwyb-click-to-chat' );
+			}
+
+			if ( $is_active_lead_intent || ( ! empty( $detected_email ) && 'support_ticket' !== $detected_intent && 'order_tracking' !== $detected_intent && 'human_handoff' !== $detected_intent ) ) {
 				if ( class_exists( 'DCTC_AI_DB' ) ) {
 					$score = 75;
 					if ( ! empty( $detected_email ) ) {
@@ -723,11 +730,20 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		$wc_products = array();
-		if ( class_exists( 'DCTC_AI_WooCommerce' ) && DCTC_AI_WooCommerce::is_active() ) {
-			if ( preg_match( '/\b(product|products|buy|purchase|price|cost|recommend|shop|shoes|shirt|item|items|store|catalog)\b/i', $prompt ) ) {
-				$wc_products = DCTC_AI_WooCommerce::search_products( $prompt, 3 );
-				if ( empty( $wc_products ) ) {
-					$wc_products = DCTC_AI_WooCommerce::get_recommendations( 'popular', 3 );
+		$is_support_or_tracking_query = in_array( $detected_intent, array( 'support_ticket', 'human_handoff', 'order_tracking' ), true )
+			|| preg_match( '/\b(issue|problem|bug|glitch|error|broken|not working|conflict|defect|trouble|refund|damage|support|ticket|help me|how to fix|facing|face a)\b/i', $prompt );
+
+		if ( ! $is_support_or_tracking_query && class_exists( 'DCTC_AI_WooCommerce' ) && DCTC_AI_WooCommerce::is_active() ) {
+			$is_explicit_catalog_query = preg_match( '/\b(popular products|best sellers|recommended products|recommend products|show products|store products|browse products|catalog)\b/i', $prompt );
+			$is_shopping_query         = preg_match( '/\b(buy|purchase|pricing|price of|how much is|shop|shoes|shirt|item|items|recommend)\b/i', $prompt );
+
+			if ( $is_explicit_catalog_query ) {
+				$wc_products = DCTC_AI_WooCommerce::get_recommendations( 'popular', 3 );
+			} elseif ( $is_shopping_query ) {
+				$clean_search = preg_replace( '/\b(buy|purchase|how much is|pricing of|price of|can i get|show me|want to|looking for|recommend)\b/i', '', $prompt );
+				$clean_search = trim( $clean_search );
+				if ( ! empty( $clean_search ) && strlen( $clean_search ) >= 3 ) {
+					$wc_products = DCTC_AI_WooCommerce::search_products( $clean_search, 3 );
 				}
 			}
 		}
@@ -741,9 +757,12 @@ class DCTC_AI_Chat_Controller {
 		 * @param string $used_model
 		 * @param string $used_provider
 		 */
-		$ticket_info  = $this->get_session_ticket_info( $session_id );
-		$has_ticket   = ! empty( $ticket_info );
-		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
+		// Extract structured lead fields for autofill
+		$detected_name     = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : '' );
+		$detected_email    = ! empty( $intent_data['email'] ) ? $intent_data['email'] : ( ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' ) );
+		$detected_phone    = ! empty( $intent_data['phone'] ) ? $intent_data['phone'] : '';
+		$detected_interest = ! empty( $intent_data['interest'] ) ? $intent_data['interest'] : ( ! empty( $page_context['product']['name'] ) ? $page_context['product']['name'] : '' );
+		$detected_company  = ! empty( $intent_data['company'] ) ? $intent_data['company'] : '';
 
 		return new \WP_REST_Response(
 			array(
@@ -755,6 +774,14 @@ class DCTC_AI_Chat_Controller {
 				'reference_links' => $sources,
 				'products'        => $wc_products,
 				'show_lead_form'  => ! empty( $should_show_lead_form ),
+				'lead_data'       => array(
+					'name'        => $detected_name,
+					'email'       => $detected_email,
+					'phone'       => $detected_phone,
+					'interest'    => $detected_interest,
+					'company'     => $detected_company,
+					'requirement' => $prompt,
+				),
 				'has_ticket'      => $has_ticket,
 				'ticket'          => $ticket_info,
 				'control_mode'    => $control_mode,
@@ -1145,14 +1172,26 @@ LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-CONVERSATIONAL LEAD CAPTURE & POLITE CONTACT SHARING:
-- When a user shows interest in buying, products, pricing, quotes, support assistance, or custom inquiries:
-  1. Warmly and helpfully answer their questions directly using available knowledge base facts.
-  2. Lead Form Rule: If the lead generation feature is enabled and the lead generation form is showing/active, you do NOT need to ask for their email or phone if they fill the form.
-  3. If they have NOT filled the form and their email/phone is not provided: Politely and respectfully ask them ONCE: \"If you would like our team to follow up with you directly, please feel free to share your email or phone number so our team will contact you.\"
-  4. STRICT RULE: Ask for contact info (email or phone) ONLY ONCE during the conversation. If you have already asked previously or if their email/phone is known or if they filled the form, NEVER ask again.
+SUPPORT, BUG, FEATURE, PRODUCT ISSUE & CONFLICT INQUIRIES:
+- If the user asks about a bug, technical support, feature request, product issue, or plugin/theme conflict:
+  1. Provide helpful troubleshooting or technical guidance based on available documentation.
+  2. Politely ask the user: \"If you are comfortable, please provide your email address and the product name so our support team can assist you directly.\"
+  3. Set the intent tag to `support_ticket` (NEVER use `lead_generation` for support or bug issues).
+
+CONVERSATIONAL SALES & PURCHASE INQUIRIES:
+- When a user asks about buying, pricing plans, custom quotes, enterprise sales, demo booking, or asks sales/our team to contact them for purchase:
+  1. Warmly and helpfully provide product/pricing information from the knowledge base.
+  2. Politely ask ONCE for their contact details or to connect them with our sales team.
+  3. Set the intent tag to `lead_generation`.
+
+WOOCOMMERCE ORDER TRACKING:
+- When a user asks to track their order status, package delivery, or mentions an order number (#1234):
+  1. Assist them with tracking and checking order status.
+  2. Set the intent tag to `order_tracking`.
+
+HIDDEN INTENT METADATA TAG:
 - At the very end of your response, always append a hidden intent metadata tag in this exact format:
-<!--INTENT:{\"intent\":\"lead_generation|support_ticket|human_handoff|order_tracking|general_qa\",\"email\":\"extracted_email_or_empty\",\"phone\":\"extracted_phone_or_empty\"}-->
+<!--INTENT:{\"intent\":\"lead_generation|support_ticket|human_handoff|order_tracking|general_qa\",\"name\":\"extracted_name_or_empty\",\"email\":\"extracted_email_or_empty\",\"phone\":\"extracted_phone_or_empty\",\"interest\":\"extracted_plugin_or_product_name_or_empty\",\"company\":\"extracted_company_or_empty\"}-->
 
 CONVERSATION MEMORY:
 - Use conversation history to resolve pronouns and follow-up requests ('more details', 'tell me more', 'why', 'how', 'continue') seamlessly.
@@ -1344,10 +1383,13 @@ CONVERSATION MEMORY:
 	 * @return array{clean_message: string, intent: string, email: string, phone: string, confidence: float}
 	 */
 	public static function parse_dynamic_ai_intent( $content, $prompt = '' ) {
-		$intent          = 'general_qa';
-		$extracted_email = '';
-		$extracted_phone = '';
-		$confidence      = 0.8;
+		$intent             = 'general_qa';
+		$extracted_name     = '';
+		$extracted_email    = '';
+		$extracted_phone    = '';
+		$extracted_interest = '';
+		$extracted_company  = '';
+		$confidence         = 0.8;
 
 		// 1. Check for structured <!--INTENT:{...}--> tag in AI output
 		if ( preg_match( '/<!--INTENT:\s*({.*?})\s*-->/s', $content, $matches ) ) {
@@ -1357,11 +1399,20 @@ CONVERSATION MEMORY:
 				if ( ! empty( $parsed['intent'] ) ) {
 					$intent = sanitize_key( $parsed['intent'] );
 				}
+				if ( ! empty( $parsed['name'] ) && 'extracted_name_or_empty' !== $parsed['name'] ) {
+					$extracted_name = sanitize_text_field( $parsed['name'] );
+				}
 				if ( ! empty( $parsed['email'] ) && is_email( $parsed['email'] ) ) {
 					$extracted_email = sanitize_email( $parsed['email'] );
 				}
-				if ( ! empty( $parsed['phone'] ) ) {
+				if ( ! empty( $parsed['phone'] ) && 'extracted_phone_or_empty' !== $parsed['phone'] ) {
 					$extracted_phone = sanitize_text_field( $parsed['phone'] );
+				}
+				if ( ! empty( $parsed['interest'] ) && 'extracted_plugin_or_product_name_or_empty' !== $parsed['interest'] ) {
+					$extracted_interest = sanitize_text_field( $parsed['interest'] );
+				}
+				if ( ! empty( $parsed['company'] ) && 'extracted_company_or_empty' !== $parsed['company'] ) {
+					$extracted_company = sanitize_text_field( $parsed['company'] );
 				}
 				if ( isset( $parsed['confidence'] ) ) {
 					$confidence = floatval( $parsed['confidence'] );
@@ -1381,10 +1432,36 @@ CONVERSATION MEMORY:
 			$extracted_phone = sanitize_text_field( $phone_matches[0] );
 		}
 
-		// 4. If intent is still general_qa, fallback to heuristic intent classifier
-		if ( 'general_qa' === $intent ) {
-			$rule_class = self::classify_user_intent( $prompt );
+		// 4. Extract name from user prompt if provided (e.g. "My name is John Doe", "I am Jane Doe", "Name: Alex")
+		if ( empty( $extracted_name ) && preg_match( '/\b(?:my name is|i am|this is|i\'m|name\s*:)\s+([A-Za-z\s]{2,30})(?:[,\.\n]|$)/i', $prompt, $name_matches ) ) {
+			$candidate_name = trim( $name_matches[1] );
+			if ( ! preg_match( '/\b(interested|looking|asking|wondering|here|ready|writing|calling|having|facing|using)\b/i', $candidate_name ) ) {
+				$extracted_name = sanitize_text_field( $candidate_name );
+			}
+		}
+
+		// 5. Extract plugin or product name from prompt if mentioned
+		if ( empty( $extracted_interest ) && preg_match( '/\b(?:plugin|theme|product|for|about|with)\s+([A-Za-z0-9\s\-]{3,35})(?:[,\.\n]|$)/i', $prompt, $prod_matches ) ) {
+			$candidate_prod = trim( $prod_matches[1] );
+			if ( ! preg_match( '/\b(help|support|error|issue|problem|bug|question|details|pricing)\b/i', $candidate_prod ) ) {
+				$extracted_interest = sanitize_text_field( $candidate_prod );
+			}
+		}
+
+		// 6. Fallback or override heuristic intent classifier
+		$rule_class = self::classify_user_intent( $prompt );
+		if ( ! empty( $rule_class['category'] ) && 'greeting' === $rule_class['category'] ) {
+			// Greetings like "hi" or "hello" are strictly general_qa (never lead_generation)
+			$intent     = 'general_qa';
+			$confidence = 0.99;
+		} elseif ( 'general_qa' === $intent ) {
 			if ( 'general_qa' !== $rule_class['intent'] ) {
+				$intent     = $rule_class['intent'];
+				$confidence = $rule_class['confidence'];
+			}
+		} elseif ( 'lead_generation' === $intent ) {
+			// Override only if prompt is clearly support, bug, or order tracking
+			if ( in_array( $rule_class['intent'], array( 'support_ticket', 'order_tracking', 'human_handoff' ), true ) ) {
 				$intent     = $rule_class['intent'];
 				$confidence = $rule_class['confidence'];
 			}
@@ -1393,8 +1470,11 @@ CONVERSATION MEMORY:
 		return array(
 			'clean_message' => trim( $content ),
 			'intent'        => $intent,
+			'name'          => $extracted_name,
 			'email'         => $extracted_email,
 			'phone'         => $extracted_phone,
+			'interest'      => $extracted_interest,
+			'company'       => $extracted_company,
 			'confidence'    => $confidence,
 		);
 	}
@@ -1595,7 +1675,35 @@ CONVERSATION MEMORY:
 			);
 		}
 
-		// 1. High-confidence patterns for Human Handoff requests
+		// 0. High-confidence patterns for Greetings and casual conversation (strictly general_qa, never lead generation)
+		if ( preg_match( '/^(hi+|hello+|hey+|good\s*(?:morning|afternoon|evening|day)|howdy|hola|greetings|what\'s\s*up|sup)\b/i', trim( $prompt ) ) ) {
+			return array(
+				'intent'     => 'general_qa',
+				'category'   => 'greeting',
+				'confidence' => 0.99,
+			);
+		}
+
+		// 1. High-confidence patterns for WooCommerce Order Tracking
+		$patterns_order = array(
+			'/\b(track\s*(?:my\s*)?order|track\s*order|order\s*tracking|track\s*(?:my\s*)?package|track\s*(?:my\s*)?shipment|order\s*status|where\s*is\s*my\s*order|check\s*my\s*order|find\s*my\s*order|tracking\s*number|delivery\s*status)\b/i',
+			'/\b(track my order status|where is my order package|check my order status|find my order delivery)\b/i',
+			'/\b(track my shipment status|check package delivery status|tracking number for my order|status of my order)\b/i',
+			'/^\s*#?\d{2,8}\s*$/',
+			'/\b(?:order|tracking)\s*(?:id|no|number|#)?\s*#?\d{2,8}\b/i',
+		);
+
+		foreach ( $patterns_order as $pattern ) {
+			if ( preg_match( $pattern, $prompt ) ) {
+				return array(
+					'intent'     => 'order_tracking',
+					'category'   => 'order',
+					'confidence' => 0.95,
+				);
+			}
+		}
+
+		// 2. High-confidence patterns for Human Handoff requests
 		$patterns_handoff = array(
 			'/\b(talk to a human|talk to a real person|talk to a human agent|talk to a live agent|talk to an agent|talk to customer support)\b/i',
 			'/\b(speak with a human|speak to a human|speak with a live agent|speak to an agent|speak to a support representative)\b/i',
@@ -1616,15 +1724,15 @@ CONVERSATION MEMORY:
 			}
 		}
 
-		// 2. High-confidence patterns for Support Ticket & Technical Issues
+		// 3. High-confidence patterns for Support Ticket & Technical Issues (Bugs, Features, Conflicts, etc.)
 		$patterns_support = array(
-			'/\b(open a support ticket|create a support ticket|submit a support ticket|file a support ticket|raise a support ticket|create ticket|open ticket|support ticket)\b/i',
-			'/\b(need technical support|troubleshoot this problem|having a technical issue|system is not working|not working properly|broken feature|bug in the plugin)\b/i',
-			'/\b(item arrived damaged|received a broken item|product is defective|claim warranty for my item|damaged product|broken product)\b/i',
-			'/\b(request a refund|want a refund|return my ordered item|cancel my placed order|cancel order|get a refund|refund policy)\b/i',
+			'/\b(open a support ticket|create a support ticket|submit a support ticket|file a support ticket|raise a support ticket|create ticket|open ticket|support ticket|ticket)\b/i',
+			'/\b(need technical support|troubleshoot this problem|having a technical issue|system is not working|not working properly|broken feature|bug in the plugin|bug|glitch|defect)\b/i',
+			'/\b(item arrived damaged|received a broken item|product is defective|claim warranty for my item|damaged product|broken product|product issue|product conflict|plugin conflict|theme conflict)\b/i',
+			'/\b(request a refund|want a refund|return my ordered item|cancel my placed order|cancel order|get a refund|refund policy|refund)\b/i',
 			'/\b(billing charge issue|failed payment|incorrect invoice amount|payment deduction error|payment failed|charged twice)\b/i',
-			'/\b(need help with error|error in|facing an issue|facing problem|having problem with|cannot log in|login problem|account issue)\b/i',
-			'/\b(i need support|contact support|customer support|support team|help desk|ticket assistance)\b/i',
+			'/\b(need help with error|error in|facing an issue|facing problem|having problem with|cannot log in|login problem|account issue|feature request)\b/i',
+			'/\b(i need support|contact support|customer support|support team|help desk|ticket assistance|help me with|how to fix|fix this)\b/i',
 		);
 
 		foreach ( $patterns_support as $pattern ) {
@@ -1632,12 +1740,12 @@ CONVERSATION MEMORY:
 				return array(
 					'intent'     => 'support_ticket',
 					'category'   => 'troubleshooting',
-					'confidence' => 0.88,
+					'confidence' => 0.90,
 				);
 			}
 		}
 
-		// 3. High-confidence patterns for Sales, Purchase & Lead Inquiries
+		// 4. High-confidence patterns for Sales, Purchase & Lead Inquiries
 		$patterns_lead = array(
 			'/\b(want to buy|like to buy|ready to buy|wish to buy|looking to buy|interested in buying|interested to buy|plan to buy)\b/i',
 			'/\b(want to purchase|like to purchase|ready to purchase|looking to purchase|interested in purchasing|interested to purchase|plan to purchase)\b/i',
@@ -1646,6 +1754,7 @@ CONVERSATION MEMORY:
 			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project|schedule a demo|book a demo)\b/i',
 			'/\b(send me pricing details|need a custom price estimate|looking for enterprise pricing|pricing plans|pricing details|how much does.*cost|how much is)\b/i',
 			'/\b(how to buy|can i buy|how do i purchase|can i purchase|where to buy|interested in your product|interested in product)\b/i',
+			'/\b(contact me for purchase|reach out to me to buy|sales consultation)\b/i',
 		);
 
 		foreach ( $patterns_lead as $pattern ) {
@@ -1654,24 +1763,6 @@ CONVERSATION MEMORY:
 					'intent'     => 'lead_generation',
 					'category'   => 'sales',
 					'confidence' => 0.88,
-				);
-			}
-		}
-
-		// 4. High-confidence patterns for WooCommerce Order Tracking
-		$patterns_order = array(
-			'/\b(track my order status|where is my order package|check my order status|find my order delivery)\b/i',
-			'/\b(track my shipment status|check package delivery status|tracking number for my order|status of my order)\b/i',
-			'/^\s*#?\d{2,8}\s*$/',
-			'/\b(order|tracking)\s*(?:id|no|number|#)?\s*#?\d{2,8}\b/i',
-		);
-
-		foreach ( $patterns_order as $pattern ) {
-			if ( preg_match( $pattern, $prompt ) ) {
-				return array(
-					'intent'     => 'order_tracking',
-					'category'   => 'order',
-					'confidence' => 0.92,
 				);
 			}
 		}

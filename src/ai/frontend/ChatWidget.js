@@ -494,19 +494,23 @@ export default function ChatWidget({ settings, inline }) {
 	}, [sessionId, email, clearAgentWaitTimers]);
 
 	// AI Lead Capture State
+	const loggedInUserEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
+	const loggedInUserName = window.dctc_ai_frontend_data?.user_name || window.dctc_ai_frontend_data?.page_context?.user_name || '';
+	const pageProductOrTitle = window.dctc_ai_frontend_data?.page_context?.product?.name || (window.dctc_ai_frontend_data?.page_context?.is_single ? window.dctc_ai_frontend_data?.page_context?.title : '') || '';
+
 	const [showLeadForm, setShowLeadForm] = useState(false);
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
 	const [leadFormSubmitting, setLeadFormSubmitting] = useState(false);
 	const [leadFormError, setLeadFormError] = useState('');
 	const [leadFormData, setLeadFormData] = useState({
-		name: '',
-		email: '',
+		name: loggedInUserName,
+		email: loggedInUserEmail,
 		phone: '',
 		company: '',
 		company_size: '',
 		budget: '',
 		timeline: '',
-		interest: '',
+		interest: pageProductOrTitle,
 		requirement: '',
 	});
 
@@ -936,14 +940,48 @@ export default function ChatWidget({ settings, inline }) {
 								sources: m.sources || [],
 							}));
 
+							let mergedMsgs = [...formattedMsgs];
+
+							// Preserve any trailing or in-flight local messages in prev not yet returned by server
+							if (prev && prev.length > 0) {
+								for (let pIdx = 0; pIdx < prev.length; pIdx++) {
+									const pMsg = prev[pIdx];
+									if (pMsg.role === 'user') {
+										const countInFormatted = formattedMsgs.filter(m => m.role === 'user' && m.content === pMsg.content).length;
+										const countInPrevSoFar = prev.slice(0, pIdx + 1).filter(m => m.role === 'user' && m.content === pMsg.content).length;
+										if (countInPrevSoFar > countInFormatted) {
+											mergedMsgs.push(pMsg);
+										}
+									} else if (pMsg.role === 'error') {
+										mergedMsgs.push(pMsg);
+									}
+								}
+
+								// Preserve rich UI metadata (sources, action_buttons, products, attachments, show_order_tracker)
+								mergedMsgs = mergedMsgs.map((m) => {
+									const matchingPrev = prev.find(p => p.content === m.content && p.role === m.role);
+									if (matchingPrev) {
+										return {
+											...m,
+											sources: m.sources && m.sources.length > 0 ? m.sources : (matchingPrev.sources || []),
+											action_buttons: matchingPrev.action_buttons || [],
+											products: matchingPrev.products || [],
+											attachments: matchingPrev.attachments || [],
+											show_order_tracker: matchingPrev.show_order_tracker || false,
+										};
+									}
+									return m;
+								});
+							}
+
 							if (
-								prev.length === formattedMsgs.length &&
-								prev.every((p, i) => p.content === formattedMsgs[i].content && p.role === formattedMsgs[i].role && p.is_agent === formattedMsgs[i].is_agent)
+								prev.length === mergedMsgs.length &&
+								prev.every((p, i) => p.content === mergedMsgs[i].content && p.role === mergedMsgs[i].role && p.is_agent === mergedMsgs[i].is_agent)
 							) {
 								return prev;
 							}
 
-							return formattedMsgs;
+							return mergedMsgs;
 						});
 					}
 				}
@@ -1281,47 +1319,7 @@ export default function ChatWidget({ settings, inline }) {
 		}
 	}, [messages, isLoading, attachments, showLeadForm, showOrderTracker]);
 
-	// Auto-prompt Lead Form based on configured triggers
-	useEffect(() => {
-		if (!chatbot.enable_lead_capture || leadFormSubmitted || showLeadForm) {
-			return;
-		}
-		if (chatbot.lead_trigger_type === 'time_delay' && isOpen) {
-			const delaySec = parseInt(chatbot.lead_trigger_delay, 10) || 30;
-			const timer = setTimeout(() => {
-				setShowLeadForm(true);
-			}, delaySec * 1000);
-			return () => clearTimeout(timer);
-		}
-	}, [
-		chatbot.enable_lead_capture,
-		chatbot.lead_trigger_type,
-		chatbot.lead_trigger_delay,
-		isOpen,
-		leadFormSubmitted,
-		showLeadForm,
-	]);
 
-	useEffect(() => {
-		if (!chatbot.enable_lead_capture || leadFormSubmitted || showLeadForm) {
-			return;
-		}
-		if (chatbot.lead_trigger_type === 'message_count') {
-			const targetCount =
-				parseInt(chatbot.lead_trigger_message_count, 10) || 3;
-			const userCount = messages.filter((m) => m.role === 'user').length;
-			if (userCount >= targetCount) {
-				setShowLeadForm(true);
-			}
-		}
-	}, [
-		chatbot.enable_lead_capture,
-		chatbot.lead_trigger_type,
-		chatbot.lead_trigger_message_count,
-		messages,
-		leadFormSubmitted,
-		showLeadForm,
-	]);
 
 	const toggleOpen = () => setIsOpen((open) => !open);
 
@@ -1610,6 +1608,7 @@ export default function ChatWidget({ settings, inline }) {
 		};
 
 		setMessages((prev) => [...prev, userMessageObj]);
+		setShowLeadForm(false);
 
 		// Clean up object URLs and reset composer attachment tray
 		attachments.forEach((a) => {
@@ -1742,8 +1741,22 @@ export default function ChatWidget({ settings, inline }) {
 				]);
 
 
+				if (response.lead_data) {
+					setLeadFormData((prev) => ({
+						...prev,
+						name: response.lead_data.name || prev.name || loggedInUserName,
+						email: response.lead_data.email || prev.email || loggedInUserEmail,
+						phone: response.lead_data.phone || prev.phone,
+						company: response.lead_data.company || prev.company,
+						interest: response.lead_data.interest || prev.interest || pageProductOrTitle,
+						requirement: response.lead_data.requirement || prev.requirement,
+					}));
+				}
+
 				if (response.show_lead_form && !leadFormSubmitted) {
 					setShowLeadForm(true);
+				} else if (!response.show_lead_form) {
+					setShowLeadForm(false);
 				}
 
 				if (response.has_ticket && response.ticket) {
@@ -1846,6 +1859,10 @@ export default function ChatWidget({ settings, inline }) {
 
 		setEmail(value);
 		setEmailError('');
+		setLeadFormData((prev) => ({
+			...prev,
+			email: prev.email || value,
+		}));
 
 		if (pendingPrompt) {
 			const promptToSend = pendingPrompt;
@@ -2050,12 +2067,24 @@ export default function ChatWidget({ settings, inline }) {
 					})
 				),
 				chatbot.enable_lead_capture &&
-				!leadFormSubmitted &&
 				createElement(
 					'button',
 					{
 						className: 'dctc-ai-chat-clear',
-						onClick: () => setShowLeadForm((prev) => !prev),
+						onClick: () => {
+							setShowLeadForm((prev) => {
+								const nextState = !prev;
+								if (nextState) {
+									setLeadFormData((curr) => ({
+										...curr,
+										name: curr.name || loggedInUserName,
+										email: curr.email || loggedInUserEmail,
+										interest: curr.interest || pageProductOrTitle,
+									}));
+								}
+								return nextState;
+							});
+						},
 						title:
 							chatbot.lead_form_title ||
 							__('Contact Our Team', 'dragwyb-click-to-chat'),

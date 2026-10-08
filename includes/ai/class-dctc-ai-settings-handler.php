@@ -415,9 +415,16 @@ class DCTC_AI_Settings_Handler {
 			'dctc-ai/v1',
 			'/leads/(?P<id>\d+)',
 			array(
-				'methods'             => \WP_REST_Server::DELETABLE,
-				'callback'            => array( $this->leads_controller, 'delete_lead' ),
-				'permission_callback' => array( $this->leads_controller, 'permission_check_admin' ),
+				array(
+					'methods'             => \WP_REST_Server::READABLE,
+					'callback'            => array( $this->leads_controller, 'get_lead' ),
+					'permission_callback' => array( $this->leads_controller, 'permission_check_admin' ),
+				),
+				array(
+					'methods'             => \WP_REST_Server::DELETABLE,
+					'callback'            => array( $this->leads_controller, 'delete_lead' ),
+					'permission_callback' => array( $this->leads_controller, 'permission_check_admin' ),
+				),
 			)
 		);
 
