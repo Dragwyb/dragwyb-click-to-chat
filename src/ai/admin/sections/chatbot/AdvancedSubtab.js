@@ -286,27 +286,7 @@ export default function AdvancedSubtab({
 				onChange={(v) => setField('enable_lead_capture', v)}
 				disabledNotice={__('Enable lead capture to collect contact inquiries, notify sales via email, and sync with webhooks.', 'dragwyb-click-to-chat')}
 			>
-				<div className="dctc-ai-grid-2col">
-					<div className="dctc-ai-bot-field" style={{ gridColumn: 'span 2' }}>
-						<label htmlFor="lead_trigger_type">
-							{__('Lead Capture Trigger Mode', 'dragwyb-click-to-chat')}
-						</label>
-						<select
-							id="lead_trigger_type"
-							className="dctc-ai-bot-select"
-							value={form.lead_trigger_type}
-							onChange={(e) => setField('lead_trigger_type', e.target.value)}
-						>
-							<option value="manual">{__('Chat Header / Menu Manual Button', 'dragwyb-click-to-chat')}</option>
-							<option value="intent">{__('Auto-Prompt on AI Purchase / Contact Intent', 'dragwyb-click-to-chat')}</option>
-						</select>
-						<p className="dctc-ai-bot-hint">
-							{__('Choose whether visitors can manually open the lead form from the chat header or if the AI automatically prompts it when sales/contact intent is detected.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-				</div>
-
-				<div style={{ marginTop: '1.25rem', padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+				<div style={{ padding: '1rem', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
 					<strong style={{ display: 'block', marginBottom: '0.5rem', color: '#1e293b', fontSize: '0.9rem' }}>
 						{__('Lead Capture & Qualification Fields to Show in Chat', 'dragwyb-click-to-chat')}
 					</strong>

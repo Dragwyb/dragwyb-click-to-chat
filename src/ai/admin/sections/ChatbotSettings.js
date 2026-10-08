@@ -97,9 +97,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 
 		// Advance / Lead Capture & CRM Integration
 		enable_lead_capture: !!chatbot.enable_lead_capture,
-		lead_trigger_type: chatbot.lead_trigger_type || 'manual',
-		lead_trigger_delay: chatbot.lead_trigger_delay ?? 30,
-		lead_trigger_message_count: chatbot.lead_trigger_message_count ?? 3,
 		lead_form_title: chatbot.lead_form_title || __('Contact Our Team', 'dragwyb-click-to-chat'),
 		lead_form_subtitle:
 			chatbot.lead_form_subtitle ||
@@ -455,9 +452,6 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			enable_budget_email_alerts: form.enable_budget_email_alerts,
 			alert_email: form.alert_email,
 			enable_lead_capture: form.enable_lead_capture,
-			lead_trigger_type: form.lead_trigger_type,
-			lead_trigger_delay: form.lead_trigger_delay,
-			lead_trigger_message_count: form.lead_trigger_message_count,
 			lead_form_title: form.lead_form_title,
 			lead_form_subtitle: form.lead_form_subtitle,
 			lead_fields: form.lead_fields,

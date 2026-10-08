@@ -562,9 +562,8 @@ class DCTC_AI_Chat_Controller {
 				);
 			}
 
-			// Dynamic Integration: Auto-connect with Lead System if AI response or prompt indicates lead_generation in 'intent' trigger mode
+			// Dynamic Integration: Auto-connect with Lead System if AI response or prompt indicates lead_generation
 			$should_show_lead_form = false;
-			$lead_trigger_type     = ! empty( $bot['lead_trigger_type'] ) ? $bot['lead_trigger_type'] : 'manual';
 			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
 
 			$rule_class  = self::classify_user_intent( $prompt );
@@ -577,7 +576,7 @@ class DCTC_AI_Chat_Controller {
 				&& 'order_tracking' !== $detected_intent
 				&& 'human_handoff' !== $detected_intent;
 
-			if ( $is_active_lead_intent && 'intent' === $lead_trigger_type && ! empty( $bot['enable_lead_capture'] ) ) {
+			if ( $is_active_lead_intent && ! empty( $bot['enable_lead_capture'] ) ) {
 				$should_show_lead_form = true;
 				$ai_message            = __( 'Please fill out the form below so our team will connect with you.', 'dragwyb-click-to-chat' );
 			}

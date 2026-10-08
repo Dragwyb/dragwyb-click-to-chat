@@ -2377,10 +2377,6 @@ export default function ChatWidget({ settings, inline }) {
 
 		setEmail(value);
 		setEmailError('');
-		setLeadFormData((prev) => ({
-			...prev,
-			email: prev.email || value,
-		}));
 
 		if (pendingPrompt) {
 			const promptToSend = pendingPrompt;
