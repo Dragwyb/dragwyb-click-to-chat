@@ -91,9 +91,11 @@ class DCTC_AI_Chat_Controller {
 
 		$params = $request->get_json_params();
 
-		$prompt      = isset( $params['prompt'] ) ? sanitize_textarea_field( $params['prompt'] ) : '';
-		$session_id  = isset( $params['session_id'] ) ? sanitize_text_field( $params['session_id'] ) : 'default';
-		$email       = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
+		$prompt           = isset( $params['prompt'] ) ? sanitize_textarea_field( $params['prompt'] ) : '';
+		$session_id       = isset( $params['session_id'] ) ? sanitize_text_field( $params['session_id'] ) : 'default';
+		$email            = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
+		$fallback_trigger = isset( $params['fallback_trigger'] ) && true === $params['fallback_trigger'];
+
 		$attachments = isset( $params['attachments'] ) && is_array( $params['attachments'] ) ? array_values(
 			array_filter(
 				array_map(
@@ -164,7 +166,7 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		// Hybrid Support Check: Block automatic AI generation if HUMAN_CONTROL is active
-		if ( class_exists( 'DCTC_Support_AI_Handoff_Service' ) && DCTC_Support_AI_Handoff_Service::should_block_ai_response( $session_id ) ) {
+		if ( class_exists( 'DCTC_Support_AI_Handoff_Service' ) && DCTC_Support_AI_Handoff_Service::should_block_ai_response( $session_id ) && ! $fallback_trigger ) {
 			$human_response = DCTC_Support_AI_Handoff_Service::handle_customer_message_in_human_mode( $session_id, $prompt, $email );
 			return new \WP_REST_Response( $human_response, 200 );
 		}
@@ -716,7 +718,7 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		// Race Condition Guard: If an agent took control while LLM API was running, discard the AI output
-		if ( class_exists( 'DCTC_Support_AI_Handoff_Service' ) && DCTC_Support_AI_Handoff_Service::should_block_ai_response( $session_id ) ) {
+		if ( class_exists( 'DCTC_Support_AI_Handoff_Service' ) && DCTC_Support_AI_Handoff_Service::should_block_ai_response( $session_id ) && ! $fallback_trigger ) {
 			$this->set_ticket_ai_responding( $session_id, false );
 			$human_response = DCTC_Support_AI_Handoff_Service::handle_customer_message_in_human_mode( $session_id, $prompt, $email );
 			return new \WP_REST_Response( $human_response, 200 );

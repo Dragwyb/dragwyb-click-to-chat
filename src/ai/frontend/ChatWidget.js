@@ -455,11 +455,12 @@ export default function ChatWidget({ settings, inline }) {
 			if (!isMountedRef.current) return;
 
 			if (response?.success) {
+				clearAgentWaitTimers();
+
 				if (response.is_human_handled) {
 					return;
 				}
 
-				clearAgentWaitTimers();
 				setWaitingAgentStatusText('');
 				setIsLoading(false);
 
@@ -505,13 +506,11 @@ export default function ChatWidget({ settings, inline }) {
 	const loggedInUserName = window.dctc_ai_frontend_data?.user_name || window.dctc_ai_frontend_data?.page_context?.user_name || '';
 	const pageProductOrTitle = window.dctc_ai_frontend_data?.page_context?.product?.name || (window.dctc_ai_frontend_data?.page_context?.is_single ? window.dctc_ai_frontend_data?.page_context?.title : '') || '';
 
-	const [showLeadForm, setShowLeadForm] = useState(false);
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
 	const [leadFormSubmitting, setLeadFormSubmitting] = useState(false);
 	const [leadFormError, setLeadFormError] = useState('');
 	const [closedFormIndexes, setClosedFormIndexes] = useState({});
 	const [formsDataByKey, setFormsDataByKey] = useState({});
-	const showLeadFormManuallyClosedRef = useRef(false);
 
 	const getFormKey = (msg, index) => {
 		const timestamp = msg?.created_at || (msg?.id ? String(msg.id) : `msg_${index}`);
@@ -1320,10 +1319,6 @@ export default function ChatWidget({ settings, inline }) {
 					}
 				}
 
-				if (res.show_lead_form && !leadFormSubmitted && !showLeadFormManuallyClosedRef.current) {
-					setShowLeadForm(true);
-				}
-
 				const currentControlMode = res.control_mode || 'ai';
 				setActiveControlMode(currentControlMode);
 
@@ -1383,6 +1378,9 @@ export default function ChatWidget({ settings, inline }) {
 							clearAgentWaitTimers();
 							setWaitingAgentStatusText('');
 							setIsLoading(false);
+						} else if (currentControlMode === 'ai' && isCustomerLastMsg && maxWaitTimeoutRef.current && !aiResponseWaiting.current) {
+							clearAgentWaitTimers();
+							triggerAiFallback(lastMsg.content || '');
 						}
 
 						setMessages((prev) => {
@@ -1435,10 +1433,10 @@ export default function ChatWidget({ settings, inline }) {
 										const countInFormatted = formattedMsgs.filter(m => m.role === 'user' && m.content === pMsg.content).length;
 										const countInPrevSoFar = prev.slice(0, pIdx + 1).filter(m => m.role === 'user' && m.content === pMsg.content).length;
 										if (countInPrevSoFar > countInFormatted) {
-											mergedMsgs.push(pMsg);
+											// mergedMsgs.push(pMsg);
 										}
 									} else if (pMsg.role === 'error') {
-										mergedMsgs.push(pMsg);
+										// mergedMsgs.push(pMsg);
 									}
 								}
 
@@ -1475,6 +1473,7 @@ export default function ChatWidget({ settings, inline }) {
 							) {
 								return prev;
 							}
+
 
 							return mergedMsgs;
 						});
@@ -1814,7 +1813,7 @@ export default function ChatWidget({ settings, inline }) {
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
 		}
-	}, [messages, isLoading, attachments, showLeadForm]);
+	}, [messages, isLoading, attachments]);
 
 
 
@@ -2105,8 +2104,6 @@ export default function ChatWidget({ settings, inline }) {
 		};
 
 		setMessages((prev) => [...prev, userMessageObj]);
-		setShowLeadForm(false);
-		showLeadFormManuallyClosedRef.current = false;
 
 		// Clean up object URLs and reset composer attachment tray
 		attachments.forEach((a) => {
@@ -2273,13 +2270,6 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
-				if (isLeadPrompt && !leadFormSubmitted) {
-					setShowLeadForm(true);
-					showLeadFormManuallyClosedRef.current = false;
-				} else if (!isLeadPrompt) {
-					setShowLeadForm(false);
-				}
-
 				if (response.has_ticket && response.ticket) {
 					const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
 					if (response.ticket.agent_name) {
@@ -2340,7 +2330,6 @@ export default function ChatWidget({ settings, inline }) {
 				setEmailDraft('');
 				setPendingPrompt('');
 				setClearAllowed(true);
-				setShowLeadForm(false);
 				setActiveControlMode('ai');
 				setAssignedAgentName('');
 				setWaitingAgentStatusText('');
@@ -2355,7 +2344,6 @@ export default function ChatWidget({ settings, inline }) {
 				'sess_' + Math.random().toString(36).substr(2, 9);
 			setSessionId(newId);
 			setClearAllowed(true);
-			setShowLeadForm(false);
 			setActiveControlMode('ai');
 			setAssignedAgentName('');
 			setWaitingAgentStatusText('');
@@ -2460,7 +2448,6 @@ export default function ChatWidget({ settings, inline }) {
 
 			if (res && res.success) {
 				setLeadFormSubmitted(true);
-				setShowLeadForm(false);
 				setMessages((prev) => [
 					...prev.map((m) => ({
 						...m,
@@ -2611,41 +2598,6 @@ export default function ChatWidget({ settings, inline }) {
 					},
 					createElement('span', {
 						className: 'dashicons dashicons-trash',
-						'aria-hidden': 'true',
-					})
-				),
-				chatbot.enable_lead_capture &&
-				createElement(
-					'button',
-					{
-						className: 'dctc-ai-chat-clear',
-						onClick: () => {
-							setShowLeadForm((prev) => {
-								const nextState = !prev;
-								if (nextState) {
-									setLeadFormData((curr) => ({
-										...curr,
-										name: curr.name || loggedInUserName,
-										email: curr.email || loggedInUserEmail,
-										interest: curr.interest || pageProductOrTitle,
-									}));
-								}
-								return nextState;
-							});
-						},
-						title:
-							chatbot.lead_form_title ||
-							__('Contact Our Team', 'dragwyb-click-to-chat'),
-						'aria-label':
-							chatbot.lead_form_title ||
-							__('Contact Our Team', 'dragwyb-click-to-chat'),
-						style: {
-							background: showLeadForm ? 'rgba(255,255,255,0.2)' : 'none',
-							borderRadius: '6px',
-						},
-					},
-					createElement('span', {
-						className: 'dashicons dashicons-id',
 						'aria-hidden': 'true',
 					})
 				),
