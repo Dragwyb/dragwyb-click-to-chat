@@ -170,6 +170,7 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
 		setSaving(true);
+		window.dispatchEvent(new CustomEvent('dctc_ai_saving_start'));
 		try {
 			await apiFetch({
 				path: '/dctc-ai/v1/save-display-settings',
@@ -188,6 +189,7 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 			);
 		} finally {
 			setSaving(false);
+			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
 

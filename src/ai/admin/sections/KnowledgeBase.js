@@ -280,6 +280,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
 		setSaving(true);
+		window.dispatchEvent(new CustomEvent('dctc_ai_saving_start'));
 		const fileIds = trainingFiles.map((f) =>
 			typeof f === 'object' ? f.id : parseInt(f, 10)
 		);
@@ -340,6 +341,7 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 			);
 		} finally {
 			setSaving(false);
+			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
 

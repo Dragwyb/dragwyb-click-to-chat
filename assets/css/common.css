@@ -51,6 +51,15 @@
   --dctc-font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
 }
 
+@keyframes dctcSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dctc-spin, .dashicons.spin {
+  animation: dctcSpin 1s linear infinite !important;
+}
+
 
 /* ==========================================================================
    Full-Size Sticky Top Header Bar (Shared across all plugin pages)

@@ -72,6 +72,7 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
 		setSaving(true);
+		window.dispatchEvent(new CustomEvent('dctc_ai_saving_start'));
 
 		try {
 			// 1. Save API keys, models & provider routing
@@ -167,6 +168,7 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 			);
 		} finally {
 			setSaving(false);
+			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
 

@@ -471,8 +471,7 @@ export default function ChatWidget({ settings, inline }) {
 
 				if (botMessage) {
 					const isLeadPrompt = Boolean(
-						response.show_lead_form ||
-						(typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form')))
+						typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form'))
 					);
 					setMessages((prev) => [
 						...prev,
@@ -2221,8 +2220,7 @@ export default function ChatWidget({ settings, inline }) {
 					: [];
 
 				const isLeadPrompt = Boolean(
-					response.show_lead_form ||
-					(typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form')))
+					typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form'))
 				);
 
 				const botCreatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -2507,9 +2505,28 @@ export default function ChatWidget({ settings, inline }) {
 		: isCustomPosition
 			? `dctc-ai-chat-floating custom custom-${customSide} custom-${customVert}`
 			: `dctc-ai-chat-floating ${display.position || 'bottom-right'}`;
+	const userMsgBg = chatbot.user_msg_bg_color || primaryColor;
+	const userMsgText = chatbot.user_msg_text_color || '#ffffff';
+	const botMsgBg = chatbot.bot_msg_bg_color || '#ffffff';
+	const botMsgText = chatbot.bot_msg_text_color || '#0f172a';
+	const containerRadius = `${chatbot.container_border_radius ?? 24}px`;
+	const containerWidth = chatbot.container_width ? `${chatbot.container_width}${chatbot.container_width_unit || 'px'}` : '380px';
+	const containerHeight = chatbot.container_height ? `${chatbot.container_height}${chatbot.container_height_unit || 'px'}` : '520px';
+	const containerBorder = `${chatbot.container_border_width ?? 1}px ${chatbot.container_border_style || 'solid'} ${chatbot.container_border_color || 'hsla(0, 0%, 100%, 0.5)'}`;
+	const chatBgImage = chatbot.chat_bg_image ? `url(${chatbot.chat_bg_image})` : 'none';
+
 	const wrapperStyle = {
 		'--dctc-ai-primary': primaryColor,
 		'--dctc-ai-launcher-size': launcherSize,
+		'--dctc-ai-user-msg-bg': userMsgBg,
+		'--dctc-ai-user-msg-color': userMsgText,
+		'--dctc-ai-bot-msg-bg': botMsgBg,
+		'--dctc-ai-bot-msg-color': botMsgText,
+		'--dctc-ai-container-radius': containerRadius,
+		'--dctc-ai-container-width': containerWidth,
+		'--dctc-ai-container-height': containerHeight,
+		'--dctc-ai-container-border': containerBorder,
+		'--dctc-ai-chat-bg-image': chatBgImage,
 	};
 	if (isCustomPosition) {
 		const vertDist = `${display.custom_vertical ?? 24}${display.custom_vertical_unit || 'px'

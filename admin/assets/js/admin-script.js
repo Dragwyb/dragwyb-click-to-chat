@@ -553,11 +553,11 @@
         saveSettings: function (e) {
             e.preventDefault();
 
-            const $btn = $(e.currentTarget);
-            const originalText = $btn.html();
+            const $btns = $('#dctc-save-btn, #dctc-header-save-btn');
+            const originalHtml = $btns.first().html();
 
-            // Disable button and show loading
-            $btn.prop('disabled', true).addClass('loading');
+            // Disable buttons and show loading
+            $btns.prop('disabled', true).addClass('loading').html('<span class="dashicons dashicons-update spin" style="margin-right: 4px; font-size: 16px; width: 16px; height: 16px; display: inline-block; animation: dctcSpin 1s linear infinite;"></span> ' + (dctc_admin.saving_text || 'Saving...'));
 
             // Collect form data
             const formData = {
@@ -620,7 +620,6 @@
             // Triggers and targeting settings
             formData.show_on_desktop = $('#dctc_show_on_desktop').is(':checked') ? '1' : '0';
             formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
-            formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
             formData.time_delay = $('#dctc_time_delay').val();
 
             // Display Rules
@@ -658,8 +657,8 @@
                     alert('Error saving settings. Please try again.');
                 },
                 complete: function () {
-                    // Re-enable button and remove loading state
-                    $btn.prop('disabled', false).removeClass('loading').html(originalText);
+                    // Re-enable buttons and restore original text
+                    $btns.prop('disabled', false).removeClass('loading').html(originalHtml);
                 }
             });
         },

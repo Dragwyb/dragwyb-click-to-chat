@@ -244,7 +244,22 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		custom_horizontal: display.custom_horizontal ?? 24,
 		custom_horizontal_unit: display.custom_horizontal_unit || 'px',
 
-		// Style / Avatars & Bubbles
+		// Style / Avatars, Bubbles & Theme Presets
+		style_preset: chatbot.style_preset || 'modern_indigo',
+		chat_bg_image: chatbot.chat_bg_image || '',
+		chat_bg_opacity: chatbot.chat_bg_opacity ?? 100,
+		user_msg_bg_color: chatbot.user_msg_bg_color || chatbot.primary_color || '#6366f1',
+		user_msg_text_color: chatbot.user_msg_text_color || '#ffffff',
+		bot_msg_bg_color: chatbot.bot_msg_bg_color || '#f1f5f9',
+		bot_msg_text_color: chatbot.bot_msg_text_color || '#0f172a',
+		container_border_radius: chatbot.container_border_radius ?? 16,
+		container_border_style: chatbot.container_border_style || 'solid',
+		container_border_color: chatbot.container_border_color || '#e2e8f0',
+		container_border_width: chatbot.container_border_width ?? 1,
+		container_width: chatbot.container_width ?? 380,
+		container_width_unit: chatbot.container_width_unit || 'px',
+		container_height: chatbot.container_height ?? 600,
+		container_height_unit: chatbot.container_height_unit || 'px',
 		bot_avatar: chatbot.bot_avatar || '',
 		bot_icon_preset: chatbot.bot_icon_preset || 'bot',
 		user_avatar: chatbot.user_avatar || '',
@@ -434,9 +449,131 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		frame.open();
 	};
 
+	const openChatBgMedia = () => {
+		if (!window.wp?.media) {
+			showNotice(__('WordPress media modal is not available.', 'dragwyb-click-to-chat'), 'error');
+			return;
+		}
+		const frame = window.wp.media({
+			title: __('Select Chat Section Background Image', 'dragwyb-click-to-chat'),
+			button: { text: __('Use Background Image', 'dragwyb-click-to-chat') },
+			multiple: false,
+		});
+		frame.on('select', () => {
+			const attachment = frame.state().get('selection').first().toJSON();
+			setField('chat_bg_image', attachment.url);
+		});
+		frame.open();
+	};
+
+	const applyStylePreset = (presetKey) => {
+		const PRESETS = {
+			modern_indigo: {
+				style_preset: 'modern_indigo',
+				primary_color: '#6366f1',
+				user_msg_bg_color: '#6366f1',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#f1f5f9',
+				bot_msg_text_color: '#0f172a',
+				container_border_radius: 16,
+				container_border_style: 'solid',
+				container_border_color: '#e2e8f0',
+				container_border_width: 1,
+			},
+			dark_slate: {
+				style_preset: 'dark_slate',
+				primary_color: '#3b82f6',
+				user_msg_bg_color: '#3b82f6',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#1e293b',
+				bot_msg_text_color: '#f8fafc',
+				container_border_radius: 16,
+				container_border_style: 'solid',
+				container_border_color: '#334155',
+				container_border_width: 1,
+			},
+			emerald_forest: {
+				style_preset: 'emerald_forest',
+				primary_color: '#10b981',
+				user_msg_bg_color: '#10b981',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#f0fdf4',
+				bot_msg_text_color: '#064e3b',
+				container_border_radius: 18,
+				container_border_style: 'solid',
+				container_border_color: '#bbf7d0',
+				container_border_width: 1,
+			},
+			ocean_blue: {
+				style_preset: 'ocean_blue',
+				primary_color: '#0284c7',
+				user_msg_bg_color: '#0284c7',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#f0f9ff',
+				bot_msg_text_color: '#0c4a6e',
+				container_border_radius: 14,
+				container_border_style: 'solid',
+				container_border_color: '#bae6fd',
+				container_border_width: 1,
+			},
+			royal_purple: {
+				style_preset: 'royal_purple',
+				primary_color: '#8b5cf6',
+				user_msg_bg_color: '#8b5cf6',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#faf5ff',
+				bot_msg_text_color: '#4c1d95',
+				container_border_radius: 20,
+				container_border_style: 'solid',
+				container_border_color: '#e9d5ff',
+				container_border_width: 1,
+			},
+			sunset_amber: {
+				style_preset: 'sunset_amber',
+				primary_color: '#f59e0b',
+				user_msg_bg_color: '#f59e0b',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#fffbeb',
+				bot_msg_text_color: '#78350f',
+				container_border_radius: 16,
+				container_border_style: 'solid',
+				container_border_color: '#fde68a',
+				container_border_width: 1,
+			},
+			crimson_rose: {
+				style_preset: 'crimson_rose',
+				primary_color: '#e11d48',
+				user_msg_bg_color: '#e11d48',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#fff1f2',
+				bot_msg_text_color: '#881337',
+				container_border_radius: 16,
+				container_border_style: 'solid',
+				container_border_color: '#fecdd3',
+				container_border_width: 1,
+			},
+			clean_monochrome: {
+				style_preset: 'clean_monochrome',
+				primary_color: '#18181b',
+				user_msg_bg_color: '#18181b',
+				user_msg_text_color: '#ffffff',
+				bot_msg_bg_color: '#f4f4f5',
+				bot_msg_text_color: '#18181b',
+				container_border_radius: 12,
+				container_border_style: 'solid',
+				container_border_color: '#e4e4e7',
+				container_border_width: 1,
+			},
+		};
+		if (PRESETS[presetKey]) {
+			setForm((prev) => ({ ...prev, ...PRESETS[presetKey] }));
+		}
+	};
+
 	const onSubmit = async (e) => {
 		if (e?.preventDefault) e.preventDefault();
 		setSaving(true);
+		window.dispatchEvent(new CustomEvent('dctc_ai_saving_start'));
 
 		const botPayload = {
 			bot_name: form.bot_name,
@@ -479,6 +616,21 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			pre_questions_border_color: form.pre_questions_border_color,
 			pre_questions_border_radius: form.pre_questions_border_radius,
 			action_buttons: form.action_buttons,
+			style_preset: form.style_preset,
+			chat_bg_image: form.chat_bg_image,
+			chat_bg_opacity: form.chat_bg_opacity,
+			user_msg_bg_color: form.user_msg_bg_color,
+			user_msg_text_color: form.user_msg_text_color,
+			bot_msg_bg_color: form.bot_msg_bg_color,
+			bot_msg_text_color: form.bot_msg_text_color,
+			container_border_radius: form.container_border_radius,
+			container_border_style: form.container_border_style,
+			container_border_color: form.container_border_color,
+			container_border_width: form.container_border_width,
+			container_width: form.container_width,
+			container_width_unit: form.container_width_unit,
+			container_height: form.container_height,
+			container_height_unit: form.container_height_unit,
 			bot_avatar: form.bot_avatar,
 			bot_icon_preset: form.bot_icon_preset,
 			user_avatar: form.user_avatar,
@@ -569,6 +721,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			showNotice(err.message || __('Failed to save settings', 'dragwyb-click-to-chat'), 'error');
 		} finally {
 			setSaving(false);
+			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
 
@@ -716,6 +869,8 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 						openBotMedia={openBotMedia}
 						openUserMedia={openUserMedia}
 						openAssistantIconMedia={openAssistantIconMedia}
+						openChatBgMedia={openChatBgMedia}
+						applyStylePreset={applyStylePreset}
 						renderBotAvatarIcon={renderBotAvatarIcon}
 						renderUserAvatarIcon={renderUserAvatarIcon}
 						renderLauncherIcon={renderLauncherIcon}

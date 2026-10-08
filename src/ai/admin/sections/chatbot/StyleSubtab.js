@@ -13,12 +13,97 @@ const LAUNCHER_PRESETS = [
 	{ id: 'whatsapp', label: __('📱 WhatsApp Chat', 'dragwyb-click-to-chat') },
 ];
 
+const STYLE_PRESETS = [
+	{
+		id: 'modern_indigo',
+		label: __('Modern Indigo (Default)', 'dragwyb-click-to-chat'),
+		primary: '#6366f1',
+		botBg: '#f1f5f9',
+		botText: '#0f172a',
+		userBg: '#6366f1',
+		userText: '#ffffff',
+		desc: __('Clean, modern gradient indigo theme for high-converting SaaS & stores.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'dark_slate',
+		label: __('Dark Slate / Midnight', 'dragwyb-click-to-chat'),
+		primary: '#3b82f6',
+		botBg: '#1e293b',
+		botText: '#f8fafc',
+		userBg: '#3b82f6',
+		userText: '#ffffff',
+		desc: __('Sleek dark mode aesthetic with midnight slate containers.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'emerald_forest',
+		label: __('Emerald Forest', 'dragwyb-click-to-chat'),
+		primary: '#10b981',
+		botBg: '#f0fdf4',
+		botText: '#064e3b',
+		userBg: '#10b981',
+		userText: '#ffffff',
+		desc: __('Fresh emerald green style for eco, health, and finance services.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'ocean_blue',
+		label: __('Ocean Blue', 'dragwyb-click-to-chat'),
+		primary: '#0284c7',
+		botBg: '#f0f9ff',
+		botText: '#0c4a6e',
+		userBg: '#0284c7',
+		userText: '#ffffff',
+		desc: __('Trustworthy azure corporate aesthetic with crisp blue accents.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'royal_purple',
+		label: __('Royal Purple', 'dragwyb-click-to-chat'),
+		primary: '#8b5cf6',
+		botBg: '#faf5ff',
+		botText: '#4c1d95',
+		userBg: '#8b5cf6',
+		userText: '#ffffff',
+		desc: __('Vibrant luxury vibe tailored for agencies, tech, and creators.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'sunset_amber',
+		label: __('Sunset Amber', 'dragwyb-click-to-chat'),
+		primary: '#f59e0b',
+		botBg: '#fffbeb',
+		botText: '#78350f',
+		userBg: '#f59e0b',
+		userText: '#ffffff',
+		desc: __('Warm amber tone ideal for food, hospitality, and creative brands.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'crimson_rose',
+		label: __('Crimson Rose', 'dragwyb-click-to-chat'),
+		primary: '#e11d48',
+		botBg: '#fff1f2',
+		botText: '#881337',
+		userBg: '#e11d48',
+		userText: '#ffffff',
+		desc: __('Bold crimson style for energetic sales and boutique shops.', 'dragwyb-click-to-chat'),
+	},
+	{
+		id: 'clean_monochrome',
+		label: __('Clean Monochrome', 'dragwyb-click-to-chat'),
+		primary: '#18181b',
+		botBg: '#f4f4f5',
+		botText: '#18181b',
+		userBg: '#18181b',
+		userText: '#ffffff',
+		desc: __('Minimalist monochrome design for luxury, architecture, and portfolios.', 'dragwyb-click-to-chat'),
+	},
+];
+
 export default function StyleSubtab({
 	form,
 	setField,
 	openBotMedia,
 	openUserMedia,
 	openAssistantIconMedia,
+	openChatBgMedia,
+	applyStylePreset,
 	renderBotAvatarIcon,
 	renderUserAvatarIcon,
 	renderLauncherIcon,
@@ -38,7 +123,7 @@ export default function StyleSubtab({
 								{__('Chatbot Visual Styling & Live Preview', 'dragwyb-click-to-chat')}
 							</h2>
 							<p className="dctc-ai-card__desc">
-								{__('Customize launcher button, bot & visitor avatars, brand colors, and message bubble styles with instant live preview.', 'dragwyb-click-to-chat')}
+								{__('Customize preset themes, launcher, background images, message colors, container borders, and dimensions with instant real-time live preview.', 'dragwyb-click-to-chat')}
 							</p>
 						</div>
 					</div>
@@ -48,7 +133,390 @@ export default function StyleSubtab({
 					<div className="dctc-ai-live-customizer-layout">
 						{/* Left Column: UI & Styling Controls */}
 						<div className="dctc-ai-customizer-controls">
-							{/* Group A: Floating Launcher Button */}
+							{/* Group 1: Style Presets */}
+							<div className="dctc-ai-customizer-group">
+								<div className="dctc-ai-customizer-group__header">
+									<span className="dashicons dashicons-layout" />
+									<h3 className="dctc-ai-customizer-group__title">
+										{__('Style Presets', 'dragwyb-click-to-chat')}
+									</h3>
+								</div>
+								<p className="dctc-ai-customizer-group__desc" style={{ margin: '0 0 12px', fontSize: '12px', color: '#64748b' }}>
+									{__('Choose a curated color palette and layout preset, then fine-tune any individual color or dimension below.', 'dragwyb-click-to-chat')}
+								</p>
+
+								<div className="dctc-ai-presets-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+									{STYLE_PRESETS.map((preset) => {
+										const isSelected = form.style_preset === preset.id;
+										return (
+											<div
+												key={preset.id}
+												onClick={() => applyStylePreset(preset.id)}
+												className={`dctc-ai-preset-card ${isSelected ? 'is-selected' : ''}`}
+												style={{
+													border: isSelected ? '2px solid #4f46e5' : '1px solid #e2e8f0',
+													borderRadius: '8px',
+													padding: '10px',
+													cursor: 'pointer',
+													background: isSelected ? '#f5f3ff' : '#ffffff',
+													transition: 'all 0.15s ease',
+													boxShadow: isSelected ? '0 2px 8px rgba(79, 70, 229, 0.15)' : 'none',
+												}}
+											>
+												<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+													<strong style={{ fontSize: '12px', color: isSelected ? '#4338ca' : '#1e293b' }}>
+														{preset.label.split(' ')[0]} {preset.label.split(' ')[1] || ''}
+													</strong>
+													{isSelected && (
+														<span className="dashicons dashicons-yes-alt" style={{ color: '#4f46e5', fontSize: '16px', width: '16px', height: '16px' }}></span>
+													)}
+												</div>
+
+												{/* Swatches preview */}
+												<div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginBottom: '6px' }}>
+													<span style={{ width: '16px', height: '16px', borderRadius: '50%', background: preset.primary, display: 'inline-block', border: '1px solid rgba(0,0,0,0.1)' }} title="Primary" />
+													<span style={{ width: '16px', height: '16px', borderRadius: '4px', background: preset.botBg, border: `1px solid ${preset.botText}30`, display: 'inline-block' }} title="Bot Bubble" />
+													<span style={{ width: '16px', height: '16px', borderRadius: '4px', background: preset.userBg, display: 'inline-block' }} title="User Bubble" />
+												</div>
+
+												<span style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+													{preset.desc}
+												</span>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+
+							{/* Group 2: Chat Section Background Image */}
+							<div className="dctc-ai-customizer-group">
+								<div className="dctc-ai-customizer-group__header">
+									<span className="dashicons dashicons-format-image" />
+									<h3 className="dctc-ai-customizer-group__title">
+										{__('Chat Section Background Image', 'dragwyb-click-to-chat')}
+									</h3>
+								</div>
+
+								<div className="dctc-ai-bot-field">
+									<label>
+										{__('Background Pattern / Wallpaper (Optional)', 'dragwyb-click-to-chat')}
+									</label>
+									<div className="dctc-ai-assistant-icon-row" style={{ alignItems: 'flex-start' }}>
+										<div className="dctc-ai-avatar-btn-group">
+											<button
+												type="button"
+												className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm"
+												onClick={openChatBgMedia}
+											>
+												<span className="dashicons dashicons-upload" />
+												{form.chat_bg_image
+													? __('Change Background Image', 'dragwyb-click-to-chat')
+													: __('Upload Background Image', 'dragwyb-click-to-chat')}
+											</button>
+											{!!form.chat_bg_image && (
+												<button
+													type="button"
+													className="dctc-ai-btn dctc-ai-btn-secondary dctc-ai-btn-sm"
+													onClick={() => setField('chat_bg_image', '')}
+												>
+													{__('Remove Background', 'dragwyb-click-to-chat')}
+												</button>
+											)}
+										</div>
+
+										{form.chat_bg_image ? (
+											<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+												<img
+													src={form.chat_bg_image}
+													alt=""
+													style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+												/>
+												<span className="dctc-ai-filename-chip">
+													{form.chat_bg_image.split('/').pop()}
+												</span>
+											</div>
+										) : (
+											<span className="dctc-ai-filename-chip is-muted">
+												{__('No background image (using clean solid color)', 'dragwyb-click-to-chat')}
+											</span>
+										)}
+									</div>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="chat_bg_image_url">
+											{__('Direct Image URL', 'dragwyb-click-to-chat')}
+										</label>
+										<input
+											type="url"
+											id="chat_bg_image_url"
+											className="dctc-ai-bot-input"
+											placeholder="https://example.com/chat-pattern.png"
+											value={form.chat_bg_image}
+											onChange={(e) => setField('chat_bg_image', e.target.value)}
+										/>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="chat_bg_opacity">
+											{__('Background Opacity (%)', 'dragwyb-click-to-chat')}
+										</label>
+										<input
+											type="number"
+											id="chat_bg_opacity"
+											className="dctc-ai-bot-input"
+											min="5"
+											max="100"
+											step="5"
+											value={form.chat_bg_opacity ?? 100}
+											onChange={(e) => setField('chat_bg_opacity', Number(e.target.value))}
+										/>
+									</div>
+								</div>
+							</div>
+
+							{/* Group 3: Message Colors & Bubbles */}
+							<div className="dctc-ai-customizer-group">
+								<div className="dctc-ai-customizer-group__header">
+									<span className="dashicons dashicons-color-picker" />
+									<h3 className="dctc-ai-customizer-group__title">
+										{__('Message Colors & Bubble Styles', 'dragwyb-click-to-chat')}
+									</h3>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<ColorField
+										id="primary_color"
+										label={__('Brand Primary Color (Header & Accents)', 'dragwyb-click-to-chat')}
+										value={form.primary_color}
+										onChange={(v) => setField('primary_color', v)}
+									/>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="bubble_style">
+											{__('Message Bubble Corners', 'dragwyb-click-to-chat')}
+										</label>
+										<select
+											id="bubble_style"
+											className="dctc-ai-bot-select"
+											value={form.bubble_style}
+											onChange={(e) => setField('bubble_style', e.target.value)}
+										>
+											<option value="rounded">{__('Rounded Corners', 'dragwyb-click-to-chat')}</option>
+											<option value="square">{__('Square / Sharp', 'dragwyb-click-to-chat')}</option>
+											<option value="pill">{__('Pill / Smooth', 'dragwyb-click-to-chat')}</option>
+										</select>
+									</div>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<ColorField
+										id="user_msg_bg_color"
+										label={__('User Message Background Color', 'dragwyb-click-to-chat')}
+										value={form.user_msg_bg_color || form.primary_color}
+										onChange={(v) => setField('user_msg_bg_color', v)}
+									/>
+
+									<ColorField
+										id="user_msg_text_color"
+										label={__('User Message Text Color', 'dragwyb-click-to-chat')}
+										value={form.user_msg_text_color || '#ffffff'}
+										onChange={(v) => setField('user_msg_text_color', v)}
+									/>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<ColorField
+										id="bot_msg_bg_color"
+										label={__('Bot/Agent Message Background Color', 'dragwyb-click-to-chat')}
+										value={form.bot_msg_bg_color || '#f1f5f9'}
+										onChange={(v) => setField('bot_msg_bg_color', v)}
+									/>
+
+									<ColorField
+										id="bot_msg_text_color"
+										label={__('Bot/Agent Message Text Color', 'dragwyb-click-to-chat')}
+										value={form.bot_msg_text_color || '#0f172a'}
+										onChange={(v) => setField('bot_msg_text_color', v)}
+									/>
+								</div>
+
+								<div className="dctc-ai-features-grid">
+									<SettingCard
+										id="show_bot_avatar_in_chat"
+										title={__('Show Bot Avatar in Messages', 'dragwyb-click-to-chat')}
+										desc={__('Display assistant avatar badge beside bot answers.', 'dragwyb-click-to-chat')}
+										checked={form.show_bot_avatar_in_chat}
+										onChange={(v) => setField('show_bot_avatar_in_chat', v)}
+									/>
+									<SettingCard
+										id="show_user_avatar_in_chat"
+										title={__('Show User Avatar in Messages', 'dragwyb-click-to-chat')}
+										desc={__('Display visitor avatar badge beside visitor messages.', 'dragwyb-click-to-chat')}
+										checked={form.show_user_avatar_in_chat}
+										onChange={(v) => setField('show_user_avatar_in_chat', v)}
+									/>
+									<SettingCard
+										id="show_sources"
+										title={__('Show Source Links in Answers', 'dragwyb-click-to-chat')}
+										desc={__('Display clickable source citation pills under AI answers when Knowledge Base content is cited.', 'dragwyb-click-to-chat')}
+										checked={form.show_sources}
+										onChange={(v) => setField('show_sources', v)}
+									/>
+								</div>
+							</div>
+
+							{/* Group 4: Container Dimensions & Border Styles */}
+							<div className="dctc-ai-customizer-group">
+								<div className="dctc-ai-customizer-group__header">
+									<span className="dashicons dashicons-screenoptions" />
+									<h3 className="dctc-ai-customizer-group__title">
+										{__('Chat Container Dimensions & Borders', 'dragwyb-click-to-chat')}
+									</h3>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="container_width">
+											{__('Container Width', 'dragwyb-click-to-chat')}
+										</label>
+										<div className="dctc-ai-widget-size-row">
+											<input
+												type="number"
+												id="container_width"
+												className="dctc-ai-bot-input dctc-ai-widget-size-input"
+												min="260"
+												max="1200"
+												step="10"
+												value={form.container_width ?? 380}
+												onChange={(e) =>
+													setField(
+														'container_width',
+														e.target.value === '' ? '' : Number(e.target.value)
+													)
+												}
+											/>
+											<select
+												id="container_width_unit"
+												className="dctc-ai-bot-select dctc-ai-widget-size-unit"
+												value={form.container_width_unit || 'px'}
+												onChange={(e) => setField('container_width_unit', e.target.value)}
+											>
+												<option value="px">px</option>
+												<option value="vw">vw</option>
+												<option value="%">%</option>
+											</select>
+										</div>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="container_height">
+											{__('Container Height', 'dragwyb-click-to-chat')}
+										</label>
+										<div className="dctc-ai-widget-size-row">
+											<input
+												type="number"
+												id="container_height"
+												className="dctc-ai-bot-input dctc-ai-widget-size-input"
+												min="320"
+												max="1200"
+												step="10"
+												value={form.container_height ?? 600}
+												onChange={(e) =>
+													setField(
+														'container_height',
+														e.target.value === '' ? '' : Number(e.target.value)
+													)
+												}
+											/>
+											<select
+												id="container_height_unit"
+												className="dctc-ai-bot-select dctc-ai-widget-size-unit"
+												value={form.container_height_unit || 'px'}
+												onChange={(e) => setField('container_height_unit', e.target.value)}
+											>
+												<option value="px">px</option>
+												<option value="vh">vh</option>
+												<option value="%">%</option>
+											</select>
+										</div>
+									</div>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="container_border_radius">
+											{__('Container Border Radius (px)', 'dragwyb-click-to-chat')}
+										</label>
+										<input
+											type="number"
+											id="container_border_radius"
+											className="dctc-ai-bot-input"
+											min="0"
+											max="60"
+											step="1"
+											value={form.container_border_radius ?? 16}
+											onChange={(e) =>
+												setField(
+													'container_border_radius',
+													e.target.value === '' ? '' : Number(e.target.value)
+												)
+											}
+										/>
+									</div>
+
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="container_border_style">
+											{__('Container Border Style', 'dragwyb-click-to-chat')}
+										</label>
+										<select
+											id="container_border_style"
+											className="dctc-ai-bot-select"
+											value={form.container_border_style || 'solid'}
+											onChange={(e) => setField('container_border_style', e.target.value)}
+										>
+											<option value="solid">{__('Solid', 'dragwyb-click-to-chat')}</option>
+											<option value="dashed">{__('Dashed', 'dragwyb-click-to-chat')}</option>
+											<option value="dotted">{__('Dotted', 'dragwyb-click-to-chat')}</option>
+											<option value="double">{__('Double', 'dragwyb-click-to-chat')}</option>
+											<option value="none">{__('None', 'dragwyb-click-to-chat')}</option>
+										</select>
+									</div>
+								</div>
+
+								<div className="dctc-ai-grid-2col">
+									<div className="dctc-ai-bot-field">
+										<label htmlFor="container_border_width">
+											{__('Container Border Width (px)', 'dragwyb-click-to-chat')}
+										</label>
+										<input
+											type="number"
+											id="container_border_width"
+											className="dctc-ai-bot-input"
+											min="0"
+											max="12"
+											step="1"
+											value={form.container_border_width ?? 1}
+											onChange={(e) =>
+												setField(
+													'container_border_width',
+													e.target.value === '' ? '' : Number(e.target.value)
+												)
+											}
+										/>
+									</div>
+
+									<ColorField
+										id="container_border_color"
+										label={__('Container Border Color', 'dragwyb-click-to-chat')}
+										value={form.container_border_color || '#e2e8f0'}
+										onChange={(v) => setField('container_border_color', v)}
+									/>
+								</div>
+							</div>
+
+							{/* Group 5: Floating Launcher Button */}
 							<div className="dctc-ai-customizer-group">
 								<div className="dctc-ai-customizer-group__header">
 									<span className="dashicons dashicons-art" />
@@ -149,66 +617,7 @@ export default function StyleSubtab({
 								</div>
 							</div>
 
-							{/* Group B: Branding Colors & Message Bubbles */}
-							<div className="dctc-ai-customizer-group">
-								<div className="dctc-ai-customizer-group__header">
-									<span className="dashicons dashicons-color-picker" />
-									<h3 className="dctc-ai-customizer-group__title">
-										{__('Branding Colors & Message Bubbles', 'dragwyb-click-to-chat')}
-									</h3>
-								</div>
-
-								<div className="dctc-ai-grid-2col">
-									<ColorField
-										id="primary_color"
-										label={__('Brand Primary Color', 'dragwyb-click-to-chat')}
-										value={form.primary_color}
-										onChange={(v) => setField('primary_color', v)}
-									/>
-
-									<div className="dctc-ai-bot-field">
-										<label htmlFor="bubble_style">
-											{__('Message Bubble Corners', 'dragwyb-click-to-chat')}
-										</label>
-										<select
-											id="bubble_style"
-											className="dctc-ai-bot-select"
-											value={form.bubble_style}
-											onChange={(e) => setField('bubble_style', e.target.value)}
-										>
-											<option value="rounded">{__('Rounded Corners', 'dragwyb-click-to-chat')}</option>
-											<option value="square">{__('Square / Sharp', 'dragwyb-click-to-chat')}</option>
-											<option value="pill">{__('Pill / Smooth', 'dragwyb-click-to-chat')}</option>
-										</select>
-									</div>
-								</div>
-
-								<div className="dctc-ai-features-grid">
-									<SettingCard
-										id="show_bot_avatar_in_chat"
-										title={__('Show Bot Avatar in Messages', 'dragwyb-click-to-chat')}
-										desc={__('Display assistant avatar badge beside bot answers.', 'dragwyb-click-to-chat')}
-										checked={form.show_bot_avatar_in_chat}
-										onChange={(v) => setField('show_bot_avatar_in_chat', v)}
-									/>
-									<SettingCard
-										id="show_user_avatar_in_chat"
-										title={__('Show User Avatar in Messages', 'dragwyb-click-to-chat')}
-										desc={__('Display visitor avatar badge beside visitor messages.', 'dragwyb-click-to-chat')}
-										checked={form.show_user_avatar_in_chat}
-										onChange={(v) => setField('show_user_avatar_in_chat', v)}
-									/>
-									<SettingCard
-										id="show_sources"
-										title={__('Show Source Links in Answers', 'dragwyb-click-to-chat')}
-										desc={__('Display clickable source citation pills under AI answers when Knowledge Base content is cited.', 'dragwyb-click-to-chat')}
-										checked={form.show_sources}
-										onChange={(v) => setField('show_sources', v)}
-									/>
-								</div>
-							</div>
-
-							{/* Group C: Bot Avatar & Identity */}
+							{/* Group 6: Bot Avatar & Identity */}
 							<div className="dctc-ai-customizer-group">
 								<div className="dctc-ai-customizer-group__header">
 									<span className="dashicons dashicons-superhero-alt" />
@@ -276,7 +685,7 @@ export default function StyleSubtab({
 								</div>
 							</div>
 
-							{/* Group D: Visitor Avatar (conditionally shown only if show_user_avatar_in_chat is true) */}
+							{/* Group 7: Visitor Avatar (conditionally shown only if show_user_avatar_in_chat is true) */}
 							{form.show_user_avatar_in_chat && (
 								<div className="dctc-ai-customizer-group">
 									<div className="dctc-ai-customizer-group__header">
@@ -360,8 +769,16 @@ export default function StyleSubtab({
 							</div>
 
 							<div className="dctc-ai-preview-stage">
-								{/* Chat Window Simulation */}
-								<div className="dctc-ai-chat-live-mockup">
+								{/* Chat Window Simulation with dynamic Container Width, Height, Border Radius, Border Style, and BG Image */}
+								<div
+									className="dctc-ai-chat-live-mockup"
+									style={{
+										borderRadius: `${form.container_border_radius ?? 16}px`,
+										border: `${form.container_border_width ?? 1}px ${form.container_border_style || 'solid'} ${form.container_border_color || '#e2e8f0'}`,
+										boxShadow: '0 12px 36px rgba(15, 23, 42, 0.12)',
+										overflow: 'hidden',
+									}}
+								>
 									<div className="dctc-ai-chat-live-mockup__header" style={{ backgroundColor: form.primary_color }}>
 										<div className="dctc-ai-mockup-avatar">
 											{renderBotAvatarIcon(18)}
@@ -369,7 +786,15 @@ export default function StyleSubtab({
 										<span className="dctc-ai-mockup-title">{form.bot_name || 'AI Assistant'}</span>
 									</div>
 
-									<div className="dctc-ai-chat-live-mockup__body">
+									<div
+										className="dctc-ai-chat-live-mockup__body"
+										style={{
+											backgroundImage: form.chat_bg_image ? `url(${form.chat_bg_image})` : undefined,
+											backgroundSize: 'cover',
+											backgroundPosition: 'center',
+											opacity: form.chat_bg_image ? ((form.chat_bg_opacity ?? 100) / 100) : 1,
+										}}
+									>
 										{/* Bot Message */}
 										<div className="dctc-ai-mockup-msg-row is-bot">
 											{form.show_bot_avatar_in_chat && (
@@ -379,7 +804,11 @@ export default function StyleSubtab({
 											)}
 											<div
 												className="dctc-ai-mockup-msg-bubble is-bot"
-												style={{ borderRadius: getBubbleRadiusStyle() }}
+												style={{
+													backgroundColor: form.bot_msg_bg_color || '#f1f5f9',
+													color: form.bot_msg_text_color || '#0f172a',
+													borderRadius: getBubbleRadiusStyle(),
+												}}
 											>
 												{form.greeting_msg || __('Hello! How can I help you today?', 'dragwyb-click-to-chat')}
 												{form.show_sources && (
@@ -407,7 +836,8 @@ export default function StyleSubtab({
 											<div
 												className="dctc-ai-mockup-msg-bubble is-user"
 												style={{
-													backgroundColor: form.primary_color,
+													backgroundColor: form.user_msg_bg_color || form.primary_color,
+													color: form.user_msg_text_color || '#ffffff',
 													borderRadius: getBubbleRadiusStyle(),
 												}}
 											>

@@ -122,6 +122,7 @@ export default function App({ settings: initialSettings }) {
 		() => initialSettings || window.dctc_ai_data?.settings || {}
 	);
 	const [notice, setNotice] = useState(null);
+	const [isSaving, setIsSaving] = useState(false);
 
 	const currentPage =
 		window.dctc_ai_data?.current_page ||
@@ -147,6 +148,18 @@ export default function App({ settings: initialSettings }) {
 		window.addEventListener('dctc_open_onboarding_wizard', handleOpenWizard);
 		return () => {
 			window.removeEventListener('dctc_open_onboarding_wizard', handleOpenWizard);
+		};
+	}, []);
+
+	// Listen for saving start and end events
+	useEffect(() => {
+		const onSavingStart = () => setIsSaving(true);
+		const onSavingEnd = () => setIsSaving(false);
+		window.addEventListener('dctc_ai_saving_start', onSavingStart);
+		window.addEventListener('dctc_ai_saving_end', onSavingEnd);
+		return () => {
+			window.removeEventListener('dctc_ai_saving_start', onSavingStart);
+			window.removeEventListener('dctc_ai_saving_end', onSavingEnd);
 		};
 	}, []);
 
@@ -278,15 +291,22 @@ export default function App({ settings: initialSettings }) {
 							type="button"
 							id="dctc-global-save-btn"
 							className="dctc-ai-btn dctc-ai-btn-primary"
+							disabled={isSaving}
 							onClick={() => {
 								window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
 							}}
 						>
 							<span
-								className="dashicons dashicons-saved"
-								style={{ fontSize: '16px', width: '16px', height: '16px', marginRight: '4px' }}
+								className={`dashicons ${isSaving ? 'dashicons-update spin' : 'dashicons-saved'}`}
+								style={{
+									fontSize: '16px',
+									width: '16px',
+									height: '16px',
+									marginRight: '4px',
+									animation: isSaving ? 'dctcSpin 1s linear infinite' : 'none',
+								}}
 							/>
-							{__('Save Settings', 'dragwyb-click-to-chat')}
+							{isSaving ? __('Saving...', 'dragwyb-click-to-chat') : __('Save Settings', 'dragwyb-click-to-chat')}
 						</button>
 					</>
 				}

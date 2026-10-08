@@ -159,19 +159,19 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   background: var(--dctc-ai-bg-glass);
-  border: 1px solid hsla(0, 0%, 100%, 0.5);
-  border-radius: var(--dctc-ai-radius);
+  border: var(--dctc-ai-container-border, 1px solid hsla(0, 0%, 100%, 0.5));
+  border-radius: var(--dctc-ai-container-radius, var(--dctc-ai-radius));
   bottom: 0;
   box-shadow: var(--dctc-ai-shadow);
   display: flex;
   flex-direction: column;
-  height: 520px;
+  height: var(--dctc-ai-container-height, 520px);
   max-height: calc(100vh - 48px);
   max-width: calc(100vw - 48px);
   overflow: hidden;
   position: absolute;
   transform-origin: bottom right;
-  width: 380px;
+  width: var(--dctc-ai-container-width, 380px);
 }
 .bottom-right .dctc-ai-chat-window {
   bottom: 0;
@@ -364,7 +364,10 @@
   color: #fff !important;
 }
 .dctc-ai-chat-messages {
-  background: linear-gradient(180deg, #f8fafc, #fff);
+  background-color: #f8fafc;
+  background-image: var(--dctc-ai-chat-bg-image, none);
+  background-size: cover;
+  background-position: center;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -437,10 +440,10 @@
 }
 .dctc-ai-message-bot {
   align-self: flex-start;
-  background: #fff;
+  background: var(--dctc-ai-bot-msg-bg, #fff);
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
-  color: var(--dctc-ai-text);
+  color: var(--dctc-ai-bot-msg-color, var(--dctc-ai-text));
 }
 .dctc-ai-bubble-rounded .dctc-ai-message-bot {
   border-radius: 4px 18px 18px 18px !important;
@@ -560,13 +563,13 @@
 }
 .dctc-ai-message-user {
   align-self: flex-end;
-  background: linear-gradient(
+  background: var(--dctc-ai-user-msg-bg, linear-gradient(
     135deg,
     var(--dctc-ai-primary) 0,
     color-mix(in srgb, var(--dctc-ai-primary) 85%, #000) 100%
-  );
+  ));
   box-shadow: 0 8px 24px -8px var(--dctc-ai-primary-glow);
-  color: #fff;
+  color: var(--dctc-ai-user-msg-color, #fff);
 }
 .dctc-ai-bubble-rounded .dctc-ai-message-user {
   border-radius: 18px 18px 4px 18px !important;

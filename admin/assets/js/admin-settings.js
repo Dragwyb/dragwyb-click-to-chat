@@ -197,10 +197,11 @@
 
         saveGeneralSettings: function (e) {
             e.preventDefault();
-            const $btn = $(e.currentTarget);
-            const originalHtml = $btn.html();
+            const $btns = $('#dctc-general-save-btn, #dctc-save-settings-top-btn');
+            const originalHtml = $('#dctc-save-settings-top-btn').html() || '<span class="dashicons dashicons-saved" style="margin-right:4px; font-size:16px; width:16px; height:16px;"></span> Save Settings';
+            const generalBtnOriginal = $('#dctc-general-save-btn').html();
 
-            $btn.prop('disabled', true).addClass('loading');
+            $btns.prop('disabled', true).addClass('loading').html('<span class="dashicons dashicons-update spin" style="margin-right: 4px; font-size: 16px; width: 16px; height: 16px; display: inline-block; animation: dctcSpin 1s linear infinite;"></span> Saving...');
 
             const formData = {
                 action: 'dctc_save_settings',
@@ -225,17 +226,21 @@
                     alert('Error saving settings. Please try again.');
                 },
                 complete: function () {
-                    $btn.prop('disabled', false).removeClass('loading').html(originalHtml);
+                    $btns.prop('disabled', false).removeClass('loading');
+                    $('#dctc-save-settings-top-btn').html(originalHtml);
+                    $('#dctc-general-save-btn').html(generalBtnOriginal);
                 }
             });
         },
 
         savePrivacySettings: function (e) {
             e.preventDefault();
-            const $btn = $(e.currentTarget);
-            const originalHtml = $btn.html();
+            const $btns = $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom, #dctc-save-settings-top-btn');
+            const topOriginalHtml = $('#dctc-save-settings-top-btn').html();
+            const privacyOriginalHtml = $('#dctc-privacy-save-btn').html();
+            const privacyBottomOriginalHtml = $('#dctc-privacy-save-btn-bottom').html();
 
-            $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').prop('disabled', true).addClass('loading');
+            $btns.prop('disabled', true).addClass('loading').html('<span class="dashicons dashicons-update spin" style="margin-right: 4px; font-size: 16px; width: 16px; height: 16px; display: inline-block; animation: dctcSpin 1s linear infinite;"></span> Saving...');
 
             const formData = {
                 action: 'dctc_save_settings',
@@ -265,7 +270,10 @@
                     alert('Error saving privacy settings. Please try again.');
                 },
                 complete: function () {
-                    $('#dctc-privacy-save-btn, #dctc-privacy-save-btn-bottom').prop('disabled', false).removeClass('loading').html(originalHtml);
+                    $btns.prop('disabled', false).removeClass('loading');
+                    $('#dctc-save-settings-top-btn').html(topOriginalHtml);
+                    $('#dctc-privacy-save-btn').html(privacyOriginalHtml);
+                    $('#dctc-privacy-save-btn-bottom').html(privacyBottomOriginalHtml);
                 }
             });
         },

@@ -796,7 +796,6 @@ class DCTC_AI_Chat_Controller {
 				'sources'         => $sources,
 				'reference_links' => $sources,
 				'products'        => $wc_products,
-				'show_lead_form'  => ! empty( $should_show_lead_form ),
 				'lead_data'       => array(
 					'name'        => $detected_name,
 					'email'       => $detected_email,
@@ -2219,7 +2218,6 @@ CONVERSATION MEMORY:
 				'messages'            => $client_messages,
 				'has_ticket'          => $has_ticket,
 				'ticket'              => $ticket_info,
-				'show_lead_form'      => $has_lead_prompt,
 				'ai_response_waiting' => $ai_waiting,
 				'ai_response'         => $ai_waiting,
 				'updated_at'          => $session['updated_at'] ?? current_time( 'mysql' ),

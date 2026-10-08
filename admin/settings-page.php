@@ -115,14 +115,6 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 						<h2 class="dctc-settings-card-title"><?php esc_html_e( 'Feature & Module Management', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-settings-card-sub"><?php esc_html_e( 'Enable or disable the core plugin features independently. When enabled, direct configuration tools and shortcodes appear inside each module.', 'dragwyb-click-to-chat' ); ?></p>
 					</div>
-					<button type="button" id="dctc-general-save-btn" class="dctc-btn dctc-btn-primary">
-						<svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 6px;">
-							<path d="M15.8333 17.5H4.16667C3.72464 17.5 3.30072 17.3244 2.98816 17.0118C2.67559 16.6993 2.5 16.2754 2.5 15.8333V4.16667C2.5 3.72464 2.67559 3.30072 2.98816 2.98816C3.30072 2.67559 3.72464 2.5 4.16667 2.5H13.3333L17.5 6.66667V15.8333C17.5 16.2754 17.3244 16.6993 17.0118 17.0118C16.6993 17.3244 16.2754 17.5 15.8333 17.5Z" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
-							<path d="M14.1666 17.5V10.8334H5.83331V17.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
-							<path d="M5.83331 2.5V6.66667H12.5" stroke="currentColor" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-						<?php esc_html_e( 'Save Changes', 'dragwyb-click-to-chat' ); ?>
-					</button>
 				</div>
 
 				<div class="dctc-modules-card-list">
