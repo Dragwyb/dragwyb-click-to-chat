@@ -41,15 +41,35 @@ export default function TicketDetailWorkspace({
 	getInitials,
 }) {
 	const [workspaceTab, setWorkspaceTab] = useState('conversation');
-	const [composerMode, setComposerMode] = useState('reply');
+	const [composerMode, setComposerMode] = useState('reply'); // 'reply' | 'note'
+	const [isComposerOpen, setIsComposerOpen] = useState(false);
 	const replyTextareaRef = useRef(null);
-	const timelineEndRef = useRef(null);
 
-	useEffect(() => {
-		if (timelineEndRef.current) {
-			timelineEndRef.current.scrollIntoView({ behavior: 'smooth' });
-		}
-	}, [selectedTicket?.messages, selectedTicket?.ai_response_waiting, selectedTicket?.ai_response]);
+	const handleOpenComposer = (mode) => {
+		setComposerMode(mode);
+		setIsComposerOpen(true);
+		setTimeout(() => {
+			if (mode === 'reply' && replyTextareaRef.current) {
+				replyTextareaRef.current.focus();
+			}
+		}, 60);
+	};
+
+	const handleAiSuggestClick = () => {
+		setComposerMode('reply');
+		setIsComposerOpen(true);
+		handleSuggestAiReply();
+	};
+
+	const onReplySubmit = async (e) => {
+		await handleSendReply(e);
+		setIsComposerOpen(false);
+	};
+
+	const onNoteSubmit = async (e) => {
+		await handleAddNote(e);
+		setIsComposerOpen(false);
+	};
 
 	const applyReplyFormatting = (tagType) => {
 		const textarea = replyTextareaRef.current;
@@ -111,6 +131,9 @@ export default function TicketDetailWorkspace({
 			input.click();
 		}
 	};
+
+	const rawMessages = selectedTicket?.messages || [];
+	const messagesNewToOld = [...rawMessages].reverse();
 
 	return (
 		<>
@@ -381,6 +404,7 @@ export default function TicketDetailWorkspace({
 						{/* CONVERSATION TAB */}
 						{workspaceTab === 'conversation' && (
 							<div className="dctc-sc-conversation-scroll">
+								{/* PINNED STAFF NOTES */}
 								{(selectedTicket?.notes || []).filter((n) => n.is_pinned).map((pin) => (
 									<div key={`pin-${pin.id}`} className="dctc-sc-pinned-note-banner">
 										<span className="dashicons dashicons-admin-post"></span>
@@ -390,12 +414,261 @@ export default function TicketDetailWorkspace({
 									</div>
 								))}
 
-								{(selectedTicket?.messages || []).length === 0 ? (
+								{/* TOP ACTION BAR: Reply to Customer / Internal Note / Suggest AI Reply */}
+								<div className="dctc-sc-top-conversation-actions">
+									<div className="dctc-sc-action-buttons-group">
+										<button
+											type="button"
+											className={`dctc-sc-action-btn ${isComposerOpen && composerMode === 'reply' ? 'active' : ''}`}
+											onClick={() => handleOpenComposer('reply')}
+										>
+											<span className="dashicons dashicons-undo"></span>
+											<strong>{__('Reply to Customer', 'dragwyb-click-to-chat')}</strong>
+										</button>
+										<button
+											type="button"
+											className={`dctc-sc-action-btn note-btn ${isComposerOpen && composerMode === 'note' ? 'active' : ''}`}
+											onClick={() => handleOpenComposer('note')}
+										>
+											<span className="dashicons dashicons-lock"></span>
+											<strong>{__('Internal Note', 'dragwyb-click-to-chat')}</strong>
+										</button>
+										<button
+											type="button"
+											className="dctc-sc-suggest-ai-btn"
+											onClick={handleAiSuggestClick}
+											disabled={aiSuggestLoading}
+										>
+											<span className="dashicons dashicons-superhero"></span>
+											{aiSuggestLoading ? __('Thinking...', 'dragwyb-click-to-chat') : __('Suggest AI Reply', 'dragwyb-click-to-chat')}
+										</button>
+									</div>
+								</div>
+
+								{/* INLINE WYSIWYG / NOTE COMPOSER (Opens in place where new reply will appear) */}
+								{isComposerOpen && (
+									<div className="dctc-sc-inline-top-composer">
+										{composerMode === 'reply' ? (
+											<form onSubmit={onReplySubmit} className="dctc-sc-composer-main-form">
+												<div className="dctc-sc-wysiwyg-wrapper">
+													<div className="dctc-sc-wysiwyg-header-tabs">
+														<div className="dctc-sc-wysiwyg-mode-switch">
+															<button
+																type="button"
+																className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'visual' ? 'active' : ''}`}
+																onClick={() => setReplyEditorMode('visual')}
+															>
+																{__('Visual', 'dragwyb-click-to-chat')}
+															</button>
+															<button
+																type="button"
+																className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'text' ? 'active' : ''}`}
+																onClick={() => setReplyEditorMode('text')}
+															>
+																{__('Text', 'dragwyb-click-to-chat')}
+															</button>
+														</div>
+														<div className="dctc-sc-wysiwyg-media-action">
+															<button
+																type="button"
+																className="dctc-sc-add-media-btn"
+																onClick={handleAttachReplyFiles}
+																title={__('Add Media / Files', 'dragwyb-click-to-chat')}
+															>
+																<span className="dashicons dashicons-admin-media"></span>
+																<span>{__('Add Media', 'dragwyb-click-to-chat')}</span>
+															</button>
+														</div>
+													</div>
+
+													{replyEditorMode === 'visual' && (
+														<div className="dctc-sc-wysiwyg-toolbar">
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
+																<strong>B</strong>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
+																<em>I</em>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
+																<u>U</u>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('strike')} title={__('Strikethrough', 'dragwyb-click-to-chat')}>
+																<s>S</s>
+															</button>
+															<span className="dctc-sc-wysiwyg-divider"></span>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-admin-links"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-ul"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-ol"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-quote"></span>
+															</button>
+															<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
+																<span className="dashicons dashicons-editor-code"></span>
+															</button>
+														</div>
+													)}
+
+													<textarea
+														ref={replyTextareaRef}
+														rows="4"
+														placeholder={__('Write a standard formatted response to the customer...', 'dragwyb-click-to-chat')}
+														value={replyText}
+														onChange={(e) => setReplyText(e.target.value)}
+														className={`dctc-sc-composer-input ${replyEditorMode === 'text' ? 'text-mode-font' : ''}`}
+													/>
+												</div>
+
+												<div className="dctc-sc-composer-bottom-bar">
+													<div className="dctc-sc-bottom-left">
+														{replyAttachments.length > 0 && (
+															<span className="dctc-sc-attached-count">
+																{replyAttachments.length} {__('file(s) attached', 'dragwyb-click-to-chat')}
+															</span>
+														)}
+														{activeViewers && activeViewers.length > 0 && (
+															<div className="dctc-sc-active-viewers-dock" title={__('Active agents viewing this ticket', 'dragwyb-click-to-chat')}>
+																<div className="dctc-sc-viewers-avatar-stack">
+																	{activeViewers.map((viewer) => (
+																		<div
+																			key={viewer.user_id}
+																			className="dctc-sc-viewer-avatar-circle"
+																			title={`${viewer.name} (Watching now)`}
+																		>
+																			{viewer.avatar ? (
+																				<img src={viewer.avatar} alt={viewer.name} />
+																			) : (
+																				<span>{viewer.initials || 'AG'}</span>
+																			)}
+																			<span className="dctc-sc-viewer-pulse-dot"></span>
+																		</div>
+																	))}
+																</div>
+																<span className="dctc-sc-viewers-text">
+																	{activeViewers.map((v) => v.name).join(', ')}
+																</span>
+															</div>
+														)}
+													</div>
+
+													<div className="dctc-sc-bottom-right">
+														<label className="dctc-sc-checkbox-label">
+															<input
+																type="checkbox"
+																checked={markAsResolved}
+																onChange={(e) => setMarkAsResolved(e.target.checked)}
+															/>
+															{__('Mark as resolved', 'dragwyb-click-to-chat')}
+														</label>
+
+														<button
+															type="button"
+															onClick={() => setIsComposerOpen(false)}
+															className="dctc-sc-secondary-btn"
+															style={{ marginRight: '6px' }}
+														>
+															{__('Cancel', 'dragwyb-click-to-chat')}
+														</button>
+
+														<button
+															type="submit"
+															disabled={submitting || !replyText.trim()}
+															className="dctc-sc-primary-send-btn"
+														>
+															<span className="dashicons dashicons-send"></span>
+															{submitting ? __('Sending...', 'dragwyb-click-to-chat') : __('Send Reply', 'dragwyb-click-to-chat')}
+														</button>
+													</div>
+												</div>
+											</form>
+										) : (
+											<form onSubmit={onNoteSubmit} className="dctc-sc-composer-main-form note-mode">
+												<textarea
+													rows="3"
+													placeholder={__('Add a private note visible only to support staff...', 'dragwyb-click-to-chat')}
+													value={noteText}
+													onChange={(e) => setNoteText(e.target.value)}
+													className="dctc-sc-composer-input note-input"
+												/>
+
+												<div className="dctc-sc-composer-bottom-bar">
+													<div className="dctc-sc-bottom-left">
+														<label className="dctc-sc-checkbox-label">
+															<input
+																type="checkbox"
+																checked={isPinnedNote}
+																onChange={(e) => setIsPinnedNote(e.target.checked)}
+															/>
+															{__('Pin note to top', 'dragwyb-click-to-chat')}
+														</label>
+													</div>
+
+													<div className="dctc-sc-bottom-right">
+														<button
+															type="button"
+															onClick={() => setIsComposerOpen(false)}
+															className="dctc-sc-secondary-btn"
+															style={{ marginRight: '6px' }}
+														>
+															{__('Cancel', 'dragwyb-click-to-chat')}
+														</button>
+
+														<button
+															type="submit"
+															disabled={submitting || !noteText.trim()}
+															className="dctc-sc-primary-send-btn note-save-btn"
+														>
+															<span className="dashicons dashicons-saved"></span>
+															{submitting ? __('Saving...', 'dragwyb-click-to-chat') : __('Save Note', 'dragwyb-click-to-chat')}
+														</button>
+													</div>
+												</div>
+											</form>
+										)}
+									</div>
+								)}
+
+								{/* AI TYPING INDICATOR (Newest ongoing event) */}
+								{Boolean(selectedTicket?.ai_response_waiting || selectedTicket?.ai_response) && (
+									<div className="dctc-sc-message-bubble-row agent-row dctc-sc-ai-typing-row">
+										<div className="dctc-sc-msg-avatar">
+											AI
+										</div>
+										<div className="dctc-sc-msg-body-wrap">
+											<div className="dctc-sc-msg-header-info">
+												<span className="dctc-sc-msg-sender-name">
+													{__('AI Assistant', 'dragwyb-click-to-chat')}
+												</span>
+												<span className="dctc-sc-msg-timestamp">
+													{__('Typing...', 'dragwyb-click-to-chat')}
+												</span>
+											</div>
+											<div className="dctc-sc-msg-bubble-content dctc-sc-ai-typing-bubble" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+												<span className="dctc-sc-typing-text" style={{ fontStyle: 'italic', color: '#166534', fontSize: '13px' }}>
+													{__('AI Assistant is generating a reply...', 'dragwyb-click-to-chat')}
+												</span>
+												<span className="dctc-chat-typing-dots" style={{ display: 'inline-flex', gap: '3px' }}>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+												</span>
+											</div>
+										</div>
+									</div>
+								)}
+
+								{/* MESSAGES LIST (New to Old: newest reply shown on top) */}
+								{messagesNewToOld.length === 0 ? (
 									<div className="dctc-sc-empty-stream">
 										<p>{__('No messages in this ticket yet.', 'dragwyb-click-to-chat')}</p>
 									</div>
 								) : (
-									selectedTicket.messages.map((msg, idx) => {
+									messagesNewToOld.map((msg, idx) => {
 										const isCustomer = msg.sender_type === 'customer' || msg.role === 'user';
 										const isHumanAgent = msg.sender_type === 'human_agent' || msg.sender_type === 'agent';
 										const isAI = !isHumanAgent && (msg.sender_type === 'ai_agent' || msg.sender_type === 'bot' || msg.role === 'assistant');
@@ -443,36 +716,6 @@ export default function TicketDetailWorkspace({
 										);
 									})
 								)}
-
-								{Boolean(selectedTicket?.ai_response_waiting || selectedTicket?.ai_response) && (
-									<div className="dctc-sc-message-bubble-row agent-row dctc-sc-ai-typing-row">
-										<div className="dctc-sc-msg-avatar">
-											AI
-										</div>
-										<div className="dctc-sc-msg-body-wrap">
-											<div className="dctc-sc-msg-header-info">
-												<span className="dctc-sc-msg-sender-name">
-													{__('AI Assistant', 'dragwyb-click-to-chat')}
-												</span>
-												<span className="dctc-sc-msg-timestamp">
-													{__('Typing...', 'dragwyb-click-to-chat')}
-												</span>
-											</div>
-											<div className="dctc-sc-msg-bubble-content dctc-sc-ai-typing-bubble" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
-												<span className="dctc-sc-typing-text" style={{ fontStyle: 'italic', color: '#166534', fontSize: '13px' }}>
-													{__('AI Assistant is generating a reply...', 'dragwyb-click-to-chat')}
-												</span>
-												<span className="dctc-chat-typing-dots" style={{ display: 'inline-flex', gap: '3px' }}>
-													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
-													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
-													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
-												</span>
-											</div>
-										</div>
-									</div>
-								)}
-
-								<div ref={timelineEndRef} />
 							</div>
 						)}
 
@@ -510,205 +753,6 @@ export default function TicketDetailWorkspace({
 								))}
 							</div>
 						)}
-
-						{/* COMPOSER AREA */}
-						<div className="dctc-sc-rich-composer">
-							<div className="dctc-sc-composer-top-bar">
-								<div className="dctc-sc-composer-mode-tabs">
-									<button
-										type="button"
-										className={`dctc-sc-composer-tab ${composerMode === 'reply' ? 'active' : ''}`}
-										onClick={() => setComposerMode('reply')}
-									>
-										<span className="dashicons dashicons-admin-comments"></span>
-										{__('Reply to Customer', 'dragwyb-click-to-chat')}
-									</button>
-									<button
-										type="button"
-										className={`dctc-sc-composer-tab ${composerMode === 'note' ? 'active' : ''}`}
-										onClick={() => setComposerMode('note')}
-									>
-										<span className="dashicons dashicons-lock"></span>
-										{__('Internal Note', 'dragwyb-click-to-chat')}
-									</button>
-								</div>
-
-								<button
-									type="button"
-									className="dctc-sc-suggest-ai-btn"
-									onClick={handleSuggestAiReply}
-									disabled={aiSuggestLoading}
-								>
-									<span className="dashicons dashicons-superhero"></span>
-									{aiSuggestLoading ? __('Thinking...', 'dragwyb-click-to-chat') : __('Suggest AI Reply', 'dragwyb-click-to-chat')}
-								</button>
-							</div>
-
-							{composerMode === 'reply' ? (
-								<form onSubmit={handleSendReply} className="dctc-sc-composer-main-form">
-									<div className="dctc-sc-wysiwyg-wrapper">
-										<div className="dctc-sc-wysiwyg-header-tabs">
-											<div className="dctc-sc-wysiwyg-mode-switch">
-												<button
-													type="button"
-													className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'visual' ? 'active' : ''}`}
-													onClick={() => setReplyEditorMode('visual')}
-												>
-													{__('Visual', 'dragwyb-click-to-chat')}
-												</button>
-												<button
-													type="button"
-													className={`dctc-sc-editor-mode-btn ${replyEditorMode === 'text' ? 'active' : ''}`}
-													onClick={() => setReplyEditorMode('text')}
-												>
-													{__('Text', 'dragwyb-click-to-chat')}
-												</button>
-											</div>
-											<div className="dctc-sc-wysiwyg-media-action">
-												<button
-													type="button"
-													className="dctc-sc-add-media-btn"
-													onClick={handleAttachReplyFiles}
-													title={__('Add Media / Files', 'dragwyb-click-to-chat')}
-												>
-													<span className="dashicons dashicons-admin-media"></span>
-													<span>{__('Add Media', 'dragwyb-click-to-chat')}</span>
-												</button>
-											</div>
-										</div>
-
-										{replyEditorMode === 'visual' && (
-											<div className="dctc-sc-wysiwyg-toolbar">
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
-													<strong>B</strong>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
-													<em>I</em>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
-													<u>U</u>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('strike')} title={__('Strikethrough', 'dragwyb-click-to-chat')}>
-													<s>S</s>
-												</button>
-												<span className="dctc-sc-wysiwyg-divider"></span>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
-													<span className="dashicons dashicons-admin-links"></span>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
-													<span className="dashicons dashicons-editor-ul"></span>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
-													<span className="dashicons dashicons-editor-ol"></span>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
-													<span className="dashicons dashicons-editor-quote"></span>
-												</button>
-												<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyReplyFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
-													<span className="dashicons dashicons-editor-code"></span>
-												</button>
-											</div>
-										)}
-
-										<textarea
-											ref={replyTextareaRef}
-											rows="4"
-											placeholder={__('Write a standard formatted response to the customer...', 'dragwyb-click-to-chat')}
-											value={replyText}
-											onChange={(e) => setReplyText(e.target.value)}
-											className={`dctc-sc-composer-input ${replyEditorMode === 'text' ? 'text-mode-font' : ''}`}
-										/>
-									</div>
-
-									<div className="dctc-sc-composer-bottom-bar">
-										<div className="dctc-sc-bottom-left">
-											{replyAttachments.length > 0 && (
-												<span className="dctc-sc-attached-count">
-													{replyAttachments.length} {__('file(s) attached', 'dragwyb-click-to-chat')}
-												</span>
-											)}
-											{activeViewers && activeViewers.length > 0 && (
-												<div className="dctc-sc-active-viewers-dock" title={__('Active agents viewing this ticket', 'dragwyb-click-to-chat')}>
-													<div className="dctc-sc-viewers-avatar-stack">
-														{activeViewers.map((viewer) => (
-															<div
-																key={viewer.user_id}
-																className="dctc-sc-viewer-avatar-circle"
-																title={`${viewer.name} (Watching now)`}
-															>
-																{viewer.avatar ? (
-																	<img src={viewer.avatar} alt={viewer.name} />
-																) : (
-																	<span>{viewer.initials || 'AG'}</span>
-																)}
-																<span className="dctc-sc-viewer-pulse-dot"></span>
-															</div>
-														))}
-													</div>
-													<span className="dctc-sc-viewers-text">
-														{activeViewers.map((v) => v.name).join(', ')}
-													</span>
-												</div>
-											)}
-										</div>
-
-										<div className="dctc-sc-bottom-right">
-											<label className="dctc-sc-checkbox-label">
-												<input
-													type="checkbox"
-													checked={markAsResolved}
-													onChange={(e) => setMarkAsResolved(e.target.checked)}
-												/>
-												{__('Mark as resolved', 'dragwyb-click-to-chat')}
-											</label>
-
-											<button
-												type="submit"
-												disabled={submitting || !replyText.trim()}
-												className="dctc-sc-primary-send-btn"
-											>
-												<span className="dashicons dashicons-send"></span>
-												{submitting ? __('Sending...', 'dragwyb-click-to-chat') : __('Send Reply', 'dragwyb-click-to-chat')}
-											</button>
-										</div>
-									</div>
-								</form>
-							) : (
-								<form onSubmit={handleAddNote} className="dctc-sc-composer-main-form note-mode">
-									<textarea
-										rows="3"
-										placeholder={__('Add a private note visible only to support staff...', 'dragwyb-click-to-chat')}
-										value={noteText}
-										onChange={(e) => setNoteText(e.target.value)}
-										className="dctc-sc-composer-input note-input"
-									/>
-
-									<div className="dctc-sc-composer-bottom-bar">
-										<div className="dctc-sc-bottom-left">
-											<label className="dctc-sc-checkbox-label">
-												<input
-													type="checkbox"
-													checked={isPinnedNote}
-													onChange={(e) => setIsPinnedNote(e.target.checked)}
-												/>
-												{__('Pin note to top', 'dragwyb-click-to-chat')}
-											</label>
-										</div>
-
-										<div className="dctc-sc-bottom-right">
-											<button
-												type="submit"
-												disabled={submitting || !noteText.trim()}
-												className="dctc-sc-primary-send-btn note-save-btn"
-											>
-												<span className="dashicons dashicons-saved"></span>
-												{submitting ? __('Saving...', 'dragwyb-click-to-chat') : __('Save Note', 'dragwyb-click-to-chat')}
-											</button>
-										</div>
-									</div>
-								</form>
-							)}
-						</div>
 					</div>
 				)}
 			</main>
