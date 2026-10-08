@@ -673,6 +673,93 @@ export default function TicketsView({
 
 				{selectedTicketId && (
 					<>
+						{/* COLLAPSIBLE LEFT "ALL TICKETS" PANEL */}
+						<div className={`dctc-sc-left-tickets-panel-wrapper ${isLeftTicketsPanelExpanded ? 'is-expanded' : 'is-collapsed'}`}>
+							{isLeftTicketsPanelExpanded ? (
+								<aside className="dctc-sc-left-tickets-panel">
+									<div className="dctc-sc-left-panel-header">
+										<div className="dctc-sc-left-panel-title">
+											<span className="dashicons dashicons-tickets-alt"></span>
+											<strong>{__('All Tickets', 'dragwyb-click-to-chat')}</strong>
+											<span className="dctc-sc-left-panel-count">
+												{totalTickets || filteredTickets.length}
+											</span>
+										</div>
+										<button
+											type="button"
+											className="dctc-sc-left-panel-collapse-btn"
+											onClick={() => setIsLeftTicketsPanelExpanded(false)}
+											title={__('Collapse Tickets Sidebar', 'dragwyb-click-to-chat')}
+										>
+											<span className="dashicons dashicons-arrow-left-alt2"></span>
+										</button>
+									</div>
+
+									<div className="dctc-sc-left-panel-list">
+										{filteredTickets.length === 0 ? (
+											<div className="dctc-sc-left-panel-empty">
+												{__('No tickets found', 'dragwyb-click-to-chat')}
+											</div>
+										) : (
+											filteredTickets.map((t) => {
+												const isCurrent = t.id === selectedTicketId;
+												const subjectTrimmed = t.subject || __('Untitled Ticket', 'dragwyb-click-to-chat');
+												const excerptTrimmed = (t.excerpt || t.last_message || t.subject || '').replace(/<[^>]*>?/gm, '').trim();
+												const displayProduct = t.product || t.product_name;
+												const displayAgent = t.agent_name || (t.assigned_agent_id ? `Agent #${t.assigned_agent_id}` : __('Unassigned', 'dragwyb-click-to-chat'));
+
+												return (
+													<div
+														key={t.id}
+														className={`dctc-sc-left-panel-item ${isCurrent ? 'active' : ''}`}
+														onClick={() => onOpenTicket(t.id)}
+													>
+														<div className="dctc-sc-left-panel-item-header">
+															<span className="dctc-sc-left-panel-id">#{t.ticket_number || t.id}</span>
+															<span className="dctc-sc-left-panel-subject" title={subjectTrimmed}>
+																{subjectTrimmed}
+															</span>
+														</div>
+
+														{excerptTrimmed && (
+															<div className="dctc-sc-left-panel-excerpt" title={excerptTrimmed}>
+																{excerptTrimmed}
+															</div>
+														)}
+
+														<div className="dctc-sc-left-panel-badges">
+															{displayProduct && (
+																<span className="dctc-sc-panel-badge-product">
+																	<span className="dashicons dashicons-products"></span>
+																	{displayProduct}
+																</span>
+															)}
+															<span className={`dctc-sc-panel-badge-agent ${!t.assigned_agent_id ? 'unassigned' : ''}`}>
+																<span className="dashicons dashicons-admin-users"></span>
+																{displayAgent}
+															</span>
+														</div>
+													</div>
+												);
+											})
+										)}
+									</div>
+								</aside>
+							) : (
+								<div className="dctc-sc-left-panel-collapsed-bar">
+									<button
+										type="button"
+										className="dctc-sc-left-panel-expand-btn"
+										onClick={() => setIsLeftTicketsPanelExpanded(true)}
+										title={__('Expand All Tickets list', 'dragwyb-click-to-chat')}
+									>
+										<span className="dashicons dashicons-arrow-right-alt2"></span>
+										<span className="dctc-sc-expand-label">{__('All Tickets', 'dragwyb-click-to-chat')}</span>
+										<span className="dctc-sc-expand-badge">{totalTickets || filteredTickets.length}</span>
+									</button>
+								</div>
+							)}
+						</div>
 						{ticketLoading && (!selectedTicket || String(selectedTicket?.id) !== String(selectedTicketId)) ? (
 							<div className="dctc-sc-workspace-inner dctc-sc-workspace-skeleton-wrap" style={{ flex: 1, display: 'flex' }}>
 								<TicketWorkspaceSkeleton />

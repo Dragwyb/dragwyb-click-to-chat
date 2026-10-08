@@ -43,9 +43,9 @@ export function TicketWorkspaceSkeleton() {
 				</div>
 			</div>
 
-			<div className="dctc-sc-ws-ticket-info">
+			<div className="dctc-sc-ws-ticket-info" style={{ padding: "14px 22px 12px" }}>
 				<div className="dctc-sk dctc-sk-ticket-title" />
-				<div className="dctc-sk-ticket-meta">
+				<div className="dctc-sk-ticket-meta" style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
 					<span className="dctc-sk dctc-sk-meta-item" />
 					<span className="dctc-sk dctc-sk-meta-item meta-medium" />
 					<span className="dctc-sk dctc-sk-meta-item meta-small" />

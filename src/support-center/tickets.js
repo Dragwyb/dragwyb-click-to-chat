@@ -292,6 +292,7 @@ function TicketsApp() {
 		if (!isSilent) {
 			setTicketLoading(true);
 		}
+
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${ticketId}`,
