@@ -140,7 +140,7 @@ export default function TicketsView({
 				if (res && Array.isArray(res.viewing_users)) {
 					setActiveViewers(res.viewing_users);
 				}
-			} catch (e) {}
+			} catch (e) { }
 		};
 
 		if (typeof document === 'undefined' || !document.hidden) {
@@ -461,8 +461,8 @@ export default function TicketsView({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicketId}/ai-suggest-reply`,
 				method: 'POST',
 			});
-			if (data?.success && data.suggestion) {
-				setReplyText(data.suggestion);
+			if (data?.success && data.suggested_reply) {
+				setReplyText(data.suggested_reply);
 				onShowNotice(__('AI drafted a response based on context!', 'dragwyb-click-to-chat'), 'info');
 			}
 		} catch (err) {
