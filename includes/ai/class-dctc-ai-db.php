@@ -317,7 +317,7 @@ class DCTC_AI_DB {
 	 * @param array  $sources    Optional source links/citations.
 	 * @return string The final session_id used.
 	 */
-	public function dctc_ai_save_message( $prompt, $response, $session_id = 'default', $provider = '', $model = '', $email = '', $sources = [] ) {
+	public function dctc_ai_save_message( $prompt, $response, $session_id = 'default', $provider = '', $model = '', $email = '', $sources = [], $extra = [] ) {
 		$prompt     = sanitize_textarea_field( $prompt );
 		$response   = wp_kses_post( $response );
 		$session_id = sanitize_text_field( $session_id );
@@ -353,6 +353,20 @@ class DCTC_AI_DB {
 			'created_at'  => $time,
 		];
 
+		if ( ! empty( $extra['show_form'] ) && is_array( $extra['show_form'] ) ) {
+			$assistant_entry['show_form'] = array(
+				'form_type'   => ! empty( $extra['show_form']['form_type'] ) ? sanitize_text_field( $extra['show_form']['form_type'] ) : 'lead_generate',
+				'show'        => isset( $extra['show_form']['show'] ) ? (bool) $extra['show_form']['show'] : true,
+				'form_filled' => ! empty( $extra['show_form']['form_filled'] ),
+			);
+		} elseif ( ! empty( $extra['form_type'] ) ) {
+			$assistant_entry['show_form'] = array(
+				'form_type'   => 'lead_generate',
+				'show'        => true,
+				'form_filled' => false,
+			);
+		}
+
 		if ( ! empty( $sources ) && is_array( $sources ) ) {
 			$assistant_entry['sources'] = array_values( array_filter( array_map( function( $s ) {
 				if ( ! is_array( $s ) || empty( $s['title'] ) ) {
@@ -379,6 +393,18 @@ class DCTC_AI_DB {
 		if ( $existing_messages ) {
 			$messages = json_decode( $existing_messages, true );
 			$messages = is_array( $messages ) ? $messages : [];
+
+			// If new message displays a form, hide previous unsubmitted forms in conversation history
+			if ( ! empty( $assistant_entry['show_form']['show'] ) ) {
+				foreach ( $messages as &$prev_msg ) {
+					if ( is_array( $prev_msg ) && isset( $prev_msg['show_form'] ) && is_array( $prev_msg['show_form'] ) ) {
+						if ( ! empty( $prev_msg['show_form']['show'] ) && empty( $prev_msg['show_form']['form_filled'] ) ) {
+							$prev_msg['show_form']['show'] = false;
+						}
+					}
+				}
+				unset( $prev_msg );
+			}
 
 			$last_idx = count( $messages ) - 1;
 			// Prevent duplicate user message if the last message in history is already this user prompt

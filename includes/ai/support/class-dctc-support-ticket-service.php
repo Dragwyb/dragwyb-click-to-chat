@@ -717,6 +717,11 @@ class DCTC_Support_Ticket_Service {
 		$ticket['viewing_users']    = $active_viewers;
 		$ticket['is_agent_viewing'] = ! empty( $active_viewers ) ? 1 : 0;
 
+		// AI responding status
+		$ai_waiting = ! empty( $ticket_meta['ai_response_waiting'] ) || ! empty( $ticket_meta['ai_response'] );
+		$ticket['ai_response_waiting'] = $ai_waiting ? true : false;
+		$ticket['ai_response']         = $ai_waiting ? true : false;
+
 		// Instantiate OOP model to load AI useful content & WC info
 		if ( class_exists( 'DCTC_Support_Ticket' ) ) {
 			$ticket_obj = new DCTC_Support_Ticket( $ticket );

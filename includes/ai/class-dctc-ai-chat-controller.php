@@ -314,9 +314,12 @@ class DCTC_AI_Chat_Controller {
 			}
 			return $this->error_response( $error_message, 400 );
 		}
+		$this->set_ticket_ai_responding( $session_id, true );
+
 		try {
 			$system_message = $this->build_system_prompt( $bot, $settings );
 		} catch ( Exception $e ) {
+			$this->set_ticket_ai_responding( $session_id, false );
 			self::log_debug( 'Dragwyb AI AI Chat System Prompt Error: ' . $e->getMessage() );
 			$error_message = current_user_can( 'manage_options' ) ? $e->getMessage() : esc_html__( 'An error occurred while processing your request.', 'dragwyb-click-to-chat' );
 			return $this->error_response( $error_message, 500 );
@@ -577,6 +580,45 @@ class DCTC_AI_Chat_Controller {
 				$ai_message            = __( 'Please fill out the form below so our team will connect with you.', 'dragwyb-click-to-chat' );
 			}
 
+			// If AI message contains lead form prompt, enforce should_show_lead_form
+			if ( is_string( $ai_message ) && false !== stripos( $ai_message, 'form below' ) ) {
+				$should_show_lead_form = true;
+			}
+
+			// Automatically create / link support ticket with LEAD_GENERATION interaction type when lead form is shown
+			if ( $should_show_lead_form && class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
+				$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+				$cust_name       = is_user_logged_in() ? wp_get_current_user()->display_name : 'Guest Visitor';
+				$cust_email      = ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' );
+
+				if ( ! $existing_ticket ) {
+					DCTC_Support_Ticket_Service::create_ticket(
+						array(
+							'subject'          => '[Lead Inquiry] ' . ( ! empty( $cust_name ) && 'Guest Visitor' !== $cust_name ? $cust_name : wp_trim_words( $prompt, 8, '...' ) ),
+							'session_id'       => $session_id,
+							'customer_name'    => $cust_name,
+							'customer_email'   => $cust_email,
+							'origin_type'      => 'chatbot',
+							'reply_surface'    => 'chatbot_widget',
+							'interaction_type' => 'LEAD_GENERATION',
+							'control_mode'     => 'ai',
+							'initial_message'  => $prompt,
+						)
+					);
+				} else {
+					$ticket_id  = (int) $existing_ticket['id'];
+					$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
+					if ( $ticket_obj && $ticket_obj->is_valid() ) {
+						if ( ! empty( $cust_email ) ) {
+							$ticket_obj->update_email( $cust_email );
+						}
+						$ticket_obj->update_meta( 'interaction_type', 'LEAD_GENERATION', 'auto' );
+						$ticket_obj->update_meta( 'detected_intent', 'lead_generation', 'auto' );
+						$ticket_obj->update_meta( 'lead_prompt', $prompt, 'textarea' );
+					}
+				}
+			}
+
 			// Conversational lead capture only when user explicitly provided contact info in prompt AND had non-greeting lead intent
 			if ( ! $is_greeting && $is_active_lead_intent && ! empty( $detected_email ) && 'support_ticket' !== $detected_intent && 'order_tracking' !== $detected_intent && 'human_handoff' !== $detected_intent ) {
 				if ( class_exists( 'DCTC_AI_DB' ) ) {
@@ -654,6 +696,7 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 		} catch ( \Throwable $e ) {
+			$this->set_ticket_ai_responding( $session_id, false );
 			if ( class_exists( 'DCTC_Error_Logger' ) ) {
 				DCTC_Error_Logger::log_ai_error(
 					$provider,
@@ -674,6 +717,7 @@ class DCTC_AI_Chat_Controller {
 
 		// Race Condition Guard: If an agent took control while LLM API was running, discard the AI output
 		if ( class_exists( 'DCTC_Support_AI_Handoff_Service' ) && DCTC_Support_AI_Handoff_Service::should_block_ai_response( $session_id ) ) {
+			$this->set_ticket_ai_responding( $session_id, false );
 			$human_response = DCTC_Support_AI_Handoff_Service::handle_customer_message_in_human_mode( $session_id, $prompt, $email );
 			return new \WP_REST_Response( $human_response, 200 );
 		}
@@ -681,8 +725,16 @@ class DCTC_AI_Chat_Controller {
 		$show_sources = ! isset( $bot['show_sources'] ) || (bool) $bot['show_sources'];
 		$sources      = ( $show_sources && ! empty( $rag_links ) ) ? array_slice( $rag_links, 0, 3 ) : array();
 
+		$extra = array(
+			'show_form' => ! empty( $should_show_lead_form ) ? array(
+				'form_type'   => 'lead_generate',
+				'show'        => true,
+				'form_filled' => false,
+			) : null,
+		);
+
 		try {
-			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $sources );
+			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $sources, $extra );
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Save Conversation Error: ' . $e->getMessage() );
 		}
@@ -722,21 +774,17 @@ class DCTC_AI_Chat_Controller {
 			}
 		}
 
-		/**
-		 * Action triggered whenever a chat round completes successfully.
-		 *
-		 * @param string $session_id
-		 * @param string $prompt
-		 * @param string $ai_message
-		 * @param string $used_model
-		 * @param string $used_provider
-		 */
 		// Extract structured lead fields for autofill
 		$detected_name     = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : '' );
 		$detected_email    = ! empty( $intent_data['email'] ) ? $intent_data['email'] : ( ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' ) );
 		$detected_phone    = ! empty( $intent_data['phone'] ) ? $intent_data['phone'] : '';
 		$detected_interest = ! empty( $intent_data['interest'] ) ? $intent_data['interest'] : ( ! empty( $page_context['product']['name'] ) ? $page_context['product']['name'] : '' );
 		$detected_company  = ! empty( $intent_data['company'] ) ? $intent_data['company'] : '';
+
+		$this->set_ticket_ai_responding( $session_id, false );
+		$ticket_info  = $this->get_session_ticket_info( $session_id );
+		$has_ticket   = ! empty( $ticket_info );
+		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
 
 		return new \WP_REST_Response(
 			array(
@@ -1549,13 +1597,13 @@ CONVERSATION MEMORY:
 	/**
 	 * Save conversation to database
 	 */
-	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources = array() ) {
+	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources = array(), $extra = array() ) {
 		// Save to database if enabled or if ticket is attached
 		$save_enabled = ! isset( $bot['save_chat'] ) || (bool) $bot['save_chat'];
 		if ( $save_enabled || class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db = new DCTC_AI_DB();
-				$db->dctc_ai_save_message( $prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources );
+				$db->dctc_ai_save_message( $prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources, $extra );
 			}
 		}
 
@@ -1622,10 +1670,22 @@ CONVERSATION MEMORY:
 				if ( is_array( $complete_messages ) ) {
 					foreach ( $complete_messages as $msg ) {
 						if ( isset( $msg['role'] ) && isset( $msg['content'] ) ) {
+							$show_form = null;
+							if ( isset( $msg['show_form'] ) && is_array( $msg['show_form'] ) ) {
+								$show_form = array(
+									'form_type'   => ! empty( $msg['show_form']['form_type'] ) ? sanitize_text_field( $msg['show_form']['form_type'] ) : 'lead_generate',
+									'show'        => ! empty( $msg['show_form']['show'] ),
+									'form_filled' => ! empty( $msg['show_form']['form_filled'] ),
+								);
+							}
 							$formatted_messages[] = array(
-								'role'    => ( $msg['role'] === 'assistant' ) ? 'bot' : 'user',
-								'content' => $msg['content'],
-								'sources' => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
+								'role'        => ( $msg['role'] === 'assistant' ) ? 'bot' : 'user',
+								'sender_type' => isset( $msg['sender_type'] ) ? $msg['sender_type'] : ( $msg['role'] === 'assistant' ? 'ai_agent' : 'customer' ),
+								'sender_name' => isset( $msg['sender_name'] ) ? $msg['sender_name'] : ( $msg['role'] === 'assistant' ? 'AI Assistant' : 'Customer' ),
+								'created_at'  => isset( $msg['created_at'] ) ? $msg['created_at'] : '',
+								'content'     => $msg['content'],
+								'sources'     => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
+								'show_form'   => $show_form,
 							);
 						}
 					}
@@ -2004,6 +2064,26 @@ CONVERSATION MEMORY:
 	 * @return \WP_REST_Response
 	 */
 	/**
+	 * Update ticket ai_response meta indicator.
+	 *
+	 * @param string $session_id
+	 * @param bool   $is_responding
+	 * @return void
+	 */
+	public function set_ticket_ai_responding( $session_id, $is_responding ) {
+		if ( empty( $session_id ) || ! class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			return;
+		}
+
+		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+		if ( $ticket && ! empty( $ticket['id'] ) ) {
+			$val = $is_responding ? 1 : 0;
+			DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'ai_response', $val );
+			DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'ai_response_waiting', $val );
+		}
+	}
+
+	/**
 	 * Get ticket info for a session.
 	 *
 	 * @param string $session_id Session ID.
@@ -2026,12 +2106,23 @@ CONVERSATION MEMORY:
 			? $ticket['agent_name']
 			: '';
 
+		$ai_waiting = false;
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $ticket['id'] ) ) {
+			$meta_val = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $ticket['id'], 'ai_response_waiting', true );
+			if ( empty( $meta_val ) ) {
+				$meta_val = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $ticket['id'], 'ai_response', true );
+			}
+			$ai_waiting = ! empty( $meta_val );
+		}
+
 		return array(
-			'id'            => (int) $ticket['id'],
-			'ticket_number' => (int) $ticket['ticket_number'],
-			'status'        => $ticket['status'],
-			'control_mode'  => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : 'ai',
-			'agent_name'    => $agent_name,
+			'id'                  => (int) $ticket['id'],
+			'ticket_number'       => (int) $ticket['ticket_number'],
+			'status'              => $ticket['status'],
+			'control_mode'        => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : 'ai',
+			'agent_name'          => $agent_name,
+			'ai_response_waiting' => $ai_waiting,
+			'ai_response'         => $ai_waiting,
 		);
 	}
 
@@ -2062,16 +2153,28 @@ CONVERSATION MEMORY:
 
 		$ticket_info = $this->get_session_ticket_info( $session_id );
 		$has_ticket  = ! empty( $ticket_info );
+		$ai_waiting  = ! empty( $ticket_info['ai_response_waiting'] );
+
+		if ( $has_ticket && ! empty( $ticket_info['id'] ) ) {
+			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+			$wpdb->update(
+				$table_tickets,
+				array( 'customer_last_seen_at' => current_time( 'mysql' ) ),
+				array( 'id' => (int) $ticket_info['id'] )
+			);
+		}
 
 		if ( ! $session ) {
 			return new \WP_REST_Response(
 				array(
-					'success'      => true,
-					'session_id'   => $session_id,
-					'control_mode' => ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai',
-					'messages'     => array(),
-					'has_ticket'   => $has_ticket,
-					'ticket'       => $ticket_info,
+					'success'             => true,
+					'session_id'          => $session_id,
+					'control_mode'        => ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai',
+					'messages'            => array(),
+					'has_ticket'          => $has_ticket,
+					'ticket'              => $ticket_info,
+					'ai_response_waiting' => $ai_waiting,
+					'ai_response'         => $ai_waiting,
 				),
 				200
 			);
@@ -2092,17 +2195,33 @@ CONVERSATION MEMORY:
 			$client_messages[] = $msg;
 		}
 
+		// Check if the latest message was an assistant lead form prompt
+		$has_lead_prompt = false;
+		if ( ! empty( $client_messages ) ) {
+			$last_msg = end( $client_messages );
+			if ( is_array( $last_msg ) && ! empty( $last_msg['content'] ) ) {
+				$is_bot = ( isset( $last_msg['role'] ) && in_array( $last_msg['role'], array( 'assistant', 'bot' ), true ) )
+					|| ( isset( $last_msg['sender_type'] ) && in_array( $last_msg['sender_type'], array( 'ai_agent', 'bot' ), true ) );
+				if ( $is_bot && false !== stripos( (string) $last_msg['content'], 'form below' ) ) {
+					$has_lead_prompt = true;
+				}
+			}
+		}
+
 		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : ( ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai' );
 
 		return new \WP_REST_Response(
 			array(
-				'success'      => true,
-				'session_id'   => $session_id,
-				'control_mode' => $control_mode,
-				'messages'     => $client_messages,
-				'has_ticket'   => $has_ticket,
-				'ticket'       => $ticket_info,
-				'updated_at'   => $session['updated_at'] ?? current_time( 'mysql' ),
+				'success'             => true,
+				'session_id'          => $session_id,
+				'control_mode'        => $control_mode,
+				'messages'            => $client_messages,
+				'has_ticket'          => $has_ticket,
+				'ticket'              => $ticket_info,
+				'show_lead_form'      => $has_lead_prompt,
+				'ai_response_waiting' => $ai_waiting,
+				'ai_response'         => $ai_waiting,
+				'updated_at'          => $session['updated_at'] ?? current_time( 'mysql' ),
 			),
 			200
 		);

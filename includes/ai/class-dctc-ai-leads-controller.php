@@ -289,15 +289,94 @@ class DCTC_AI_Leads_Controller
 			}
 		}
 
-		// 3. Dispatch Email Notification
+		// 3. Save confirmation response message in AI session and ticket conversation history
+		$confirmation_message = __( 'Thank you! Your information has been received. Our team will contact you shortly.', 'dragwyb-click-to-chat' );
+		if ( ! empty( $session_id ) ) {
+			$time_now = current_time( 'mysql' );
+			$confirm_entry = [
+				'role'        => 'assistant',
+				'sender_type' => 'ai_agent',
+				'sender_name' => 'AI Assistant',
+				'content'     => $confirmation_message,
+				'created_at'  => $time_now,
+			];
+
+			// 3a. Update session table
+			$session_row = $wpdb->get_row( $wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
+			if ( $session_row ) {
+				$current_msgs = ! empty( $session_row['content'] ) ? json_decode( $session_row['content'], true ) : [];
+				$current_msgs = is_array( $current_msgs ) ? $current_msgs : [];
+				foreach ( $current_msgs as &$msg ) {
+					if ( is_array( $msg ) ) {
+						if ( isset( $msg['show_form'] ) && is_array( $msg['show_form'] ) ) {
+							$msg['show_form']['show']        = false;
+							$msg['show_form']['form_filled'] = true;
+						} elseif ( ! empty( $msg['form_type'] ) || ( isset( $msg['content'] ) && false !== stripos( (string) $msg['content'], 'form below' ) ) ) {
+							$msg['show_form'] = array(
+								'form_type'   => 'lead_generate',
+								'show'        => false,
+								'form_filled' => true,
+							);
+						}
+					}
+				}
+				unset( $msg );
+				$current_msgs[] = $confirm_entry;
+				$current_msgs = array_slice( $current_msgs, -50 );
+				$encoded_msgs = wp_json_encode( $current_msgs );
+
+				$wpdb->update(
+					$table_sessions,
+					[
+						'content'    => $encoded_msgs,
+						'updated_at' => $time_now,
+					],
+					[ 'session_id' => $session_id ]
+				);
+			}
+
+			// 3b. Update linked ticket messages if ticket exists
+			$target_ticket_id = ! empty( $ticket_id ) ? $ticket_id : ( ! empty( $new_ticket_id ) ? $new_ticket_id : 0 );
+			if ( ! $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				$linked = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+				if ( $linked && ! empty( $linked['id'] ) ) {
+					$target_ticket_id = (int) $linked['id'];
+				}
+			}
+
+			if ( $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( $target_ticket_id, '_dctc_ticket_messages', true );
+				$ticket_meta_msgs = is_array( $ticket_meta_msgs ) ? $ticket_meta_msgs : [];
+				foreach ( $ticket_meta_msgs as &$t_msg ) {
+					if ( is_array( $t_msg ) ) {
+						if ( isset( $t_msg['show_form'] ) && is_array( $t_msg['show_form'] ) ) {
+							$t_msg['show_form']['show']        = false;
+							$t_msg['show_form']['form_filled'] = true;
+						} elseif ( ! empty( $t_msg['form_type'] ) || ( isset( $t_msg['content'] ) && false !== stripos( (string) $t_msg['content'], 'form below' ) ) ) {
+							$t_msg['show_form'] = array(
+								'form_type'   => 'lead_generate',
+								'show'        => false,
+								'form_filled' => true,
+							);
+						}
+					}
+				}
+				unset( $t_msg );
+				$ticket_meta_msgs[] = $confirm_entry;
+				$ticket_meta_msgs = array_slice( $ticket_meta_msgs, -50 );
+				DCTC_Support_Ticket_Service::update_ticket_meta( $target_ticket_id, '_dctc_ticket_messages', $ticket_meta_msgs );
+			}
+		}
+
+		// 4. Dispatch Email Notification
 		$this->maybe_send_lead_email($lead_data);
 
-		// 4. Dispatch Webhook
+		// 5. Dispatch Webhook
 		$this->maybe_dispatch_webhook($lead_data);
 
 		return new \WP_REST_Response([
 			'success' => true,
-			'message' => __('Thank you! Your information has been received. Our team will contact you shortly.', 'dragwyb-click-to-chat'),
+			'message' => $confirmation_message,
 			'lead_id' => $lead_id,
 			'score'   => $scoring['score'],
 			'status'  => $initial_status,

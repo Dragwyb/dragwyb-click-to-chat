@@ -277,6 +277,11 @@ class DCTC_Support_AI_Handoff_Service {
 					null,
 					$prompt
 				);
+
+				// Trigger delayed notification if agent doesn't view ticket within 1 minute
+				if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+					DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $prompt );
+				}
 			}
 		}
 

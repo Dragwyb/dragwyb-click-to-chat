@@ -630,13 +630,24 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		global $wpdb;
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$now_time       = current_time( 'mysql' );
 		$wpdb->update(
 			$table_sessions,
-			array( 'updated_at' => current_time( 'mysql' ) ),
+			array( 'updated_at' => $now_time ),
 			array( 'session_id' => $session_id )
 		);
+
+		// Touch ticket customer_last_seen_at
+		$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
+		if ( $ticket && ! empty( $ticket['id'] ) ) {
+			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+			$wpdb->update(
+				$table_tickets,
+				array( 'customer_last_seen_at' => $now_time ),
+				array( 'id' => (int) $ticket['id'] )
+			);
+		}
 
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
@@ -722,6 +733,12 @@ class DCTC_Support_REST_Controller {
 				404
 			);
 		}
+
+		// If viewed by support agent or admin, record last viewed timestamp
+		if ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) {
+			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', time() );
+		}
+
 		return new WP_REST_Response(
 			array(
 				'success' => true,

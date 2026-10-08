@@ -3,7 +3,7 @@
  * DCTC Support Notification Service
  *
  * Handles agent and customer email notifications, active session presence suppression,
- * HTML email templating, and delivery audit logging.
+ * 1-minute delayed notification dispatch with view-checking, HTML email templating, and delivery audit logging.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -16,6 +16,16 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Class DCTC_Support_Notification_Service
  */
 class DCTC_Support_Notification_Service {
+
+	/**
+	 * Hook delayed cron actions.
+	 *
+	 * @return void
+	 */
+	public static function init() {
+		add_action( 'dctc_support_delayed_customer_reply_notif', array( __CLASS__, 'process_delayed_customer_reply' ), 10, 3 );
+		add_action( 'dctc_support_delayed_agent_reply_notif', array( __CLASS__, 'process_delayed_agent_reply' ), 10, 3 );
+	}
 
 	/**
 	 * Send notification when a ticket is assigned to an agent.
@@ -51,49 +61,210 @@ class DCTC_Support_Notification_Service {
 	}
 
 	/**
-	 * Send notification to assigned agent when a customer replies.
+	 * Send notification when a customer replies (Delayed 1 minute to check if agent views ticket).
 	 *
 	 * @param int    $ticket_id   Ticket ID.
 	 * @param string $reply_text Customer message.
+	 * @param bool   $immediate   Whether to bypass 1-minute delay (for tests/forced dispatch).
 	 * @return bool
 	 */
-	public static function notify_customer_reply( $ticket_id, $reply_text ) {
+	public static function notify_customer_reply( $ticket_id, $reply_text, $immediate = false ) {
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
-		if ( ! $ticket || empty( $ticket['assigned_agent_id'] ) ) {
+		if ( ! $ticket ) {
 			return false;
 		}
 
-		$agent = DCTC_Support_Agent_Service::get_agent_by_id( $ticket['assigned_agent_id'] );
-		if ( ! $agent || empty( $agent['user_email'] ) ) {
+		$sent_time = time();
+
+		if ( $immediate ) {
+			return self::process_delayed_customer_reply( $ticket_id, $reply_text, $sent_time );
+		}
+
+		// Schedule single event 1 minute in the future
+		wp_schedule_single_event(
+			$sent_time + 60,
+			'dctc_support_delayed_customer_reply_notif',
+			array( (int) $ticket_id, (string) $reply_text, $sent_time )
+		);
+
+		return true;
+	}
+
+	/**
+	 * Process delayed customer reply notification after 1 minute.
+	 *
+	 * @param int    $ticket_id  Ticket ID.
+	 * @param string $reply_text Customer message content.
+	 * @param int    $sent_time  Timestamp when customer message was sent.
+	 * @return bool
+	 */
+	public static function process_delayed_customer_reply( $ticket_id, $reply_text, $sent_time = 0 ) {
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		if ( ! $ticket ) {
 			return false;
 		}
 
-		if ( ! self::should_notify( 'agent', 'customer_reply', $ticket, array( 'agent' => $agent ) ) ) {
+		// If ticket is resolved/closed, no need to notify
+		if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
+			return false;
+		}
+
+		$sent_time = $sent_time ? (int) $sent_time : ( time() - 60 );
+
+		// 1. Check if an agent viewed or is actively viewing the ticket within/after that 1 minute
+		$agent_viewed = false;
+
+		$agent_last_viewed = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
+		if ( ! empty( $agent_last_viewed ) && (int) $agent_last_viewed >= $sent_time ) {
+			$agent_viewed = true;
+		}
+
+		if ( ! $agent_viewed ) {
+			$stored_viewers = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
+			if ( is_array( $stored_viewers ) ) {
+				foreach ( $stored_viewers as $viewer ) {
+					if ( is_array( $viewer ) && ! empty( $viewer['last_seen'] ) && (int) $viewer['last_seen'] >= $sent_time ) {
+						$agent_viewed = true;
+						break;
+					}
+				}
+			}
+		}
+
+		// 2. Check if an agent already replied after the customer's message
+		if ( ! $agent_viewed && ! empty( $ticket['messages'] ) && is_array( $ticket['messages'] ) ) {
+			foreach ( array_reverse( $ticket['messages'] ) as $msg ) {
+				if ( is_array( $msg ) && ( ( isset( $msg['sender_type'] ) && in_array( $msg['sender_type'], array( 'agent', 'human_agent' ), true ) ) ) ) {
+					$msg_time = ! empty( $msg['created_at'] ) ? strtotime( $msg['created_at'] ) : 0;
+					if ( $msg_time >= $sent_time ) {
+						$agent_viewed = true;
+						break;
+					}
+				}
+			}
+		}
+
+		// If agent has viewed or replied within 1 minute, suppress notification
+		if ( $agent_viewed ) {
+			self::log_suppressed(
+				$ticket['id'],
+				'customer_reply',
+				'agent',
+				! empty( $ticket['assigned_agent_id'] ) ? $ticket['assigned_agent_id'] : 0,
+				'',
+				'agent_viewed_within_1_minute'
+			);
 			return false;
 		}
 
 		$site_name = get_bloginfo( 'name' );
 		$admin_url = admin_url( 'admin.php?page=dragwyb-click-to-chat-ai#support-center' );
-		$subject   = sprintf( '[%s] New Customer Reply on Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
 
-		$content  = '<h2>' . esc_html__( 'Customer has sent a new reply', 'dragwyb-click-to-chat' ) . '</h2>';
+		// 3. If ticket is assigned to an agent, send email to assigned agent
+		if ( ! empty( $ticket['assigned_agent_id'] ) ) {
+			$agent = DCTC_Support_Agent_Service::get_agent_by_id( $ticket['assigned_agent_id'] );
+			if ( $agent && ! empty( $agent['user_email'] ) ) {
+				if ( ! self::should_notify( 'agent', 'customer_reply', $ticket, array( 'agent' => $agent ) ) ) {
+					return false;
+				}
+
+				$subject  = sprintf( '[%s] New Customer Reply on Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
+				$content  = '<h2>' . esc_html__( 'Customer has sent a new reply', 'dragwyb-click-to-chat' ) . '</h2>';
+				$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket['ticket_number'] ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
+				$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
+				$content .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
+				$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
+
+				return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'customer_reply' );
+			}
+		}
+
+		// 4. If no agent is assigned, send notification to admin
+		$admin_email = self::get_admin_notification_email();
+		if ( empty( $admin_email ) ) {
+			return false;
+		}
+
+		if ( ! self::should_notify( 'admin', 'customer_reply', $ticket ) ) {
+			return false;
+		}
+
+		$subject  = sprintf( '[%s] [Unassigned] New Customer Message on Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
+		$content  = '<h2>' . esc_html__( 'New Customer Message on Unassigned Ticket', 'dragwyb-click-to-chat' ) . '</h2>';
 		$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket['ticket_number'] ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
+		$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
+		$content .= '<p><strong>' . esc_html__( 'Status:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( str_replace( '_', ' ', $ticket['status'] ) ) ) . ' (' . esc_html__( 'Unassigned', 'dragwyb-click-to-chat' ) . ')</p>';
 		$content .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
-		$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
+		$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Assign & Reply in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
 
-		return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'customer_reply' );
+		return self::send_email( $admin_email, $subject, $content, $ticket['id'], 'admin', 0, 'customer_reply_unassigned' );
 	}
 
 	/**
-	 * Send notification to customer when an agent replies.
+	 * Send notification to customer when an agent replies (Delayed 1 minute to check if user views ticket/chat).
 	 *
 	 * @param int    $ticket_id   Ticket ID.
 	 * @param string $reply_text Agent message.
+	 * @param bool   $immediate   Whether to bypass 1-minute delay (for tests/forced dispatch).
 	 * @return bool
 	 */
-	public static function notify_agent_reply( $ticket_id, $reply_text ) {
+	public static function notify_agent_reply( $ticket_id, $reply_text, $immediate = false ) {
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
 		if ( ! $ticket || empty( $ticket['customer_email'] ) ) {
+			return false;
+		}
+
+		$sent_time = time();
+
+		if ( $immediate ) {
+			return self::process_delayed_agent_reply( $ticket_id, $reply_text, $sent_time );
+		}
+
+		// Schedule single event 1 minute in the future
+		wp_schedule_single_event(
+			$sent_time + 60,
+			'dctc_support_delayed_agent_reply_notif',
+			array( (int) $ticket_id, (string) $reply_text, $sent_time )
+		);
+
+		return true;
+	}
+
+	/**
+	 * Process delayed agent reply notification after 1 minute.
+	 *
+	 * @param int    $ticket_id  Ticket ID.
+	 * @param string $reply_text Agent message content.
+	 * @param int    $sent_time  Timestamp when agent message was sent.
+	 * @return bool
+	 */
+	public static function process_delayed_agent_reply( $ticket_id, $reply_text, $sent_time = 0 ) {
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		if ( ! $ticket || empty( $ticket['customer_email'] ) ) {
+			return false;
+		}
+
+		$sent_time = $sent_time ? (int) $sent_time : ( time() - 60 );
+
+		// Check if customer viewed the ticket or was active in session within/after that 1 minute
+		$customer_viewed = false;
+		if ( ! empty( $ticket['customer_last_seen_at'] ) ) {
+			$last_seen = strtotime( $ticket['customer_last_seen_at'] );
+			if ( $last_seen >= $sent_time ) {
+				$customer_viewed = true;
+			}
+		}
+
+		// If customer has viewed or was active in chat within 1 minute, suppress email notification
+		if ( $customer_viewed ) {
+			self::log_suppressed(
+				$ticket['id'],
+				'agent_reply',
+				'customer',
+				$ticket['customer_wp_user_id'],
+				$ticket['customer_email'],
+				'customer_viewed_within_1_minute'
+			);
 			return false;
 		}
 
@@ -143,7 +314,7 @@ class DCTC_Support_Notification_Service {
 	/**
 	 * Centralized Decision Engine for notifications.
 	 *
-	 * @param string $recipient_type 'agent' or 'customer'.
+	 * @param string $recipient_type 'agent', 'admin', or 'customer'.
 	 * @param string $event_type     Event slug.
 	 * @param array  $ticket         Ticket array.
 	 * @param array  $context        Additional metadata.
@@ -182,13 +353,32 @@ class DCTC_Support_Notification_Service {
 	}
 
 	/**
+	 * Get the designated administrator notification email.
+	 *
+	 * @return string
+	 */
+	public static function get_admin_notification_email() {
+		$chatbot_settings = get_option( 'dctc_ai_chatbot', array() );
+		if ( ! empty( $chatbot_settings['ticket_notification_email'] ) ) {
+			return sanitize_email( $chatbot_settings['ticket_notification_email'] );
+		}
+
+		$support_settings = get_option( 'dctc_support_settings', array() );
+		if ( ! empty( $support_settings['ticket_notification_email'] ) ) {
+			return sanitize_email( $support_settings['ticket_notification_email'] );
+		}
+
+		return sanitize_email( get_option( 'admin_email' ) );
+	}
+
+	/**
 	 * Render HTML email template and send via wp_mail.
 	 *
 	 * @param string $to             Recipient email.
 	 * @param string $subject        Subject line.
 	 * @param string $body_content   HTML body inner content.
 	 * @param int    $ticket_id      Ticket ID.
-	 * @param string $recipient_type 'agent' or 'customer'.
+	 * @param string $recipient_type 'agent', 'admin', or 'customer'.
 	 * @param int    $recipient_id   User ID.
 	 * @param string $event_type     Event slug.
 	 * @return bool
@@ -265,3 +455,7 @@ class DCTC_Support_Notification_Service {
 		);
 	}
 }
+
+// Hook notification service actions
+DCTC_Support_Notification_Service::init();
+

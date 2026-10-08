@@ -49,7 +49,7 @@ export default function TicketDetailWorkspace({
 		if (timelineEndRef.current) {
 			timelineEndRef.current.scrollIntoView({ behavior: 'smooth' });
 		}
-	}, [selectedTicket?.messages]);
+	}, [selectedTicket?.messages, selectedTicket?.ai_response_waiting, selectedTicket?.ai_response]);
 
 	const applyReplyFormatting = (tagType) => {
 		const textarea = replyTextareaRef.current;
@@ -442,6 +442,34 @@ export default function TicketDetailWorkspace({
 											</div>
 										);
 									})
+								)}
+
+								{Boolean(selectedTicket?.ai_response_waiting || selectedTicket?.ai_response) && (
+									<div className="dctc-sc-message-bubble-row agent-row dctc-sc-ai-typing-row">
+										<div className="dctc-sc-msg-avatar">
+											AI
+										</div>
+										<div className="dctc-sc-msg-body-wrap">
+											<div className="dctc-sc-msg-header-info">
+												<span className="dctc-sc-msg-sender-name">
+													{__('AI Assistant', 'dragwyb-click-to-chat')}
+												</span>
+												<span className="dctc-sc-msg-timestamp">
+													{__('Typing...', 'dragwyb-click-to-chat')}
+												</span>
+											</div>
+											<div className="dctc-sc-msg-bubble-content dctc-sc-ai-typing-bubble" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '9px 14px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px' }}>
+												<span className="dctc-sc-typing-text" style={{ fontStyle: 'italic', color: '#166534', fontSize: '13px' }}>
+													{__('AI Assistant is generating a reply...', 'dragwyb-click-to-chat')}
+												</span>
+												<span className="dctc-chat-typing-dots" style={{ display: 'inline-flex', gap: '3px' }}>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
+												</span>
+											</div>
+										</div>
+									</div>
 								)}
 
 								<div ref={timelineEndRef} />

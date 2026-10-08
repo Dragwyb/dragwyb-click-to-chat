@@ -405,13 +405,10 @@ export default function ChatWidget({ settings, inline }) {
 	// Live Support & Session Control State
 	const [activeControlMode, setActiveControlMode] = useState('ai');
 	const [assignedAgentName, setAssignedAgentName] = useState('');
-	const [activeTicketInfo, setActiveTicketInfo] = useState(null);
-	const [hasActiveTicket, setHasActiveTicket] = useState(false);
 
 	// Human agent waiting & auto-fallback states
-	const [isWaitingForAgent, setIsWaitingForAgent] = useState(false);
 	const [waitingAgentStatusText, setWaitingAgentStatusText] = useState('');
-	const lastSentPromptRef = useRef('');
+	const aiResponseWaiting = useRef(false);
 	const wait30sTimerRef = useRef(null);
 	const maxWaitTimeoutRef = useRef(null);
 
@@ -435,6 +432,8 @@ export default function ChatWidget({ settings, inline }) {
 	const triggerAiFallback = useCallback(async (fallbackPrompt) => {
 		if (!sessionId || !isMountedRef.current) return;
 		try {
+			aiResponseWaiting.current = true;
+
 			const activePageContext = window.dctc_ai_frontend_data?.page_context || {
 				url: window.location.href,
 				title: document.title,
@@ -461,7 +460,6 @@ export default function ChatWidget({ settings, inline }) {
 				}
 
 				clearAgentWaitTimers();
-				setIsWaitingForAgent(false);
 				setWaitingAgentStatusText('');
 				setIsLoading(false);
 
@@ -471,6 +469,10 @@ export default function ChatWidget({ settings, inline }) {
 				}
 
 				if (botMessage) {
+					const isLeadPrompt = Boolean(
+						response.show_lead_form ||
+						(typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form')))
+					);
 					setMessages((prev) => [
 						...prev,
 						{
@@ -480,6 +482,9 @@ export default function ChatWidget({ settings, inline }) {
 							action_buttons: Array.isArray(response.action_buttons) ? response.action_buttons : [],
 							products: Array.isArray(response.products) ? response.products : [],
 							show_order_tracker: !!response.show_order_tracker,
+							show_form: isLeadPrompt ? { form_type: 'lead_generate', show: true } : (response.show_form || null),
+							form_type: isLeadPrompt,
+							form_filled: false,
 						},
 					]);
 				}
@@ -491,6 +496,8 @@ export default function ChatWidget({ settings, inline }) {
 		} catch (e) {
 			// Silently catch background fallback network error
 		}
+
+		aiResponseWaiting.current = false;
 	}, [sessionId, email, clearAgentWaitTimers]);
 
 	// AI Lead Capture State
@@ -502,27 +509,48 @@ export default function ChatWidget({ settings, inline }) {
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
 	const [leadFormSubmitting, setLeadFormSubmitting] = useState(false);
 	const [leadFormError, setLeadFormError] = useState('');
-	const [leadFormData, setLeadFormData] = useState({
-		name: loggedInUserName,
-		email: loggedInUserEmail,
-		phone: '',
-		company: '',
-		company_size: '',
-		budget: '',
-		timeline: '',
-		interest: pageProductOrTitle,
-		requirement: '',
-	});
+	const [closedFormIndexes, setClosedFormIndexes] = useState({});
+	const [formsDataByKey, setFormsDataByKey] = useState({});
+	const showLeadFormManuallyClosedRef = useRef(false);
+
+	const getFormKey = (msg, index) => {
+		const timestamp = msg?.created_at || (msg?.id ? String(msg.id) : `msg_${index}`);
+		const sender = msg?.sender_name || (msg?.role === 'user' ? 'customer' : 'bot');
+		return `${timestamp}_${sender}`;
+	};
+
+	const getFormDataForMessage = (msg, index) => {
+		const key = getFormKey(msg, index);
+		return formsDataByKey[key] || {
+			name: loggedInUserName,
+			email: loggedInUserEmail,
+			phone: '',
+			company: '',
+			company_size: '',
+			budget: '',
+			timeline: '',
+			interest: pageProductOrTitle,
+			requirement: '',
+		};
+	};
+
+	const updateFormDataForMessage = (msg, index, field, value) => {
+		const key = getFormKey(msg, index);
+		setFormsDataByKey((prev) => ({
+			...prev,
+			[key]: {
+				...getFormDataForMessage(msg, index),
+				[field]: value,
+			},
+		}));
+	};
 
 	// Feature 11: WooCommerce Sales & Order Tracker State
-	const [showOrderTracker, setShowOrderTracker] = useState(false);
 	const [orderLookupId, setOrderLookupId] = useState('');
 	const [orderLookupEmail, setOrderLookupEmail] = useState('');
 	const [orderLookupResult, setOrderLookupResult] = useState(null);
 	const [orderLookupLoading, setOrderLookupLoading] = useState(false);
 	const [orderLookupError, setOrderLookupError] = useState('');
-
-	const isWcActive = settings?.is_woocommerce_active !== false;
 
 	// AI Chatbot Session Keepalive / Heartbeat: ping every 25 seconds when widget is active
 	useEffect(() => {
@@ -534,7 +562,7 @@ export default function ChatWidget({ settings, inline }) {
 			path: '/dctc-ai/v1/support/session/heartbeat',
 			method: 'POST',
 			data: { session_id: sessionId },
-		}).catch(() => {});
+		}).catch(() => { });
 
 		const interval = setInterval(() => {
 			if (typeof document !== 'undefined' && document.hidden) return;
@@ -542,7 +570,7 @@ export default function ChatWidget({ settings, inline }) {
 				path: '/dctc-ai/v1/support/session/heartbeat',
 				method: 'POST',
 				data: { session_id: sessionId },
-			}).catch(() => {});
+			}).catch(() => { });
 		}, 25000); // 25 seconds
 
 		return () => clearInterval(interval);
@@ -811,6 +839,430 @@ export default function ChatWidget({ settings, inline }) {
 		);
 	};
 
+	const renderLeadCard = (message, msgIndex) => {
+		if (closedFormIndexes[msgIndex]) {
+			return null;
+		}
+
+		const formData = getFormDataForMessage(message, msgIndex);
+		const cardPrimaryColor = chatbot.primary_color || '#6366f1';
+
+		return createElement(
+			'div',
+			{
+				key: `lead_form_${getFormKey(message, msgIndex)}`,
+				className: 'dctc-ai-lead-card',
+				style: {
+					background: '#ffffff',
+					border: '1px solid #e2e8f0',
+					borderRadius: '12px',
+					padding: '1.25rem',
+					margin: '0.75rem 0 0.25rem 0',
+					boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.07)',
+					width: '100%',
+					boxSizing: 'border-box',
+				},
+			},
+			createElement(
+				'div',
+				{
+					style: {
+						display: 'flex',
+						justifyContent: 'space-between',
+						alignItems: 'flex-start',
+						marginBottom: '0.75rem',
+					},
+				},
+				createElement(
+					'div',
+					null,
+					createElement(
+						'strong',
+						{
+							style: {
+								display: 'block',
+								fontSize: '0.95rem',
+								color: '#0f172a',
+							},
+						},
+						chatbot.lead_form_title ||
+						__('Contact Our Team', 'dragwyb-click-to-chat')
+					),
+					createElement(
+						'span',
+						{
+							style: {
+								fontSize: '0.8rem',
+								color: '#64748b',
+							},
+						},
+						chatbot.lead_form_subtitle ||
+						__(
+							'Leave your details and our team will get back to you shortly.',
+							'dragwyb-click-to-chat'
+						)
+					)
+				),
+				createElement(
+					'button',
+					{
+						type: 'button',
+						onClick: () => {
+							setClosedFormIndexes((prev) => ({ ...prev, [msgIndex]: true }));
+						},
+						style: {
+							background: 'none',
+							border: 'none',
+							cursor: 'pointer',
+							color: '#94a3b8',
+							fontSize: '1rem',
+							padding: '2px 6px',
+						},
+						title: __('Close', 'dragwyb-click-to-chat'),
+					},
+					'✕'
+				)
+			),
+			createElement(
+				'form',
+				{
+					onSubmit: (e) => handleLeadSubmit(e, message, msgIndex),
+					style: {
+						display: 'flex',
+						flexDirection: 'column',
+						gap: '0.6rem',
+					},
+				},
+				(!chatbot.lead_fields || chatbot.lead_fields.name !== false) &&
+				createElement('input', {
+					type: 'text',
+					placeholder: __('Your Name', 'dragwyb-click-to-chat'),
+					value: formData.name,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'name', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				(!chatbot.lead_fields || chatbot.lead_fields.email !== false) &&
+				createElement('input', {
+					type: 'email',
+					placeholder: __(
+						'Your Email Address',
+						'dragwyb-click-to-chat'
+					),
+					value: formData.email,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'email', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				(!chatbot.lead_fields || chatbot.lead_fields.phone !== false) &&
+				createElement('input', {
+					type: 'tel',
+					placeholder: __(
+						'Your Phone / WhatsApp',
+						'dragwyb-click-to-chat'
+					),
+					value: formData.phone,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'phone', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				chatbot.lead_fields &&
+				chatbot.lead_fields.company &&
+				createElement('input', {
+					type: 'text',
+					placeholder: __(
+						'Company / Organization',
+						'dragwyb-click-to-chat'
+					),
+					value: formData.company,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'company', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				chatbot.lead_fields &&
+				chatbot.lead_fields.company_size &&
+				createElement(
+					'select',
+					{
+						value: formData.company_size,
+						onChange: (e) =>
+							updateFormDataForMessage(message, msgIndex, 'company_size', e.target.value),
+						style: {
+							padding: '0.45rem 0.75rem',
+							borderRadius: '6px',
+							border: '1px solid #cbd5e1',
+							fontSize: '0.85rem',
+							background: '#ffffff',
+						},
+					},
+					createElement(
+						'option',
+						{ value: '' },
+						__(
+							'-- Select Company Size --',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '1-10' },
+						__(
+							'1 - 10 employees',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '11-50' },
+						__(
+							'11 - 50 employees',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '51-200' },
+						__(
+							'51 - 200 employees',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '200+' },
+						__(
+							'200+ Enterprise',
+							'dragwyb-click-to-chat'
+						)
+					)
+				),
+				chatbot.lead_fields &&
+				chatbot.lead_fields.budget &&
+				createElement(
+					'select',
+					{
+						value: formData.budget,
+						onChange: (e) =>
+							updateFormDataForMessage(message, msgIndex, 'budget', e.target.value),
+						style: {
+							padding: '0.45rem 0.75rem',
+							borderRadius: '6px',
+							border: '1px solid #cbd5e1',
+							fontSize: '0.85rem',
+							background: '#ffffff',
+						},
+					},
+					createElement(
+						'option',
+						{ value: '' },
+						__(
+							'-- Select Budget Range --',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '< $1,000' },
+						'< $1,000'
+					),
+					createElement(
+						'option',
+						{ value: '$1,000 - $5,000' },
+						'$1,000 - $5,000'
+					),
+					createElement(
+						'option',
+						{ value: '$5,000 - $20,000' },
+						'$5,000 - $20,000'
+					),
+					createElement(
+						'option',
+						{ value: '$20,000+' },
+						'$20,000+'
+					)
+				),
+				chatbot.lead_fields &&
+				chatbot.lead_fields.timeline &&
+				createElement(
+					'select',
+					{
+						value: formData.timeline,
+						onChange: (e) =>
+							updateFormDataForMessage(message, msgIndex, 'timeline', e.target.value),
+						style: {
+							padding: '0.45rem 0.75rem',
+							borderRadius: '6px',
+							border: '1px solid #cbd5e1',
+							fontSize: '0.85rem',
+							background: '#ffffff',
+						},
+					},
+					createElement(
+						'option',
+						{ value: '' },
+						__(
+							'-- Purchase Timeline --',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: 'Immediate / ASAP' },
+						__(
+							'Immediate / ASAP',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: 'Within 1 Month' },
+						__(
+							'Within 1 Month',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: '1 - 3 Months' },
+						__(
+							'1 - 3 Months',
+							'dragwyb-click-to-chat'
+						)
+					),
+					createElement(
+						'option',
+						{ value: 'Just Exploring' },
+						__(
+							'Just Exploring',
+							'dragwyb-click-to-chat'
+						)
+					)
+				),
+				chatbot.lead_fields &&
+				chatbot.lead_fields.interest &&
+				createElement('input', {
+					type: 'text',
+					placeholder: __(
+						'Product / Service Interest',
+						'dragwyb-click-to-chat'
+					),
+					value: formData.interest,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'interest', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+					},
+				}),
+				(!chatbot.lead_fields || chatbot.lead_fields.requirement !== false) &&
+				createElement('textarea', {
+					rows: 2,
+					placeholder: __(
+						'Specific Requirements or Questions',
+						'dragwyb-click-to-chat'
+					),
+					value: formData.requirement,
+					onChange: (e) =>
+						updateFormDataForMessage(message, msgIndex, 'requirement', e.target.value),
+					style: {
+						padding: '0.45rem 0.75rem',
+						borderRadius: '6px',
+						border: '1px solid #cbd5e1',
+						fontSize: '0.85rem',
+						resize: 'vertical',
+					},
+				}),
+				leadFormError &&
+				createElement(
+					'span',
+					{
+						style: {
+							color: '#ef4444',
+							fontSize: '0.8rem',
+						},
+					},
+					leadFormError
+				),
+				createElement(
+					'div',
+					{
+						style: {
+							display: 'flex',
+							justifyContent: 'flex-end',
+							gap: '0.5rem',
+							marginTop: '0.3rem',
+						},
+					},
+					createElement(
+						'button',
+						{
+							type: 'button',
+							onClick: () => {
+								setClosedFormIndexes((prev) => ({ ...prev, [msgIndex]: true }));
+							},
+							style: {
+								padding: '0.4rem 0.8rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								background: '#f8fafc',
+								color: '#475569',
+								fontSize: '0.85rem',
+								cursor: 'pointer',
+							},
+						},
+						__('Cancel', 'dragwyb-click-to-chat')
+					),
+					createElement(
+						'button',
+						{
+							type: 'submit',
+							disabled: leadFormSubmitting,
+							style: {
+								padding: '0.5rem 1rem',
+								borderRadius: '6px',
+								border: 'none',
+								background: cardPrimaryColor,
+								color: '#ffffff',
+								fontSize: '0.85rem',
+								fontWeight: 600,
+								cursor: leadFormSubmitting
+									? 'not-allowed'
+									: 'pointer',
+								opacity: leadFormSubmitting ? 0.7 : 1,
+							},
+						},
+						leadFormSubmitting
+							? __('Submitting...', 'dragwyb-click-to-chat')
+							: chatbot.lead_submit_button_text ||
+							__('Submit Request', 'dragwyb-click-to-chat')
+					)
+				)
+			)
+		);
+	};
+
 	const messagesEndRef = useRef(null);
 	const inputRef = useRef(null);
 	const fileInputRef = useRef(null);
@@ -821,6 +1273,7 @@ export default function ChatWidget({ settings, inline }) {
 	const isMountedRef = useRef(true);
 	const baseInputRef = useRef('');
 	const attachmentsRef = useRef(attachments);
+	const pollSessionRunningRef = useRef(false);
 	attachmentsRef.current = attachments;
 
 	const isAnyUploading = attachments.some((a) => a.status === 'uploading');
@@ -846,10 +1299,12 @@ export default function ChatWidget({ settings, inline }) {
 		let isCancelled = false;
 
 		const pollSession = async () => {
-			if (typeof document !== 'undefined' && document.hidden) {
+			if ((typeof document !== 'undefined' && document.hidden) || pollSessionRunningRef.current) {
 				return;
 			}
+
 			try {
+				pollSessionRunningRef.current = true;
 				const res = await apiFetch({
 					path: `/dctc-ai/v1/chat/sync?session_id=${encodeURIComponent(sessionId)}`,
 					method: 'GET',
@@ -860,14 +1315,13 @@ export default function ChatWidget({ settings, inline }) {
 				}
 
 				if (res.has_ticket && res.ticket) {
-					const isClosed = ['resolved', 'closed'].includes(res.ticket.status);
-					setHasActiveTicket(!isClosed);
-					setActiveTicketInfo(res.ticket);
 					if (res.ticket.agent_name) {
 						setAssignedAgentName(res.ticket.agent_name);
 					}
-				} else {
-					setHasActiveTicket(false);
+				}
+
+				if (res.show_lead_form && !leadFormSubmitted && !showLeadFormManuallyClosedRef.current) {
+					setShowLeadForm(true);
 				}
 
 				const currentControlMode = res.control_mode || 'ai';
@@ -899,9 +1353,10 @@ export default function ChatWidget({ settings, inline }) {
 						const isCustomerLastMsg = lastMsg && (lastMsg.sender_type === 'customer' || lastMsg.role === 'user');
 						const hasAgentOrBotReply = lastMsg && (lastMsg.sender_type === 'agent' || lastMsg.role === 'assistant' || lastMsg.role === 'bot');
 
+						const isAiResponding = Boolean(aiResponseWaiting.current || res.ai_response_waiting || res.ai_response);
+
 						if (currentControlMode === 'human' && isCustomerLastMsg) {
 							// In human control mode waiting for human agent reply: keep typing dots & waiting text alive
-							setIsWaitingForAgent(true);
 							setIsLoading(true);
 
 							if (!wait30sTimerRef.current) {
@@ -921,24 +1376,54 @@ export default function ChatWidget({ settings, inline }) {
 									}
 								}, Math.max(10, maxWaitSec) * 1000);
 							}
+						} else if (isAiResponding) {
+							// Keep loading active while AI response is waiting/generating
+							setIsLoading(true);
 						} else if (hasAgentOrBotReply) {
 							clearAgentWaitTimers();
-							setIsWaitingForAgent(false);
 							setWaitingAgentStatusText('');
 							setIsLoading(false);
 						}
 
 						setMessages((prev) => {
-							const formattedMsgs = validServerMsgs.map((m, idx) => ({
-								id: m.id || `srv_${idx}_${m.created_at || idx}`,
-								role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
-								content: m.content || '',
-								sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
-								sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
-								is_agent: m.sender_type === 'agent',
-								created_at: m.created_at || '',
-								sources: m.sources || [],
-							}));
+							// If AI response is in progress, only merge/update if a new non-AI message (e.g. from human agent or user) was added
+							if (isAiResponding) {
+								const serverNonAiMsgs = validServerMsgs.filter(
+									(m) => m && m.sender_type !== 'ai_agent' && m.sender_type !== 'bot' && m.role !== 'assistant'
+								);
+								const prevNonAiMsgs = (prev || []).filter(
+									(m) => m && m.sender_type !== 'ai_agent' && m.sender_type !== 'bot' && m.role !== 'assistant'
+								);
+
+								if (serverNonAiMsgs.length <= prevNonAiMsgs.length) {
+									return prev;
+								}
+							}
+
+							const formattedMsgs = validServerMsgs.map((m, idx) => {
+								const rawShowForm = m.show_form || (m.form_type ? { form_type: 'lead_generate', show: !m.form_filled } : null);
+								const isLeadPromptText = typeof m.content === 'string' && (m.content.toLowerCase().includes('form below') || m.content.toLowerCase().includes('fill out the form'));
+								const showFormObj = rawShowForm
+									? {
+										form_type: rawShowForm.form_type || 'lead_generate',
+										show: rawShowForm.show === true || rawShowForm.show === 'true' || rawShowForm.show === 1,
+									}
+									: (isLeadPromptText && !m.form_filled ? { form_type: 'lead_generate', show: true } : null);
+
+								return {
+									id: m.id || `srv_${idx}_${m.created_at || idx}`,
+									role: m.sender_type === 'agent' ? 'bot' : (m.role === 'assistant' ? 'bot' : (m.role === 'user' ? 'user' : 'bot')),
+									content: m.content || '',
+									sender_type: m.sender_type || (m.role === 'assistant' ? 'bot' : 'customer'),
+									sender_name: m.sender_name || (m.sender_type === 'agent' ? (res.ticket?.agent_name || __('Support Agent', 'dragwyb-click-to-chat')) : ''),
+									is_agent: m.sender_type === 'agent',
+									created_at: m.created_at || '',
+									sources: m.sources || [],
+									show_form: showFormObj,
+									form_type: Boolean(showFormObj && showFormObj.show),
+									form_filled: Boolean(m.form_filled || (showFormObj && !showFormObj.show)),
+								};
+							});
 
 							let mergedMsgs = [...formattedMsgs];
 
@@ -957,7 +1442,7 @@ export default function ChatWidget({ settings, inline }) {
 									}
 								}
 
-								// Preserve rich UI metadata (sources, action_buttons, products, attachments, show_order_tracker)
+								// Preserve rich UI metadata (sources, action_buttons, products, attachments, show_order_tracker, show_form)
 								mergedMsgs = mergedMsgs.map((m) => {
 									const matchingPrev = prev.find(p => p.content === m.content && p.role === m.role);
 									if (matchingPrev) {
@@ -968,6 +1453,9 @@ export default function ChatWidget({ settings, inline }) {
 											products: matchingPrev.products || [],
 											attachments: matchingPrev.attachments || [],
 											show_order_tracker: matchingPrev.show_order_tracker || false,
+											show_form: m.show_form !== undefined ? m.show_form : (matchingPrev.show_form || null),
+											form_type: m.form_type !== undefined ? m.form_type : (matchingPrev.form_type || false),
+											form_filled: m.form_filled !== undefined ? m.form_filled : (matchingPrev.form_filled || false),
 										};
 									}
 									return m;
@@ -976,7 +1464,14 @@ export default function ChatWidget({ settings, inline }) {
 
 							if (
 								prev.length === mergedMsgs.length &&
-								prev.every((p, i) => p.content === mergedMsgs[i].content && p.role === mergedMsgs[i].role && p.is_agent === mergedMsgs[i].is_agent)
+								prev.every((p, i) =>
+									p.content === mergedMsgs[i].content &&
+									p.role === mergedMsgs[i].role &&
+									p.is_agent === mergedMsgs[i].is_agent &&
+									JSON.stringify(p.show_form) === JSON.stringify(mergedMsgs[i].show_form) &&
+									p.form_type === mergedMsgs[i].form_type &&
+									p.form_filled === mergedMsgs[i].form_filled
+								)
 							) {
 								return prev;
 							}
@@ -988,6 +1483,8 @@ export default function ChatWidget({ settings, inline }) {
 			} catch (err) {
 				// Silently catch background poll errors
 			}
+
+			pollSessionRunningRef.current = false;
 		};
 
 		// Initial check
@@ -1317,7 +1814,7 @@ export default function ChatWidget({ settings, inline }) {
 		if (messagesEndRef.current) {
 			messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
 		}
-	}, [messages, isLoading, attachments, showLeadForm, showOrderTracker]);
+	}, [messages, isLoading, attachments, showLeadForm]);
 
 
 
@@ -1609,6 +2106,7 @@ export default function ChatWidget({ settings, inline }) {
 
 		setMessages((prev) => [...prev, userMessageObj]);
 		setShowLeadForm(false);
+		showLeadFormManuallyClosedRef.current = false;
 
 		// Clean up object URLs and reset composer attachment tray
 		attachments.forEach((a) => {
@@ -1630,6 +2128,7 @@ export default function ChatWidget({ settings, inline }) {
 		if (promptOverride === null) {
 			setInput('');
 		}
+		aiResponseWaiting.current = true;
 		setIsLoading(true);
 
 		if (inputRef.current) {
@@ -1669,7 +2168,6 @@ export default function ChatWidget({ settings, inline }) {
 
 				if (response.is_human_handled) {
 					// Human control mode active: do NOT show a static text notice
-					setIsWaitingForAgent(true);
 					setIsLoading(true); // Keep typing animation active
 
 					clearAgentWaitTimers();
@@ -1692,8 +2190,6 @@ export default function ChatWidget({ settings, inline }) {
 
 					if (response.has_ticket && response.ticket) {
 						const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
-						setHasActiveTicket(!isClosed);
-						setActiveTicketInfo(response.ticket);
 						if (response.ticket.agent_name) {
 							setAssignedAgentName(response.ticket.agent_name);
 						}
@@ -1705,7 +2201,6 @@ export default function ChatWidget({ settings, inline }) {
 				}
 
 				clearAgentWaitTimers();
-				setIsWaitingForAgent(false);
 				setWaitingAgentStatusText('');
 
 				let botMessage = response.message;
@@ -1728,41 +2223,65 @@ export default function ChatWidget({ settings, inline }) {
 					? response.products
 					: [];
 
+				const isLeadPrompt = Boolean(
+					response.show_lead_form ||
+					(typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form')))
+				);
+
+				const botCreatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+				const botSenderName = botName || 'AI Assistant';
+
+				if (response.lead_data && isLeadPrompt) {
+					const formKey = `${botCreatedAt}_${botSenderName}`;
+					setFormsDataByKey((prev) => ({
+						...prev,
+						[formKey]: {
+							name: response.lead_data.name || loggedInUserName,
+							email: response.lead_data.email || loggedInUserEmail,
+							phone: response.lead_data.phone || '',
+							company: response.lead_data.company || '',
+							company_size: '',
+							budget: '',
+							timeline: '',
+							interest: response.lead_data.interest || pageProductOrTitle,
+							requirement: response.lead_data.requirement || '',
+						},
+					}));
+				}
+
 				setMessages((prev) => [
-					...prev,
+					...prev.map((m) => {
+						if (isLeadPrompt && m.show_form && m.show_form.show && !m.show_form.form_filled) {
+							return {
+								...m,
+								show_form: { ...m.show_form, show: false },
+							};
+						}
+						return m;
+					}),
 					{
 						role: 'bot',
+						sender_type: 'ai_agent',
+						sender_name: botSenderName,
+						created_at: botCreatedAt,
 						content: botMessage,
 						sources: responseSources,
 						action_buttons: responseActionButtons,
 						products: responseProducts,
 						show_order_tracker: !!response.show_order_tracker,
+						show_form: isLeadPrompt ? { form_type: 'lead_generate', show: true, form_filled: false } : (response.show_form || null),
 					},
 				]);
 
-
-				if (response.lead_data) {
-					setLeadFormData((prev) => ({
-						...prev,
-						name: response.lead_data.name || prev.name || loggedInUserName,
-						email: response.lead_data.email || prev.email || loggedInUserEmail,
-						phone: response.lead_data.phone || prev.phone,
-						company: response.lead_data.company || prev.company,
-						interest: response.lead_data.interest || prev.interest || pageProductOrTitle,
-						requirement: response.lead_data.requirement || prev.requirement,
-					}));
-				}
-
-				if (response.show_lead_form && !leadFormSubmitted) {
+				if (isLeadPrompt && !leadFormSubmitted) {
 					setShowLeadForm(true);
-				} else if (!response.show_lead_form) {
+					showLeadFormManuallyClosedRef.current = false;
+				} else if (!isLeadPrompt) {
 					setShowLeadForm(false);
 				}
 
 				if (response.has_ticket && response.ticket) {
 					const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
-					setHasActiveTicket(!isClosed);
-					setActiveTicketInfo(response.ticket);
 					if (response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);
 					}
@@ -1800,6 +2319,7 @@ export default function ChatWidget({ settings, inline }) {
 				]);
 			}
 		} finally {
+			aiResponseWaiting.current = false;
 			if (isMountedRef.current) {
 				setIsLoading(false);
 			}
@@ -1821,11 +2341,8 @@ export default function ChatWidget({ settings, inline }) {
 				setPendingPrompt('');
 				setClearAllowed(true);
 				setShowLeadForm(false);
-				setHasActiveTicket(false);
-				setActiveTicketInfo(null);
 				setActiveControlMode('ai');
 				setAssignedAgentName('');
-				setIsWaitingForAgent(false);
 				setWaitingAgentStatusText('');
 				clearAgentWaitTimers();
 			}
@@ -1839,11 +2356,8 @@ export default function ChatWidget({ settings, inline }) {
 			setSessionId(newId);
 			setClearAllowed(true);
 			setShowLeadForm(false);
-			setHasActiveTicket(false);
-			setActiveTicketInfo(null);
 			setActiveControlMode('ai');
 			setAssignedAgentName('');
-			setIsWaitingForAgent(false);
 			setWaitingAgentStatusText('');
 			clearAgentWaitTimers();
 		}
@@ -1887,16 +2401,28 @@ export default function ChatWidget({ settings, inline }) {
 		}
 	};
 
-	const handleLeadSubmit = async (e) => {
+	const handleLeadSubmit = async (e, targetMessage = null, msgIndex = null) => {
 		if (e && e.preventDefault) {
 			e.preventDefault();
 		}
 		setLeadFormError('');
 
+		const currentFormData = targetMessage ? getFormDataForMessage(targetMessage, msgIndex) : {
+			name: loggedInUserName,
+			email: loggedInUserEmail,
+			phone: '',
+			company: '',
+			company_size: '',
+			budget: '',
+			timeline: '',
+			interest: pageProductOrTitle,
+			requirement: '',
+		};
+
 		if (
-			!leadFormData.name &&
-			!leadFormData.email &&
-			!leadFormData.phone
+			!currentFormData.name &&
+			!currentFormData.email &&
+			!currentFormData.phone
 		) {
 			setLeadFormError(
 				__(
@@ -1908,8 +2434,8 @@ export default function ChatWidget({ settings, inline }) {
 		}
 
 		if (
-			leadFormData.email &&
-			! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadFormData.email)
+			currentFormData.email &&
+			! /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(currentFormData.email)
 		) {
 			setLeadFormError(
 				__(
@@ -1926,7 +2452,7 @@ export default function ChatWidget({ settings, inline }) {
 				path: '/dctc-ai/v1/leads/capture',
 				method: 'POST',
 				data: {
-					...leadFormData,
+					...currentFormData,
 					session_id: sessionId,
 					source_url: window.location.href,
 				},
@@ -1936,9 +2462,15 @@ export default function ChatWidget({ settings, inline }) {
 				setLeadFormSubmitted(true);
 				setShowLeadForm(false);
 				setMessages((prev) => [
-					...prev,
+					...prev.map((m) => ({
+						...m,
+						show_form: m.show_form ? { ...m.show_form, show: false, form_filled: true } : null,
+					})),
 					{
 						role: 'bot',
+						sender_type: 'ai_agent',
+						sender_name: botName || 'AI Assistant',
+						created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
 						content:
 							res.message ||
 							__(
@@ -2630,7 +3162,13 @@ export default function ChatWidget({ settings, inline }) {
 									)
 									: null,
 							message.show_order_tracker &&
-							renderOrderTrackerCard(message, index)
+							renderOrderTrackerCard(message, index),
+							message.show_form &&
+							message.show_form.show === true &&
+							message.show_form.form_type === 'lead_generate' &&
+							!message.show_form.form_filled &&
+							!leadFormSubmitted &&
+							renderLeadCard(message, index)
 						),
 						!isBot && showUserAvatarInChat &&
 						createElement(
@@ -2677,443 +3215,6 @@ export default function ChatWidget({ settings, inline }) {
 							createElement('span', null),
 							createElement('span', null),
 							createElement('span', null)
-						)
-					)
-				),
-				// Interactive Lead Capture Card
-				showLeadForm &&
-				createElement(
-					'div',
-					{
-						className: 'dctc-ai-lead-card',
-						style: {
-							background: '#ffffff',
-							border: '1px solid #e2e8f0',
-							borderRadius: '12px',
-							padding: '1.25rem',
-							margin: '0.75rem 0',
-							boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-						},
-					},
-					createElement(
-						'div',
-						{
-							style: {
-								display: 'flex',
-								justifyContent: 'space-between',
-								alignItems: 'flex-start',
-								marginBottom: '0.75rem',
-							},
-						},
-						createElement(
-							'div',
-							null,
-							createElement(
-								'strong',
-								{
-									style: {
-										display: 'block',
-										fontSize: '0.95rem',
-										color: '#0f172a',
-									},
-								},
-								chatbot.lead_form_title ||
-								__('Contact Our Team', 'dragwyb-click-to-chat')
-							),
-							createElement(
-								'span',
-								{
-									style: {
-										fontSize: '0.8rem',
-										color: '#64748b',
-									},
-								},
-								chatbot.lead_form_subtitle ||
-								__(
-									'Leave your details and our team will get back to you shortly.',
-									'dragwyb-click-to-chat'
-								)
-							)
-						),
-						createElement(
-							'button',
-							{
-								type: 'button',
-								onClick: () => setShowLeadForm(false),
-								style: {
-									background: 'none',
-									border: 'none',
-									cursor: 'pointer',
-									color: '#94a3b8',
-									fontSize: '1rem',
-									padding: '2px 6px',
-								},
-								title: __('Close', 'dragwyb-click-to-chat'),
-							},
-							'✕'
-						)
-					),
-					createElement(
-						'form',
-						{
-							onSubmit: handleLeadSubmit,
-							style: {
-								display: 'flex',
-								flexDirection: 'column',
-								gap: '0.6rem',
-							},
-						},
-						(!chatbot.lead_fields || chatbot.lead_fields.name !== false) &&
-						createElement('input', {
-							type: 'text',
-							placeholder: __('Your Name', 'dragwyb-click-to-chat'),
-							value: leadFormData.name,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									name: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						(!chatbot.lead_fields || chatbot.lead_fields.email !== false) &&
-						createElement('input', {
-							type: 'email',
-							placeholder: __(
-								'Your Email Address',
-								'dragwyb-click-to-chat'
-							),
-							value: leadFormData.email,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									email: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						(!chatbot.lead_fields || chatbot.lead_fields.phone !== false) &&
-						createElement('input', {
-							type: 'tel',
-							placeholder: __(
-								'Your Phone / WhatsApp',
-								'dragwyb-click-to-chat'
-							),
-							value: leadFormData.phone,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									phone: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						chatbot.lead_fields &&
-						chatbot.lead_fields.company &&
-						createElement('input', {
-							type: 'text',
-							placeholder: __(
-								'Company / Organization',
-								'dragwyb-click-to-chat'
-							),
-							value: leadFormData.company,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									company: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						chatbot.lead_fields &&
-						chatbot.lead_fields.company_size &&
-						createElement(
-							'select',
-							{
-								value: leadFormData.company_size,
-								onChange: (e) =>
-									setLeadFormData({
-										...leadFormData,
-										company_size: e.target.value,
-									}),
-								style: {
-									padding: '0.45rem 0.75rem',
-									borderRadius: '6px',
-									border: '1px solid #cbd5e1',
-									fontSize: '0.85rem',
-									background: '#ffffff',
-								},
-							},
-							createElement(
-								'option',
-								{ value: '' },
-								__(
-									'-- Select Company Size --',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '1-10' },
-								__(
-									'1 - 10 employees',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '11-50' },
-								__(
-									'11 - 50 employees',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '51-200' },
-								__(
-									'51 - 200 employees',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '200+' },
-								__(
-									'200+ Enterprise',
-									'dragwyb-click-to-chat'
-								)
-							)
-						),
-						chatbot.lead_fields &&
-						chatbot.lead_fields.budget &&
-						createElement(
-							'select',
-							{
-								value: leadFormData.budget,
-								onChange: (e) =>
-									setLeadFormData({
-										...leadFormData,
-										budget: e.target.value,
-									}),
-								style: {
-									padding: '0.45rem 0.75rem',
-									borderRadius: '6px',
-									border: '1px solid #cbd5e1',
-									fontSize: '0.85rem',
-									background: '#ffffff',
-								},
-							},
-							createElement(
-								'option',
-								{ value: '' },
-								__(
-									'-- Select Budget Range --',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '< $1,000' },
-								'< $1,000'
-							),
-							createElement(
-								'option',
-								{ value: '$1,000 - $5,000' },
-								'$1,000 - $5,000'
-							),
-							createElement(
-								'option',
-								{ value: '$5,000 - $20,000' },
-								'$5,000 - $20,000'
-							),
-							createElement(
-								'option',
-								{ value: '$20,000+' },
-								'$20,000+'
-							)
-						),
-						chatbot.lead_fields &&
-						chatbot.lead_fields.timeline &&
-						createElement(
-							'select',
-							{
-								value: leadFormData.timeline,
-								onChange: (e) =>
-									setLeadFormData({
-										...leadFormData,
-										timeline: e.target.value,
-									}),
-								style: {
-									padding: '0.45rem 0.75rem',
-									borderRadius: '6px',
-									border: '1px solid #cbd5e1',
-									fontSize: '0.85rem',
-									background: '#ffffff',
-								},
-							},
-							createElement(
-								'option',
-								{ value: '' },
-								__(
-									'-- Purchase Timeline --',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: 'Immediate / ASAP' },
-								__(
-									'Immediate / ASAP',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: 'Within 1 Month' },
-								__(
-									'Within 1 Month',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: '1 - 3 Months' },
-								__(
-									'1 - 3 Months',
-									'dragwyb-click-to-chat'
-								)
-							),
-							createElement(
-								'option',
-								{ value: 'Just Exploring' },
-								__(
-									'Just Exploring',
-									'dragwyb-click-to-chat'
-								)
-							)
-						),
-						chatbot.lead_fields &&
-						chatbot.lead_fields.interest &&
-						createElement('input', {
-							type: 'text',
-							placeholder: __(
-								'Product / Service of Interest',
-								'dragwyb-click-to-chat'
-							),
-							value: leadFormData.interest,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									interest: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-							},
-						}),
-						(!chatbot.lead_fields || chatbot.lead_fields.requirement !== false) &&
-						createElement('textarea', {
-							placeholder: __(
-								'How can we help you?',
-								'dragwyb-click-to-chat'
-							),
-							rows: 2,
-							value: leadFormData.requirement,
-							onChange: (e) =>
-								setLeadFormData({
-									...leadFormData,
-									requirement: e.target.value,
-								}),
-							style: {
-								padding: '0.45rem 0.75rem',
-								borderRadius: '6px',
-								border: '1px solid #cbd5e1',
-								fontSize: '0.85rem',
-								resize: 'vertical',
-							},
-						}),
-						leadFormError &&
-						createElement(
-							'span',
-							{
-								style: {
-									color: '#ef4444',
-									fontSize: '0.8rem',
-								},
-							},
-							leadFormError
-						),
-						createElement(
-							'div',
-							{
-								style: {
-									display: 'flex',
-									justifyContent: 'flex-end',
-									gap: '0.5rem',
-									marginTop: '0.3rem',
-								},
-							},
-							createElement(
-								'button',
-								{
-									type: 'button',
-									onClick: () => setShowLeadForm(false),
-									style: {
-										padding: '0.4rem 0.8rem',
-										borderRadius: '6px',
-										border: '1px solid #cbd5e1',
-										background: '#f8fafc',
-										color: '#475569',
-										fontSize: '0.85rem',
-										cursor: 'pointer',
-									},
-								},
-								__('Cancel', 'dragwyb-click-to-chat')
-							),
-							createElement(
-								'button',
-								{
-									type: 'submit',
-									disabled: leadFormSubmitting,
-									style: {
-										padding: '0.4rem 0.9rem',
-										borderRadius: '6px',
-										border: 'none',
-										background: primaryColor,
-										color: '#ffffff',
-										fontSize: '0.85rem',
-										fontWeight: 600,
-										cursor: leadFormSubmitting
-											? 'not-allowed'
-											: 'pointer',
-										opacity: leadFormSubmitting
-											? 0.7
-											: 1,
-									},
-								},
-								leadFormSubmitting
-									? __('Sending...', 'dragwyb-click-to-chat')
-									: __('Submit Info', 'dragwyb-click-to-chat')
-							)
 						)
 					)
 				),

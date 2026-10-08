@@ -74,6 +74,7 @@ class DCTC_Support_Manager {
 		add_action( 'rest_api_init', array( $rest_controller, 'register_routes' ) );
 
 		DCTC_Support_Portal::init();
+		DCTC_Support_Notification_Service::init();
 
 		// Admin Menu & Standalone Support Assets
 		add_action( 'admin_menu', array( $this, 'register_admin_menus' ), 25 );
