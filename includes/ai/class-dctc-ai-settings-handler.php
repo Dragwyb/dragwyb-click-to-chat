@@ -25,6 +25,7 @@ require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-usage-tracker.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-leads-controller.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-woocommerce.php';
 require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-tool-registry.php';
+require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-data-sanitizer.php';
 
 /**
  * Class DCTC_AI_Settings_Handler
@@ -458,7 +459,9 @@ class DCTC_AI_Settings_Handler {
 			array(
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $wc_controller, 'rest_lookup_order' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => function ( $request ) {
+					return is_user_logged_in() || current_user_can( 'read' );
+				},
 			)
 		);
 
@@ -494,10 +497,30 @@ class DCTC_AI_Settings_Handler {
 						'session_id' => sanitize_text_field( $params['session_id'] ?? '' ),
 						'email'      => sanitize_email( $params['email'] ?? '' ),
 					);
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-tool-registry.php';
 					$res       = DCTC_AI_Tool_Registry::execute_tool( $tool_name, $args, $context );
 					return new \WP_REST_Response( $res, ! empty( $res['success'] ) ? 200 : 400 );
 				},
-				'permission_callback' => '__return_true',
+				'permission_callback' => function ( $request ) {
+					$params    = $request->get_json_params();
+					$tool_name = sanitize_key( $params['tool'] ?? '' );
+					if ( empty( $tool_name ) ) {
+						return false;
+					}
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-tool-registry.php';
+					$tools = DCTC_AI_Tool_Registry::get_all_tools();
+					if ( ! isset( $tools[ $tool_name ] ) || empty( $tools[ $tool_name ]['enabled'] ) ) {
+						return false;
+					}
+					$tool = $tools[ $tool_name ];
+					if ( ! empty( $tool['requires_admin'] ) && ! current_user_can( 'manage_options' ) ) {
+						return false;
+					}
+					if ( is_callable( $tool['permission_callback'] ) ) {
+						return (bool) call_user_func( $tool['permission_callback'], (array) ( $params['arguments'] ?? array() ), array() );
+					}
+					return true;
+				},
 			)
 		);
 
@@ -605,7 +628,23 @@ class DCTC_AI_Settings_Handler {
 					$result = DCTC_AI_Abilities::execute_ability( $ability_name, $args, $context );
 					return new \WP_REST_Response( $result, ! empty( $result['success'] ) ? 200 : 400 );
 				},
-				'permission_callback' => '__return_true',
+				'permission_callback' => function ( $request ) {
+					$ability_name = sanitize_text_field( $request->get_param( 'ability' ) );
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+					$ability = DCTC_AI_Abilities::get_ability( $ability_name );
+					if ( ! $ability ) {
+						return false;
+					}
+					if ( ! empty( $ability['requires_auth'] ) && ! is_user_logged_in() ) {
+						return false;
+					}
+					if ( is_callable( $ability['permission_callback'] ) ) {
+						$params = $request->get_json_params() ?: array();
+						$args   = isset( $params['arguments'] ) && is_array( $params['arguments'] ) ? $params['arguments'] : $params;
+						return (bool) call_user_func( $ability['permission_callback'], $args, array() );
+					}
+					return true;
+				},
 			)
 		);
 
@@ -636,7 +675,23 @@ class DCTC_AI_Settings_Handler {
 			array(
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->mcp_controller, 'execute_tool' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => function ( $request ) {
+					$tool_name = sanitize_text_field( $request->get_param( 'tool' ) );
+					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
+					$ability = DCTC_AI_Abilities::get_ability( $tool_name );
+					if ( ! $ability ) {
+						return false;
+					}
+					if ( ! empty( $ability['requires_auth'] ) && ! is_user_logged_in() ) {
+						return false;
+					}
+					if ( is_callable( $ability['permission_callback'] ) ) {
+						$params = $request->get_json_params() ?: array();
+						$args   = isset( $params['arguments'] ) && is_array( $params['arguments'] ) ? $params['arguments'] : $params;
+						return (bool) call_user_func( $ability['permission_callback'], $args, array() );
+					}
+					return true;
+				},
 			)
 		);
 

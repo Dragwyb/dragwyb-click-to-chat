@@ -485,9 +485,17 @@ class DCTC_AI_Chat_Controller {
 		 */
 		$system_message = apply_filters( 'dctc_ai_chat_system_prompt', $system_message, $session_id, $bot );
 
+		// Security: Redact sensitive credentials, password hashes, payment PANs, and secret keys before sending to AI
+		if ( class_exists( 'DCTC_AI_Data_Sanitizer' ) ) {
+			$system_message = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $system_message );
+			$clean_prompt   = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $prompt );
+		} else {
+			$clean_prompt = $prompt;
+		}
+
 		try {
 			$ai_result = $this->call_ai_api(
-				$prompt,
+				$clean_prompt,
 				$system_message,
 				$provider,
 				$model_id,
@@ -499,6 +507,11 @@ class DCTC_AI_Chat_Controller {
 			$ai_message    = isset( $ai_result['message'] ) ? $ai_result['message'] : '';
 			$used_provider = isset( $ai_result['provider'] ) ? $ai_result['provider'] : $provider;
 			$used_model    = isset( $ai_result['model'] ) ? $ai_result['model'] : $model_id;
+
+			// Security: Sanitize AI response against internal errors, credentials, and leaked system traces
+			if ( class_exists( 'DCTC_AI_Data_Sanitizer' ) ) {
+				$ai_message = DCTC_AI_Data_Sanitizer::sanitize_ai_response( $ai_message );
+			}
 
 			/**
 			 * Filters the raw AI assistant response text.

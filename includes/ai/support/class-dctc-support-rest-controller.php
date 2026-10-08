@@ -1684,15 +1684,65 @@ class DCTC_Support_REST_Controller {
 
 		if ( $user_id ) {
 			$params['customer_wp_user_id'] = $user_id;
+		} else {
+			$guest_token = $request->get_header( 'X-Guest-Token' );
+			if ( ! empty( $guest_token ) ) {
+				$params['guest_access_token'] = sanitize_text_field( $guest_token );
+			} else {
+				// Logged-out visitor with no guest token has no tickets
+				return new WP_REST_Response(
+					array(
+						'success' => true,
+						'tickets' => array(),
+						'total'   => 0,
+						'pages'   => 1,
+					),
+					200
+				);
+			}
 		}
 
 		$result = DCTC_Support_Ticket_Service::get_tickets( $params );
+
+		// Security: Strip internal notes and sensitive staff-only metadata from all tickets returned to portal
+		if ( ! empty( $result['tickets'] ) && is_array( $result['tickets'] ) ) {
+			foreach ( $result['tickets'] as &$t ) {
+				unset( $t['notes'], $t['internal_notes'], $t['ai_classification_confidence'] );
+			}
+		}
+
 		return new WP_REST_Response( array_merge( array( 'success' => true ), $result ), 200 );
 	}
 
 	public function create_portal_ticket( $request ) {
 		$params  = $request->get_json_params();
 		$user_id = get_current_user_id();
+
+		// If user is logged out, verify that guest ticket submissions are enabled
+		if ( ! $user_id ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
+			$portal_settings = DCTC_Support_Portal::get_settings();
+			if ( empty( $portal_settings['enable_guest_ticket_form'] ) ) {
+				return new WP_REST_Response(
+					array(
+						'success' => false,
+						'message' => __( 'Guest ticket submissions are disabled. Please log in to your account to submit a ticket.', 'dragwyb-click-to-chat' ),
+					),
+					403
+				);
+			}
+
+			// Require visitor name and email for guest ticket
+			if ( empty( $params['customer_email'] ) || ! is_email( $params['customer_email'] ) ) {
+				return new WP_REST_Response(
+					array(
+						'success' => false,
+						'message' => __( 'Please provide a valid email address for your support ticket.', 'dragwyb-click-to-chat' ),
+					),
+					400
+				);
+			}
+		}
 
 		$params['origin_type']      = 'support_portal';
 		$params['reply_surface']    = 'support_portal';
@@ -1713,6 +1763,9 @@ class DCTC_Support_REST_Controller {
 				400
 			);
 		}
+
+		// Strip internal staff notes from response
+		unset( $ticket['notes'], $ticket['ai_classification_confidence'] );
 
 		return new WP_REST_Response(
 			array(

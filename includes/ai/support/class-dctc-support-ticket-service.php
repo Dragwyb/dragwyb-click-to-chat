@@ -408,6 +408,13 @@ class DCTC_Support_Ticket_Service {
 			$where .= $wpdb->prepare( ' AND t.customer_wp_user_id = %d', absint( $args['customer_wp_user_id'] ) );
 		}
 
+		if ( ! empty( $args['guest_access_token'] ) ) {
+			$where .= $wpdb->prepare(
+				" AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'guest_access_token' AND meta_value = %s)",
+				sanitize_text_field( $args['guest_access_token'] )
+			);
+		}
+
 		// Search
 		if ( ! empty( $args['search'] ) ) {
 			$search = '%' . $wpdb->esc_like( sanitize_text_field( $args['search'] ) ) . '%';

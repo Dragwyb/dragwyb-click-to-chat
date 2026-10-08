@@ -194,11 +194,15 @@ class DCTC_AI_Admin_Copilot {
 			"Current System Intelligence:\n" . $analytics_context;
 
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/ai-providers/class-dctc-ai-provider-manager.php';
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-data-sanitizer.php';
 		$manager = DCTC_AI_Provider_Manager::get_instance();
 
+		$clean_admin_prompt = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $admin_prompt );
+		$clean_sys_prompt   = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $system_prompt );
+
 		$response = $manager->chat_with_fallback(
-			$admin_prompt,
-			$system_prompt,
+			$clean_admin_prompt,
+			$clean_sys_prompt,
 			$provider_id,
 			$model_id,
 			array(
@@ -207,8 +211,10 @@ class DCTC_AI_Admin_Copilot {
 			)
 		);
 
+		$clean_message = DCTC_AI_Data_Sanitizer::sanitize_ai_response( $response['message'] ?? '' );
+
 		return array(
-			'message'  => $response['message'],
+			'message'  => $clean_message,
 			'provider' => $response['provider'],
 			'model'    => $response['model'],
 			'stats'    => $stats,

@@ -121,6 +121,7 @@ class DCTC_Support_AI_Assist_Service {
 		$models   = ! empty( $settings['models'] ) ? $settings['models'] : array();
 
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/ai-providers/class-dctc-ai-provider-manager.php';
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-data-sanitizer.php';
 		$manager = DCTC_AI_Provider_Manager::get_instance();
 
 		$provider_name = ! empty( $bot['active_provider'] ) ? $bot['active_provider'] : 'google';
@@ -132,10 +133,13 @@ class DCTC_Support_AI_Assist_Service {
 
 		$model_id = ! empty( $models[ $provider_name ]['model'] ) ? $models[ $provider_name ]['model'] : '';
 
+		$clean_user_prompt   = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $user_prompt );
+		$clean_system_prompt = DCTC_AI_Data_Sanitizer::redact_sensitive_data( $system_prompt );
+
 		try {
-			$result = $provider->chat_completion( $user_prompt, $system_prompt, $model_id );
+			$result = $provider->chat_completion( $clean_user_prompt, $clean_system_prompt, $model_id );
 			if ( ! empty( $result['message'] ) ) {
-				return $result['message'];
+				return DCTC_AI_Data_Sanitizer::sanitize_ai_response( $result['message'] );
 			}
 			return new WP_Error( 'empty_response', __( 'AI returned an empty response.', 'dragwyb-click-to-chat' ) );
 		} catch ( \Throwable $e ) {
