@@ -16,9 +16,9 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DCTC_Settings_Import_Export {
 
-	const OPTION_CHANNELS = 'dctc_settings';
-	const OPTION_AI       = 'dctc_ai_chat_assistant_settings';
-	const OPTION_SUPPORT  = 'dctc_support_settings';
+	const OPTION_CHANNELS  = 'dctc_settings';
+	const OPTION_AI        = 'dctc_ai_chat_assistant_settings';
+	const OPTION_SUPPORT   = 'dctc_support_settings';
 	const MAX_UPLOAD_BYTES = 52428800; // 50MB for data exports.
 
 	/**
@@ -102,8 +102,8 @@ class DCTC_Settings_Import_Export {
 
 		if ( in_array( 'ai_data', $modules, true ) ) {
 			global $wpdb;
-			$sessions_table = $wpdb->prefix . 'dctc_ai_sessions';
-			$leads_table    = $wpdb->prefix . 'dctc_ai_leads';
+			$sessions_table     = $wpdb->prefix . 'dctc_ai_sessions';
+			$leads_table        = $wpdb->prefix . 'dctc_ai_leads';
 			$payload['ai_data'] = array();
 			if ( $wpdb->get_var( "SHOW TABLES LIKE '$sessions_table'" ) === $sessions_table ) {
 				$payload['ai_data']['sessions'] = $wpdb->get_results( "SELECT * FROM `$sessions_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
@@ -115,12 +115,12 @@ class DCTC_Settings_Import_Export {
 
 		if ( in_array( 'support_data', $modules, true ) ) {
 			global $wpdb;
-			$tickets_table     = $wpdb->prefix . 'dctc_support_tickets';
-			$ticket_meta_table = $wpdb->prefix . 'dctc_support_ticket_meta';
-			$taxonomies_table  = $wpdb->prefix . 'dctc_support_taxonomies';
-			$terms_table       = $wpdb->prefix . 'dctc_support_terms';
-			$term_meta_table   = $wpdb->prefix . 'dctc_support_term_meta';
-			$rel_table         = $wpdb->prefix . 'dctc_support_term_relationships';
+			$tickets_table           = $wpdb->prefix . 'dctc_support_tickets';
+			$ticket_meta_table       = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$taxonomies_table        = $wpdb->prefix . 'dctc_support_taxonomies';
+			$terms_table             = $wpdb->prefix . 'dctc_support_terms';
+			$term_meta_table         = $wpdb->prefix . 'dctc_support_term_meta';
+			$rel_table               = $wpdb->prefix . 'dctc_support_term_relationships';
 			$payload['support_data'] = array();
 			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
 				$payload['support_data']['tickets'] = $wpdb->get_results( "SELECT * FROM `$tickets_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
@@ -279,7 +279,7 @@ class DCTC_Settings_Import_Export {
 
 		return "INSERT INTO `{$table}` (`option_name`, `option_value`, `autoload`)\n"
 			. "VALUES ('{$esc_name}', '{$esc_value}', '{$autoload}')\n"
-			. "ON DUPLICATE KEY UPDATE `option_value` = VALUES(`option_value`);";
+			. 'ON DUPLICATE KEY UPDATE `option_value` = VALUES(`option_value`);';
 	}
 
 	/**
@@ -609,8 +609,8 @@ class DCTC_Settings_Import_Export {
 
 		if ( preg_match_all( $pattern, $contents, $matches, PREG_SET_ORDER ) ) {
 			foreach ( $matches as $match ) {
-				$name  = $match[1];
-				$value = self::dctc_sql_unescape_string( $match[2] );
+				$name           = $match[1];
+				$value          = self::dctc_sql_unescape_string( $match[2] );
 				$found[ $name ] = maybe_unserialize( $value );
 			}
 		}
@@ -622,8 +622,8 @@ class DCTC_Settings_Import_Export {
 
 		if ( preg_match_all( $update_pattern, $contents, $umatches, PREG_SET_ORDER ) ) {
 			foreach ( $umatches as $match ) {
-				$value = self::dctc_sql_unescape_string( $match[1] );
-				$name  = $match[2];
+				$value          = self::dctc_sql_unescape_string( $match[1] );
+				$name           = $match[2];
 				$found[ $name ] = maybe_unserialize( $value );
 			}
 		}
@@ -695,10 +695,10 @@ class DCTC_Settings_Import_Export {
 				}
 			}
 			if ( isset( $raw[ $slug . '_desktop' ] ) ) {
-				$out[ $slug . '_desktop' ] = ( '1' === (string) $raw[ $slug . '_desktop' ] ) ? '1' : '0';
+				$out[ $slug . '_desktop' ] = ( '1' === (string) $raw[ $slug . '_desktop' ] ) ? '1' : '1';
 			}
 			if ( isset( $raw[ $slug . '_mobile' ] ) ) {
-				$out[ $slug . '_mobile' ] = ( '1' === (string) $raw[ $slug . '_mobile' ] ) ? '1' : '0';
+				$out[ $slug . '_mobile' ] = ( '1' === (string) $raw[ $slug . '_mobile' ] ) ? '1' : '1';
 			}
 			if ( isset( $raw[ $slug . '_custom_icon' ] ) ) {
 				$out[ $slug . '_custom_icon' ] = esc_url_raw( $raw[ $slug . '_custom_icon' ] );

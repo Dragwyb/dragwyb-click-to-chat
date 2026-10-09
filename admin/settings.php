@@ -153,7 +153,7 @@ function dctc_render_ai_assistant_page() {
  * @return void
  */
 function dctc_admin_scripts( $hook ) {
-	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	$page        = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_channels = class_exists( 'DCTC_Helper' ) && DCTC_Helper::is_channels_enabled() && ( ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' ) );
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
 	$is_guide    = ( 'dragwyb-click-to-chat-guide' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-guide' );
@@ -302,8 +302,8 @@ function dctc_save_settings() {
 		// Device visibility
 		$desktop_key                    = $slug . '_desktop';
 		$mobile_key                     = $slug . '_mobile';
-		$settings[ $slug . '_desktop' ] = isset( $_POST[ $desktop_key ] ) && $_POST[ $desktop_key ] === '1' ? '1' : '0';
-		$settings[ $slug . '_mobile' ]  = isset( $_POST[ $mobile_key ] ) && $_POST[ $mobile_key ] === '1' ? '1' : '0';
+		$settings[ $slug . '_desktop' ] = isset( $_POST[ $desktop_key ] ) && $_POST[ $desktop_key ] === '1' ? '1' : '1';
+		$settings[ $slug . '_mobile' ]  = isset( $_POST[ $mobile_key ] ) && $_POST[ $mobile_key ] === '1' ? '1' : '1';
 
 		// Custom Icon
 		$icon_key = $slug . '_custom_icon';
@@ -385,10 +385,10 @@ function dctc_save_settings() {
 
 	// Triggers and Targeting
 	if ( isset( $_POST['show_on_desktop'] ) ) {
-		$settings['show_on_desktop'] = $_POST['show_on_desktop'] === '1' ? '1' : '0';
+		$settings['show_on_desktop'] = $_POST['show_on_desktop'] === '1' ? '1' : '1';
 	}
 	if ( isset( $_POST['show_on_mobile'] ) ) {
-		$settings['show_on_mobile'] = $_POST['show_on_mobile'] === '1' ? '1' : '0';
+		$settings['show_on_mobile'] = $_POST['show_on_mobile'] === '1' ? '1' : '1';
 	}
 	if ( isset( $_POST['time_delay'] ) ) {
 		$delay = intval( $_POST['time_delay'] );
@@ -430,7 +430,7 @@ function dctc_save_settings() {
 
 		// Support Center Module Toggle
 		if ( isset( $_POST['support_center_enabled'] ) ) {
-			$support_settings            = get_option( 'dctc_support_settings', array() );
+			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! is_array( $support_settings ) ) {
 				$support_settings = array();
 			}
