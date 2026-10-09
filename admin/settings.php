@@ -20,64 +20,46 @@ add_action( 'admin_enqueue_scripts', 'dctc_admin_scripts' );
  * @return void
  */
 function dctc_add_settings_page() {
-	$is_ai_enabled       = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : false;
-	$is_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : true;
-	$is_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : false;
-
-	// Determine top-level landing page callback based on active features
-	$main_callback = 'dctc_guide_page_html';
-	if ( $is_ai_enabled ) {
-		$main_callback = 'dctc_render_ai_assistant_page';
-	} elseif ( $is_channels_enabled ) {
-		$main_callback = 'dctc_channels_page_html';
-	}
-
 	// Top-level menu: Clicking "Click to Chat" opens the primary active module
 	add_menu_page(
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		'manage_options',
 		'dragwyb-click-to-chat',
-		$main_callback,
+		'dctc_render_ai_assistant_page',
 		'dashicons-format-chat',
 		90
 	);
 
-	// 1. Submenu: AI Assistant (only if AI Assistant is enabled)
-	if ( $is_ai_enabled ) {
-		add_submenu_page(
-			'dragwyb-click-to-chat',
-			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-			'manage_options',
-			'dragwyb-click-to-chat',
-			'dctc_render_ai_assistant_page'
-		);
-	}
+	// 1. Submenu: AI Assistant
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat',
+		'dctc_render_ai_assistant_page'
+	);
 
-	// 2. Submenu: Channels (only if Channels widget is enabled)
-	if ( $is_channels_enabled ) {
-		add_submenu_page(
-			'dragwyb-click-to-chat',
-			__( 'Channels', 'dragwyb-click-to-chat' ),
-			__( 'Channels', 'dragwyb-click-to-chat' ),
-			'manage_options',
-			'dragwyb-click-to-chat-channels',
-			'dctc_channels_page_html'
-		);
-	}
+	// 2. Submenu: Channels
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'Channels', 'dragwyb-click-to-chat' ),
+		__( 'Channels', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-channels',
+		'dctc_channels_page_html'
+	);
 
-	// 3. Submenu: Tickets (only if Support Center is enabled)
-	if ( $is_support_enabled ) {
-		add_submenu_page(
-			'dragwyb-click-to-chat',
-			__( 'Tickets', 'dragwyb-click-to-chat' ),
-			__( 'Tickets', 'dragwyb-click-to-chat' ),
-			'manage_options',
-			'dragwyb-click-to-chat-support',
-			'dctc_render_support_center_redirect'
-		);
-	}
+	// 3. Submenu: Tickets
+	add_submenu_page(
+		'dragwyb-click-to-chat',
+		__( 'Tickets', 'dragwyb-click-to-chat' ),
+		__( 'Tickets', 'dragwyb-click-to-chat' ),
+		'manage_options',
+		'dragwyb-click-to-chat-support',
+		'dctc_render_support_center_redirect'
+	);
 
 	// 4. Submenu: Guide (Documentation, Walkthroughs & Setup Wizard)
 	add_submenu_page(
@@ -106,7 +88,13 @@ function dctc_add_settings_page() {
  * @return void
  */
 function dctc_render_support_center_redirect() {
-	wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-support-tickets' ) );
+	$is_support_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : false;
+
+	if ( $is_support_enabled ) {
+		wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-support-tickets' ) );
+	} else {
+		wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat-guide&tab=support' ) );
+	}
 	exit;
 }
 
@@ -129,10 +117,17 @@ function dctc_render_onboarding_page() {
  * @return void
  */
 function dctc_render_ai_assistant_page() {
-	if ( class_exists( 'DCTC_AI_Module' ) ) {
-		DCTC_AI_Module::get_instance()->dctc_ai_render_admin_page();
+	$is_ai_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : false;
+
+	if ( $is_ai_enabled ) {
+		if ( class_exists( 'DCTC_AI_Module' ) ) {
+			DCTC_AI_Module::get_instance()->dctc_ai_render_admin_page();
+		} else {
+			require_once DCTC_PLUGIN_DIR . 'admin/ai/dctc-ai-dashboard.php';
+		}
 	} else {
-		require_once DCTC_PLUGIN_DIR . 'admin/ai/dctc-ai-dashboard.php';
+		wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat-guide&tab=ai' ) );
+		exit;
 	}
 }
 
@@ -238,7 +233,14 @@ function dctc_guide_page_html() {
  * @return void
  */
 function dctc_channels_page_html() {
-	include DCTC_PLUGIN_DIR . 'admin/admin-main.php';
+	$is_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : true;
+
+	if ( $is_channels_enabled ) {
+		include DCTC_PLUGIN_DIR . 'admin/admin-main.php';
+	} else {
+		wp_safe_redirect( admin_url( 'admin.php?page=dragwyb-click-to-chat-guide&tab=channels' ) );
+		exit;
+	}
 }
 
 /**
