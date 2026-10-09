@@ -9,6 +9,12 @@ export default function TicketSidebar({
 	agents = [],
 	tags = [],
 	wcData = null,
+	activeViewers = [],
+	starredTickets = {},
+	flaggedTickets = {},
+	toggleStar,
+	toggleFlag,
+	onCloseTicket,
 	onRefreshTicketDetails,
 	onRefreshTickets,
 	onShowNotice,
@@ -19,14 +25,16 @@ export default function TicketSidebar({
 	getInitials,
 }) {
 	const [showCustomerCard, setShowCustomerCard] = useState(true);
-	const [showAiUsefulContentCard, setShowAiUsefulContentCard] = useState(true);
-	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(true);
+	const [showAiUsefulContentCard, setShowAiUsefulContentCard] = useState(false);
+	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(false);
 	const [showCommerceCard, setShowCommerceCard] = useState(false);
 	const [showQuickActionsCard, setShowQuickActionsCard] = useState(false);
 	const [showCustomerSession, setShowCustomerSession] = useState(false);
 	const [showAdvancedProps, setShowAdvancedProps] = useState(false);
 
 	if (!selectedTicket) return null;
+
+	const displayViewers = activeViewers || [];
 
 	const handleCategoryChange = async (val) => {
 		if (!selectedTicket?.id) return;
@@ -101,6 +109,43 @@ export default function TicketSidebar({
 
 	return (
 		<aside className="dctc-sc-col-details">
+			{/* TOP ACTIONS BAR: Back, Flag, Star */}
+			<div className="dctc-sc-sidebar-top-bar">
+				<button
+					type="button"
+					className="dctc-sc-sidebar-back-btn"
+					onClick={onCloseTicket}
+					title={__('Back to all tickets', 'dragwyb-click-to-chat')}
+				>
+					<span className="dashicons dashicons-arrow-left-alt"></span>
+					<span>{__('Back', 'dragwyb-click-to-chat')}</span>
+				</button>
+
+				<div className="dctc-sc-sidebar-top-actions">
+					{selectedTicket?.id && (
+						<>
+							<button
+								type="button"
+								className={`dctc-sc-sidebar-icon-btn ${flaggedTickets?.[selectedTicket.id] ? 'active-flag' : ''}`}
+								onClick={() => toggleFlag?.(selectedTicket.id)}
+								title={__('Flag Ticket', 'dragwyb-click-to-chat')}
+							>
+								<span className="dashicons dashicons-flag"></span>
+							</button>
+
+							<button
+								type="button"
+								className={`dctc-sc-sidebar-icon-btn ${starredTickets?.[selectedTicket.id] ? 'active-star' : ''}`}
+								onClick={() => toggleStar?.(selectedTicket.id)}
+								title={__('Star Ticket', 'dragwyb-click-to-chat')}
+							>
+								<span className={`dashicons ${starredTickets?.[selectedTicket.id] ? 'dashicons-star-filled' : 'dashicons-star-empty'}`}></span>
+							</button>
+						</>
+					)}
+				</div>
+			</div>
+
 			{/* CUSTOMER CARD */}
 			<div className="dctc-sc-details-card">
 				<button
@@ -577,6 +622,49 @@ export default function TicketSidebar({
 						</button>
 					</div>
 				)}
+			</div>
+
+			{/* VIEWERS CARD (RIGHT SIDE BOTTOM) */}
+			<div className="dctc-sc-details-card dctc-sc-viewers-card">
+				<div className="dctc-sc-card-head" style={{ cursor: 'default' }}>
+					<div className="dctc-sc-card-head-title">
+						<span className="dashicons dashicons-visibility" style={{ color: '#0f172a' }}></span>
+						<h4>{__('Viewers', 'dragwyb-click-to-chat')} ({displayViewers.length})</h4>
+					</div>
+				</div>
+				<div className="dctc-sc-card-body" style={{ paddingTop: '10px', paddingBottom: '14px' }}>
+					<div className="dctc-sc-sidebar-viewers-stack">
+						{displayViewers.map((viewer, vIdx) => {
+							const colors = [
+								'#4f46e5', // Indigo
+								'#ea580c', // Orange
+								'#059669', // Emerald
+								'#e11d48', // Rose / Pink
+								'#7c3aed', // Purple
+								'#0284c7', // Sky
+							];
+							const bg = viewer.bg || colors[vIdx % colors.length];
+							const initials = viewer.initials || getInitials(viewer.name || viewer.display_name || 'Staff');
+							const name = viewer.name || viewer.display_name || 'Staff Member';
+
+							return (
+								<div
+									key={viewer.user_id || viewer.id || `v-${vIdx}`}
+									className="dctc-sc-sidebar-viewer-avatar"
+									style={{ backgroundColor: bg }}
+									title={`${name} (Viewing now)`}
+								>
+									{viewer.avatar ? (
+										<img src={viewer.avatar} alt={name} />
+									) : (
+										<span>{initials}</span>
+									)}
+									<span className="dctc-sc-viewer-online-dot"></span>
+								</div>
+							);
+						})}
+					</div>
+				</div>
 			</div>
 		</aside>
 	);

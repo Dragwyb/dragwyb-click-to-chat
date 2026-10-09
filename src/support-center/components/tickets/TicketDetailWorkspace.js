@@ -146,91 +146,16 @@ export default function TicketDetailWorkspace({
 					</div>
 				) : (
 					<div className="dctc-sc-workspace-inner">
-						{/* TOP HEADER BAR */}
+						{/* TOP HEADER BAR WITH LONG TITLE WRAPPING */}
 						<div className="dctc-sc-ws-header">
-							<div className="dctc-sc-ws-header-left">
-								<button
-									type="button"
-									className="dctc-sc-back-to-list-btn"
-									onClick={onCloseTicket}
-									title={__('Close ticket and return to full list', 'dragwyb-click-to-chat')}
-								>
-									<span className="dashicons dashicons-arrow-left-alt"></span>
-									<span>{__('Back', 'dragwyb-click-to-chat')}</span>
-								</button>
-
-								<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
-
-								<div className="dctc-sc-ws-badge-dropdown">
-									<select
-										value={selectedTicket?.status || 'open'}
-										onChange={(e) => handleStatusChange(e.target.value)}
-										className="dctc-sc-ws-select-badge"
-									>
-										<option value="open">OPEN</option>
-										<option value="pending">PENDING</option>
-										<option value="waiting_customer">WAITING</option>
-										<option value="resolved">RESOLVED</option>
-										<option value="closed">CLOSED</option>
-									</select>
-								</div>
-
-								<div className="dctc-sc-ws-badge-dropdown">
-									<select
-										value={selectedTicket?.priority || 'normal'}
-										onChange={(e) => handlePriorityChange(e.target.value)}
-										className="dctc-sc-ws-select-badge"
-									>
-										<option value="low">Low</option>
-										<option value="normal">Normal</option>
-										<option value="high">High</option>
-										<option value="urgent">Urgent</option>
-									</select>
-								</div>
-
-								{selectedTicket?.id && (
-									<>
-										<button
-											type="button"
-											className={`dctc-sc-ws-icon-btn ${flaggedTickets[selectedTicket.id] ? 'active-flag' : ''}`}
-											onClick={() => toggleFlag(selectedTicket.id)}
-											title={__('Flag Ticket', 'dragwyb-click-to-chat')}
-										>
-											<span className="dashicons dashicons-flag"></span>
-										</button>
-
-										<button
-											type="button"
-											className={`dctc-sc-ws-icon-btn ${starredTickets[selectedTicket.id] ? 'active-star' : ''}`}
-											onClick={() => toggleStar(selectedTicket.id)}
-											title={__('Star Ticket', 'dragwyb-click-to-chat')}
-										>
-											<span className={`dashicons ${starredTickets[selectedTicket.id] ? 'dashicons-star-filled' : 'dashicons-star-empty'}`}></span>
-										</button>
-									</>
-								)}
+							<div className="dctc-sc-ws-header-title-wrap">
+								<h2 className="dctc-sc-ws-subject">
+									<span className="dctc-sc-ws-subject-text">{selectedTicket?.subject || __('Untitled Ticket', 'dragwyb-click-to-chat')}</span>
+									<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
+								</h2>
 							</div>
 
-							<div className="dctc-sc-ws-header-right">
-								<div className="dctc-sc-nav-arrows">
-									<button
-										type="button"
-										className="dctc-sc-arrow-btn"
-										onClick={() => onNavigateTicket('prev')}
-										title={__('Previous Ticket', 'dragwyb-click-to-chat')}
-									>
-										&lt;
-									</button>
-									<button
-										type="button"
-										className="dctc-sc-arrow-btn"
-										onClick={() => onNavigateTicket('next')}
-										title={__('Next Ticket', 'dragwyb-click-to-chat')}
-									>
-										&gt;
-									</button>
-								</div>
-
+							<div className="dctc-sc-ws-header-actions">
 								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'ai_chatbot') && (selectedTicket?.is_session_active || selectedTicket?.session_active) && (
 									<button
 										type="button"
@@ -255,40 +180,56 @@ export default function TicketDetailWorkspace({
 							</div>
 						</div>
 
-						{/* TITLE & META BAR */}
-						<div className="dctc-sc-ws-title-section">
-							<h2 className="dctc-sc-ws-subject">{selectedTicket?.subject || __('Untitled Ticket', 'dragwyb-click-to-chat')}</h2>
-						</div>
+						{/* WORKSPACE SUBTABS & TOP ACTIONS BAR */}
+						<div className="dctc-sc-workspace-tabs-bar">
+							<div className="dctc-sc-workspace-tabs">
+								<button
+									type="button"
+									className={`dctc-sc-ws-tab-btn ${workspaceTab === 'conversation' ? 'active' : ''}`}
+									onClick={() => setWorkspaceTab('conversation')}
+								>
+									<span className="dashicons dashicons-format-chat"></span>
+									{__('Conversation', 'dragwyb-click-to-chat')}
+								</button>
+								<button
+									type="button"
+									className={`dctc-sc-ws-tab-btn ${workspaceTab === 'notes' ? 'active' : ''}`}
+									onClick={() => setWorkspaceTab('notes')}
+								>
+									<span className="dashicons dashicons-lock"></span>
+									{__('Internal Notes', 'dragwyb-click-to-chat')}
+									{(selectedTicket?.notes || []).length > 0 && (
+										<span className="dctc-sc-tab-badge">{(selectedTicket?.notes || []).length}</span>
+									)}
+								</button>
+								<button
+									type="button"
+									className={`dctc-sc-ws-tab-btn ${workspaceTab === 'activity' ? 'active' : ''}`}
+									onClick={() => setWorkspaceTab('activity')}
+								>
+									<span className="dashicons dashicons-backup"></span>
+									{__('Activity Logs', 'dragwyb-click-to-chat')}
+								</button>
+							</div>
 
-						{/* WORKSPACE SUBTABS */}
-						<div className="dctc-sc-workspace-tabs">
-							<button
-								type="button"
-								className={`dctc-sc-ws-tab-btn ${workspaceTab === 'conversation' ? 'active' : ''}`}
-								onClick={() => setWorkspaceTab('conversation')}
-							>
-								<span className="dashicons dashicons-format-chat"></span>
-								{__('Conversation', 'dragwyb-click-to-chat')}
-							</button>
-							<button
-								type="button"
-								className={`dctc-sc-ws-tab-btn ${workspaceTab === 'notes' ? 'active' : ''}`}
-								onClick={() => setWorkspaceTab('notes')}
-							>
-								<span className="dashicons dashicons-lock"></span>
-								{__('Internal Notes', 'dragwyb-click-to-chat')}
-								{(selectedTicket?.notes || []).length > 0 && (
-									<span className="dctc-sc-tab-badge">{(selectedTicket?.notes || []).length}</span>
-								)}
-							</button>
-							<button
-								type="button"
-								className={`dctc-sc-ws-tab-btn ${workspaceTab === 'activity' ? 'active' : ''}`}
-								onClick={() => setWorkspaceTab('activity')}
-							>
-								<span className="dashicons dashicons-backup"></span>
-								{__('Activity Logs', 'dragwyb-click-to-chat')}
-							</button>
+							<div className="dctc-sc-ws-tab-actions">
+								<button
+									type="button"
+									className={`dctc-sc-header-action-btn reply-btn ${isComposerOpen && composerMode === 'reply' ? 'active' : ''}`}
+									onClick={() => handleOpenComposer('reply')}
+								>
+									<span className="dashicons dashicons-undo"></span>
+									<span>{__('Add Reply', 'dragwyb-click-to-chat')}</span>
+								</button>
+								<button
+									type="button"
+									className={`dctc-sc-header-action-btn note-btn ${isComposerOpen && composerMode === 'note' ? 'active' : ''}`}
+									onClick={() => handleOpenComposer('note')}
+								>
+									<span className="dashicons dashicons-lock"></span>
+									<span>{__('Add Note', 'dragwyb-click-to-chat')}</span>
+								</button>
+							</div>
 						</div>
 
 						{/* CONVERSATION TAB */}
@@ -304,38 +245,7 @@ export default function TicketDetailWorkspace({
 									</div>
 								))}
 
-								{/* TOP ACTION BAR: Reply to Customer / Internal Note / Suggest AI Reply */}
-								<div className="dctc-sc-top-conversation-actions">
-									<div className="dctc-sc-action-buttons-group">
-										<button
-											type="button"
-											className={`dctc-sc-action-btn ${isComposerOpen && composerMode === 'reply' ? 'active' : ''}`}
-											onClick={() => handleOpenComposer('reply')}
-										>
-											<span className="dashicons dashicons-undo"></span>
-											<strong>{__('Reply to Customer', 'dragwyb-click-to-chat')}</strong>
-										</button>
-										<button
-											type="button"
-											className={`dctc-sc-action-btn note-btn ${isComposerOpen && composerMode === 'note' ? 'active' : ''}`}
-											onClick={() => handleOpenComposer('note')}
-										>
-											<span className="dashicons dashicons-lock"></span>
-											<strong>{__('Internal Note', 'dragwyb-click-to-chat')}</strong>
-										</button>
-										<button
-											type="button"
-											className="dctc-sc-suggest-ai-btn"
-											onClick={handleAiSuggestClick}
-											disabled={aiSuggestLoading}
-										>
-											<span className="dashicons dashicons-superhero"></span>
-											{aiSuggestLoading ? __('Thinking...', 'dragwyb-click-to-chat') : __('Suggest AI Reply', 'dragwyb-click-to-chat')}
-										</button>
-									</div>
-								</div>
-
-								{/* INLINE WYSIWYG / NOTE COMPOSER (Opens in place where new reply will appear) */}
+								{/* INLINE WYSIWYG / NOTE COMPOSER */}
 								{isComposerOpen && (
 									<div className="dctc-sc-inline-top-composer">
 										{composerMode === 'reply' ? (
@@ -358,7 +268,19 @@ export default function TicketDetailWorkspace({
 																{__('Text', 'dragwyb-click-to-chat')}
 															</button>
 														</div>
+
 														<div className="dctc-sc-wysiwyg-media-action">
+															<button
+																type="button"
+																className="dctc-sc-composer-ai-btn"
+																onClick={handleAiSuggestClick}
+																disabled={aiSuggestLoading}
+																title={__('Suggest AI Reply', 'dragwyb-click-to-chat')}
+															>
+																<span className="dashicons dashicons-superhero"></span>
+																<span>{aiSuggestLoading ? __('Thinking...', 'dragwyb-click-to-chat') : __('AI Suggest', 'dragwyb-click-to-chat')}</span>
+															</button>
+
 															<button
 																type="button"
 																className="dctc-sc-add-media-btn"
@@ -420,29 +342,6 @@ export default function TicketDetailWorkspace({
 															<span className="dctc-sc-attached-count">
 																{replyAttachments.length} {__('file(s) attached', 'dragwyb-click-to-chat')}
 															</span>
-														)}
-														{activeViewers && activeViewers.length > 0 && (
-															<div className="dctc-sc-active-viewers-dock" title={__('Active agents viewing this ticket', 'dragwyb-click-to-chat')}>
-																<div className="dctc-sc-viewers-avatar-stack">
-																	{activeViewers.map((viewer) => (
-																		<div
-																			key={viewer.user_id}
-																			className="dctc-sc-viewer-avatar-circle"
-																			title={`${viewer.name} (Watching now)`}
-																		>
-																			{viewer.avatar ? (
-																				<img src={viewer.avatar} alt={viewer.name} />
-																			) : (
-																				<span>{viewer.initials || 'AG'}</span>
-																			)}
-																			<span className="dctc-sc-viewer-pulse-dot"></span>
-																		</div>
-																	))}
-																</div>
-																<span className="dctc-sc-viewers-text">
-																	{activeViewers.map((v) => v.name).join(', ')}
-																</span>
-															</div>
 														)}
 													</div>
 
@@ -565,7 +464,11 @@ export default function TicketDetailWorkspace({
 
 										const avatarInitials = isCustomer
 											? getInitials(selectedTicket?.customer_name, selectedTicket?.customer_email || selectedTicket?.session_id)
-											: (isAI ? 'AI' : ((userPermissions.agent_name || 'Admin').substring(0, 2).toUpperCase()));
+											: (isAI ? 'AI' : getInitials(msg.sender_name || userPermissions.agent_name || 'AD'));
+
+										const senderName = isCustomer
+											? (selectedTicket?.customer_name || 'Guest Visitor')
+											: (isAI ? __('AI Assistant', 'dragwyb-click-to-chat') : (msg.sender_name || userPermissions.agent_name || 'Staff Member'));
 
 										return (
 											<div
@@ -573,22 +476,23 @@ export default function TicketDetailWorkspace({
 												data-index={idx}
 												data-msg-uuid={selectedTicket?.uuid || ''}
 												data-msg-id={msg.id || ''}
-												className={`dctc-sc-message-bubble-row ${isCustomer ? 'customer-row' : 'agent-row'}`}
+												className={`dctc-sc-message-bubble-row ${isCustomer ? 'customer-row' : (isAI ? 'agent-row ai-row' : 'agent-row')}`}
 											>
-												<div className="dctc-sc-msg-avatar">
+												<div className={`dctc-sc-msg-avatar ${isCustomer ? 'cust-avatar' : (isAI ? 'ai-avatar' : 'agent-avatar')}`}>
 													{avatarInitials}
 												</div>
 
 												<div className="dctc-sc-msg-body-wrap">
 													<div className="dctc-sc-msg-header-info">
 														<span className="dctc-sc-msg-sender-name">
-															{isCustomer
-																? (selectedTicket?.customer_name || 'Guest Visitor')
-																: (isAI ? __('AI Assistant', 'dragwyb-click-to-chat') : (msg.sender_name || 'admin'))}
+															{senderName}
 														</span>
 														<span className="dctc-sc-msg-timestamp">
 															{msg.created_at || ''}
 														</span>
+														<button type="button" className="dctc-sc-msg-menu-btn" title={__('Message options', 'dragwyb-click-to-chat')}>
+															<span className="dashicons dashicons-ellipsis"></span>
+														</button>
 													</div>
 
 													<div

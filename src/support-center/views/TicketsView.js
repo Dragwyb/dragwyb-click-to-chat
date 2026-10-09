@@ -68,8 +68,12 @@ export default function TicketsView({
 	// Left Folders & Views sidebar: Collapsed by default
 	const [isFoldersExpanded, setIsFoldersExpanded] = useState(false);
 
-	// Collapsible Left "All Tickets" Panel in Ticket Detail View: Collapsed by default
-	const [isLeftTicketsPanelExpanded, setIsLeftTicketsPanelExpanded] = useState(false);
+	// Collapsible Left "All Tickets" Panel in Ticket Detail View: Expanded by default
+	const [isLeftTicketsPanelExpanded, setIsLeftTicketsPanelExpanded] = useState(true);
+
+	// Left sidebar panel search and quick status filter
+	const [leftPanelSearch, setLeftPanelSearch] = useState('');
+	const [leftPanelStatus, setLeftPanelStatus] = useState('all');
 
 	// Manual refresh spinning indicator state
 	const [isRefreshing, setIsRefreshing] = useState(false);
@@ -242,6 +246,44 @@ export default function TicketsView({
 		});
 		return count;
 	}, [priorityFilter, ticketTypeFilter, categoryFilter, productFilter, assignedToFilter, tagFilter, dateRangeFilter, customerTypeFilter, taxFilters]);
+
+	// Left Panel status counts
+	const leftPanelCounts = useMemo(() => {
+		const counts = { all: (tickets || []).length, open: 0, waiting: 0, resolved: 0 };
+		(tickets || []).forEach((t) => {
+			if (t.status === 'open') counts.open++;
+			else if (t.status === 'pending' || t.status === 'waiting_customer' || t.status === 'waiting_agent' || t.status === 'hold') counts.waiting++;
+			else if (t.status === 'resolved' || t.status === 'closed') counts.resolved++;
+		});
+		return counts;
+	}, [tickets]);
+
+	// Left Panel filtered tickets by search & status
+	const leftPanelFilteredTickets = useMemo(() => {
+		return (tickets || []).filter((t) => {
+			if (leftPanelStatus === 'open') {
+				if (t.status !== 'open') return false;
+			} else if (leftPanelStatus === 'waiting') {
+				if (t.status !== 'pending' && t.status !== 'waiting_customer' && t.status !== 'waiting_agent' && t.status !== 'hold') return false;
+			} else if (leftPanelStatus === 'resolved') {
+				if (t.status !== 'resolved' && t.status !== 'closed') return false;
+			}
+
+			if (leftPanelSearch.trim()) {
+				const q = leftPanelSearch.toLowerCase().trim();
+				const idMatch = String(t.id).includes(q) || String(t.ticket_number || '').toLowerCase().includes(q);
+				const subjectMatch = (t.subject || '').toLowerCase().includes(q);
+				const customerMatch = (t.customer_name || '').toLowerCase().includes(q) || (t.customer_email || '').toLowerCase().includes(q);
+				const excerptMatch = (t.excerpt || t.last_message || '').toLowerCase().includes(q);
+				const productMatch = (t.product || t.product_name || '').toLowerCase().includes(q);
+				const agentMatch = (t.agent_name || '').toLowerCase().includes(q);
+				if (!idMatch && !subjectMatch && !customerMatch && !excerptMatch && !productMatch && !agentMatch) {
+					return false;
+				}
+			}
+			return true;
+		});
+	}, [tickets, leftPanelStatus, leftPanelSearch]);
 
 	// Customer initials helper
 	const getInitials = (name, email) => {
@@ -682,7 +724,7 @@ export default function TicketsView({
 											<span className="dashicons dashicons-tickets-alt"></span>
 											<strong>{__('All Tickets', 'dragwyb-click-to-chat')}</strong>
 											<span className="dctc-sc-left-panel-count">
-												{totalTickets || filteredTickets.length}
+												{totalTickets || (tickets || []).length}
 											</span>
 										</div>
 										<button
@@ -695,30 +737,101 @@ export default function TicketsView({
 										</button>
 									</div>
 
+									{/* LEFT PANEL SEARCH BAR */}
+									<div className="dctc-sc-left-panel-search-box">
+										<span className="dashicons dashicons-search dctc-sc-left-search-icon"></span>
+										<input
+											type="text"
+											placeholder={__('Search tickets...', 'dragwyb-click-to-chat')}
+											value={leftPanelSearch}
+											onChange={(e) => setLeftPanelSearch(e.target.value)}
+											className="dctc-sc-left-search-input"
+										/>
+										{leftPanelSearch && (
+											<button
+												type="button"
+												className="dctc-sc-left-search-clear-btn"
+												onClick={() => setLeftPanelSearch('')}
+												title={__('Clear search', 'dragwyb-click-to-chat')}
+											>
+												&times;
+											</button>
+										)}
+									</div>
+
+									{/* LEFT PANEL STATUS PILL TABS */}
+									<div className="dctc-sc-left-panel-status-tabs">
+										<button
+											type="button"
+											className={`dctc-sc-left-status-tab ${leftPanelStatus === 'all' ? 'active' : ''}`}
+											onClick={() => setLeftPanelStatus('all')}
+										>
+											{__('All', 'dragwyb-click-to-chat')} ({leftPanelCounts.all})
+										</button>
+										<button
+											type="button"
+											className={`dctc-sc-left-status-tab ${leftPanelStatus === 'open' ? 'active' : ''}`}
+											onClick={() => setLeftPanelStatus('open')}
+										>
+											{__('Open', 'dragwyb-click-to-chat')} ({leftPanelCounts.open})
+										</button>
+										<button
+											type="button"
+											className={`dctc-sc-left-status-tab ${leftPanelStatus === 'waiting' ? 'active' : ''}`}
+											onClick={() => setLeftPanelStatus('waiting')}
+										>
+											{__('Waiting', 'dragwyb-click-to-chat')} ({leftPanelCounts.waiting})
+										</button>
+										<button
+											type="button"
+											className={`dctc-sc-left-status-tab ${leftPanelStatus === 'resolved' ? 'active' : ''}`}
+											onClick={() => setLeftPanelStatus('resolved')}
+										>
+											{__('Resolved', 'dragwyb-click-to-chat')} ({leftPanelCounts.resolved})
+										</button>
+									</div>
+
 									<div className="dctc-sc-left-panel-list">
-										{filteredTickets.length === 0 ? (
+										{leftPanelFilteredTickets.length === 0 ? (
 											<div className="dctc-sc-left-panel-empty">
-												{__('No tickets found', 'dragwyb-click-to-chat')}
+												<span className="dashicons dashicons-search" style={{ fontSize: '24px', width: '24px', height: '24px', color: '#cbd5e1', marginBottom: '6px' }}></span>
+												<p style={{ margin: 0 }}>{__('No tickets found', 'dragwyb-click-to-chat')}</p>
 											</div>
 										) : (
-											filteredTickets.map((t) => {
+											leftPanelFilteredTickets.map((t) => {
 												const isCurrent = t.id === selectedTicketId;
 												const subjectTrimmed = t.subject || __('Untitled Ticket', 'dragwyb-click-to-chat');
-												const excerptTrimmed = (t.excerpt || t.last_message || t.subject || '').replace(/<[^>]*>?/gm, '').trim();
+												const excerptTrimmed = (t.excerpt || t.last_message || '').replace(/<[^>]*>?/gm, '').trim();
 												const displayProduct = t.product || t.product_name;
-												const displayAgent = t.agent_name || (t.assigned_agent_id ? `Agent #${t.assigned_agent_id}` : __('Unassigned', 'dragwyb-click-to-chat'));
+												const displayAgent = t.agent_name || (t.assigned_agent_id ? `Agent #${t.assigned_agent_id}` : __('admin', 'dragwyb-click-to-chat'));
+												const relativeTime = formatRelativeTime(t.updated_at || t.created_at);
+												const custInitials = getInitials(t.customer_name, t.customer_email || t.session_id);
+
+												const statusKey = (t.status || 'open').toLowerCase();
+												const statusLabel = statusKey === 'open' ? 'Open' : (statusKey === 'pending' || statusKey.includes('wait') ? 'Waiting' : (statusKey === 'resolved' || statusKey === 'closed' ? 'Resolved' : statusKey));
 
 												return (
 													<div
 														key={t.id}
 														className={`dctc-sc-left-panel-item ${isCurrent ? 'active' : ''}`}
-														onClick={() => onOpenTicket(t.id)}
+														onClick={() => handleOpenTicket(t.id)}
 													>
 														<div className="dctc-sc-left-panel-item-header">
-															<span className="dctc-sc-left-panel-id">#{t.ticket_number || t.id}</span>
-															<span className="dctc-sc-left-panel-subject" title={subjectTrimmed}>
-																{subjectTrimmed}
-															</span>
+															<div className="dctc-sc-left-panel-item-meta">
+																<span className="dctc-sc-left-panel-id">#{t.ticket_number || t.id}</span>
+																<span className={`dctc-sc-left-status-dot-badge status-${statusKey}`}>
+																	<span className="dctc-sc-dot"></span>
+																	<span>{statusLabel}</span>
+																</span>
+																{relativeTime && <span className="dctc-sc-left-panel-time">{relativeTime}</span>}
+															</div>
+															<div className="dctc-sc-left-item-avatar" title={t.customer_name || 'Customer'}>
+																{custInitials}
+															</div>
+														</div>
+
+														<div className="dctc-sc-left-panel-subject" title={subjectTrimmed}>
+															{subjectTrimmed}
 														</div>
 
 														{excerptTrimmed && (
@@ -729,8 +842,8 @@ export default function TicketsView({
 
 														<div className="dctc-sc-left-panel-badges">
 															{displayProduct && (
-																<span className="dctc-sc-panel-badge-product">
-																	<span className="dashicons dashicons-products"></span>
+																<span className="dctc-sc-panel-badge-product" title={displayProduct}>
+																	<span className="dashicons dashicons-tag"></span>
 																	{displayProduct}
 																</span>
 															)}
@@ -755,7 +868,7 @@ export default function TicketsView({
 									>
 										<span className="dashicons dashicons-arrow-right-alt2"></span>
 										<span className="dctc-sc-expand-label">{__('All Tickets', 'dragwyb-click-to-chat')}</span>
-										<span className="dctc-sc-expand-badge">{totalTickets || filteredTickets.length}</span>
+										<span className="dctc-sc-expand-badge">{totalTickets || (tickets || []).length}</span>
 									</button>
 								</div>
 							)}
@@ -816,6 +929,12 @@ export default function TicketsView({
 								agents={agents}
 								tags={tags}
 								wcData={wcData}
+								activeViewers={activeViewers}
+								starredTickets={starredTickets}
+								flaggedTickets={flaggedTickets}
+								toggleStar={toggleStar}
+								toggleFlag={toggleFlag}
+								onCloseTicket={handleCloseTicket}
 								onRefreshTicketDetails={onRefreshTicketDetails}
 								onRefreshTickets={onRefreshTickets}
 								onShowNotice={onShowNotice}
