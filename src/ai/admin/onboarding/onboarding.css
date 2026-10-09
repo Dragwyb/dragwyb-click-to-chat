@@ -26,7 +26,6 @@
 /* Modal Content Container */
 .dctc-onboarding-modal {
 	background: #ffffff;
-	border-radius: 24px;
 	box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9);
 	width: 100%;
 	max-width: 1160px;
@@ -208,21 +207,24 @@
 	display: grid;
 	grid-template-columns: 1.18fr 0.82fr;
 	gap: 40px;
-	padding: 36px 48px 44px;
+	padding: 28px 40px 36px;
 	align-items: center;
 }
 
 .dctc-welcome-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 4px 12px;
-	border-radius: 9999px;
-	background: #ffe4e6;
-	color: #e11d48;
-	font-size: 12px;
-	font-weight: 700;
-	margin-bottom: 16px;
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    background: #e11d48;
+    color: #ffe4e6;
+    font-size: 12px;
+    z-index: 1;
+    font-weight: 700;
+    right: 33px;
+    top: 1px;
 }
 
 .dctc-welcome-title {
@@ -311,26 +313,6 @@
 	margin: 0;
 }
 
-/* 4 Pill Badges */
-.dctc-welcome-pills {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
-	margin-bottom: 28px;
-}
-
-.dctc-welcome-pill {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 14px;
-	border-radius: 9999px;
-	background: #eef2ff;
-	color: #4f46e5;
-	font-size: 12px;
-	font-weight: 600;
-}
-
 /* Actions Row */
 .dctc-welcome-actions {
 	display: flex;
@@ -393,7 +375,7 @@
 
 .dctc-welcome-mockup-card {
 	background: #ffffff;
-	border-radius: 20px;
+	border-radius: 14px;
 	border: 1px solid #e2e8f0;
 	box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(241, 245, 249, 0.8);
 	overflow: hidden;
@@ -712,15 +694,13 @@
 	line-height: 1.5;
 	color: #64748b;
 	margin: 0 0 16px;
-	flex-grow: 1;
 }
 
 .dctc-feature-select-card__bullets {
 	display: flex;
 	flex-direction: column;
-	gap: 10px;
+	gap: 2px;
 	border-top: 1px solid #f1f5f9;
-	padding-top: 16px;
 	margin: 0;
 	list-style: none;
 }
@@ -981,6 +961,7 @@
 .dctc-channel-icon-pill--whatsapp svg { color: #22c55e; fill: currentColor; }
 .dctc-channel-icon-pill--phone svg { color: #3b82f6; fill: currentColor; }
 .dctc-channel-icon-pill--email svg { color: #ef4444; fill: currentColor; }
+.dctc-channel-icon-pill--telegram svg { color: #0088cc; fill: currentColor; }
 .dctc-channel-icon-pill--link svg { color: #8b5cf6; fill: currentColor; }
 
 /* --------------------------------------------------------------------------
