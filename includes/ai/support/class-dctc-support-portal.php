@@ -207,6 +207,10 @@ class DCTC_Support_Portal {
 	 * Enqueue frontend scripts and styles when shortcode or page is present.
 	 */
 	public static function maybe_enqueue_portal_assets() {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_support_enabled() ) {
+			return;
+		}
+
 		global $post;
 		$has_portal_shortcode = is_a( $post, 'WP_Post' ) && (
 			has_shortcode( $post->post_content, 'dctc_support_portal' ) ||
@@ -379,6 +383,10 @@ class DCTC_Support_Portal {
 	 * @return string HTML output.
 	 */
 	public static function render_portal_shortcode( $atts = array() ) {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_support_enabled() ) {
+			return '';
+		}
+
 		self::enqueue_portal_styles();
 		self::enqueue_portal_scripts();
 

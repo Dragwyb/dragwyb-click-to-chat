@@ -20,46 +20,74 @@ add_action( 'admin_enqueue_scripts', 'dctc_admin_scripts' );
  * @return void
  */
 function dctc_add_settings_page() {
-	// Top-level menu: Clicking "Click to Chat" opens AI Assistant by default
+	$is_ai_enabled       = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : false;
+	$is_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : true;
+	$is_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : false;
+
+	// Determine top-level landing page callback based on active features
+	$main_callback = 'dctc_guide_page_html';
+	if ( $is_ai_enabled ) {
+		$main_callback = 'dctc_render_ai_assistant_page';
+	} elseif ( $is_channels_enabled ) {
+		$main_callback = 'dctc_channels_page_html';
+	}
+
+	// Top-level menu: Clicking "Click to Chat" opens the primary active module
 	add_menu_page(
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		__( 'Click to Chat', 'dragwyb-click-to-chat' ),
 		'manage_options',
 		'dragwyb-click-to-chat',
-		'dctc_render_ai_assistant_page',
+		$main_callback,
 		'dashicons-format-chat',
 		90
 	);
 
-	// 1. Submenu: AI Assistant (matches parent slug to rename the first submenu item)
-	add_submenu_page(
-		'dragwyb-click-to-chat',
-		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-		'manage_options',
-		'dragwyb-click-to-chat',
-		'dctc_render_ai_assistant_page'
-	);
+	// 1. Submenu: AI Assistant (only if AI Assistant is enabled)
+	if ( $is_ai_enabled ) {
+		add_submenu_page(
+			'dragwyb-click-to-chat',
+			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+			'manage_options',
+			'dragwyb-click-to-chat',
+			'dctc_render_ai_assistant_page'
+		);
 
-	// 2. Submenu: Channels (Social multi-channel widget builder)
-	add_submenu_page(
-		'dragwyb-click-to-chat',
-		__( 'Channels', 'dragwyb-click-to-chat' ),
-		__( 'Channels', 'dragwyb-click-to-chat' ),
-		'manage_options',
-		'dragwyb-click-to-chat-channels',
-		'dctc_channels_page_html'
-	);
+		// Hidden submenu alias for dragwyb-click-to-chat-ai direct links
+		add_submenu_page(
+			null,
+			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
+			'manage_options',
+			'dragwyb-click-to-chat-ai',
+			'dctc_render_ai_assistant_page'
+		);
+	}
 
-	// 3. Submenu: Tickets (Direct link to Tickets workspace)
-	add_submenu_page(
-		'dragwyb-click-to-chat',
-		__( 'Tickets', 'dragwyb-click-to-chat' ),
-		__( 'Tickets', 'dragwyb-click-to-chat' ),
-		'manage_options',
-		'dragwyb-click-to-chat-support',
-		'dctc_render_support_center_redirect'
-	);
+	// 2. Submenu: Channels (only if Channels widget is enabled)
+	if ( $is_channels_enabled ) {
+		add_submenu_page(
+			'dragwyb-click-to-chat',
+			__( 'Channels', 'dragwyb-click-to-chat' ),
+			__( 'Channels', 'dragwyb-click-to-chat' ),
+			'manage_options',
+			'dragwyb-click-to-chat-channels',
+			'dctc_channels_page_html'
+		);
+	}
+
+	// 3. Submenu: Tickets (only if Support Center is enabled)
+	if ( $is_support_enabled ) {
+		add_submenu_page(
+			'dragwyb-click-to-chat',
+			__( 'Tickets', 'dragwyb-click-to-chat' ),
+			__( 'Tickets', 'dragwyb-click-to-chat' ),
+			'manage_options',
+			'dragwyb-click-to-chat-support',
+			'dctc_render_support_center_redirect'
+		);
+	}
 
 	// 4. Submenu: Guide (Documentation, Walkthroughs & Setup Wizard)
 	add_submenu_page(
@@ -79,16 +107,6 @@ function dctc_add_settings_page() {
 		'manage_options',
 		'dragwyb-click-to-chat-settings',
 		'dctc_settings_page_html'
-	);
-
-	// Hidden submenu alias for dragwyb-click-to-chat-ai direct links
-	add_submenu_page(
-		null,
-		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-		__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-		'manage_options',
-		'dragwyb-click-to-chat-ai',
-		'dctc_render_ai_assistant_page'
 	);
 }
 
@@ -136,7 +154,7 @@ function dctc_render_ai_assistant_page() {
  */
 function dctc_admin_scripts( $hook ) {
 	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
-	$is_channels = ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' );
+	$is_channels = class_exists( 'DCTC_Helper' ) && DCTC_Helper::is_channels_enabled() && ( ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' ) );
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
 	$is_guide    = ( 'dragwyb-click-to-chat-guide' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-guide' );
 
@@ -389,39 +407,41 @@ function dctc_save_settings() {
 		$settings['display_post_types'] = array();
 	}
 
-	// 3. Module Master Toggles
-	// Channels Module Toggle
-	if ( isset( $_POST['channels_enabled'] ) ) {
-		$settings['channels_enabled'] = ( '1' === $_POST['channels_enabled'] ) ? '1' : '0';
-	}
-
-	// AI Assistant Module Toggle
-	if ( isset( $_POST['ai_assistant_enabled'] ) ) {
-		$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
-		if ( ! is_array( $ai_settings ) ) {
-			$ai_settings = array();
+	// 3. Module Master Toggles (Only when explicitly submitted from Settings page)
+	if ( isset( $_POST['is_module_settings'] ) ) {
+		// Channels Module Toggle
+		if ( isset( $_POST['channels_enabled'] ) ) {
+			$settings['channels_enabled'] = ( '1' === $_POST['channels_enabled'] ) ? '1' : '0';
 		}
-		if ( ! isset( $ai_settings['display'] ) || ! is_array( $ai_settings['display'] ) ) {
-			$ai_settings['display'] = array();
-		}
-		$ai_settings['display']['entire_site'] = ( '1' === $_POST['ai_assistant_enabled'] );
-		update_option( 'dctc_ai_chat_assistant_settings', $ai_settings );
-		$settings['ai_assistant_enabled'] = ( '1' === $_POST['ai_assistant_enabled'] ) ? '1' : '0';
-	}
 
-	// Support Center Module Toggle
-	if ( isset( $_POST['support_center_enabled'] ) ) {
-		$support_settings            = get_option( 'dctc_support_settings', array() );
-		if ( ! is_array( $support_settings ) ) {
-			$support_settings = array();
+		// AI Assistant Module Toggle
+		if ( isset( $_POST['ai_assistant_enabled'] ) ) {
+			$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( ! is_array( $ai_settings ) ) {
+				$ai_settings = array();
+			}
+			if ( ! isset( $ai_settings['display'] ) || ! is_array( $ai_settings['display'] ) ) {
+				$ai_settings['display'] = array();
+			}
+			$ai_settings['display']['entire_site'] = ( '1' === $_POST['ai_assistant_enabled'] );
+			update_option( 'dctc_ai_chat_assistant_settings', $ai_settings );
+			$settings['ai_assistant_enabled'] = ( '1' === $_POST['ai_assistant_enabled'] ) ? '1' : '0';
 		}
-		$enabled                     = ( '1' === $_POST['support_center_enabled'] );
-		$support_settings['enabled'] = $enabled;
-		update_option( 'dctc_support_settings', $support_settings );
 
-		if ( $enabled && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
-			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
-			DCTC_Support_DB::create_tables();
+		// Support Center Module Toggle
+		if ( isset( $_POST['support_center_enabled'] ) ) {
+			$support_settings            = get_option( 'dctc_support_settings', array() );
+			if ( ! is_array( $support_settings ) ) {
+				$support_settings = array();
+			}
+			$enabled                     = ( '1' === $_POST['support_center_enabled'] );
+			$support_settings['enabled'] = $enabled;
+			update_option( 'dctc_support_settings', $support_settings );
+
+			if ( $enabled && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
+				DCTC_Support_DB::create_tables();
+			}
 		}
 	}
 

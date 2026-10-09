@@ -180,5 +180,45 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 				do_action( 'dctc_support_admin_notices', $current_page );
 			}
 		}
+
+		/**
+		 * Check whether the Social Channels Widget module is enabled.
+		 *
+		 * @return bool
+		 */
+		public static function is_channels_enabled() {
+			$settings = get_option( 'dctc_settings', array() );
+			if ( ! is_array( $settings ) ) {
+				return true;
+			}
+			return ! isset( $settings['channels_enabled'] ) || '1' === (string) $settings['channels_enabled'] || true === $settings['channels_enabled'];
+		}
+
+		/**
+		 * Check whether the AI Assistant module is enabled.
+		 *
+		 * @return bool
+		 */
+		public static function is_ai_enabled() {
+			$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( ! is_array( $ai_settings ) ) {
+				return false;
+			}
+			return ! empty( $ai_settings['display']['entire_site'] );
+		}
+
+		/**
+		 * Check whether the Support Center module is enabled.
+		 *
+		 * @return bool
+		 */
+		public static function is_support_enabled() {
+			$support_settings = get_option( 'dctc_support_settings', array() );
+			if ( ! is_array( $support_settings ) ) {
+				return false;
+			}
+			return ! empty( $support_settings['enabled'] );
+		}
 	}
 }
+

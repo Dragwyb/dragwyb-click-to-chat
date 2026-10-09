@@ -206,6 +206,7 @@
             const formData = {
                 action: 'dctc_save_settings',
                 nonce: dctc_admin ? dctc_admin.nonce : '',
+                is_module_settings: '1',
                 channels_enabled: $('#dctc_gen_channels_enabled').is(':checked') ? '1' : '0',
                 ai_assistant_enabled: $('#dctc_gen_ai_enabled').is(':checked') ? '1' : '0',
                 support_center_enabled: $('#dctc_gen_support_enabled').is(':checked') ? '1' : '0'
@@ -217,15 +218,19 @@
                 data: formData,
                 success: function (response) {
                     if (response.success) {
-                        DCTC_Settings_App.showToast('Settings saved successfully!');
+                        DCTC_Settings_App.showToast('Settings saved successfully! Updating menus...');
+                        setTimeout(function () {
+                            window.location.reload();
+                        }, 600);
                     } else {
                         alert(response.data && response.data.message ? response.data.message : 'Error saving settings.');
+                        $btns.prop('disabled', false).removeClass('loading');
+                        $('#dctc-save-settings-top-btn').html(originalHtml);
+                        $('#dctc-general-save-btn').html(generalBtnOriginal);
                     }
                 },
                 error: function () {
                     alert('Error saving settings. Please try again.');
-                },
-                complete: function () {
                     $btns.prop('disabled', false).removeClass('loading');
                     $('#dctc-save-settings-top-btn').html(originalHtml);
                     $('#dctc-general-save-btn').html(generalBtnOriginal);

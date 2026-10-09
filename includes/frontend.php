@@ -7,6 +7,10 @@ class DCTC_Frontend {
 
 
 	public function __construct() {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_channels_enabled() ) {
+			return;
+		}
+
 		// Auto-add to footer
 		add_action( 'wp_footer', array( $this, 'render_widget_html' ) );
 
@@ -32,6 +36,9 @@ class DCTC_Frontend {
 	 * Wrapper for Shortcode [dctc-widget]
 	 */
 	public function render_widget_shortcode() {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_channels_enabled() ) {
+			return '';
+		}
 		ob_start(); // Start recording output
 		$this->render_widget_html( true ); // Generate HTML/CSS/JS
 		return ob_get_clean(); // Return output to the page
@@ -52,16 +59,15 @@ class DCTC_Frontend {
 	 * @param boolean $from_shortcode Whether called via shortcode
 	 */
 	public function render_widget_html( $from_shortcode = false ) {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_channels_enabled() ) {
+			return;
+		}
+
 		// Get all settings container
 		$settings = get_option( 'dctc_settings', array() );
 
 		if ( ! is_array( $settings ) ) {
 			$settings = array();
-		}
-
-		// Check if channels module is globally enabled
-		if ( isset( $settings['channels_enabled'] ) && '0' === $settings['channels_enabled'] ) {
-			return;
 		}
 
 		// Display Rules Check (only if auto-injected, not manually via shortcode)

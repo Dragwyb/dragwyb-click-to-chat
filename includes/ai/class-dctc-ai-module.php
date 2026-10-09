@@ -209,20 +209,21 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_enqueue_admin_assets( $hook ) {
-			$page       = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$page          = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			$is_ai_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : true;
+			$is_guide_page = ( 'dragwyb-click-to-chat-guide' === $page || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-guide' ) );
+
 			$is_ai_page = (
 				( $this->admin_hook && $hook === $this->admin_hook ) ||
 				'dragwyb-click-to-chat' === $page ||
 				'dragwyb-click-to-chat-ai' === $page ||
-				'dragwyb-click-to-chat-guide' === $page ||
 				'dragwyb-click-to-chat-onboarding' === $page ||
 				'toplevel_page_dragwyb-click-to-chat' === $hook ||
 				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai' === $hook ||
-				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-guide' === $hook ||
 				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-onboarding' === $hook
 			);
 
-			if ( ! $is_ai_page ) {
+			if ( ( ! $is_ai_enabled && ! $is_guide_page ) || ( ! $is_ai_page && ! $is_guide_page ) ) {
 				return;
 			}
 
@@ -335,6 +336,10 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_enqueue_frontend_assets() {
+			if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_ai_enabled() ) {
+				return;
+			}
+
 			if ( ! $this->dctc_ai_should_load_frontend_assets() ) {
 				return;
 			}
@@ -476,6 +481,10 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_render_global_chatbot() {
+			if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_ai_enabled() ) {
+				return;
+			}
+
 			$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 
 			if ( empty( $settings['display']['entire_site'] ) ) {
@@ -536,6 +545,10 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return string Chatbot root container markup.
 		 */
 		public function dctc_ai_shortcode_render( $atts ) {
+			if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_ai_enabled() ) {
+				return '';
+			}
+
 			$this->dctc_ai_do_enqueue_frontend_assets();
 			ob_start();
 			$this->dctc_ai_render_chatbot_ui( true );

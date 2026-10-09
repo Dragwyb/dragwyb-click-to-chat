@@ -216,6 +216,10 @@ class DCTC_Support_Manager {
 	 * @return void
 	 */
 	public function enqueue_admin_assets( $hook ) {
+		if ( class_exists( 'DCTC_Helper' ) && ! DCTC_Helper::is_support_enabled() ) {
+			return;
+		}
+
 		$page            = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$is_support_page = (
 			'dragwyb-support-center' === $page ||
