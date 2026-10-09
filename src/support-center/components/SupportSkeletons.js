@@ -18,7 +18,7 @@ export function TicketWorkspaceSkeleton() {
 						disabled
 					>
 						<span className="dashicons dashicons-arrow-left-alt" />
-						<span>{__('All Tickets', 'dragwyb-click-to-chat')}</span>
+						<span>{__('Back', 'dragwyb-click-to-chat')}</span>
 					</button>
 					<span className="dctc-sk dctc-sk-ticket-id" />
 					<span className="dctc-sk dctc-sk-status" />
@@ -45,12 +45,6 @@ export function TicketWorkspaceSkeleton() {
 
 			<div className="dctc-sc-ws-ticket-info" style={{ padding: "14px 22px 12px" }}>
 				<div className="dctc-sk dctc-sk-ticket-title" />
-				<div className="dctc-sk-ticket-meta" style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
-					<span className="dctc-sk dctc-sk-meta-item" />
-					<span className="dctc-sk dctc-sk-meta-item meta-medium" />
-					<span className="dctc-sk dctc-sk-meta-item meta-small" />
-					<span className="dctc-sk dctc-sk-meta-item meta-medium" />
-				</div>
 			</div>
 
 			<div className="dctc-sc-workspace-tabs dctc-sk-tabs">

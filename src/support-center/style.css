@@ -1807,7 +1807,6 @@
   font-weight: 800 !important;
   margin: 0 0 6px !important;
   line-height: 1.25 !important;
-  margin-bottom: 8px !important;
 }
 
 .dctc-sc-ws-meta-bar {
@@ -4556,7 +4555,7 @@
 .dctc-sk-ticket-title {
 	width: min(260px, 55%);
 	height: 24.5px;
-	margin-bottom: 14px;
+	margin-bottom: 6px;
 }
 
 .dctc-sk-meta-item {

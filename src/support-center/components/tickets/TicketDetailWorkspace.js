@@ -156,7 +156,7 @@ export default function TicketDetailWorkspace({
 									title={__('Close ticket and return to full list', 'dragwyb-click-to-chat')}
 								>
 									<span className="dashicons dashicons-arrow-left-alt"></span>
-									<span>{__('All Tickets', 'dragwyb-click-to-chat')}</span>
+									<span>{__('Back', 'dragwyb-click-to-chat')}</span>
 								</button>
 
 								<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
@@ -258,28 +258,6 @@ export default function TicketDetailWorkspace({
 						{/* TITLE & META BAR */}
 						<div className="dctc-sc-ws-title-section">
 							<h2 className="dctc-sc-ws-subject">{selectedTicket?.subject || __('Untitled Ticket', 'dragwyb-click-to-chat')}</h2>
-							<div className="dctc-sc-ws-meta-bar">
-								<span className="dctc-sc-meta-item">
-									<span className="dashicons dashicons-admin-users"></span>
-									{selectedTicket?.customer_name || (selectedTicket?.session_id ? `Guest (${selectedTicket.session_id.substring(0, 8)})` : 'Guest Visitor')}
-								</span>
-								<span className="dctc-sc-meta-item">
-									<span className="dashicons dashicons-email-alt"></span>
-									{selectedTicket?.customer_email || __('Not provided', 'dragwyb-click-to-chat')}
-								</span>
-								<span className="dctc-sc-meta-item">
-									<span className="dashicons dashicons-format-chat"></span>
-									{selectedTicket?.chat_count !== undefined ? selectedTicket.chat_count : (selectedTicket?.messages?.length || 0)} {__('chats', 'dragwyb-click-to-chat')}
-								</span>
-								<span className="dctc-sc-meta-item">
-									<span className="dashicons dashicons-calendar-alt"></span>
-									{selectedTicket?.created_at || ''}
-								</span>
-								<span className="dctc-sc-meta-item">
-									<span className="dashicons dashicons-smartphone"></span>
-									{selectedTicket?.reply_surface === 'chatbot_widget' ? __('Via Chatbot Widget', 'dragwyb-click-to-chat') : __('Via Support Portal', 'dragwyb-click-to-chat')}
-								</span>
-							</div>
 						</div>
 
 						{/* WORKSPACE SUBTABS */}
