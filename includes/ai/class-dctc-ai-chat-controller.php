@@ -665,7 +665,7 @@ class DCTC_AI_Chat_Controller {
 						}
 					}
 				}
-			} elseif ( ! $is_greeting && 'human_handoff' === $detected_intent ) {
+			} elseif ( ! $is_greeting && ( 'human_handoff' === $detected_intent || 'support_ticket' === $detected_intent ) ) {
 				// Auto-create/sync Support Ticket in Support Center only for explicit human handoff requests
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
