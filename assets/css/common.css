@@ -808,3 +808,163 @@
   background: #f1f5f9;
   color: #64748b;
 }
+
+/* ==========================================================================
+   Global Toast Notifications (Bottom-Left - Unified Across Entire Plugin)
+   ========================================================================== */
+.dctc-toast-notification,
+.dctc-success-message {
+  display: none !important;
+}
+
+.dctc-ai-toast,
+.dctc-toast-notification.show,
+.dctc-success-message.show {
+  position: fixed !important;
+  bottom: 24px !important;
+  left: 184px !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 9999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 16px !important;
+  border-radius: 10px !important;
+  max-width: 480px !important;
+  font-family: var(--dctc-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif) !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08) !important;
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: #166534 !important;
+  box-sizing: border-box !important;
+  animation: dctcToastSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes dctcToastSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dctc-ai-toast.is-hiding,
+.dctc-toast-notification.is-hiding,
+.dctc-success-message.is-hiding {
+  animation: dctcToastFadeOut 0.25s ease forwards !important;
+}
+
+@keyframes dctcToastFadeOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+}
+
+body.folded .dctc-ai-toast,
+body.folded .dctc-toast-notification,
+body.folded .dctc-success-message {
+  left: 56px !important;
+}
+
+@media screen and (max-width: 782px) {
+  .dctc-ai-toast,
+  .dctc-toast-notification,
+  .dctc-success-message {
+    left: 16px !important;
+    right: 16px !important;
+    max-width: calc(100% - 32px) !important;
+    bottom: 16px !important;
+  }
+}
+
+.dctc-ai-toast-success,
+.dctc-toast-notification.success,
+.dctc-success-message {
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: #166534 !important;
+}
+
+.dctc-ai-toast-error,
+.dctc-toast-notification.error {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: #991b1b !important;
+}
+
+.dctc-ai-toast-warning,
+.dctc-toast-notification.warning {
+  background: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+  color: #92400e !important;
+}
+
+.dctc-ai-toast-info,
+.dctc-toast-notification.info {
+  background: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+  color: #075985 !important;
+}
+
+.dctc-ai-toast .dashicons,
+.dctc-toast-notification .dashicons,
+.dctc-success-message .dashicons {
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dctc-ai-toast-message,
+.dctc-toast-message,
+.dctc-success-message-text {
+  flex: 1 1 auto !important;
+  margin: 0 !important;
+  word-break: break-word !important;
+}
+
+.dctc-ai-toast-close,
+.dctc-toast-close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: inherit !important;
+  cursor: pointer !important;
+  padding: 3px !important;
+  margin-left: 8px !important;
+  opacity: 0.65 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  transition: opacity 0.15s ease, background-color 0.15s ease !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+}
+
+.dctc-ai-toast-close:hover,
+.dctc-toast-close-btn:hover {
+  opacity: 1 !important;
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+.dctc-ai-toast-close .dashicons,
+.dctc-toast-close-btn .dashicons {
+  font-size: 15px !important;
+  width: 15px !important;
+  height: 15px !important;
+}

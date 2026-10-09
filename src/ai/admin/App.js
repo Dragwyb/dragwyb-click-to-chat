@@ -241,7 +241,7 @@ export default function App({ settings: initialSettings }) {
 	if (isGuidePage) {
 		return (
 			<div className="dctc-guide-react-root">
-				{notice && <Toast message={notice.message} type={notice.type} />}
+				{notice && <Toast message={notice.message} type={notice.type} onClose={() => setNotice(null)} />}
 				{showWizard && (
 					<OnboardingWizard
 						key={wizardKey}
@@ -268,7 +268,7 @@ export default function App({ settings: initialSettings }) {
 	// Normal Main Menu Page (dragwyb-click-to-chat):
 	return (
 		<div className="dctc-ai-app-wrapper">
-			{notice && <Toast message={notice.message} type={notice.type} />}
+			{notice && <Toast message={notice.message} type={notice.type} onClose={() => setNotice(null)} />}
 
 			{/* Full-Size Sticky Top Header Bar using shared GlobalHeader */}
 			<GlobalHeader

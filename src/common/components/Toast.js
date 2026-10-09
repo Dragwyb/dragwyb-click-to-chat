@@ -1,11 +1,3 @@
-/**
- * Global Toast notice component.
- *
- * @param {Object}   props
- * @param {string}   props.message
- * @param {string}   [props.type='success']
- * @param {Function} props.onClose
- */
 import { __ } from '@wordpress/i18n';
 
 export default function Toast({ message, type = 'success', onClose }) {
@@ -14,11 +6,15 @@ export default function Toast({ message, type = 'success', onClose }) {
 	}
 
 	return (
-		<div className={`dctc-ai-toast dctc-ai-toast-${type}`}>
+		<div className={`dctc-ai-toast dctc-ai-toast-${type}`} role="alert">
 			<span
 				className={
 					'dashicons ' +
-					(type === 'success' ? 'dashicons-yes-alt' : 'dashicons-warning')
+					(type === 'error'
+						? 'dashicons-warning'
+						: type === 'info'
+						? 'dashicons-info'
+						: 'dashicons-yes-alt')
 				}
 			/>
 			<span className="dctc-ai-toast-message">{message}</span>

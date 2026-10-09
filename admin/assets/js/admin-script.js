@@ -625,13 +625,49 @@
             });
         },
 
-        showSuccessMessage: function (message) {
-            const $msg = $('.dctc-success-message');
-            $msg.text(message).addClass('show');
+        showSuccessMessage: function (message, type = 'success') {
+            let $msg = $('.dctc-success-message');
+            if ($msg.length === 0) {
+                $msg = $('<div class="dctc-success-message" role="alert"></div>');
+                $('body').append($msg);
+            }
 
-            setTimeout(function () {
-                $msg.removeClass('show');
-            }, 3000);
+            if ($msg.data('timer')) {
+                clearTimeout($msg.data('timer'));
+                $msg.removeData('timer');
+            }
+
+            const iconClass = type === 'error' ? 'dashicons-warning' : (type === 'info' ? 'dashicons-info' : 'dashicons-yes-alt');
+
+            $msg.removeClass('is-hiding')
+                .html(`
+                    <span class="dashicons ${iconClass}"></span>
+                    <span class="dctc-success-message-text">${message}</span>
+                    <button type="button" class="dctc-toast-close-btn" aria-label="Close">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                `)
+                .addClass('show');
+
+            const dismissToast = function () {
+                if ($msg.data('timer')) {
+                    clearTimeout($msg.data('timer'));
+                    $msg.removeData('timer');
+                }
+                $msg.addClass('is-hiding');
+                setTimeout(function () {
+                    $msg.removeClass('show is-hiding').empty();
+                }, 250);
+            };
+
+            $msg.find('.dctc-toast-close-btn').off('click').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dismissToast();
+            });
+
+            const timer = setTimeout(dismissToast, 4000);
+            $msg.data('timer', timer);
         },
 
         loadCurrentStep: function () {
