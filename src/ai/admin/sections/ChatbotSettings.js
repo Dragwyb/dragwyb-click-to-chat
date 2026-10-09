@@ -258,7 +258,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		container_border_width: chatbot.container_border_width ?? 1,
 		container_width: chatbot.container_width ?? 380,
 		container_width_unit: chatbot.container_width_unit || 'px',
-		container_height: chatbot.container_height ?? 600,
+		container_height: chatbot.container_height ?? 520,
 		container_height_unit: chatbot.container_height_unit || 'px',
 		bot_avatar: chatbot.bot_avatar || '',
 		bot_icon_preset: chatbot.bot_icon_preset || 'bot',
@@ -292,7 +292,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 					setContent(res.items);
 				}
 			})
-			.catch(() => {})
+			.catch(() => { })
 			.finally(() => {
 				if (!cancelled) setLoadingContent(false);
 			});
@@ -311,7 +311,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 					setUsageStats(res.stats);
 				}
 			})
-			.catch(() => {});
+			.catch(() => { });
 
 		return () => {
 			isSubscribed = false;

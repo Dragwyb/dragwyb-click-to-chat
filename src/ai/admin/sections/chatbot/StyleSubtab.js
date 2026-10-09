@@ -422,7 +422,7 @@ export default function StyleSubtab({
 												min="320"
 												max="1200"
 												step="10"
-												value={form.container_height ?? 600}
+												value={form.container_height ?? 520}
 												onChange={(e) =>
 													setField(
 														'container_height',

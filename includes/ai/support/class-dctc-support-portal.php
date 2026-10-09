@@ -268,24 +268,8 @@ class DCTC_Support_Portal {
 
 		$handle = 'dctc-ai-frontend-script';
 
-		if ( ! wp_script_is( $handle, 'registered' ) && ! wp_script_is( $handle, 'enqueued' ) ) {
-			$asset_file = file_exists( DCTC_PLUGIN_DIR . 'build/ai/frontend/dctc-ai-frontend.asset.php' )
-				? require DCTC_PLUGIN_DIR . 'build/ai/frontend/dctc-ai-frontend.asset.php'
-				: array(
-					'dependencies' => array( 'wp-element' ),
-					'version'      => defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0.0',
-				);
-			wp_register_script(
-				$handle,
-				DCTC_PLUGIN_URL . 'build/ai/frontend/dctc-ai-frontend.js',
-				$asset_file['dependencies'],
-				$asset_file['version'],
-				true
-			);
-		}
-
 		if ( ! wp_script_is( $handle, 'enqueued' ) ) {
-			wp_enqueue_script( $handle );
+			DCTC_AI_Module::get_instance()->dctc_ai_do_enqueue_frontend_assets();
 		}
 
 		wp_add_inline_script( $handle, self::get_portal_js(), 'after' );
