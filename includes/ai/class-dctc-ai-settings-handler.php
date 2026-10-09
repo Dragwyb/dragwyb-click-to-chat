@@ -1592,17 +1592,17 @@ class DCTC_AI_Settings_Handler {
 
 		$social_enabled                      = ! empty( $social_data['enabled'] );
 		$social_settings['channels_enabled'] = $social_enabled ? '1' : '0';
+		$social_settings['show_widget']      = $social_enabled ? '1' : '0';
 
+		// WhatsApp
 		if ( isset( $social_data['whatsapp_enabled'] ) ) {
 			$social_settings['whatsapp_enabled'] = ! empty( $social_data['whatsapp_enabled'] ) ? '1' : '0';
 		}
 		if ( isset( $social_data['whatsapp_number'] ) ) {
 			$social_settings['whatsapp_value'] = sanitize_text_field( $social_data['whatsapp_number'] );
 		}
-		if ( isset( $social_data['whatsapp_message'] ) ) {
-			$social_settings['whatsapp_message'] = sanitize_text_field( $social_data['whatsapp_message'] );
-		}
 
+		// Phone Call
 		if ( isset( $social_data['phone_enabled'] ) ) {
 			$social_settings['phone_enabled'] = ! empty( $social_data['phone_enabled'] ) ? '1' : '0';
 		}
@@ -1610,6 +1610,7 @@ class DCTC_AI_Settings_Handler {
 			$social_settings['phone_value'] = sanitize_text_field( $social_data['phone_number'] );
 		}
 
+		// Email
 		if ( isset( $social_data['email_enabled'] ) ) {
 			$social_settings['email_enabled'] = ! empty( $social_data['email_enabled'] ) ? '1' : '0';
 		}
@@ -1617,21 +1618,28 @@ class DCTC_AI_Settings_Handler {
 			$social_settings['email_value'] = sanitize_email( $social_data['email_address'] );
 		}
 
-		if ( isset( $social_data['custom_link_enabled'] ) ) {
-			$social_settings['contact_enabled'] = ! empty( $social_data['custom_link_enabled'] ) ? '1' : '0';
+		// Telegram
+		if ( isset( $social_data['telegram_enabled'] ) ) {
+			$social_settings['telegram_enabled'] = ! empty( $social_data['telegram_enabled'] ) ? '1' : '0';
 		}
-		if ( isset( $social_data['custom_link_url'] ) ) {
-			$social_settings['contact_value'] = esc_url_raw( $social_data['custom_link_url'] );
+		if ( isset( $social_data['telegram_username'] ) ) {
+			$social_settings['telegram_value'] = sanitize_text_field( $social_data['telegram_username'] );
+		}
+
+		// Greeting Message
+		if ( isset( $social_data['greeting_message'] ) ) {
+			$social_settings['greeting_message'] = sanitize_text_field( $social_data['greeting_message'] );
 		}
 
 		$ai_enabled = ! empty( $ai_data['enabled'] );
 
-		// If user enables both social chat widget and AI assistant, default social chat widget position to left
+		// If user enables both social chat widget and AI assistant, place social chat on left so they don't overlap
 		if ( $social_enabled && $ai_enabled ) {
 			$social_settings['widget_position'] = 'left';
 			$social_settings['position']        = 'left';
-		} elseif ( isset( $social_data['widget_position'] ) && in_array( $social_data['widget_position'], array( 'left', 'right', 'custom' ), true ) ) {
-			$social_settings['widget_position'] = sanitize_text_field( $social_data['widget_position'] );
+		} else {
+			$social_settings['widget_position'] = 'right';
+			$social_settings['position']        = 'right';
 		}
 
 		update_option( 'dctc_settings', $social_settings );

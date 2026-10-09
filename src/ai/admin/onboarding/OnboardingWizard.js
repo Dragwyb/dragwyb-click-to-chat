@@ -50,9 +50,9 @@ const Icons = {
 			<path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" />
 		</svg>
 	),
-	link: (
+	telegram: (
 		<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" style={{ width: '18px', height: '18px', display: 'block' }}>
-			<path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+			<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.03-1.94 1.23-5.48 3.62-.52.36-.99.53-1.42.52-.47-.01-1.37-.26-2.03-.48-.82-.27-1.47-.42-1.42-.88.03-.24.37-.48 1.03-.73 4.04-1.76 6.74-2.92 8.09-3.49 3.85-1.62 4.65-1.9 5.17-1.91.11 0 .37.03.54.17.14.12.18.28.2.44.02.12.04.4.02.61z" />
 		</svg>
 	),
 	check: (
@@ -169,14 +169,14 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 	const [socialChatSettings, setSocialChatSettings] = useState({
 		enabled: true,
 		whatsapp_enabled: true,
-		whatsapp_number: '+91 98765 43210',
-		whatsapp_message: 'Hello, I need help with your website.',
-		phone_enabled: false,
-		phone_number: '+91 98765 43210',
+		whatsapp_number: '+1 (555) 234-5678',
+		phone_enabled: true,
+		phone_number: '+1 (555) 234-5678',
 		email_enabled: true,
 		email_address: window.dctc_ai_data?.admin_email || 'support@yourdomain.com',
-		custom_link_enabled: true,
-		custom_link_url: window.dctc_ai_data?.home_url ? `${window.dctc_ai_data.home_url}/contact` : 'https://yourdomain.com/contact',
+		telegram_enabled: false,
+		telegram_username: '@support_team',
+		greeting_message: 'Chat with us',
 	});
 
 	const [aiSettings, setAiSettings] = useState({
@@ -203,17 +203,19 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 		const ai = window.dctc_ai_data?.settings || {};
 		const supp = window.dctc_ai_data?.support_settings || {};
 
-		if (s.whatsapp_value) {
+		if (s.whatsapp_value || s.phone_value || s.email_value || s.telegram_value || s.channels_enabled !== undefined) {
 			setSocialChatSettings((prev) => ({
 				...prev,
+				enabled: s.channels_enabled !== '0',
 				whatsapp_enabled: s.whatsapp_enabled !== '0',
-				whatsapp_number: s.whatsapp_value,
+				whatsapp_number: s.whatsapp_value || prev.whatsapp_number,
 				phone_enabled: s.phone_enabled === '1',
 				phone_number: s.phone_value || prev.phone_number,
 				email_enabled: s.email_enabled !== '0',
 				email_address: s.email_value || prev.email_address,
-				custom_link_enabled: s.contact_enabled !== '0',
-				custom_link_url: s.contact_value || prev.custom_link_url,
+				telegram_enabled: s.telegram_enabled === '1',
+				telegram_username: s.telegram_value || prev.telegram_username,
+				greeting_message: s.greeting_message || prev.greeting_message,
 			}));
 		}
 
@@ -550,8 +552,8 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 										<div className="dctc-mockup-chan-btn dctc-mockup-chan-btn--email">
 											{Icons.email}
 										</div>
-										<div className="dctc-mockup-chan-btn dctc-mockup-chan-btn--link">
-											{Icons.link}
+										<div className="dctc-mockup-chan-btn dctc-mockup-chan-btn--telegram">
+											{Icons.telegram}
 										</div>
 										<div className="dctc-mockup-chan-btn dctc-mockup-chan-btn--close">
 											✕
@@ -786,7 +788,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													<input
 														type="text"
 														className="dctc-input"
-														placeholder="+91 98765 43210"
+														placeholder="+1234567890"
 														value={socialChatSettings.whatsapp_number}
 														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, whatsapp_number: e.target.value }))}
 													/>
@@ -806,7 +808,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													<input
 														type="text"
 														className="dctc-input"
-														placeholder="+91 98765 43210"
+														placeholder="+1234567890"
 														value={socialChatSettings.phone_number}
 														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, phone_number: e.target.value }))}
 													/>
@@ -832,25 +834,41 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													/>
 												</div>
 
-												{ /* Custom Link */}
+												{ /* Telegram */}
 												<div className="dctc-channel-row">
 													<input
 														type="checkbox"
 														className="dctc-channel-checkbox"
-														checked={socialChatSettings.custom_link_enabled}
-														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, custom_link_enabled: e.target.checked }))}
+														checked={socialChatSettings.telegram_enabled}
+														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, telegram_enabled: e.target.checked }))}
 													/>
-													<div className="dctc-channel-icon-pill dctc-channel-icon-pill--link">
-														{Icons.link} Custom Link
+													<div className="dctc-channel-icon-pill dctc-channel-icon-pill--telegram">
+														{Icons.telegram} Telegram
 													</div>
 													<input
-														type="url"
+														type="text"
 														className="dctc-input"
-														placeholder="https://yourdomain.com/contact"
-														value={socialChatSettings.custom_link_url}
-														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, custom_link_url: e.target.value }))}
+														placeholder="@support_team"
+														value={socialChatSettings.telegram_username}
+														onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, telegram_username: e.target.value }))}
 													/>
 												</div>
+											</div>
+
+											<div className="dctc-form-group" style={{ marginTop: '4px' }}>
+												<label className="dctc-form-label">
+													{__('Greeting Badge Text (Call-To-Action)', 'dragwyb-click-to-chat')}
+												</label>
+												<input
+													type="text"
+													className="dctc-input"
+													placeholder="e.g. Chat with us"
+													value={socialChatSettings.greeting_message}
+													onChange={(e) => setSocialChatSettings((prev) => ({ ...prev, greeting_message: e.target.value }))}
+												/>
+												<p className="dctc-form-helper">
+													{__('Optional text pill displayed adjacent to the circular floating button.', 'dragwyb-click-to-chat')}
+												</p>
 											</div>
 										</div>
 									)}
@@ -1146,19 +1164,23 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 											<tbody>
 												<tr>
 													<td>WhatsApp</td>
-													<td>{socialChatSettings.whatsapp_enabled && socialChatSettings.whatsapp_number ? socialChatSettings.whatsapp_number : 'Not configured'}</td>
-												</tr>
-												<tr>
-													<td>Email</td>
-													<td>{socialChatSettings.email_enabled && socialChatSettings.email_address ? socialChatSettings.email_address : 'Not configured'}</td>
+													<td>{socialChatSettings.whatsapp_enabled && socialChatSettings.whatsapp_number ? socialChatSettings.whatsapp_number : 'Disabled'}</td>
 												</tr>
 												<tr>
 													<td>Phone Call</td>
-													<td>{socialChatSettings.phone_enabled && socialChatSettings.phone_number ? socialChatSettings.phone_number : 'Not configured'}</td>
+													<td>{socialChatSettings.phone_enabled && socialChatSettings.phone_number ? socialChatSettings.phone_number : 'Disabled'}</td>
 												</tr>
 												<tr>
-													<td>Custom Link</td>
-													<td>{socialChatSettings.custom_link_enabled && socialChatSettings.custom_link_url ? socialChatSettings.custom_link_url : 'Not configured'}</td>
+													<td>Email</td>
+													<td>{socialChatSettings.email_enabled && socialChatSettings.email_address ? socialChatSettings.email_address : 'Disabled'}</td>
+												</tr>
+												<tr>
+													<td>Telegram</td>
+													<td>{socialChatSettings.telegram_enabled && socialChatSettings.telegram_username ? socialChatSettings.telegram_username : 'Disabled'}</td>
+												</tr>
+												<tr>
+													<td>Greeting Text</td>
+													<td>{socialChatSettings.greeting_message || 'Default'}</td>
 												</tr>
 											</tbody>
 										</table>
