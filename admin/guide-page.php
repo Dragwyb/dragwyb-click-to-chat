@@ -34,9 +34,21 @@ $dctc_ai_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled()
 $dctc_support_settings = get_option( 'dctc_support_settings', array() );
 $dctc_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : ( ! empty( $dctc_support_settings['enabled'] ) );
 
-// Active guide tab from URL (channels, ai, support, setup)
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'channels', 'ai', 'support', 'setup' ), true ) ? sanitize_key( $_GET['tab'] ) : 'channels';
+// Priority-based active tab when not explicitly requested via URL:
+// 1. AI Assistant (if active)
+// 2. Support Center (if active)
+// 3. Channels (if active)
+if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'channels', 'ai', 'support', 'setup' ), true ) ) {
+	$dctc_active_tab = sanitize_key( $_GET['tab'] );
+} elseif ( $dctc_ai_enabled ) {
+	$dctc_active_tab = 'ai';
+} elseif ( $dctc_support_enabled ) {
+	$dctc_active_tab = 'support';
+} elseif ( $dctc_channels_enabled ) {
+	$dctc_active_tab = 'channels';
+} else {
+	$dctc_active_tab = 'channels';
+}
 ?>
 
 <div class="dctc-admin-wrap dctc-guide-wrap">

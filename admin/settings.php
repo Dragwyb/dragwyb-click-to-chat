@@ -211,8 +211,11 @@ function dctc_admin_scripts( $hook ) {
 			'dctc-admin-guide',
 			'dctc_admin',
 			array(
-				'nonce'   => wp_create_nonce( 'dctc_nonce' ),
-				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'               => wp_create_nonce( 'dctc_nonce' ),
+				'ajaxurl'             => admin_url( 'admin-ajax.php' ),
+				'is_ai_enabled'       => class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : false,
+				'is_support_enabled'  => class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : false,
+				'is_channels_enabled' => class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : true,
 			)
 		);
 	}

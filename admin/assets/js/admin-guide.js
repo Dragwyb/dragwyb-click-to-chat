@@ -77,13 +77,31 @@
             }
         },
 
+        getPriorityTab: function () {
+            if (window.dctc_admin) {
+                if (window.dctc_admin.is_ai_enabled) {
+                    return 'ai';
+                }
+                if (window.dctc_admin.is_support_enabled) {
+                    return 'support';
+                }
+                if (window.dctc_admin.is_channels_enabled) {
+                    return 'channels';
+                }
+            }
+            return 'channels';
+        },
+
         initTabFromUrl: function () {
             const urlParams = new URLSearchParams(window.location.search);
-            const tab = urlParams.get('tab') || (window.location.hash ? window.location.hash.replace('#', '') : 'channels');
-            if (['channels', 'ai', 'support', 'setup'].includes(tab)) {
+            const tabParam = urlParams.get('tab');
+            const hashParam = window.location.hash ? window.location.hash.replace('#', '') : null;
+            const tab = tabParam || hashParam || this.getPriorityTab();
+
+            if (['ai', 'support', 'channels', 'setup'].includes(tab)) {
                 this.switchTab(tab);
             } else {
-                this.switchTab('channels');
+                this.switchTab(this.getPriorityTab());
             }
         },
 

@@ -402,7 +402,19 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 								className="dctc-btn-primary"
 								onClick={() => {
 									removeOpenParamFromUrl();
-									onClose();
+									let targetTab = 'channels';
+									if (features.aiAssistant) {
+										targetTab = 'ai';
+									} else if (features.supportCenter) {
+										targetTab = 'support';
+									} else if (features.socialChat) {
+										targetTab = 'channels';
+									}
+									const url = new URL(window.location.href);
+									url.searchParams.delete('open');
+									url.searchParams.delete('dctc_open_onboarding');
+									url.searchParams.set('tab', targetTab);
+									window.location.href = url.toString();
 								}}
 							>
 								{__('Go to Plugin Dashboard →', 'dragwyb-click-to-chat')}
