@@ -916,53 +916,6 @@ export default function TicketsView({
 											})
 										)}
 									</div>
-
-									{/* LEFT PANEL PAGINATION & PER-PAGE SELECTOR */}
-									{(totalTickets > 0 || totalPages > 0) && (
-										<div className="dctc-sc-left-panel-pagination">
-											<div className="dctc-sc-left-pagination-top">
-												<span className="dctc-sc-left-page-info">
-													{currentPage} / {Math.max(1, totalPages)} ({totalTickets} {__('tickets', 'dragwyb-click-to-chat')})
-												</span>
-												<select
-													value={perPage}
-													onChange={(e) => {
-														if (setPerPage) setPerPage(Number(e.target.value));
-														if (setCurrentPage) setCurrentPage(1);
-													}}
-													className="dctc-sc-left-per-page-select"
-													title={__('Tickets per page', 'dragwyb-click-to-chat')}
-												>
-													<option value={10}>10 / p</option>
-													<option value={25}>25 / p</option>
-													<option value={50}>50 / p</option>
-													<option value={100}>100 / p</option>
-												</select>
-											</div>
-											<div className="dctc-sc-left-pagination-btns">
-												<button
-													type="button"
-													disabled={currentPage <= 1}
-													onClick={() => setCurrentPage?.((p) => Math.max(1, p - 1))}
-													className="dctc-sc-left-page-btn"
-													title={__('Previous page', 'dragwyb-click-to-chat')}
-												>
-													<span className="dashicons dashicons-arrow-left-alt2"></span>
-													<span>{__('Prev', 'dragwyb-click-to-chat')}</span>
-												</button>
-												<button
-													type="button"
-													disabled={currentPage >= totalPages}
-													onClick={() => setCurrentPage?.((p) => Math.min(totalPages, p + 1))}
-													className="dctc-sc-left-page-btn"
-													title={__('Next page', 'dragwyb-click-to-chat')}
-												>
-													<span>{__('Next', 'dragwyb-click-to-chat')}</span>
-													<span className="dashicons dashicons-arrow-right-alt2"></span>
-												</button>
-											</div>
-										</div>
-									)}
 								</aside>
 							) : (
 								<div className="dctc-sc-left-panel-collapsed-bar">

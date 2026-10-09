@@ -225,7 +225,7 @@ export default function TicketSidebar({
 				)}
 			</div>
 
-			{/* AI CONVERSATION USEFUL CONTENT CARD */}
+			{/* AI Insights CARD */}
 			{((selectedTicket?.ai_useful_content && selectedTicket.ai_useful_content.has_ai_content) || selectedTicket?.meta?.lead_id || selectedTicket?.meta?.budget || selectedTicket?.meta?.requirement || selectedTicket?.meta?.company || selectedTicket?.customer_phone) && (
 				<div className="dctc-sc-details-card dctc-sc-ai-useful-card">
 					<button
@@ -236,7 +236,7 @@ export default function TicketSidebar({
 					>
 						<div className="dctc-sc-card-head-title">
 							<span className="dashicons dashicons-format-chat" style={{ color: '#0ea5e9' }}></span>
-							<h4>{__('AI Conversation Useful Content', 'dragwyb-click-to-chat')}</h4>
+							<h4>{__('AI Insights', 'dragwyb-click-to-chat')}</h4>
 						</div>
 						<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 							{selectedTicket?.ai_useful_content?.lead_score > 0 && (
@@ -643,7 +643,10 @@ export default function TicketSidebar({
 								'#7c3aed', // Purple
 								'#0284c7', // Sky
 							];
-							const bg = viewer.bg || colors[vIdx % colors.length];
+							const matchedAgent = (agents || []).find(
+								(a) => String(a.wp_user_id) === String(viewer.user_id) || String(a.id) === String(viewer.user_id)
+							);
+							const bg = viewer.color || matchedAgent?.color || viewer.bg || colors[vIdx % colors.length];
 							const initials = viewer.initials || getInitials(viewer.name || viewer.display_name || 'Staff');
 							const name = viewer.name || viewer.display_name || 'Staff Member';
 
@@ -654,11 +657,7 @@ export default function TicketSidebar({
 									style={{ backgroundColor: bg }}
 									title={`${name} (Viewing now)`}
 								>
-									{viewer.avatar ? (
-										<img src={viewer.avatar} alt={name} />
-									) : (
-										<span>{initials}</span>
-									)}
+									<span>{initials}</span>
 									<span className="dctc-sc-viewer-online-dot"></span>
 								</div>
 							);

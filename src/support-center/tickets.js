@@ -383,9 +383,21 @@ function TicketsApp() {
 		fetchTickets();
 	}, [fetchTickets]);
 
+	const bodyAddTicketViewCls = (status) => {
+		if (status) {
+			document.documentElement.scrollTop = 0;
+		}
+		document.body.classList.toggle('dctc-view-ticket', status);
+	}
+
 	// Ticket polling: 5-second polling when inside a specific ticket conversation
 	useEffect(() => {
-		if (!selectedTicketId) return;
+		if (!selectedTicketId) {
+			bodyAddTicketViewCls(false)
+			return
+		};
+
+		bodyAddTicketViewCls(true);
 
 		let isMounted = true;
 		const interval = setInterval(() => {

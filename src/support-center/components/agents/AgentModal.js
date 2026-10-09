@@ -12,6 +12,19 @@ const PRESET_SKILLS = [
 	'orders',
 ];
 
+const PRESET_COLORS = [
+	{ name: 'Indigo', value: '#4f46e5' },
+	{ name: 'Sky Blue', value: '#0284c7' },
+	{ name: 'Emerald', value: '#059669' },
+	{ name: 'Teal', value: '#0d9488' },
+	{ name: 'Orange', value: '#ea580c' },
+	{ name: 'Rose Red', value: '#e11d48' },
+	{ name: 'Amber', value: '#d97706' },
+	{ name: 'Purple', value: '#7c3aed' },
+	{ name: 'Pink', value: '#db2777' },
+	{ name: 'Slate', value: '#475569' },
+];
+
 export default function AgentModal({
 	isOpen,
 	onClose,
@@ -27,6 +40,7 @@ export default function AgentModal({
 	const [selectedUserId, setSelectedUserId] = useState('');
 	const [supportRole, setSupportRole] = useState('support');
 	const [seniority, setSeniority] = useState('support');
+	const [color, setColor] = useState('#4f46e5');
 	const [maxTickets, setMaxTickets] = useState(10);
 	const [availability, setAvailability] = useState('available');
 	const [skills, setSkills] = useState(['technical', 'woocommerce', 'billing']);
@@ -38,6 +52,7 @@ export default function AgentModal({
 				setSelectedUserId(agent.wp_user_id);
 				setSupportRole(agent.support_role || 'support');
 				setSeniority(agent.seniority || 'support');
+				setColor(agent.color || '#4f46e5');
 				setMaxTickets(agent.max_active_tickets || 10);
 				setAvailability(agent.availability_status || 'available');
 				setSkills(Array.isArray(agent.skills) ? agent.skills : []);
@@ -45,6 +60,7 @@ export default function AgentModal({
 				setSelectedUserId('');
 				setSupportRole('support');
 				setSeniority('support');
+				setColor('#4f46e5');
 				setMaxTickets(10);
 				setAvailability('available');
 				setSkills(['technical', 'woocommerce', 'billing']);
@@ -82,6 +98,9 @@ export default function AgentModal({
 		if (existingAgent) {
 			setSupportRole(existingAgent.support_role || 'support');
 			setSeniority(existingAgent.seniority || 'support');
+			if (existingAgent.color) {
+				setColor(existingAgent.color);
+			}
 			setMaxTickets(existingAgent.max_active_tickets || 10);
 			setAvailability(existingAgent.availability_status || 'available');
 			if (Array.isArray(existingAgent.skills) && existingAgent.skills.length > 0) {
@@ -134,6 +153,7 @@ export default function AgentModal({
 					wp_user_id: parseInt(selectedUserId, 10),
 					support_role: supportRole,
 					seniority: seniority,
+					color: color || '#4f46e5',
 					max_active_tickets: parseInt(maxTickets, 10) || 10,
 					availability_status: availability,
 					skills: skills,
@@ -158,6 +178,15 @@ export default function AgentModal({
 			setSaving(false);
 		}
 	};
+
+	const selectedUserObj = (wpUsers || []).find((u) => String(u.id) === String(selectedUserId));
+	const currentDisplayName = selectedUserObj?.display_name || agent?.display_name || 'Support Agent';
+	const userInitials = (function(name) {
+		if (!name) return 'AG';
+		const parts = name.trim().split(/\s+/);
+		if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+		return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+	})(currentDisplayName);
 
 	return (
 		<div className="dctc-sc-modal-backdrop" onClick={onClose}>
@@ -302,7 +331,72 @@ export default function AgentModal({
 								</div>
 							</div>
 
-							{/* Section 4: Routing Skills with Interactive Tag Pillbox */}
+							{/* Section 4: Agent Avatar & Identifier Color */}
+							<div className="dctc-sc-form-group">
+								<label className="dctc-sc-field-label">
+									<span className="dashicons dashicons-art"></span>
+									{__('Agent Avatar & Identification Color', 'dragwyb-click-to-chat')}
+								</label>
+								<div className="dctc-sc-agent-color-picker-box">
+									<div className="dctc-sc-agent-color-preview-wrap">
+										<div
+											className="dctc-sc-sidebar-viewer-avatar dctc-sc-agent-color-preview-avatar"
+											style={{ backgroundColor: color || '#4f46e5' }}
+											title={`${currentDisplayName} (${userInitials})`}
+										>
+											<span>{userInitials}</span>
+											<span className="dctc-sc-viewer-online-dot"></span>
+										</div>
+										<div className="dctc-sc-agent-color-preview-info">
+											<strong>{currentDisplayName}</strong>
+											<span>{__('Ticket viewers stack initials preview', 'dragwyb-click-to-chat')}</span>
+										</div>
+									</div>
+
+									<div className="dctc-sc-color-palette-wrap">
+										<div className="dctc-sc-preset-colors-row">
+											{PRESET_COLORS.map((c) => {
+												const isSelected = (color || '').toLowerCase() === c.value.toLowerCase();
+												return (
+													<button
+														key={c.value}
+														type="button"
+														className={`dctc-sc-color-swatch-btn ${isSelected ? 'is-selected' : ''}`}
+														style={{ backgroundColor: c.value }}
+														onClick={() => setColor(c.value)}
+														title={c.name}
+													>
+														{isSelected && <span className="dashicons dashicons-yes"></span>}
+													</button>
+												);
+											})}
+										</div>
+
+										<div className="dctc-sc-custom-color-input-row">
+											<input
+												type="color"
+												className="dctc-sc-color-input-native"
+												value={color || '#4f46e5'}
+												onChange={(e) => setColor(e.target.value)}
+												title={__('Custom color picker', 'dragwyb-click-to-chat')}
+											/>
+											<input
+												type="text"
+												className="dctc-sc-custom-input dctc-sc-hex-input"
+												value={color || '#4f46e5'}
+												onChange={(e) => setColor(e.target.value)}
+												placeholder="#4f46e5"
+												maxLength={7}
+											/>
+										</div>
+									</div>
+								</div>
+								<span className="dctc-sc-field-hint">
+									{__('This color is used for the active viewer avatar initials span in the ticket sidebar and agent presence indicator.', 'dragwyb-click-to-chat')}
+								</span>
+							</div>
+
+							{/* Section 5: Routing Skills with Interactive Tag Pillbox */}
 							<div className="dctc-sc-form-group">
 								<label className="dctc-sc-field-label">
 									<span className="dashicons dashicons-tag"></span>

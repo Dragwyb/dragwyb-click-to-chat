@@ -54,6 +54,7 @@ class DCTC_Support_Agent_Service {
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
+			$row['color']        = ! empty( $row['color'] ) ? $row['color'] : '#4f46e5';
 
 			$row['skills'] = ! empty( $row['skills'] ) ? json_decode( $row['skills'], true ) : array();
 			$row['skills'] = is_array( $row['skills'] ) ? $row['skills'] : array();
@@ -86,6 +87,7 @@ class DCTC_Support_Agent_Service {
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
+			$row['color']        = ! empty( $row['color'] ) ? $row['color'] : '#4f46e5';
 
 			$row['skills'] = ! empty( $row['skills'] ) ? json_decode( $row['skills'], true ) : array();
 			$row['skills'] = is_array( $row['skills'] ) ? $row['skills'] : array();
@@ -118,6 +120,7 @@ class DCTC_Support_Agent_Service {
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
+			$row['color']        = ! empty( $row['color'] ) ? $row['color'] : '#4f46e5';
 
 			$row['skills'] = ! empty( $row['skills'] ) ? json_decode( $row['skills'], true ) : array();
 			$row['skills'] = is_array( $row['skills'] ) ? $row['skills'] : array();
@@ -143,10 +146,23 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
+		// Ensure color column exists in database
+		$col_check = $wpdb->get_results( "SHOW COLUMNS FROM `$table` LIKE 'color'" );
+		if ( empty( $col_check ) ) {
+			$wpdb->query( "ALTER TABLE `$table` ADD `color` varchar(30) DEFAULT '#4f46e5' NOT NULL AFTER `seniority`" );
+		}
+
 		$id                         = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
 		$wp_user_id                 = ! empty( $data['wp_user_id'] ) ? absint( $data['wp_user_id'] ) : 0;
 		$support_role               = ! empty( $data['support_role'] ) ? sanitize_key( $data['support_role'] ) : 'support';
 		$seniority                  = ! empty( $data['seniority'] ) ? sanitize_key( $data['seniority'] ) : 'support';
+		$color                      = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '';
+		if ( empty( $color ) && ! empty( $data['color'] ) ) {
+			$color = sanitize_text_field( $data['color'] );
+		}
+		if ( empty( $color ) ) {
+			$color = '#4f46e5';
+		}
 		$active                     = isset( $data['active'] ) ? ( $data['active'] ? 1 : 0 ) : 1;
 		$assignment_enabled         = isset( $data['assignment_enabled'] ) ? ( $data['assignment_enabled'] ? 1 : 0 ) : 1;
 		$availability_status        = ! empty( $data['availability_status'] ) ? sanitize_key( $data['availability_status'] ) : 'available';
@@ -179,6 +195,7 @@ class DCTC_Support_Agent_Service {
 		$fields = array(
 			'support_role'               => $support_role,
 			'seniority'                  => $seniority,
+			'color'                      => $color,
 			'skills'                     => $skills,
 			'allowed_categories'         => $allowed_categories,
 			'active'                     => $active,

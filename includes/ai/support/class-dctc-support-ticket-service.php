@@ -335,7 +335,7 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $prod_val ) && 'all' !== $prod_val ) {
 			if ( is_numeric( $prod_val ) ) {
 				$prod_id = absint( $prod_val );
-				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'product_id' AND meta_value = %s) OR (meta_key = 'product' AND meta_value = %s)) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id = %d))", (string) $prod_id, (string) $prod_id, $prod_id );
+				$where  .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'product_id' AND meta_value = %s) OR (meta_key = 'product' AND meta_value = %s)) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id = %d))", (string) $prod_id, (string) $prod_id, $prod_id );
 			} else {
 				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key IN ('product', 'product_name') AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s))))", sanitize_text_field( $prod_val ), sanitize_title( $prod_val ), sanitize_text_field( $prod_val ) );
 			}
@@ -429,8 +429,8 @@ class DCTC_Support_Ticket_Service {
 
 		// Order
 		$orderby_allowed = array( 'created_at', 'updated_at', 'ticket_number', 'priority', 'status' );
-		$orderby = ( ! empty( $args['orderby'] ) && in_array( $args['orderby'], $orderby_allowed, true ) ) ? $args['orderby'] : 'created_at';
-		$order   = ( ! empty( $args['order'] ) && 'ASC' === strtoupper( $args['order'] ) ) ? 'ASC' : 'DESC';
+		$orderby         = ( ! empty( $args['orderby'] ) && in_array( $args['orderby'], $orderby_allowed, true ) ) ? $args['orderby'] : 'created_at';
+		$order           = ( ! empty( $args['order'] ) && 'ASC' === strtoupper( $args['order'] ) ) ? 'ASC' : 'DESC';
 
 		// Count total
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -521,8 +521,8 @@ class DCTC_Support_Ticket_Service {
 				$row['guest_access_token']           = ! empty( $t_meta['guest_access_token'] ) ? (string) $t_meta['guest_access_token'] : '';
 				$row['ai_classification_confidence'] = isset( $t_meta['ai_classification_confidence'] ) ? floatval( $t_meta['ai_classification_confidence'] ) : 0.0;
 				$row['ai_summary']                   = ! empty( $t_meta['ai_summary'] ) ? (string) $t_meta['ai_summary'] : '';
-				$row['is_starred']                    = ! empty( $t_meta['is_starred'] );
-				$row['is_flagged']                    = ! empty( $t_meta['is_flagged'] );
+				$row['is_starred']                   = ! empty( $t_meta['is_starred'] );
+				$row['is_flagged']                   = ! empty( $t_meta['is_flagged'] );
 
 				// Category resolution
 				if ( ! empty( $row['category_id'] ) && isset( $cats_map[ $row['category_id'] ] ) ) {
@@ -628,8 +628,8 @@ class DCTC_Support_Ticket_Service {
 		$ticket['assigned_team_id']             = ! empty( $ticket_meta['assigned_team_id'] ) ? absint( $ticket_meta['assigned_team_id'] ) : 0;
 		$ticket['ai_classification_confidence'] = isset( $ticket_meta['ai_classification_confidence'] ) ? floatval( $ticket_meta['ai_classification_confidence'] ) : 0.0;
 		$ticket['ai_summary']                   = ! empty( $ticket_meta['ai_summary'] ) ? (string) $ticket_meta['ai_summary'] : '';
-		$ticket['is_starred']                    = ! empty( $ticket_meta['is_starred'] );
-		$ticket['is_flagged']                    = ! empty( $ticket_meta['is_flagged'] );
+		$ticket['is_starred']                   = ! empty( $ticket_meta['is_starred'] );
+		$ticket['is_flagged']                   = ! empty( $ticket_meta['is_flagged'] );
 
 		// Category info
 		$ticket['category_name']  = '';
@@ -667,8 +667,8 @@ class DCTC_Support_Ticket_Service {
 			}
 		}
 
-		$ticket['tags']   = DCTC_Support_Tag_Service::get_ticket_tags( $ticket_id );
-		$ticket['notes']  = DCTC_Support_Note_Service::get_notes( $ticket_id );
+		$ticket['tags']  = DCTC_Support_Tag_Service::get_ticket_tags( $ticket_id );
+		$ticket['notes'] = DCTC_Support_Note_Service::get_notes( $ticket_id );
 
 		// Retrieve conversation messages from sessions table (by session_id or support_ticket_id)
 		$session_row = null;
@@ -687,9 +687,9 @@ class DCTC_Support_Ticket_Service {
 			);
 		}
 
-		$ticket['has_session']   = ! empty( $session_row );
-		$session_content         = $session_row ? $session_row['content'] : '';
-		$ticket['messages']      = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
+		$ticket['has_session'] = ! empty( $session_row );
+		$session_content       = $session_row ? $session_row['content'] : '';
+		$ticket['messages']    = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
 		if ( empty( $ticket['messages'] ) ) {
 			$meta_msgs = ! empty( $ticket_meta['_dctc_ticket_messages'] ) ? $ticket_meta['_dctc_ticket_messages'] : array();
 			if ( is_array( $meta_msgs ) ) {
@@ -708,26 +708,31 @@ class DCTC_Support_Ticket_Service {
 			$ticket['customer_phone'] = (string) $ticket_meta['phone'];
 		}
 
-		$session_updated = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
-		$now             = current_time( 'timestamp' );
+		$session_updated             = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
+		$now                         = current_time( 'timestamp' );
 		$ticket['is_session_active'] = $session_row && ( ( $now - $session_updated ) < 90 );
 
 		// Active agent viewers list
-		$viewing_users = ! empty( $ticket_meta['_agent_viewing_user_ids'] ) && is_array( $ticket_meta['_agent_viewing_user_ids'] ) ? $ticket_meta['_agent_viewing_user_ids'] : array();
-		$active_viewers = array_values( array_filter( $viewing_users, function( $v ) use ( $now ) {
-			return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
-		} ) );
+		$viewing_users              = ! empty( $ticket_meta['_agent_viewing_user_ids'] ) && is_array( $ticket_meta['_agent_viewing_user_ids'] ) ? $ticket_meta['_agent_viewing_user_ids'] : array();
+		$active_viewers             = array_values(
+			array_filter(
+				$viewing_users,
+				function ( $v ) use ( $now ) {
+					return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
+				}
+			)
+		);
 		$ticket['viewing_users']    = $active_viewers;
 		$ticket['is_agent_viewing'] = ! empty( $active_viewers ) ? 1 : 0;
 
 		// AI responding status
-		$ai_waiting = ! empty( $ticket_meta['ai_response_waiting'] ) || ! empty( $ticket_meta['ai_response'] );
+		$ai_waiting                    = ! empty( $ticket_meta['ai_response_waiting'] ) || ! empty( $ticket_meta['ai_response'] );
 		$ticket['ai_response_waiting'] = $ai_waiting ? true : false;
 		$ticket['ai_response']         = $ai_waiting ? true : false;
 
 		// Instantiate OOP model to load AI useful content & WC info
 		if ( class_exists( 'DCTC_Support_Ticket' ) ) {
-			$ticket_obj = new DCTC_Support_Ticket( $ticket );
+			$ticket_obj                  = new DCTC_Support_Ticket( $ticket );
 			$ticket['ai_useful_content'] = $ticket_obj->get_ai_useful_content();
 			if ( empty( $ticket['customer_phone'] ) && ! empty( $ticket['ai_useful_content']['customer_phone'] ) ) {
 				$ticket['customer_phone'] = $ticket['ai_useful_content']['customer_phone'];
@@ -790,11 +795,11 @@ class DCTC_Support_Ticket_Service {
 	/**
 	 * Change ticket status (open, pending, waiting_customer, resolved, closed, trash).
 	 *
-	 * @param int         $ticket_id   Ticket ID.
-	 * @param string      $new_status  New status slug.
-	 * @param string      $actor_type  'agent', 'customer', 'ai', 'system'.
-	 * @param int         $actor_id    Actor WP User ID.
-	 * @param string      $actor_name  Actor Name.
+	 * @param int    $ticket_id   Ticket ID.
+	 * @param string $new_status  New status slug.
+	 * @param string $actor_type  'agent', 'customer', 'ai', 'system'.
+	 * @param int    $actor_id    Actor WP User ID.
+	 * @param string $actor_name  Actor Name.
 	 * @return bool
 	 */
 	public static function change_status( $ticket_id, $new_status, $actor_type = 'agent', $actor_id = 0, $actor_name = '' ) {
@@ -863,11 +868,11 @@ class DCTC_Support_Ticket_Service {
 	/**
 	 * Change ticket priority.
 	 *
-	 * @param int         $ticket_id     Ticket ID.
-	 * @param string      $new_priority  'low', 'normal', 'high', 'urgent'.
-	 * @param string      $actor_type    'agent', 'system'.
-	 * @param int         $actor_id      Actor User ID.
-	 * @param string      $actor_name    Actor Name.
+	 * @param int    $ticket_id     Ticket ID.
+	 * @param string $new_priority  'low', 'normal', 'high', 'urgent'.
+	 * @param string $actor_type    'agent', 'system'.
+	 * @param int    $actor_id      Actor User ID.
+	 * @param string $actor_name    Actor Name.
 	 * @return bool
 	 */
 	public static function change_priority( $ticket_id, $new_priority, $actor_type = 'agent', $actor_id = 0, $actor_name = '' ) {
@@ -884,7 +889,10 @@ class DCTC_Support_Ticket_Service {
 
 		$wpdb->update(
 			$table_tickets,
-			array( 'priority' => $new_priority, 'updated_at' => current_time( 'mysql' ) ),
+			array(
+				'priority'   => $new_priority,
+				'updated_at' => current_time( 'mysql' ),
+			),
 			array( 'id' => $ticket_id )
 		);
 
@@ -1014,13 +1022,13 @@ class DCTC_Support_Ticket_Service {
 		$wpdb->insert(
 			$table_assignments,
 			array(
-				'ticket_id'          => $ticket_id,
-				'agent_id'           => $agent_id,
-				'team_id'            => $team_id,
-				'assigned_by'        => $assigned_by ? absint( $assigned_by ) : get_current_user_id(),
-				'assignment_reason'  => sanitize_text_field( $reason ),
-				'assignment_method'  => sanitize_key( $method ),
-				'created_at'         => current_time( 'mysql' ),
+				'ticket_id'         => $ticket_id,
+				'agent_id'          => $agent_id,
+				'team_id'           => $team_id,
+				'assigned_by'       => $assigned_by ? absint( $assigned_by ) : get_current_user_id(),
+				'assignment_reason' => sanitize_text_field( $reason ),
+				'assignment_method' => sanitize_key( $method ),
+				'created_at'        => current_time( 'mysql' ),
 			)
 		);
 
@@ -1034,7 +1042,10 @@ class DCTC_Support_Ticket_Service {
 			'',
 			$old_agent_id,
 			$agent_id,
-			array( 'method' => $method, 'reason' => $reason )
+			array(
+				'method' => $method,
+				'reason' => $reason,
+			)
 		);
 
 		// Update workloads
@@ -1080,10 +1091,10 @@ class DCTC_Support_Ticket_Service {
 	/**
 	 * Append a customer or agent reply to the linked session conversation.
 	 *
-	 * @param int         $ticket_id   Ticket ID.
-	 * @param string      $message     Message content.
-	 * @param string      $sender_type 'customer' or 'agent'.
-	 * @param int|null    $user_id     Actor user ID.
+	 * @param int      $ticket_id   Ticket ID.
+	 * @param string   $message     Message content.
+	 * @param string   $sender_type 'customer' or 'agent'.
+	 * @param int|null $user_id     Actor user ID.
 	 * @return bool|WP_Error
 	 */
 	public static function add_reply( $ticket_id, $message, $sender_type = 'customer', $user_id = null ) {
@@ -1253,7 +1264,7 @@ class DCTC_Support_Ticket_Service {
 		);
 
 		// Assigned to me metrics
-		$agent_ids_check = array_filter( array_unique( array( $agent_id, $user_id ) ) );
+		$agent_ids_check    = array_filter( array_unique( array( $agent_id, $user_id ) ) );
 		$agent_placeholders = ! empty( $agent_ids_check ) ? implode( ',', array_map( 'absint', $agent_ids_check ) ) : '0';
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -1271,7 +1282,7 @@ class DCTC_Support_Ticket_Service {
 
 		// If user is admin and has no individual assigned tickets, show site active open/pending
 		if ( $is_admin && 0 === $my_active && $total_open > 0 ) {
-			$my_active = $total_open;
+			$my_active         = $total_open;
 			$my_today_assigned = $today_created;
 		} elseif ( 0 === $my_today_assigned && $my_active > 0 ) {
 			// If active tickets exist for agent, display active count so hero/card is meaningful
@@ -1283,7 +1294,7 @@ class DCTC_Support_Ticket_Service {
 		$human_controlled = (int) $wpdb->get_var(
 			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status NOT IN ('resolved', 'closed', 'trash')"
 		);
-		$ai_controlled = max( 0, $total_open - $human_controlled );
+		$ai_controlled    = max( 0, $total_open - $human_controlled );
 
 		// Agent info
 		$agent_profile = array(
@@ -1399,21 +1410,23 @@ class DCTC_Support_Ticket_Service {
 		// 1. Detect WooCommerce Products if present
 		$matched_product_name = '';
 		if ( post_type_exists( 'product' ) ) {
-			$products = get_posts( array(
-				'post_type'      => 'product',
-				'post_status'    => 'publish',
-				'posts_per_page' => 100,
-				'orderby'        => 'title',
-				'order'          => 'ASC',
-			) );
+			$products = get_posts(
+				array(
+					'post_type'      => 'product',
+					'post_status'    => 'publish',
+					'posts_per_page' => 100,
+					'orderby'        => 'title',
+					'order'          => 'ASC',
+				)
+			);
 
 			if ( ! empty( $products ) && is_array( $products ) ) {
 				foreach ( $products as $product ) {
 					$title_lower = mb_strtolower( $product->post_title );
 					if ( strlen( $title_lower ) >= 3 && false !== mb_strpos( $text_lower, $title_lower ) ) {
 						$matched_product_name = $product->post_title;
-						$tags[] = $product->post_title;
-						$confidence = 0.90;
+						$tags[]               = $product->post_title;
+						$confidence           = 0.90;
 						break;
 					}
 				}
@@ -1553,7 +1566,7 @@ class DCTC_Support_Ticket_Service {
 		$map = array();
 		if ( is_array( $rows ) ) {
 			foreach ( $rows as $row ) {
-				$decoded = json_decode( $row['meta_value'], true );
+				$decoded                 = json_decode( $row['meta_value'], true );
 				$map[ $row['meta_key'] ] = ( null !== $decoded && is_array( $decoded ) ) ? $decoded : $row['meta_value'];
 			}
 		}
@@ -1631,7 +1644,10 @@ class DCTC_Support_Ticket_Service {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->delete(
 				$table,
-				array( 'ticket_id' => $ticket_id, 'meta_key' => sanitize_key( $meta_key ) ),
+				array(
+					'ticket_id' => $ticket_id,
+					'meta_key'  => sanitize_key( $meta_key ),
+				),
 				array( '%d', '%s' )
 			);
 		} else {
@@ -1942,4 +1958,3 @@ class DCTC_Support_Ticket_Service {
 		return self::get_ticket( $ticket['id'] );
 	}
 }
-

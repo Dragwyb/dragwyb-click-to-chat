@@ -1298,13 +1298,18 @@ class DCTC_Support_REST_Controller {
 
 		// Fetch existing viewers map
 		$stored_viewers = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], '_agent_viewing_user_ids', true );
+
+		if ( ! empty( $stored_viewers ) && is_string( $stored_viewers ) ) {
+			$stored_viewers = json_decode( $stored_viewers, true );
+		}
+
 		$active_viewers = array();
 
 		if ( is_array( $stored_viewers ) ) {
 			foreach ( $stored_viewers as $viewer ) {
 				if ( is_array( $viewer ) && ! empty( $viewer['user_id'] ) && ! empty( $viewer['last_seen'] ) ) {
 					// Prune if older than 35s
-					if ( ( $now - (int) $viewer['last_seen'] ) <= 35 ) {
+					if ( ( $now - (int) $viewer['last_seen'] ) <= 120 ) {
 						$active_viewers[ (int) $viewer['user_id'] ] = $viewer;
 					}
 				}
@@ -1315,7 +1320,6 @@ class DCTC_Support_REST_Controller {
 			if ( $viewing ) {
 				$user         = get_userdata( $user_id );
 				$display_name = $user ? $user->display_name : 'Agent #' . $user_id;
-				$avatar       = get_avatar_url( $user_id, array( 'size' => 48 ) );
 
 				$initials = '';
 				$parts    = explode( ' ', trim( $display_name ) );
@@ -1326,11 +1330,14 @@ class DCTC_Support_REST_Controller {
 				}
 				$initials = substr( $initials, 0, 2 ) ?: 'AG';
 
+				$agent       = class_exists( 'DCTC_Support_Agent_Service' ) ? DCTC_Support_Agent_Service::get_agent_by_user_id( $user_id ) : null;
+				$agent_color = ( $agent && ! empty( $agent['color'] ) ) ? $agent['color'] : '#4f46e5';
+
 				$active_viewers[ $user_id ] = array(
 					'user_id'   => (int) $user_id,
 					'name'      => $display_name,
 					'initials'  => $initials,
-					'avatar'    => $avatar,
+					'color'     => $agent_color,
 					'last_seen' => $now,
 				);
 			} else {
@@ -2047,7 +2054,13 @@ class DCTC_Support_REST_Controller {
 	public function get_user_filters( $request ) {
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			return new WP_REST_Response( array( 'success' => false, 'filters' => new stdClass() ), 401 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'filters' => new stdClass(),
+				),
+				401
+			);
 		}
 
 		$filters = get_option( 'dctc_support_user_filters_' . $user_id, null );
@@ -2077,7 +2090,13 @@ class DCTC_Support_REST_Controller {
 	public function save_user_filters( $request ) {
 		$user_id = get_current_user_id();
 		if ( ! $user_id ) {
-			return new WP_REST_Response( array( 'success' => false, 'message' => __( 'Unauthorized.', 'dragwyb-click-to-chat' ) ), 401 );
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Unauthorized.', 'dragwyb-click-to-chat' ),
+				),
+				401
+			);
 		}
 
 		$params  = $request->get_json_params();

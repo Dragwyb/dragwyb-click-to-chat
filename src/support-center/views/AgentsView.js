@@ -48,6 +48,13 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 		}
 	};
 
+	const getAgentInitials = (name) => {
+		if (!name) return 'AG';
+		const parts = name.trim().split(/\s+/);
+		if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+		return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+	};
+
 	return (
 		<div className="dctc-sc-panel-box">
 			{notice && (
@@ -112,7 +119,21 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 						agents.map((ag) => (
 							<tr key={ag.id}>
 								<td>
-									<div className="dctc-sc-agent-cell">
+									<div className="dctc-sc-agent-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+										<div
+											className="dctc-sc-sidebar-viewer-avatar"
+											style={{
+												backgroundColor: ag.color || '#4f46e5',
+												width: '30px',
+												height: '30px',
+												minWidth: '30px',
+												fontSize: '11px',
+												cursor: 'default'
+											}}
+											title={ag.display_name}
+										>
+											<span>{getAgentInitials(ag.display_name)}</span>
+										</div>
 										<span className={`dctc-sc-status-indicator ${ag.availability_status}`}></span>
 										<strong>{ag.display_name}</strong>
 									</div>
