@@ -233,7 +233,7 @@ class DCTC_Support_Ticket_Service {
 		if ( $agent_id > 0 ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$is_valid_agent = $wpdb->get_var(
-				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 			);
 			if ( ! $is_valid_agent ) {
 				$agent_id = 0; // fallback to unassigned
@@ -1298,7 +1298,7 @@ class DCTC_Support_Ticket_Service {
 		if ( $agent_id > 0 ) {
 			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$is_active = $wpdb->get_var(
-				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 			);
 			if ( ! $is_active ) {
 				return false;
@@ -1493,7 +1493,7 @@ class DCTC_Support_Ticket_Service {
 			if ( empty( $ticket['assigned_agent_id'] ) && $user_id ) {
 				$table_agents = $wpdb->prefix . 'dctc_support_agents';
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND is_active = 1", $user_id ), ARRAY_A );
+				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), ARRAY_A );
 				if ( $agent_row ) {
 					self::update_ticket_meta( $ticket_id, 'assigned_agent_id', absint( $agent_row['id'] ) );
 					DCTC_Support_Agent_Service::update_workload( absint( $agent_row['id'] ) );
@@ -2100,7 +2100,7 @@ class DCTC_Support_Ticket_Service {
 			if ( $agent_id > 0 ) {
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$is_valid = $wpdb->get_var(
-					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 				);
 				if ( $is_valid ) {
 					self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
