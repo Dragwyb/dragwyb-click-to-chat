@@ -429,6 +429,7 @@ function dctc_save_settings() {
 			$enabled                     = ( '1' === $_POST['support_center_enabled'] );
 			$support_settings['enabled'] = $enabled;
 			update_option( 'dctc_support_settings', $support_settings );
+			$settings['support_center_enabled'] = $enabled ? '1' : '0';
 
 			if ( $enabled && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php' ) ) {
 				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';

@@ -24,15 +24,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 $dctc_settings = get_option( 'dctc_settings', array() );
 
 // 1. Channels status
-$dctc_channels_enabled = ! isset( $dctc_settings['channels_enabled'] ) || '1' === $dctc_settings['channels_enabled'];
+$dctc_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : ( ! isset( $dctc_settings['channels_enabled'] ) || '1' === $dctc_settings['channels_enabled'] );
 
 // 2. AI Assistant status
 $dctc_ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
-$dctc_ai_enabled  = ! empty( $dctc_ai_settings['display']['entire_site'] );
+$dctc_ai_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : ( ! empty( $dctc_ai_settings['display']['entire_site'] ) );
 
 // 3. Support Center status
 $dctc_support_settings = get_option( 'dctc_support_settings', array() );
-$dctc_support_enabled  = ! empty( $dctc_support_settings['enabled'] );
+$dctc_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : ( ! empty( $dctc_support_settings['enabled'] ) );
 
 // Active guide tab from URL (channels, ai, support, setup)
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended

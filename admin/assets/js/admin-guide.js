@@ -93,11 +93,12 @@
             const feature = $btn.data('feature');
             const originalHtml = $btn.html();
 
-            $btn.prop('disabled', true).html('Activating…');
+            $btn.prop('disabled', true).html('<span class="dashicons dashicons-update spin" style="margin-right:4px; font-size:16px; width:16px; height:16px; display:inline-block; animation:dctcSpin 1s linear infinite;"></span> Activating…');
 
             const formData = {
                 action: 'dctc_save_settings',
-                nonce: dctc_admin ? dctc_admin.nonce : ''
+                nonce: dctc_admin ? dctc_admin.nonce : '',
+                is_module_settings: '1'
             };
 
             if (feature === 'channels') {
@@ -116,8 +117,10 @@
                     if (response.success) {
                         DCTC_Guide_App.showToast('Feature enabled successfully! Reloading…');
                         setTimeout(function () {
-                            window.location.reload();
-                        }, 800);
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.searchParams.set('tab', feature);
+                            window.location.href = currentUrl.toString();
+                        }, 700);
                     } else {
                         alert(response.data && response.data.message ? response.data.message : 'Error activating feature.');
                         $btn.prop('disabled', false).html(originalHtml);
