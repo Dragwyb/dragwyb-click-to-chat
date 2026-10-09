@@ -305,7 +305,7 @@ class DCTC_AI_Chat_Controller {
 			self::log_debug( 'Dragwyb AI AI Chat Active Provider/Model Error: ' . $e->getMessage() );
 			$is_admin = current_user_can( 'manage_options' );
 			if ( $is_admin ) {
-				$settings_url  = admin_url( 'admin.php?page=dragwyb-click-to-chat-ai' );
+				$settings_url  = admin_url( 'admin.php?page=dragwyb-click-to-chat' );
 				$error_message = sprintf(
 					/* translators: %s: AI Assistant settings URL */
 					__( 'AI Provider API key is not configured. Please [configure your AI Provider API key](%s) in settings.', 'dragwyb-click-to-chat' ),

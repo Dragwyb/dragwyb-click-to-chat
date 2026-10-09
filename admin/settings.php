@@ -53,16 +53,6 @@ function dctc_add_settings_page() {
 			'dragwyb-click-to-chat',
 			'dctc_render_ai_assistant_page'
 		);
-
-		// Hidden submenu alias for dragwyb-click-to-chat-ai direct links
-		add_submenu_page(
-			null,
-			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-			__( 'AI Assistant', 'dragwyb-click-to-chat' ),
-			'manage_options',
-			'dragwyb-click-to-chat-ai',
-			'dctc_render_ai_assistant_page'
-		);
 	}
 
 	// 2. Submenu: Channels (only if Channels widget is enabled)

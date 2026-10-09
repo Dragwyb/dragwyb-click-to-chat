@@ -71,7 +71,6 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 			$plugin_pages = array(
 				// AI Assistant & Channels pages
 				'dragwyb-click-to-chat',
-				'dragwyb-click-to-chat-ai',
 				'dragwyb-click-to-chat-channels',
 				'dragwyb-click-to-chat-guide',
 				'dragwyb-click-to-chat-settings',
@@ -221,4 +220,3 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		}
 	}
 }
-

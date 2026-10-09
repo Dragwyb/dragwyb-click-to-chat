@@ -216,7 +216,6 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$is_ai_page = (
 				( $this->admin_hook && $hook === $this->admin_hook ) ||
 				'dragwyb-click-to-chat' === $page ||
-				'dragwyb-click-to-chat-ai' === $page ||
 				'dragwyb-click-to-chat-onboarding' === $page ||
 				'toplevel_page_dragwyb-click-to-chat' === $hook ||
 				'dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai' === $hook ||
