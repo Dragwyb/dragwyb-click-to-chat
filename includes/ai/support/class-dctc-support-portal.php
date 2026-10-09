@@ -286,6 +286,42 @@ class DCTC_Support_Portal {
 	}
 
 	/**
+	 * Helper to test if a given hex / rgba color is dark.
+	 *
+	 * @param string $hex Hex or rgb/rgba color string.
+	 * @return bool True if dark, false if light.
+	 */
+	public static function is_dark_color( $hex ) {
+		if ( empty( $hex ) || ! is_string( $hex ) ) {
+			return false;
+		}
+		$hex = trim( $hex );
+		if ( 'transparent' === $hex || 'inherit' === $hex ) {
+			return false;
+		}
+		if ( 0 === strpos( $hex, 'rgba' ) || 0 === strpos( $hex, 'rgb' ) ) {
+			preg_match_all( '/\d+/', $hex, $matches );
+			if ( ! empty( $matches[0] ) && count( $matches[0] ) >= 3 ) {
+				$lum = ( 0.299 * intval( $matches[0][0] ) + 0.587 * intval( $matches[0][1] ) + 0.114 * intval( $matches[0][2] ) );
+				return $lum < 140;
+			}
+			return false;
+		}
+		$hex = ltrim( $hex, '#' );
+		if ( strlen( $hex ) === 3 ) {
+			$hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+		}
+		if ( strlen( $hex ) !== 6 ) {
+			return false;
+		}
+		$r = hexdec( substr( $hex, 0, 2 ) );
+		$g = hexdec( substr( $hex, 2, 2 ) );
+		$b = hexdec( substr( $hex, 4, 2 ) );
+		$lum = ( 0.299 * $r + 0.587 * $g + 0.114 * $b );
+		return $lum < 140;
+	}
+
+	/**
 	 * Render the Customer Support Portal shortcode: [dctc_support_portal]
 	 *
 	 * @param array $atts Shortcode attributes.
@@ -566,8 +602,8 @@ class DCTC_Support_Portal {
 					<div class="dctc-detail-header-left">
 						<div class="dctc-detail-badges">
 							<span id="dctc-detail-num" class="dctc-detail-ticket-num">#0000</span>
-							<span id="dctc-detail-status" class="dctc-badge">Open</span>
-							<span id="dctc-detail-priority" class="dctc-badge">Normal</span>
+							<span id="dctc-detail-status" class="dctc-badge dctc-badge-open">OPEN</span>
+							<span id="dctc-detail-priority" class="dctc-badge dctc-badge-priority-normal">NORMAL</span>
 							<span id="dctc-detail-category" class="dctc-portal-badge-cat">Category</span>
 							<span id="dctc-detail-agent" class="dctc-portal-badge-agent">Agent</span>
 							<span id="dctc-detail-chats" class="dctc-portal-badge-chats">0 chats</span>
@@ -844,20 +880,28 @@ class DCTC_Support_Portal {
 								const agentName = t.agent_name || "Assigned Agent";
 								const tags = Array.isArray(t.tags) ? t.tags : [];
 
+								function getTagLabel(tag) {
+									if (!tag) return "";
+									if (typeof tag === "string") return tag;
+									if (typeof tag === "object") return tag.name || tag.slug || tag.title || "";
+									return String(tag);
+								}
+
 								html += "<div class=\"dctc-portal-ticket-card\" data-uuid=\"" + t.uuid + "\">";
 								html += "  <div class=\"dctc-portal-card-left\" style=\"flex:1;\">";
 								html += "    <div class=\"dctc-portal-card-top\">";
 								html += "      <span class=\"dctc-portal-card-num\">#" + t.ticket_number + "</span>";
-								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + t.status + "</span>";
+								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + (t.status || "open").toUpperCase() + "</span>";
 								html += "      <span class=\"dctc-portal-badge-cat\">" + categoryName + "</span>";
 								html += "      <span class=\"dctc-portal-badge-agent\">" + agentName + "</span>";
 								html += "      <span class=\"dctc-portal-badge-chats\">" + chatCount + " " + (chatCount === 1 ? "chat" : "chats") + "</span>";
 								html += "    </div>";
 								html += "    <h4 class=\"dctc-portal-card-title\">" + (t.subject || "Support Ticket") + "</h4>";
-								if (tags.length > 0) {
+								const validTags = tags.map(getTagLabel).filter(function(l) { return l && l !== "[object Object]"; });
+								if (validTags.length > 0) {
 									html += "    <div class=\"dctc-portal-card-badges-row\">";
-									tags.forEach(function(tag) {
-										html += "      <span class=\"dctc-portal-badge-tag\">" + tag + "</span>";
+									validTags.forEach(function(tagLabel) {
+										html += "      <span class=\"dctc-portal-badge-tag\">" + tagLabel + "</span>";
 									});
 									html += "    </div>";
 								}
@@ -877,11 +921,11 @@ class DCTC_Support_Portal {
 						} else {
 							if (q) {
 								if (filterRow) filterRow.style.display = "";
-								ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:#6B7280;\">No tickets found matching your search.</div>";
+								ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\">No tickets found matching your search.</div>";
 							} else {
 								if (filterRow) filterRow.style.display = "none";
 								if (isLoggedIn) {
-									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:#6B7280;\"><strong>" + emptyTitle + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + emptyDesc + "</p></div>";
+									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\"><strong>" + emptyTitle + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + emptyDesc + "</p></div>";
 								} else {
 									if (guestRecentSection) guestRecentSection.style.display = "none";
 								}
@@ -889,7 +933,7 @@ class DCTC_Support_Portal {
 						}
 					} catch (err) {
 						if (filterRow) filterRow.style.display = "none";
-						ticketsContainer.innerHTML = "<div style=\"color:#DC2626;text-align:center;padding:20px 0;\">Error loading support tickets. Please try again.</div>";
+						ticketsContainer.innerHTML = "<div style=\"color:#EF4444;text-align:center;padding:20px 0;\">Error loading support tickets. Please try again.</div>";
 					}
 				}
 
@@ -910,7 +954,7 @@ class DCTC_Support_Portal {
 					const msgContainer = document.getElementById("dctc-portal-detail-messages");
 					if (!msgContainer) return;
 					if (!isSilentUpdate) {
-						msgContainer.innerHTML = "<div>Loading conversation...</div>";
+						msgContainer.innerHTML = "<div style=\"color:var(--dctc-portal-header-subtitle, #6B7280);\">Loading conversation...</div>";
 					}
 
 					try {
@@ -929,8 +973,17 @@ class DCTC_Support_Portal {
 
 							if (numEl) numEl.textContent = "#" + t.ticket_number;
 							if (subEl) subEl.textContent = t.subject;
-							if (statEl) statEl.textContent = t.status;
-							if (priEl) priEl.textContent = t.priority;
+							
+							if (statEl) {
+								const st = (t.status || "open").toLowerCase();
+								statEl.textContent = (t.status || "open").toUpperCase();
+								statEl.className = "dctc-badge " + (st === "open" ? "dctc-badge-open" : (st === "resolved" ? "dctc-badge-resolved" : "dctc-badge-closed"));
+							}
+							if (priEl) {
+								const pr = (t.priority || "normal").toLowerCase();
+								priEl.textContent = (t.priority || "normal").toUpperCase();
+								priEl.className = "dctc-badge dctc-badge-priority-" + pr;
+							}
 							
 							const catElem = document.getElementById("dctc-detail-category");
 							if (catElem) catElem.textContent = (t.category_name || "General");
@@ -944,8 +997,14 @@ class DCTC_Support_Portal {
 
 							const tagsRow = document.getElementById("dctc-detail-tags-row");
 							if (tagsRow) {
-								const tags = Array.isArray(t.tags) ? t.tags : [];
-								tagsRow.innerHTML = tags.map(function(tag) {
+								const rawTags = Array.isArray(t.tags) ? t.tags : [];
+								const validTags = rawTags.map(function(tg) {
+									if (!tg) return "";
+									if (typeof tg === "string") return tg;
+									if (typeof tg === "object") return tg.name || tg.slug || tg.title || "";
+									return String(tg);
+								}).filter(function(l) { return l && l !== "[object Object]"; });
+								tagsRow.innerHTML = validTags.map(function(tag) {
 									return "<span class=\"dctc-portal-badge-tag\">" + tag + "</span>";
 								}).join("");
 							}
@@ -964,14 +1023,14 @@ class DCTC_Support_Portal {
 							});
 
 							const previousScrollBottom = msgContainer.scrollHeight - msgContainer.scrollTop <= msgContainer.clientHeight + 40;
-							msgContainer.innerHTML = msgHtml || "<div>No messages yet.</div>";
+							msgContainer.innerHTML = msgHtml || "<div style=\"color:var(--dctc-portal-header-subtitle, #6B7280);\">No messages yet.</div>";
 							if (!isSilentUpdate || previousScrollBottom) {
 								msgContainer.scrollTop = msgContainer.scrollHeight;
 							}
 						}
 					} catch (err) {
 						if (!isSilentUpdate) {
-							msgContainer.innerHTML = "<div style=\"color:#DC2626;\">Error loading ticket details.</div>";
+							msgContainer.innerHTML = "<div style=\"color:#EF4444;\">Error loading ticket details.</div>";
 						}
 					}
 				}
@@ -1206,6 +1265,51 @@ class DCTC_Support_Portal {
 		$input_bg             = esc_attr( $s['input_bg_color'] );
 		$input_border         = esc_attr( $s['input_border_color'] );
 
+		$is_dark              = self::is_dark_color( $container_bg ) || ( isset( $s['preset'] ) && 'dark' === $s['preset'] );
+		$is_dark_card         = self::is_dark_color( $card_bg ) || $is_dark;
+		$is_dark_input        = self::is_dark_color( $input_bg ) || $is_dark;
+
+		$card_title_color     = $is_dark_card ? '#F8FAFC' : '#0F172A';
+		$card_date_color      = $is_dark_card ? '#94A3B8' : '#64748B';
+		$body_text_color      = $is_dark ? '#E2E8F0' : '#1E293B';
+		$border_divider_color = $is_dark ? '#334155' : '#E2E8F0';
+		$input_text_color     = $is_dark_input ? '#F8FAFC' : '#1E293B';
+		$input_placeholder    = $is_dark_input ? '#64748B' : '#94A3B8';
+
+		// Chat bubbles contrast
+		$msg_cust_bg          = $is_dark ? 'rgba(99, 102, 241, 0.22)' : '#EEF2FF';
+		$msg_cust_border      = $is_dark ? 'rgba(99, 102, 241, 0.45)' : '#C7D2FE';
+		$msg_cust_text        = $is_dark ? '#F8FAFC' : '#1E1B4B';
+		$msg_cust_sender      = $is_dark ? '#A5B4FC' : '#4338CA';
+
+		$msg_agent_bg         = $is_dark ? '#1E293B' : '#F9FAFB';
+		$msg_agent_border     = $is_dark ? '#334155' : '#E5E7EB';
+		$msg_agent_text       = $is_dark ? '#F8FAFC' : '#111827';
+		$msg_agent_sender     = $is_dark ? '#38BDF8' : '#047857';
+
+		// Modal
+		$modal_card_bg        = $is_dark ? '#1E293B' : '#FFFFFF';
+		$modal_card_border    = $is_dark ? '#334155' : '#E2E8F0';
+		$modal_footer_bg      = $is_dark ? '#0F172A' : '#F8FAFC';
+		$modal_label_color    = $is_dark ? '#E2E8F0' : '#334155';
+
+		// Badges for Dark & Light
+		$badge_cat_bg         = $is_dark ? 'rgba(99, 102, 241, 0.2)' : '#EEF2FF';
+		$badge_cat_border     = $is_dark ? 'rgba(99, 102, 241, 0.4)' : '#C7D2FE';
+		$badge_cat_text       = $is_dark ? '#C7D2FE' : '#4338CA';
+
+		$badge_agent_bg       = $is_dark ? 'rgba(16, 185, 129, 0.2)' : '#ECFDF5';
+		$badge_agent_border   = $is_dark ? 'rgba(16, 185, 129, 0.4)' : '#A7F3D0';
+		$badge_agent_text     = $is_dark ? '#6EE7B7' : '#047857';
+
+		$badge_chats_bg       = $is_dark ? 'rgba(245, 158, 11, 0.2)' : '#FEF3C7';
+		$badge_chats_border   = $is_dark ? 'rgba(245, 158, 11, 0.4)' : '#FDE68A';
+		$badge_chats_text     = $is_dark ? '#FCD34D' : '#B45309';
+
+		$badge_tag_bg         = $is_dark ? 'rgba(148, 163, 184, 0.16)' : '#F1F5F9';
+		$badge_tag_border     = $is_dark ? 'rgba(148, 163, 184, 0.3)' : '#E2E8F0';
+		$badge_tag_text       = $is_dark ? '#E2E8F0' : '#334155';
+
 		return "
 			:root, .dctc-portal-root {
 				--dctc-portal-primary: {$primary_color};
@@ -1229,17 +1333,48 @@ class DCTC_Support_Portal {
 				--dctc-portal-card-bg: {$card_bg};
 				--dctc-portal-card-hover-bg: {$card_hover_bg};
 				--dctc-portal-card-border: {$card_border};
+				--dctc-portal-card-title: {$card_title_color};
+				--dctc-portal-card-date: {$card_date_color};
+				--dctc-portal-body-text: {$body_text_color};
+				--dctc-portal-border-divider: {$border_divider_color};
 				--dctc-portal-input-bg: {$input_bg};
 				--dctc-portal-input-border: {$input_border};
+				--dctc-portal-input-text: {$input_text_color};
+				--dctc-portal-input-placeholder: {$input_placeholder};
+				--dctc-portal-msg-cust-bg: {$msg_cust_bg};
+				--dctc-portal-msg-cust-border: {$msg_cust_border};
+				--dctc-portal-msg-cust-text: {$msg_cust_text};
+				--dctc-portal-msg-cust-sender: {$msg_cust_sender};
+				--dctc-portal-msg-agent-bg: {$msg_agent_bg};
+				--dctc-portal-msg-agent-border: {$msg_agent_border};
+				--dctc-portal-msg-agent-text: {$msg_agent_text};
+				--dctc-portal-msg-agent-sender: {$msg_agent_sender};
+				--dctc-portal-modal-bg: {$modal_card_bg};
+				--dctc-portal-modal-border: {$modal_card_border};
+				--dctc-portal-modal-footer-bg: {$modal_footer_bg};
+				--dctc-portal-modal-label: {$modal_label_color};
+				--dctc-portal-badge-cat-bg: {$badge_cat_bg};
+				--dctc-portal-badge-cat-border: {$badge_cat_border};
+				--dctc-portal-badge-cat-text: {$badge_cat_text};
+				--dctc-portal-badge-agent-bg: {$badge_agent_bg};
+				--dctc-portal-badge-agent-border: {$badge_agent_border};
+				--dctc-portal-badge-agent-text: {$badge_agent_text};
+				--dctc-portal-badge-chats-bg: {$badge_chats_bg};
+				--dctc-portal-badge-chats-border: {$badge_chats_border};
+				--dctc-portal-badge-chats-text: {$badge_chats_text};
+				--dctc-portal-badge-tag-bg: {$badge_tag_bg};
+				--dctc-portal-badge-tag-border: {$badge_tag_border};
+				--dctc-portal-badge-tag-text: {$badge_tag_text};
 			}
 
 			.dctc-portal-root {
 				background: var(--dctc-portal-container-bg, #ffffff);
+				color: var(--dctc-portal-body-text, #1e293b);
 				border-width: var(--dctc-portal-border-width, 1px);
 				border-style: var(--dctc-portal-border-style, solid);
 				border-color: var(--dctc-portal-border-color, #E5E7EB);
 				border-radius: var(--dctc-portal-radius, 12px);
-				box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+				box-shadow: 0 4px 16px rgba(0,0,0,0.06);
 				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
 				margin: 20px 0;
 				overflow: hidden;
@@ -1331,13 +1466,17 @@ class DCTC_Support_Portal {
 				border: 1px solid var(--dctc-portal-input-border, #CBD5E1);
 				border-radius: var(--dctc-portal-btn-radius, 8px);
 				box-sizing: border-box;
-				color: #1E293B;
+				color: var(--dctc-portal-input-text, #1E293B);
 				font-family: inherit;
 				font-size: 13.5px;
 				padding: 10px 14px;
 				transition: all 0.15s ease-in-out;
 				width: 100%;
 				max-width: 100%;
+			}
+			.dctc-portal-input::placeholder, .dctc-portal-textarea::placeholder {
+				color: var(--dctc-portal-input-placeholder, #94A3B8);
+				opacity: 1;
 			}
 			.dctc-portal-select {
 				appearance: none;
@@ -1347,10 +1486,14 @@ class DCTC_Support_Portal {
 				background-size: 16px 16px;
 				padding-right: 36px;
 			}
+			.dctc-portal-select option {
+				background: var(--dctc-portal-input-bg, #FFFFFF);
+				color: var(--dctc-portal-input-text, #1E293B);
+			}
 			.dctc-portal-input:focus, .dctc-portal-select:focus, .dctc-portal-textarea:focus {
-				background: #FFFFFF;
+				background: var(--dctc-portal-input-bg, #FFFFFF);
 				border-color: var(--dctc-portal-primary, #4F46E5);
-				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
 				outline: none;
 			}
 			.dctc-portal-required {
@@ -1376,32 +1519,37 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-ticket-card:hover {
 				background: var(--dctc-portal-card-hover-bg, #F3F4F6);
-				border-color: #CBD5E1;
+				border-color: var(--dctc-portal-primary, #CBD5E1);
+				transform: translateY(-1px);
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 			}
 			.dctc-portal-card-left {
 				display: flex;
 				flex-direction: column;
-				gap: 4px;
+				gap: 6px;
 			}
 			.dctc-portal-card-top {
 				align-items: center;
 				display: flex;
+				flex-wrap: wrap;
 				gap: 8px;
 			}
 			.dctc-portal-card-num {
 				color: var(--dctc-portal-primary, #4F46E5);
-				font-size: 12px;
-				font-weight: 700;
+				font-size: 13px;
+				font-weight: 800;
 			}
 			.dctc-portal-card-title {
-				color: #111827;
-				font-size: 14.5px;
+				color: var(--dctc-portal-card-title, #0F172A) !important;
+				font-size: 15px;
 				font-weight: 600;
+				line-height: 1.4;
 				margin: 0;
 			}
 			.dctc-portal-card-date {
-				color: #9CA3AF;
+				color: var(--dctc-portal-card-date, #9CA3AF);
 				font-size: 12px;
+				font-weight: 500;
 			}
 			.dctc-form-grid-1 {
 				display: grid;
@@ -1421,7 +1569,7 @@ class DCTC_Support_Portal {
 			}
 			.dctc-form-group label {
 				align-items: center;
-				color: #334155;
+				color: var(--dctc-portal-modal-label, #334155);
 				display: flex;
 				font-size: 13px;
 				font-weight: 600;
@@ -1432,7 +1580,7 @@ class DCTC_Support_Portal {
 				align-items: center;
 				animation: dctcPortalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 				backdrop-filter: blur(4px);
-				background: rgba(15, 23, 42, 0.55);
+				background: rgba(15, 23, 42, 0.65);
 				display: flex;
 				inset: 0;
 				justify-content: center;
@@ -1442,10 +1590,10 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-modal-card {
 				animation: dctcPortalZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-				background: #ffffff;
-				border: 1px solid #E2E8F0;
+				background: var(--dctc-portal-modal-bg, #ffffff);
+				border: 1px solid var(--dctc-portal-modal-border, #E2E8F0);
 				border-radius: var(--dctc-portal-radius, 14px);
-				box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+				box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.08);
 				display: flex;
 				flex-direction: column;
 				max-height: 90vh;
@@ -1457,10 +1605,10 @@ class DCTC_Support_Portal {
 			.dctc-portal-modal-header {
 				align-items: center;
 				background: var(--dctc-portal-header-bg, #F9FAFB);
-				border-bottom: 1px solid #F1F5F9;
+				border-bottom: 1px solid var(--dctc-portal-border-divider, #F1F5F9);
 				display: flex;
 				justify-content: space-between;
-				padding: 20px 24px;
+				padding: 18px 24px;
 			}
 			.dctc-portal-modal-header-info {
 				align-items: center;
@@ -1493,10 +1641,10 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-modal-close-btn {
 				align-items: center;
-				background: #F1F5F9;
-				border: none;
+				background: var(--dctc-portal-input-bg, #F1F5F9);
+				border: 1px solid var(--dctc-portal-border-divider, transparent);
 				border-radius: 8px;
-				color: #64748B;
+				color: var(--dctc-portal-card-date, #64748B);
 				cursor: pointer;
 				display: flex;
 				height: 32px;
@@ -1505,8 +1653,8 @@ class DCTC_Support_Portal {
 				width: 32px;
 			}
 			.dctc-portal-modal-close-btn:hover {
-				background: #E2E8F0;
-				color: #0F172A;
+				background: var(--dctc-portal-card-hover-bg, #E2E8F0);
+				color: var(--dctc-portal-header-title, #0F172A);
 			}
 			.dctc-portal-modal-body-scroll {
 				box-sizing: border-box;
@@ -1516,8 +1664,8 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-modal-footer {
 				align-items: center;
-				background: #F8FAFC;
-				border-top: 1px solid #F1F5F9;
+				background: var(--dctc-portal-modal-footer-bg, #F8FAFC);
+				border-top: 1px solid var(--dctc-portal-border-divider, #F1F5F9);
 				display: flex;
 				gap: 12px;
 				justify-content: flex-end;
@@ -1541,8 +1689,8 @@ class DCTC_Support_Portal {
 			}
 
 			.dctc-detail-header {
-				align-items: center;
-				border-bottom: 1px solid #E5E7EB;
+				align-items: flex-start;
+				border-bottom: 1px solid var(--dctc-portal-border-divider, #E5E7EB);
 				display: flex;
 				flex-wrap: wrap;
 				gap: 16px;
@@ -1552,121 +1700,169 @@ class DCTC_Support_Portal {
 			.dctc-detail-badges {
 				align-items: center;
 				display: flex;
+				flex-wrap: wrap;
 				gap: 8px;
-				margin-bottom: 6px;
+				margin-bottom: 8px;
 			}
 			.dctc-detail-ticket-num {
 				color: var(--dctc-portal-primary, #4F46E5);
-				font-size: 14px;
-				font-weight: 700;
+				font-size: 15px;
+				font-weight: 800;
 			}
 			.dctc-detail-subject {
-				color: #111827;
-				font-size: 18px;
+				color: var(--dctc-portal-card-title, #111827) !important;
+				font-size: 19px;
 				font-weight: 700;
-				margin: 0 !important;
+				line-height: 1.35;
+				margin: 4px 0 0 !important;
 			}
 			.dctc-portal-messages-timeline {
 				display: flex;
 				flex-direction: column;
-				gap: 12px;
-				max-height: 440px;
+				gap: 14px;
+				max-height: 480px;
 				overflow-y: auto;
 				padding: 20px 0;
 			}
 			.dctc-portal-msg {
-				border-radius: 10px;
+				border-radius: var(--dctc-portal-inner-radius, 10px);
+				box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 				display: flex;
 				flex-direction: column;
-				gap: 4px;
-				max-width: 80%;
-				padding: 12px 16px;
+				gap: 6px;
+				max-width: 82%;
+				padding: 14px 16px;
 			}
 			.dctc-portal-msg-customer {
 				align-self: flex-end;
-				background: #EEF2FF;
-				border: 1px solid #C7D2FE;
-				color: #1E1B4B;
+				background: var(--dctc-portal-msg-cust-bg, #EEF2FF);
+				border: 1px solid var(--dctc-portal-msg-cust-border, #C7D2FE);
+				color: var(--dctc-portal-msg-cust-text, #1E1B4B);
+			}
+			.dctc-portal-msg-customer .dctc-portal-msg-header span:first-child {
+				color: var(--dctc-portal-msg-cust-sender, #4338CA);
+				font-weight: 700;
 			}
 			.dctc-portal-msg-agent {
 				align-self: flex-start;
-				background: #F9FAFB;
-				border: 1px solid #E5E7EB;
-				color: #111827;
+				background: var(--dctc-portal-msg-agent-bg, #F9FAFB);
+				border: 1px solid var(--dctc-portal-msg-agent-border, #E5E7EB);
+				color: var(--dctc-portal-msg-agent-text, #111827);
+			}
+			.dctc-portal-msg-agent .dctc-portal-msg-header span:first-child {
+				color: var(--dctc-portal-msg-agent-sender, #047857);
+				font-weight: 700;
 			}
 			.dctc-portal-msg-header {
 				align-items: center;
 				display: flex;
-				font-size: 11.5px;
+				font-size: 12px;
 				font-weight: 600;
 				justify-content: space-between;
 			}
 			.dctc-portal-msg-time {
-				color: #9CA3AF;
+				color: var(--dctc-portal-card-date, #9CA3AF);
+				font-size: 11px;
 				font-weight: normal;
 				margin-left: 12px;
 			}
 			.dctc-portal-msg-body {
-				font-size: 13.5px;
-				line-height: 1.5;
+				font-size: 14px;
+				line-height: 1.55;
 				white-space: pre-wrap;
+				word-break: break-word;
 			}
 			.dctc-portal-reply-box {
-				border-top: 1px solid #E5E7EB;
+				border-top: 1px solid var(--dctc-portal-border-divider, #E5E7EB);
 				display: flex;
 				flex-direction: column;
-				gap: 10px;
-				padding-top: 16px;
+				gap: 12px;
+				padding-top: 18px;
 			}
 			.dctc-portal-reply-actions {
 				display: flex;
 				justify-content: flex-end;
 			}
 			.dctc-badge {
-				border-radius: 4px;
-				font-size: 10.5px;
+				border-radius: 5px;
+				font-size: 11px;
 				font-weight: 700;
-				padding: 2px 6px;
+				letter-spacing: 0.3px;
+				padding: 2.5px 7px;
 				text-transform: uppercase;
+				display: inline-flex;
+				align-items: center;
 			}
-			.dctc-badge-open { background: #ECFDF5; color: #047857; }
-			.dctc-badge-resolved { background: #EFF6FF; color: #1D4ED8; }
-			.dctc-badge-closed { background: #F3F4F6; color: #6B7280; }
+			.dctc-badge-open {
+				background: rgba(16, 185, 129, 0.15);
+				color: #059669;
+				border: 1px solid rgba(16, 185, 129, 0.35);
+			}
+			.dctc-badge-resolved {
+				background: rgba(59, 130, 246, 0.15);
+				color: #2563EB;
+				border: 1px solid rgba(59, 130, 246, 0.35);
+			}
+			.dctc-badge-closed {
+				background: rgba(100, 116, 139, 0.15);
+				color: #64748B;
+				border: 1px solid rgba(100, 116, 139, 0.35);
+			}
+			.dctc-badge-priority-urgent, .dctc-badge-priority-critical {
+				background: rgba(239, 68, 68, 0.15);
+				color: #DC2626;
+				border: 1px solid rgba(239, 68, 68, 0.35);
+			}
+			.dctc-badge-priority-high {
+				background: rgba(234, 88, 12, 0.15);
+				color: #EA580C;
+				border: 1px solid rgba(234, 88, 12, 0.35);
+			}
+			.dctc-badge-priority-normal, .dctc-badge-priority-medium {
+				background: rgba(16, 185, 129, 0.15);
+				color: #10B981;
+				border: 1px solid rgba(16, 185, 129, 0.35);
+			}
+			.dctc-badge-priority-low {
+				background: rgba(100, 116, 139, 0.15);
+				color: #64748B;
+				border: 1px solid rgba(100, 116, 139, 0.35);
+			}
 			.dctc-portal-badge-cat {
-				background: #EEF2FF;
-				border: 1px solid #C7D2FE;
+				background: var(--dctc-portal-badge-cat-bg, #EEF2FF);
+				border: 1px solid var(--dctc-portal-badge-cat-border, #C7D2FE);
 				border-radius: 6px;
-				color: #4338CA;
+				color: var(--dctc-portal-badge-cat-text, #4338CA);
 				font-size: 11.5px;
 				font-weight: 600;
-				padding: 3px 8px;
+				padding: 2.5px 8px;
 			}
 			.dctc-portal-badge-tag {
-				background: #F3F4F6;
-				border: 1px solid #E5E7EB;
+				background: var(--dctc-portal-badge-tag-bg, #F1F5F9);
+				border: 1px solid var(--dctc-portal-badge-tag-border, #E2E8F0);
 				border-radius: 6px;
-				color: #374151;
+				color: var(--dctc-portal-badge-tag-text, #374151);
 				font-size: 11px;
 				font-weight: 500;
 				padding: 2px 7px;
 			}
 			.dctc-portal-badge-agent {
-				background: #ECFDF5;
-				border: 1px solid #A7F3D0;
+				background: var(--dctc-portal-badge-agent-bg, #ECFDF5);
+				border: 1px solid var(--dctc-portal-badge-agent-border, #A7F3D0);
 				border-radius: 6px;
-				color: #047857;
+				color: var(--dctc-portal-badge-agent-text, #047857);
 				font-size: 11.5px;
 				font-weight: 600;
-				padding: 3px 8px;
+				padding: 2.5px 8px;
 			}
 			.dctc-portal-badge-chats {
-				background: #FEF3C7;
-				border: 1px solid #FDE68A;
+				background: var(--dctc-portal-badge-chats-bg, #FEF3C7);
+				border: 1px solid var(--dctc-portal-badge-chats-border, #FDE68A);
 				border-radius: 6px;
-				color: #B45309;
+				color: var(--dctc-portal-badge-chats-text, #B45309);
 				font-size: 11.5px;
 				font-weight: 600;
-				padding: 3px 8px;
+				padding: 2.5px 8px;
 			}
 			.dctc-portal-tags-row {
 				display: flex;
@@ -1693,26 +1889,26 @@ class DCTC_Support_Portal {
 				display: none !important;
 			}
 			.dctc-portal-editor-wrapper .wp-editor-container {
-				background: #ffffff;
+				background: var(--dctc-portal-input-bg, #ffffff);
 				border: 1px solid var(--dctc-portal-input-border, #CBD5E1);
 				border-radius: 8px;
 				overflow: hidden;
 			}
 			.dctc-portal-editor-wrapper .wp-editor-container:focus-within {
 				border-color: var(--dctc-portal-primary, #4F46E5);
-				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+				box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.18);
 			}
 			.dctc-portal-editor-wrapper .mce-tinymce {
 				border: none !important;
 				box-shadow: none !important;
 			}
 			.dctc-portal-editor-wrapper .mce-top-part {
-				background: #F8FAFC !important;
-				border-bottom: 1px solid #E2E8F0 !important;
+				background: var(--dctc-portal-card-bg, #F8FAFC) !important;
+				border-bottom: 1px solid var(--dctc-portal-border-divider, #E2E8F0) !important;
 			}
 			.dctc-portal-editor-wrapper .quicktags-toolbar {
-				background: #F8FAFC;
-				border-bottom: 1px solid #E2E8F0;
+				background: var(--dctc-portal-card-bg, #F8FAFC);
+				border-bottom: 1px solid var(--dctc-portal-border-divider, #E2E8F0);
 				padding: 6px 8px;
 			}
 			.dctc-portal-editor-wrapper .wp-media-buttons {
@@ -1775,3 +1971,4 @@ class DCTC_Support_Portal {
 		";
 	}
 }
+
