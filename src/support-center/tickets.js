@@ -64,6 +64,7 @@ function TicketsApp() {
 	// Debounce and Auto-save state tracker
 	const isInitialMount = useRef(true);
 	const saveTimeoutRef = useRef(null);
+	const isTicketFetching = useRef(false);
 
 	// Metadata
 	const [categories, setCategories] = useState([]);
@@ -295,6 +296,8 @@ function TicketsApp() {
 			setTicketLoading(true);
 		}
 
+		isTicketFetching.current = true;
+
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${ticketId}`,
@@ -354,6 +357,8 @@ function TicketsApp() {
 				setTicketLoading(false);
 			}
 		}
+
+		isTicketFetching.current = false;
 	}, []);
 
 	// Fetch WooCommerce Context
@@ -401,7 +406,7 @@ function TicketsApp() {
 
 		let isMounted = true;
 		const interval = setInterval(() => {
-			if (isMounted && selectedTicketId) {
+			if (isMounted && selectedTicketId && !isTicketFetching.current) {
 				fetchTicketDetails(selectedTicketId, true);
 			}
 		}, 5000);
