@@ -405,6 +405,7 @@ export default function ChatWidget({ settings, inline }) {
 	// Live Support & Session Control State
 	const [activeControlMode, setActiveControlMode] = useState('ai');
 	const [assignedAgentName, setAssignedAgentName] = useState('');
+	const [hasActiveTicket, setHasActiveTicket] = useState(false);
 
 	// Human agent waiting & auto-fallback states
 	const [waitingAgentStatusText, setWaitingAgentStatusText] = useState('');
@@ -491,6 +492,13 @@ export default function ChatWidget({ settings, inline }) {
 
 				if (response.control_mode) {
 					setActiveControlMode(response.control_mode);
+				}
+
+				if (response.ticket && response.ticket.ticket_number) {
+					setHasActiveTicket(true);
+					if (response.ticket.agent_name) {
+						setAssignedAgentName(response.ticket.agent_name);
+					}
 				}
 			}
 		} catch (e) {
@@ -1312,7 +1320,11 @@ export default function ChatWidget({ settings, inline }) {
 					return;
 				}
 
-				if (res.has_ticket && res.ticket) {
+				// Check whether a valid support ticket with ticket_number exists
+				const ticketExists = Boolean(res.ticket && res.ticket.ticket_number);
+				setHasActiveTicket(ticketExists);
+
+				if (ticketExists && res.ticket) {
 					if (res.ticket.agent_name) {
 						setAssignedAgentName(res.ticket.agent_name);
 					}
@@ -1485,15 +1497,22 @@ export default function ChatWidget({ settings, inline }) {
 			pollSessionRunningRef.current = false;
 		};
 
-		// Initial check
+		// Initial check on load/open
 		pollSession();
 
-		const interval = setInterval(pollSession, 3500);
+		// Only start periodic polling interval if an active ticket exists
+		let interval = null;
+		if (hasActiveTicket) {
+			interval = setInterval(pollSession, 3500);
+		}
+
 		return () => {
 			isCancelled = true;
-			clearInterval(interval);
+			if (interval) {
+				clearInterval(interval);
+			}
 		};
-	}, [isOpen, sessionId, triggerAiFallback, clearAgentWaitTimers, chatbot.human_agent_waiting_message, chatbot.human_agent_max_wait_time]);
+	}, [isOpen, sessionId, hasActiveTicket, triggerAiFallback, clearAgentWaitTimers, chatbot.human_agent_waiting_message, chatbot.human_agent_max_wait_time]);
 
 	// Click outside to close attachment menu
 	useEffect(() => {
@@ -2184,8 +2203,8 @@ export default function ChatWidget({ settings, inline }) {
 						}
 					}, Math.max(10, maxWaitSec) * 1000);
 
-					if (response.has_ticket && response.ticket) {
-						const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
+					if (response.ticket && response.ticket.ticket_number) {
+						setHasActiveTicket(true);
 						if (response.ticket.agent_name) {
 							setAssignedAgentName(response.ticket.agent_name);
 						}
@@ -2268,8 +2287,8 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
-				if (response.has_ticket && response.ticket) {
-					const isClosed = ['resolved', 'closed'].includes(response.ticket.status);
+				if (response.ticket && response.ticket.ticket_number) {
+					setHasActiveTicket(true);
 					if (response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);
 					}
@@ -2330,6 +2349,7 @@ export default function ChatWidget({ settings, inline }) {
 				setClearAllowed(true);
 				setActiveControlMode('ai');
 				setAssignedAgentName('');
+				setHasActiveTicket(false);
 				setWaitingAgentStatusText('');
 				clearAgentWaitTimers();
 			}
@@ -2344,6 +2364,7 @@ export default function ChatWidget({ settings, inline }) {
 			setClearAllowed(true);
 			setActiveControlMode('ai');
 			setAssignedAgentName('');
+			setHasActiveTicket(false);
 			setWaitingAgentStatusText('');
 			clearAgentWaitTimers();
 		}
