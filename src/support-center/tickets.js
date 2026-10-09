@@ -31,6 +31,7 @@ function TicketsApp() {
 	const [tickets, setTickets] = useState([]);
 	const [totalTickets, setTotalTickets] = useState(0);
 	const [currentPage, setCurrentPage] = useState(1);
+	const [perPage, setPerPage] = useState(10);
 	const [totalPages, setTotalPages] = useState(1);
 	const [loading, setLoading] = useState(false);
 	const [selectedTicketId, setSelectedTicketId] = useState(ticketIdFromUrl);
@@ -229,7 +230,7 @@ function TicketsApp() {
 		try {
 			const queryParams = new URLSearchParams({
 				page: currentPage,
-				per_page: 20,
+				per_page: perPage,
 				status: statusFilter,
 				priority: priorityFilter,
 				category_id: categoryFilter !== 'all' ? categoryFilter : '',
@@ -272,6 +273,7 @@ function TicketsApp() {
 		}
 	}, [
 		currentPage,
+		perPage,
 		statusFilter,
 		priorityFilter,
 		categoryFilter,
@@ -332,8 +334,7 @@ function TicketsApp() {
 						prevTicket.control_mode !== data.ticket.control_mode ||
 						prevTicket.subject !== data.ticket.subject ||
 						JSON.stringify(prevTicket.tags || []) !== JSON.stringify(data.ticket.tags || []) ||
-						JSON.stringify(prevTicket.notes || []) !== JSON.stringify(data.ticket.notes || []) ||
-						JSON.stringify(prevTicket.events || []) !== JSON.stringify(data.ticket.events || []);
+						JSON.stringify(prevTicket.notes || []) !== JSON.stringify(data.ticket.notes || []);
 
 					if (messagesChanged || metadataChanged) {
 						return {
@@ -602,6 +603,8 @@ function TicketsApp() {
 					totalTickets={totalTickets}
 					currentPage={currentPage}
 					setCurrentPage={setCurrentPage}
+					perPage={perPage}
+					setPerPage={setPerPage}
 					totalPages={totalPages}
 					loading={loading}
 					onRefreshTickets={fetchTickets}

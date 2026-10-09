@@ -13,9 +13,10 @@ export default function TicketListTable({
 	flaggedTickets = {},
 	selectedTicketIds = [],
 	onOpenTicket,
-	onToggleTicketSelect,
 	onResetFilters,
 	currentPage = 1,
+	perPage = 10,
+	setPerPage,
 	totalPages = 1,
 	setCurrentPage,
 	getInitials,
@@ -152,19 +153,13 @@ export default function TicketListTable({
 										<div className="dctc-sc-card-main-info">
 											<div className="dctc-sc-card-top">
 												<div className="dctc-sc-card-top-left">
-													<input
-														type="checkbox"
-														checked={isChecked}
-														onChange={(e) => onToggleTicketSelect(item.id, e)}
-														className="dctc-sc-card-checkbox"
-													/>
 													<span className="dctc-sc-card-id">#{item.ticket_number || item.id}</span>
 													<StatusBadge status={item.status} />
 													<PriorityBadge priority={item.priority} />
 												</div>
 												<div className="dctc-sc-card-top-right">
-													{isStarred && <span className="dashicons dashicons-star-filled" style={{ color: '#f59e0b', fontSize: '14px' }}></span>}
-													{isFlagged && <span className="dashicons dashicons-flag" style={{ color: '#ef4444', fontSize: '14px' }}></span>}
+													{isStarred && <span className="dashicons dashicons-star-filled"></span>}
+													{isFlagged && <span className="dashicons dashicons-flag"></span>}
 												</div>
 											</div>
 
@@ -213,25 +208,62 @@ export default function TicketListTable({
 						)}
 					</div>
 
-					{totalPages > 1 && (
+					{(totalTickets > 0 || totalPages > 0) && (
 						<div className="dctc-sc-pagination-bar">
-							<button
-								type="button"
-								disabled={currentPage <= 1}
-								onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-								className="dctc-sc-page-nav"
-							>
-								&laquo; {__('Prev', 'dragwyb-click-to-chat')}
-							</button>
-							<span>{currentPage} / {totalPages}</span>
-							<button
-								type="button"
-								disabled={currentPage >= totalPages}
-								onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-								className="dctc-sc-page-nav"
-							>
-								{__('Next', 'dragwyb-click-to-chat')} &raquo;
-							</button>
+							<div className="dctc-sc-pagination-info">
+								{__('Showing', 'dragwyb-click-to-chat')}{' '}
+								<strong>{totalTickets === 0 ? 0 : (currentPage - 1) * perPage + 1}</strong>
+								{' - '}
+								<strong>{Math.min(currentPage * perPage, totalTickets)}</strong>
+								{' '}{__('of', 'dragwyb-click-to-chat')}{' '}
+								<strong>{totalTickets}</strong> {__('tickets', 'dragwyb-click-to-chat')}
+							</div>
+
+							<div className="dctc-sc-pagination-per-page">
+								<label htmlFor="dctc-sc-per-page-select">{__('Show:', 'dragwyb-click-to-chat')}</label>
+								<select
+									id="dctc-sc-per-page-select"
+									value={perPage}
+									onChange={(e) => {
+										if (setPerPage) setPerPage(Number(e.target.value));
+										if (setCurrentPage) setCurrentPage(1);
+									}}
+									className="dctc-sc-per-page-dropdown"
+								>
+									<option value={10}>10 {__('per page', 'dragwyb-click-to-chat')}</option>
+									<option value={25}>25 {__('per page', 'dragwyb-click-to-chat')}</option>
+									<option value={50}>50 {__('per page', 'dragwyb-click-to-chat')}</option>
+									<option value={100}>100 {__('per page', 'dragwyb-click-to-chat')}</option>
+								</select>
+							</div>
+
+							<div className="dctc-sc-pagination-actions">
+								<button
+									type="button"
+									disabled={currentPage <= 1}
+									onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+									className="dctc-sc-page-nav"
+									title={__('Previous page', 'dragwyb-click-to-chat')}
+								>
+									<span className="dashicons dashicons-arrow-left-alt2"></span>
+									<span>{__('Prev', 'dragwyb-click-to-chat')}</span>
+								</button>
+								<div className="dctc-sc-page-indicator">
+									<span>{currentPage}</span>
+									<span className="dctc-sc-page-divider">/</span>
+									<span>{Math.max(1, totalPages)}</span>
+								</div>
+								<button
+									type="button"
+									disabled={currentPage >= totalPages}
+									onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+									className="dctc-sc-page-nav"
+									title={__('Next page', 'dragwyb-click-to-chat')}
+								>
+									<span>{__('Next', 'dragwyb-click-to-chat')}</span>
+									<span className="dashicons dashicons-arrow-right-alt2"></span>
+								</button>
+							</div>
 						</div>
 					)}
 				</>

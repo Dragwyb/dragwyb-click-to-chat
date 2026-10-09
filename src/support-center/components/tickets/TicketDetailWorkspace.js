@@ -1,3 +1,4 @@
+import apiFetch from '@wordpress/api-fetch';
 import { useState, useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import { StatusBadge, PriorityBadge } from '../SupportBadges';
@@ -39,11 +40,32 @@ export default function TicketDetailWorkspace({
 	replyEditorMode,
 	setReplyEditorMode,
 	getInitials,
+	onRefreshTicketDetails,
+	onShowNotice,
 }) {
 	const [workspaceTab, setWorkspaceTab] = useState('conversation');
 	const [composerMode, setComposerMode] = useState('reply'); // 'reply' | 'note'
 	const [isComposerOpen, setIsComposerOpen] = useState(false);
 	const replyTextareaRef = useRef(null);
+
+	// Message Action Dropdown and Inline Edit States
+	const [activeMessageMenuKey, setActiveMessageMenuKey] = useState(null);
+	const [editingMessageKey, setEditingMessageKey] = useState(null);
+	const [editMessageContent, setEditMessageContent] = useState('');
+	const [editEditorMode, setEditEditorMode] = useState('visual');
+	const [editSubmitting, setEditSubmitting] = useState(false);
+	const editMessageTextareaRef = useRef(null);
+
+	// Close message menu when clicking outside
+	useEffect(() => {
+		const handleClickOutside = (e) => {
+			if (!e.target.closest('.dctc-sc-msg-menu-container')) {
+				setActiveMessageMenuKey(null);
+			}
+		};
+		document.addEventListener('click', handleClickOutside);
+		return () => document.removeEventListener('click', handleClickOutside);
+	}, []);
 
 	const handleOpenComposer = (mode) => {
 		setComposerMode(mode);
@@ -97,6 +119,111 @@ export default function TicketDetailWorkspace({
 				textarea.setSelectionRange(start + replacement.length, start + replacement.length);
 			}
 		}, 50);
+	};
+
+	const applyEditFormatting = (tagType) => {
+		const textarea = editMessageTextareaRef.current;
+		if (!textarea) return;
+		const start = textarea.selectionStart || 0;
+		const end = textarea.selectionEnd || 0;
+		const text = editMessageContent || '';
+		const selected = text.substring(start, end) || 'text';
+		let replacement = '';
+		if (tagType === 'bold') replacement = `<strong>${selected}</strong>`;
+		else if (tagType === 'italic') replacement = `<em>${selected}</em>`;
+		else if (tagType === 'underline') replacement = `<u>${selected}</u>`;
+		else if (tagType === 'strike') replacement = `<s>${selected}</s>`;
+		else if (tagType === 'link') replacement = `<a href="https://example.com">${selected}</a>`;
+		else if (tagType === 'ul') replacement = `\n<ul>\n  <li>${selected}</li>\n</ul>\n`;
+		else if (tagType === 'ol') replacement = `\n<ol>\n  <li>${selected}</li>\n</ol>\n`;
+		else if (tagType === 'quote') replacement = `\n<blockquote>${selected}</blockquote>\n`;
+		else if (tagType === 'code') replacement = `<code>${selected}</code>`;
+
+		const updated = text.substring(0, start) + replacement + text.substring(end);
+		setEditMessageContent(updated);
+		setTimeout(() => {
+			if (textarea) {
+				textarea.focus();
+				textarea.setSelectionRange(start + replacement.length, start + replacement.length);
+			}
+		}, 50);
+	};
+
+	const handleStartEditMessage = (msg, msgIdentifier) => {
+		setEditingMessageKey(msgIdentifier);
+		setEditMessageContent(msg.content || '');
+		setEditEditorMode('visual');
+		setActiveMessageMenuKey(null);
+		setTimeout(() => {
+			if (editMessageTextareaRef.current) {
+				editMessageTextareaRef.current.focus();
+			}
+		}, 60);
+	};
+
+	const handleSaveEditMessage = async (msgIdentifier) => {
+		if (!selectedTicket?.id || !msgIdentifier || !editMessageContent.trim()) return;
+		setEditSubmitting(true);
+		try {
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}/message-edit`,
+				method: 'POST',
+				data: {
+					message_id: msgIdentifier,
+					content: editMessageContent,
+				},
+			});
+			if (data?.success) {
+				setEditingMessageKey(null);
+				setEditMessageContent('');
+				if (onRefreshTicketDetails) {
+					onRefreshTicketDetails(selectedTicket.id, true);
+				}
+				if (onShowNotice) {
+					onShowNotice(__('Message updated successfully.', 'dragwyb-click-to-chat'), 'success');
+				}
+			}
+		} catch (err) {
+			console.error('Error updating message:', err);
+			if (onShowNotice) {
+				onShowNotice(__('Failed to update message.', 'dragwyb-click-to-chat'), 'error');
+			}
+		} finally {
+			setEditSubmitting(false);
+		}
+	};
+
+	const handleDeleteMessage = async (msgIdentifier) => {
+		if (!selectedTicket?.id || !msgIdentifier) return;
+		if (!window.confirm(__('Are you sure you want to delete this message?', 'dragwyb-click-to-chat'))) {
+			return;
+		}
+		try {
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}/message-delete`,
+				method: 'POST',
+				data: {
+					message_id: msgIdentifier,
+				},
+			});
+			if (data?.success) {
+				setActiveMessageMenuKey(null);
+				if (editingMessageKey === msgIdentifier) {
+					setEditingMessageKey(null);
+				}
+				if (onRefreshTicketDetails) {
+					onRefreshTicketDetails(selectedTicket.id, true);
+				}
+				if (onShowNotice) {
+					onShowNotice(__('Message deleted successfully.', 'dragwyb-click-to-chat'), 'success');
+				}
+			}
+		} catch (err) {
+			console.error('Error deleting message:', err);
+			if (onShowNotice) {
+				onShowNotice(__('Failed to delete message.', 'dragwyb-click-to-chat'), 'error');
+			}
+		}
 	};
 
 	const handleAttachReplyFiles = () => {
@@ -201,14 +328,6 @@ export default function TicketDetailWorkspace({
 									{(selectedTicket?.notes || []).length > 0 && (
 										<span className="dctc-sc-tab-badge">{(selectedTicket?.notes || []).length}</span>
 									)}
-								</button>
-								<button
-									type="button"
-									className={`dctc-sc-ws-tab-btn ${workspaceTab === 'activity' ? 'active' : ''}`}
-									onClick={() => setWorkspaceTab('activity')}
-								>
-									<span className="dashicons dashicons-backup"></span>
-									{__('Activity Logs', 'dragwyb-click-to-chat')}
 								</button>
 							</div>
 
@@ -470,13 +589,24 @@ export default function TicketDetailWorkspace({
 											? (selectedTicket?.customer_name || 'Guest Visitor')
 											: (isAI ? __('AI Assistant', 'dragwyb-click-to-chat') : (msg.sender_name || userPermissions.agent_name || 'Staff Member'));
 
+										const msgIdentifier = msg.id || msg.uuid || (msg.created_at ? msg.created_at : String(rawMessages.length - 1 - idx));
+										const msgKey = `msg-${msgIdentifier}`;
+										const isEditingThisMsg = editingMessageKey === msgIdentifier;
+
+										const isCustomerSeen = Boolean(
+											msg.is_read ||
+											msg.read ||
+											msg.seen ||
+											(selectedTicket?.customer_last_seen_at && msg.created_at && (new Date(selectedTicket.customer_last_seen_at).getTime() >= new Date(msg.created_at).getTime()))
+										);
+
 										return (
 											<div
-												key={msg.id ? `msg-${msg.id}` : (msg.uuid ? `msg-${msg.uuid}` : `msg-idx-${idx}`)}
+												key={msgKey}
 												data-index={idx}
 												data-msg-uuid={selectedTicket?.uuid || ''}
-												data-msg-id={msg.id || ''}
-												className={`dctc-sc-message-bubble-row ${isCustomer ? 'customer-row' : (isAI ? 'agent-row ai-row' : 'agent-row')}`}
+												data-msg-id={msgIdentifier}
+												className={`dctc-sc-message-bubble-row ${isCustomer ? 'customer-row' : (isAI ? 'agent-row ai-row' : 'agent-row')} ${isEditingThisMsg ? 'is-editing-mode' : ''}`}
 											>
 												<div className={`dctc-sc-msg-avatar ${isCustomer ? 'cust-avatar' : (isAI ? 'ai-avatar' : 'agent-avatar')}`}>
 													{avatarInitials}
@@ -489,20 +619,141 @@ export default function TicketDetailWorkspace({
 														</span>
 														<span className="dctc-sc-msg-timestamp">
 															{msg.created_at || ''}
+															{msg.is_edited && <span className="dctc-sc-msg-edited-badge">({__('edited', 'dragwyb-click-to-chat')})</span>}
 														</span>
-														<button type="button" className="dctc-sc-msg-menu-btn" title={__('Message options', 'dragwyb-click-to-chat')}>
-															<span className="dashicons dashicons-ellipsis"></span>
-														</button>
+
+														{msg.sender_type !== 'customer' &&
+															<div className="dctc-sc-msg-menu-container">
+																<button
+																	type="button"
+																	className={`dctc-sc-msg-menu-btn ${activeMessageMenuKey === msgKey ? 'active' : ''}`}
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		setActiveMessageMenuKey((prev) => (prev === msgKey ? null : msgKey));
+																	}}
+																	title={__('Message options', 'dragwyb-click-to-chat')}
+																>
+																	<span className="dashicons dashicons-ellipsis"></span>
+																</button>
+
+																{activeMessageMenuKey === msgKey && (
+																	<div className="dctc-sc-msg-dropdown-menu">
+																		<button
+																			type="button"
+																			className="dctc-sc-msg-dropdown-item"
+																			onClick={() => handleStartEditMessage(msg, msgIdentifier)}
+																		>
+																			<span className="dashicons dashicons-edit"></span>
+																			<span>{__('Edit Message', 'dragwyb-click-to-chat')}</span>
+																		</button>
+																		<button
+																			type="button"
+																			className="dctc-sc-msg-dropdown-item is-delete"
+																			onClick={() => handleDeleteMessage(msgIdentifier)}
+																		>
+																			<span className="dashicons dashicons-trash"></span>
+																			<span>{__('Delete Message', 'dragwyb-click-to-chat')}</span>
+																		</button>
+																	</div>
+																)}
+															</div>
+														}
 													</div>
 
-													<div
-														className="dctc-sc-msg-bubble-content"
-														dangerouslySetInnerHTML={{ __html: msg.content || '' }}
-													/>
+													{isEditingThisMsg ? (
+														<div className="dctc-sc-msg-inline-editor">
+															<div className="dctc-sc-wysiwyg-wrapper">
+																<div className="dctc-sc-wysiwyg-header-tabs">
+																	<div className="dctc-sc-wysiwyg-mode-switch">
+																		<button
+																			type="button"
+																			className={`dctc-sc-editor-mode-btn ${editEditorMode === 'visual' ? 'active' : ''}`}
+																			onClick={() => setEditEditorMode('visual')}
+																		>
+																			{__('Visual', 'dragwyb-click-to-chat')}
+																		</button>
+																		<button
+																			type="button"
+																			className={`dctc-sc-editor-mode-btn ${editEditorMode === 'text' ? 'active' : ''}`}
+																			onClick={() => setEditEditorMode('text')}
+																		>
+																			{__('Text', 'dragwyb-click-to-chat')}
+																		</button>
+																	</div>
+																</div>
+
+																{editEditorMode === 'visual' && (
+																	<div className="dctc-sc-wysiwyg-toolbar">
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('bold')} title={__('Bold', 'dragwyb-click-to-chat')}>
+																			<strong>B</strong>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('italic')} title={__('Italic', 'dragwyb-click-to-chat')}>
+																			<em>I</em>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('underline')} title={__('Underline', 'dragwyb-click-to-chat')}>
+																			<u>U</u>
+																		</button>
+																		<span className="dctc-sc-wysiwyg-divider"></span>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('link')} title={__('Insert Link', 'dragwyb-click-to-chat')}>
+																			<span className="dashicons dashicons-admin-links"></span>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('ul')} title={__('Bullet List', 'dragwyb-click-to-chat')}>
+																			<span className="dashicons dashicons-editor-ul"></span>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('ol')} title={__('Numbered List', 'dragwyb-click-to-chat')}>
+																			<span className="dashicons dashicons-editor-ol"></span>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('quote')} title={__('Blockquote', 'dragwyb-click-to-chat')}>
+																			<span className="dashicons dashicons-editor-quote"></span>
+																		</button>
+																		<button type="button" className="dctc-sc-wysiwyg-btn" onClick={() => applyEditFormatting('code')} title={__('Code Block', 'dragwyb-click-to-chat')}>
+																			<span className="dashicons dashicons-editor-code"></span>
+																		</button>
+																	</div>
+																)}
+
+																<textarea
+																	ref={editMessageTextareaRef}
+																	rows="4"
+																	value={editMessageContent}
+																	onChange={(e) => setEditMessageContent(e.target.value)}
+																	className={`dctc-sc-wysiwyg-textarea ${editEditorMode === 'text' ? 'text-mode-font' : ''}`}
+																/>
+
+																<div className="dctc-sc-inline-edit-footer">
+																	<button
+																		type="button"
+																		className="dctc-sc-edit-cancel-btn"
+																		onClick={() => { setEditingMessageKey(null); setEditMessageContent(''); }}
+																		disabled={editSubmitting}
+																	>
+																		{__('Discard', 'dragwyb-click-to-chat')}
+																	</button>
+																	<button
+																		type="button"
+																		className="dctc-sc-edit-save-btn"
+																		onClick={() => handleSaveEditMessage(msgIdentifier)}
+																		disabled={editSubmitting || !editMessageContent.trim()}
+																	>
+																		{editSubmitting ? __('Updating...', 'dragwyb-click-to-chat') : __('Update', 'dragwyb-click-to-chat')}
+																	</button>
+																</div>
+															</div>
+														</div>
+													) : (
+														<div
+															className="dctc-sc-msg-bubble-content"
+															dangerouslySetInnerHTML={{ __html: msg.content || '' }}
+														/>
+													)}
 
 													{!isCustomer && (
-														<div className="dctc-sc-msg-status-receipt">
-															<span className="dctc-sc-double-check">✓✓</span>
+														<div className="dctc-sc-msg-status-receipt" title={isCustomerSeen ? __('Read by customer', 'dragwyb-click-to-chat') : __('Sent', 'dragwyb-click-to-chat')}>
+															{isCustomerSeen ? (
+																<span className="dctc-sc-double-check is-seen">✓✓</span>
+															) : (
+																<span className="dctc-sc-single-check">✓</span>
+															)}
 														</div>
 													)}
 												</div>
@@ -531,20 +782,6 @@ export default function TicketDetailWorkspace({
 										))
 									)}
 								</div>
-							</div>
-						)}
-
-						{/* ACTIVITY TAB */}
-						{workspaceTab === 'activity' && (
-							<div className="dctc-sc-tab-pane">
-								<h4 style={{ margin: '0 0 12px', fontSize: '13.5px', color: '#0f172a' }}>{__('Ticket Audit Trail & System Events', 'dragwyb-click-to-chat')}</h4>
-								{(selectedTicket?.events || []).map((evt, idx) => (
-									<div key={idx} className="dctc-sc-audit-log-row">
-										<span className="dashicons dashicons-marker"></span>
-										<span style={{ flex: 1 }}><strong>{evt.actor_name}</strong> ({evt.event_type}) {evt.new_value || ''}</span>
-										<span className="dctc-sc-audit-time">{evt.created_at}</span>
-									</div>
-								))}
 							</div>
 						)}
 					</div>

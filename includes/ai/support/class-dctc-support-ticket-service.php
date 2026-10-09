@@ -521,6 +521,8 @@ class DCTC_Support_Ticket_Service {
 				$row['guest_access_token']           = ! empty( $t_meta['guest_access_token'] ) ? (string) $t_meta['guest_access_token'] : '';
 				$row['ai_classification_confidence'] = isset( $t_meta['ai_classification_confidence'] ) ? floatval( $t_meta['ai_classification_confidence'] ) : 0.0;
 				$row['ai_summary']                   = ! empty( $t_meta['ai_summary'] ) ? (string) $t_meta['ai_summary'] : '';
+				$row['is_starred']                    = ! empty( $t_meta['is_starred'] );
+				$row['is_flagged']                    = ! empty( $t_meta['is_flagged'] );
 
 				// Category resolution
 				if ( ! empty( $row['category_id'] ) && isset( $cats_map[ $row['category_id'] ] ) ) {
@@ -626,6 +628,8 @@ class DCTC_Support_Ticket_Service {
 		$ticket['assigned_team_id']             = ! empty( $ticket_meta['assigned_team_id'] ) ? absint( $ticket_meta['assigned_team_id'] ) : 0;
 		$ticket['ai_classification_confidence'] = isset( $ticket_meta['ai_classification_confidence'] ) ? floatval( $ticket_meta['ai_classification_confidence'] ) : 0.0;
 		$ticket['ai_summary']                   = ! empty( $ticket_meta['ai_summary'] ) ? (string) $ticket_meta['ai_summary'] : '';
+		$ticket['is_starred']                    = ! empty( $ticket_meta['is_starred'] );
+		$ticket['is_flagged']                    = ! empty( $ticket_meta['is_flagged'] );
 
 		// Category info
 		$ticket['category_name']  = '';
@@ -664,7 +668,6 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		$ticket['tags']   = DCTC_Support_Tag_Service::get_ticket_tags( $ticket_id );
-		$ticket['events'] = DCTC_Support_Event_Service::get_events( $ticket_id, 'ASC', 50 );
 		$ticket['notes']  = DCTC_Support_Note_Service::get_notes( $ticket_id );
 
 		// Retrieve conversation messages from sessions table (by session_id or support_ticket_id)
@@ -1675,7 +1678,7 @@ class DCTC_Support_Ticket_Service {
 			if ( $new_status !== $ticket['status'] ) {
 				$core_updates['status'] = $new_status;
 				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
-					DCTC_Support_Event_Service::log_event( $ticket['id'], 'status_changed', $ticket['status'], $new_status, $actor_type, $actor_id, $actor_name );
+					DCTC_Support_Event_Service::log_event( $ticket['id'], 'status_changed', $actor_type, $actor_id, $actor_name, $ticket['status'], $new_status );
 				}
 			}
 		}
@@ -1685,7 +1688,7 @@ class DCTC_Support_Ticket_Service {
 			if ( $new_priority !== $ticket['priority'] ) {
 				$core_updates['priority'] = $new_priority;
 				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
-					DCTC_Support_Event_Service::log_event( $ticket['id'], 'priority_changed', $ticket['priority'], $new_priority, $actor_type, $actor_id, $actor_name );
+					DCTC_Support_Event_Service::log_event( $ticket['id'], 'priority_changed', $actor_type, $actor_id, $actor_name, $ticket['priority'], $new_priority );
 				}
 			}
 		}
@@ -1704,7 +1707,7 @@ class DCTC_Support_Ticket_Service {
 			$cat_id = absint( $data['category_id'] );
 			self::update_ticket_meta( $ticket['id'], 'category_id', $cat_id );
 			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
-				DCTC_Support_Event_Service::log_event( $ticket['id'], 'category_changed', (string) $ticket['category_id'], (string) $cat_id, $actor_type, $actor_id, $actor_name );
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'category_changed', $actor_type, $actor_id, $actor_name, (string) $ticket['category_id'], (string) $cat_id );
 			}
 		}
 
@@ -1714,7 +1717,7 @@ class DCTC_Support_Ticket_Service {
 			self::update_ticket_meta( $ticket['id'], 'product_name', $product_val );
 			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 				$prev_product = isset( $ticket['product'] ) ? $ticket['product'] : '';
-				DCTC_Support_Event_Service::log_event( $ticket['id'], 'product_changed', $prev_product, $product_val, $actor_type, $actor_id, $actor_name );
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'product_changed', $actor_type, $actor_id, $actor_name, $prev_product, $product_val );
 			}
 		}
 
@@ -1722,7 +1725,7 @@ class DCTC_Support_Ticket_Service {
 			$agent_id = absint( $data['assigned_agent_id'] );
 			self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
 			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
-				DCTC_Support_Event_Service::log_event( $ticket['id'], 'agent_assigned', (string) $ticket['assigned_agent_id'], (string) $agent_id, $actor_type, $actor_id, $actor_name );
+				DCTC_Support_Event_Service::log_event( $ticket['id'], 'agent_assigned', $actor_type, $actor_id, $actor_name, (string) $ticket['assigned_agent_id'], (string) $agent_id );
 			}
 		}
 
@@ -1731,6 +1734,209 @@ class DCTC_Support_Ticket_Service {
 				DCTC_Support_Tag_Service::set_ticket_tags( $ticket['id'], $data['tags'] );
 			}
 			self::update_ticket_meta( $ticket['id'], 'tags', $data['tags'] );
+		}
+
+		if ( isset( $data['is_starred'] ) ) {
+			$star_val = ! empty( $data['is_starred'] ) ? 1 : 0;
+			self::update_ticket_meta( $ticket['id'], 'is_starred', $star_val );
+		}
+
+		if ( isset( $data['is_flagged'] ) ) {
+			$flag_val = ! empty( $data['is_flagged'] ) ? 1 : 0;
+			self::update_ticket_meta( $ticket['id'], 'is_flagged', $flag_val );
+		}
+
+		return self::get_ticket( $ticket['id'] );
+	}
+
+	/**
+	 * Edit a specific message in a ticket conversation.
+	 *
+	 * @param int|string $ticket_id_or_uuid Ticket ID or UUID.
+	 * @param string|int $message_id Message ID, UUID, timestamp or index.
+	 * @param string     $new_content New message content HTML/text.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function edit_ticket_message( $ticket_id_or_uuid, $message_id, $new_content ) {
+		global $wpdb;
+		$ticket = self::get_ticket( $ticket_id_or_uuid );
+		if ( ! $ticket ) {
+			return new WP_Error( 'not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
+
+		// Read existing session content
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
+			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+		) : null;
+
+		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
+		if ( empty( $messages ) && ! empty( $ticket['messages'] ) ) {
+			$messages = $ticket['messages'];
+		}
+		$messages = is_array( $messages ) ? $messages : array();
+
+		$edited        = false;
+		$clean_content = wp_kses_post( $new_content );
+
+		foreach ( $messages as $idx => &$msg ) {
+			$match = false;
+			if ( isset( $msg['id'] ) && (string) $msg['id'] === (string) $message_id ) {
+				$match = true;
+			} elseif ( isset( $msg['uuid'] ) && (string) $msg['uuid'] === (string) $message_id ) {
+				$match = true;
+			} elseif ( (string) $idx === (string) $message_id ) {
+				$match = true;
+			} elseif ( isset( $msg['created_at'] ) && (string) $msg['created_at'] === (string) $message_id ) {
+				$match = true;
+			}
+
+			if ( $match ) {
+				$msg['content']   = $clean_content;
+				$msg['edited_at'] = current_time( 'mysql' );
+				$msg['is_edited'] = true;
+				$edited           = true;
+				break;
+			}
+		}
+
+		if ( ! $edited ) {
+			return new WP_Error( 'message_not_found', __( 'Message not found in ticket conversation.', 'dragwyb-click-to-chat' ) );
+		}
+
+		if ( ! empty( $session_id ) ) {
+			$wpdb->update(
+				$table_sessions,
+				array(
+					'content'    => wp_json_encode( $messages ),
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array( 'session_id' => $session_id )
+			);
+		}
+
+		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $messages );
+
+		// Touch ticket updated_at
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
+
+		// Log activity audit trail event
+		if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+			$actor_id   = get_current_user_id();
+			$actor_user = $actor_id ? get_userdata( $actor_id ) : null;
+			$actor_name = $actor_user ? $actor_user->display_name : 'Support Staff';
+			$excerpt    = wp_strip_all_tags( $clean_content );
+			if ( mb_strlen( $excerpt ) > 50 ) {
+				$excerpt = mb_substr( $excerpt, 0, 47 ) . '...';
+			}
+			DCTC_Support_Event_Service::log_event(
+				$ticket['id'],
+				'message_edited',
+				'agent',
+				$actor_id,
+				$actor_name,
+				null,
+				$excerpt,
+				array( 'message_id' => $message_id )
+			);
+		}
+
+		return self::get_ticket( $ticket['id'] );
+	}
+
+	/**
+	 * Delete a specific message from a ticket conversation.
+	 *
+	 * @param int|string $ticket_id_or_uuid Ticket ID or UUID.
+	 * @param string|int $message_id Message ID, UUID, timestamp or index.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public static function delete_ticket_message( $ticket_id_or_uuid, $message_id ) {
+		global $wpdb;
+		$ticket = self::get_ticket( $ticket_id_or_uuid );
+		if ( ! $ticket ) {
+			return new WP_Error( 'not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
+
+		// Read existing session content
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
+			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+		) : null;
+
+		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
+		if ( empty( $messages ) && ! empty( $ticket['messages'] ) ) {
+			$messages = $ticket['messages'];
+		}
+		$messages = is_array( $messages ) ? $messages : array();
+
+		$deleted           = false;
+		$filtered_messages = array();
+
+		foreach ( $messages as $idx => $msg ) {
+			$match = false;
+			if ( isset( $msg['id'] ) && (string) $msg['id'] === (string) $message_id ) {
+				$match = true;
+			} elseif ( isset( $msg['uuid'] ) && (string) $msg['uuid'] === (string) $message_id ) {
+				$match = true;
+			} elseif ( (string) $idx === (string) $message_id ) {
+				$match = true;
+			} elseif ( isset( $msg['created_at'] ) && (string) $msg['created_at'] === (string) $message_id ) {
+				$match = true;
+			}
+
+			if ( $match && ! $deleted ) {
+				$deleted = true;
+				continue;
+			}
+			$filtered_messages[] = $msg;
+		}
+
+		if ( ! $deleted ) {
+			return new WP_Error( 'message_not_found', __( 'Message not found in ticket conversation.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$filtered_messages = array_values( $filtered_messages );
+
+		if ( ! empty( $session_id ) ) {
+			$wpdb->update(
+				$table_sessions,
+				array(
+					'content'    => wp_json_encode( $filtered_messages ),
+					'updated_at' => current_time( 'mysql' ),
+				),
+				array( 'session_id' => $session_id )
+			);
+		}
+
+		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $filtered_messages );
+
+		// Touch ticket updated_at
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
+
+		// Log activity audit trail event
+		if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+			$actor_id   = get_current_user_id();
+			$actor_user = $actor_id ? get_userdata( $actor_id ) : null;
+			$actor_name = $actor_user ? $actor_user->display_name : 'Support Staff';
+			DCTC_Support_Event_Service::log_event(
+				$ticket['id'],
+				'message_deleted',
+				'agent',
+				$actor_id,
+				$actor_name,
+				null,
+				__( 'deleted message', 'dragwyb-click-to-chat' ),
+				array( 'message_id' => $message_id )
+			);
 		}
 
 		return self::get_ticket( $ticket['id'] );

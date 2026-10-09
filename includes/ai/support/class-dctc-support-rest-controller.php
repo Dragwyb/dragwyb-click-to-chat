@@ -181,6 +181,26 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/message-edit',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'edit_ticket_message' ),
+				'permission_callback' => array( $this, 'permission_staff_reply' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/message-delete',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'delete_ticket_message' ),
+				'permission_callback' => array( $this, 'permission_staff_reply' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/note',
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
@@ -1017,6 +1037,77 @@ class DCTC_Support_REST_Controller {
 			array(
 				'success' => true,
 				'ticket'  => $updated_ticket,
+			),
+			200
+		);
+	}
+
+	public function edit_ticket_message( $request ) {
+		$id         = $request->get_param( 'id' );
+		$params     = $request->get_json_params();
+		$message_id = isset( $params['message_id'] ) ? $params['message_id'] : ( isset( $params['id'] ) ? $params['id'] : '' );
+		$content    = isset( $params['content'] ) ? wp_kses_post( $params['content'] ) : '';
+
+		if ( '' === (string) $message_id || '' === $content ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Missing message identifier or content.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		$result = DCTC_Support_Ticket_Service::edit_ticket_message( $id, $message_id, $content );
+		if ( is_wp_error( $result ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $result,
+			),
+			200
+		);
+	}
+
+	public function delete_ticket_message( $request ) {
+		$id         = $request->get_param( 'id' );
+		$params     = $request->get_json_params();
+		$message_id = isset( $params['message_id'] ) ? $params['message_id'] : ( isset( $params['id'] ) ? $params['id'] : '' );
+
+		if ( '' === (string) $message_id ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Missing message identifier.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		$result = DCTC_Support_Ticket_Service::delete_ticket_message( $id, $message_id );
+		if ( is_wp_error( $result ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => $result->get_error_message(),
+				),
+				400
+			);
+		}
+
+		return new WP_REST_Response(
+			array(
+				'success' => true,
+				'ticket'  => $result,
 			),
 			200
 		);

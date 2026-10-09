@@ -21,6 +21,8 @@ export default function TicketsView({
 	totalTickets = 0,
 	loading = false,
 	currentPage = 1,
+	perPage = 10,
+	setPerPage,
 	totalPages = 1,
 	setCurrentPage,
 	statusFilter = 'all',
@@ -104,6 +106,41 @@ export default function TicketsView({
 	// Starred & Flagged local states
 	const [starredTickets, setStarredTickets] = useState({});
 	const [flaggedTickets, setFlaggedTickets] = useState({});
+
+	// Initialize / sync star and flag status from tickets and selectedTicket
+	useEffect(() => {
+		if (Array.isArray(tickets)) {
+			setStarredTickets((prev) => {
+				const next = { ...prev };
+				tickets.forEach((t) => {
+					if (t.id && t.is_starred !== undefined) {
+						next[t.id] = Boolean(t.is_starred);
+					}
+				});
+				return next;
+			});
+			setFlaggedTickets((prev) => {
+				const next = { ...prev };
+				tickets.forEach((t) => {
+					if (t.id && t.is_flagged !== undefined) {
+						next[t.id] = Boolean(t.is_flagged);
+					}
+				});
+				return next;
+			});
+		}
+	}, [tickets]);
+
+	useEffect(() => {
+		if (selectedTicket?.id) {
+			if (selectedTicket.is_starred !== undefined) {
+				setStarredTickets((prev) => ({ ...prev, [selectedTicket.id]: Boolean(selectedTicket.is_starred) }));
+			}
+			if (selectedTicket.is_flagged !== undefined) {
+				setFlaggedTickets((prev) => ({ ...prev, [selectedTicket.id]: Boolean(selectedTicket.is_flagged) }));
+			}
+		}
+	}, [selectedTicket]);
 
 	// Active Ticket Viewers (Multi-agent presence)
 	const [activeViewers, setActiveViewers] = useState([]);
@@ -597,19 +634,40 @@ export default function TicketsView({
 		}
 	};
 
-	const toggleStar = (id) => {
-		setStarredTickets((prev) => ({ ...prev, [id]: !prev[id] }));
+	const toggleStar = async (id) => {
+		if (!id) return;
+		const nextState = !starredTickets[id];
+		setStarredTickets((prev) => ({ ...prev, [id]: nextState }));
+		try {
+			await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${id}`,
+				method: 'PUT',
+				data: { is_starred: nextState },
+			});
+			if (onRefreshTicketDetails && selectedTicketId === id) {
+				onRefreshTicketDetails(id, true);
+			}
+		} catch (err) {
+			console.error('Failed to save star status:', err);
+		}
 	};
 
-	const toggleFlag = (id) => {
-		setFlaggedTickets((prev) => ({ ...prev, [id]: !prev[id] }));
-	};
-
-	const toggleTicketSelect = (id, e) => {
-		e.stopPropagation();
-		setSelectedTicketIds((prev) =>
-			prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-		);
+	const toggleFlag = async (id) => {
+		if (!id) return;
+		const nextState = !flaggedTickets[id];
+		setFlaggedTickets((prev) => ({ ...prev, [id]: nextState }));
+		try {
+			await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${id}`,
+				method: 'PUT',
+				data: { is_flagged: nextState },
+			});
+			if (onRefreshTicketDetails && selectedTicketId === id) {
+				onRefreshTicketDetails(id, true);
+			}
+		} catch (err) {
+			console.error('Failed to save flag status:', err);
+		}
 	};
 
 	// Filtered tickets from server results
@@ -701,9 +759,10 @@ export default function TicketsView({
 						flaggedTickets={flaggedTickets}
 						selectedTicketIds={selectedTicketIds}
 						onOpenTicket={handleOpenTicket}
-						onToggleTicketSelect={toggleTicketSelect}
 						onResetFilters={handleResetFilters}
 						currentPage={currentPage}
+						perPage={perPage}
+						setPerPage={setPerPage}
 						totalPages={totalPages}
 						setCurrentPage={setCurrentPage}
 						getInitials={getInitials}
@@ -857,6 +916,53 @@ export default function TicketsView({
 											})
 										)}
 									</div>
+
+									{/* LEFT PANEL PAGINATION & PER-PAGE SELECTOR */}
+									{(totalTickets > 0 || totalPages > 0) && (
+										<div className="dctc-sc-left-panel-pagination">
+											<div className="dctc-sc-left-pagination-top">
+												<span className="dctc-sc-left-page-info">
+													{currentPage} / {Math.max(1, totalPages)} ({totalTickets} {__('tickets', 'dragwyb-click-to-chat')})
+												</span>
+												<select
+													value={perPage}
+													onChange={(e) => {
+														if (setPerPage) setPerPage(Number(e.target.value));
+														if (setCurrentPage) setCurrentPage(1);
+													}}
+													className="dctc-sc-left-per-page-select"
+													title={__('Tickets per page', 'dragwyb-click-to-chat')}
+												>
+													<option value={10}>10 / p</option>
+													<option value={25}>25 / p</option>
+													<option value={50}>50 / p</option>
+													<option value={100}>100 / p</option>
+												</select>
+											</div>
+											<div className="dctc-sc-left-pagination-btns">
+												<button
+													type="button"
+													disabled={currentPage <= 1}
+													onClick={() => setCurrentPage?.((p) => Math.max(1, p - 1))}
+													className="dctc-sc-left-page-btn"
+													title={__('Previous page', 'dragwyb-click-to-chat')}
+												>
+													<span className="dashicons dashicons-arrow-left-alt2"></span>
+													<span>{__('Prev', 'dragwyb-click-to-chat')}</span>
+												</button>
+												<button
+													type="button"
+													disabled={currentPage >= totalPages}
+													onClick={() => setCurrentPage?.((p) => Math.min(totalPages, p + 1))}
+													className="dctc-sc-left-page-btn"
+													title={__('Next page', 'dragwyb-click-to-chat')}
+												>
+													<span>{__('Next', 'dragwyb-click-to-chat')}</span>
+													<span className="dashicons dashicons-arrow-right-alt2"></span>
+												</button>
+											</div>
+										</div>
+									)}
 								</aside>
 							) : (
 								<div className="dctc-sc-left-panel-collapsed-bar">
@@ -915,6 +1021,8 @@ export default function TicketsView({
 								replyEditorMode={replyEditorMode}
 								setReplyEditorMode={setReplyEditorMode}
 								getInitials={getInitials}
+								onRefreshTicketDetails={onRefreshTicketDetails}
+								onShowNotice={onShowNotice}
 							/>
 						)}
 
