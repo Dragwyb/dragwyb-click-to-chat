@@ -114,6 +114,7 @@ class DCTC_Frontend {
 		if ( $is_mobile && $show_on_mobile !== '1' ) {
 			return; // Don't show on mobile
 		}
+
 		if ( ! $is_mobile && $show_on_desktop !== '1' ) {
 			return; // Don't show on desktop
 		}
@@ -185,7 +186,10 @@ class DCTC_Frontend {
 		$all_channels_registry = dctc_get_channels();
 		$phase1_channels       = array( 'whatsapp', 'facebook', 'phone', 'email', 'instagram', 'telegram', 'sms', 'twitter', 'linkedin' );
 
-		$channels = array();
+		$channels           = array();
+		$current_page_title = '';
+		$current_page_url   = '';
+
 		foreach ( $phase1_channels as $slug ) {
 			if ( ! isset( $all_channels_registry[ $slug ] ) ) {
 				continue;
@@ -249,6 +253,25 @@ class DCTC_Frontend {
 
 			$default_message = isset( $settings[ $slug . '_default_message' ] ) ? sanitize_textarea_field( $settings[ $slug . '_default_message' ] ) : __( 'Hi! How can I help you?', 'dragwyb-click-to-chat' );
 
+			if ( strpos( $default_message, '{title}' ) !== false ) {
+				if ( empty( $current_page_title ) ) {
+					global $post;
+					if ( ! empty( $post ) ) {
+						$current_page_title = esc_html( $post->post_title );
+					}
+				}
+
+				$default_message = str_replace( '{title}', $current_page_title, $default_message );
+			}
+
+			if ( strpos( $default_message, '{url}' ) !== false ) {
+				if ( empty( $current_page_url ) ) {
+					$current_page_url = home_url( add_query_arg( null, null ) );
+				}
+
+				$default_message = str_replace( '{url}', esc_url( $current_page_url ), $default_message );
+			}
+
 			// Build channel array
 			$channel_item = array(
 				'slug'                => $slug, // Added slug for identifying channel
@@ -305,7 +328,8 @@ class DCTC_Frontend {
 
 		// Greeting Message
 		$greeting_message = isset( $settings['greeting_message'] ) ? sanitize_text_field( $settings['greeting_message'] ) : '';
-		$greeting_color   = $widget_color;
+
+		$greeting_color = $widget_color;
 		if ( $is_single_channel && ! empty( $channels[0]['color'] ) && $channels[0]['color'] !== 'transparent' ) {
 			$single_color = sanitize_hex_color( $channels[0]['color'] );
 			if ( ! empty( $single_color ) ) {
