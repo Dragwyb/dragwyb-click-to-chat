@@ -134,32 +134,37 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 					</div>
 				</div>
 
-				<!-- Quick Setup Checklist Map -->
-				<div class="dctc-guide-quick-map">
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
+				<!-- 5-Step Interactive Navigation Map -->
+				<nav class="dctc-guide-step-nav" aria-label="<?php esc_attr_e( 'Channels setup steps', 'dragwyb-click-to-chat' ); ?>">
+					<a href="#channels-step-1" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 01', 'dragwyb-click-to-chat' ); ?></span>
 						<strong><?php esc_html_e( '1. Channel Inputs', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Enter Phone/WhatsApp with country code or username', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '2. Position & Style', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Set Bottom-Right/Left and button brand color', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'VISIBILITY', 'dragwyb-click-to-chat' ); ?></span>
+						<small><?php esc_html_e( 'Enter WhatsApp, Phone, Email & Social handles', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#channels-step-2" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 02', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '2. Look & Position', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Set Bottom-Right/Left, size & brand colors', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#channels-step-3" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'STEP 03', 'dragwyb-click-to-chat' ); ?></span>
 						<strong><?php esc_html_e( '3. Device & Triggers', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Desktop/Mobile filters & scroll/time delay rules', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'HIGHLIGHT', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '4. Prefilled Text', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Dynamic WhatsApp greetings with page URL tags', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-				</div>
+						<small><?php esc_html_e( 'Desktop/Mobile filters, time delay & scroll rules', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#channels-step-4" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 04', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '4. Dynamic Greetings', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Personalize WhatsApp with {title} & {url} tags', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#channels-step-5" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 05', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '5. Embed Shortcode', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Embed [dctc-widget] in Gutenberg or Elementor', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+				</nav>
 
 				<!-- Step 1: REQUIRED - Select Channels & Contact Details -->
-				<div class="dctc-zigzag-row">
+				<div id="channels-step-1" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 01', 'dragwyb-click-to-chat' ); ?></span>
@@ -167,7 +172,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						</div>
 						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Enable Channels & Enter Contact Values', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
-							<?php esc_html_e( 'In Step 1 of the Channels Builder, click to enable the communication channels your team monitors.', 'dragwyb-click-to-chat' ); ?>
+							<?php esc_html_e( 'In Step 1 of the Channels Builder, toggle on the communication channels your team actively monitors.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
 							<li><strong><?php esc_html_e( 'WhatsApp (Recommended):', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Enter full international phone number with country code without spaces or dashes (e.g., +14155552671 or 14155552671).', 'dragwyb-click-to-chat' ); ?></li>
@@ -215,7 +220,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 2: REQUIRED - Button Design & Position -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="channels-step-2" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -258,7 +263,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 3: VISIBILITY RULES & TRIGGERS -->
-				<div class="dctc-zigzag-row">
+				<div id="channels-step-3" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 03', 'dragwyb-click-to-chat' ); ?></span>
@@ -301,7 +306,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 4: HIGHLIGHTED FEATURE - WhatsApp Prefilled Inquiries -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="channels-step-4" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -335,7 +340,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 5: HIGHLIGHTED FEATURE - Shortcode & Embeds -->
-				<div class="dctc-zigzag-row">
+				<div id="channels-step-5" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 05', 'dragwyb-click-to-chat' ); ?></span>
@@ -434,32 +439,37 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 					</div>
 				</div>
 
-				<!-- Quick Setup Checklist Map -->
-				<div class="dctc-guide-quick-map">
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '1. Connect API Key', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'OpenAI, Gemini, Claude, OpenRouter, Groq or Ollama', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '2. Persona Prompt', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Define tone, brand role, and answer boundaries', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'VISIBILITY', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '3. Sitewide Display', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Toggle Entire Site display or embed via shortcode', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'HIGHLIGHT', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '4. Knowledge Base', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Sync website articles, FAQs & vector search', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-				</div>
+				<!-- 5-Step Interactive Navigation Map -->
+				<nav class="dctc-guide-step-nav" aria-label="<?php esc_attr_e( 'AI Assistant setup steps', 'dragwyb-click-to-chat' ); ?>">
+					<a href="#ai-step-1" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 01', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '1. Connect AI Provider', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'OpenAI, Gemini, Claude, Groq, DeepSeek, Ollama', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#ai-step-2" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 02', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '2. Persona & Prompt', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Brand tone, role guidelines & 50+ languages', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#ai-step-3" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'STEP 03', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '3. Sitewide & Embeds', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Sitewide toggle, greeting delay & [dctc_ai]', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#ai-step-4" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 04', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '4. Knowledge Base (RAG)', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Sync posts, custom FAQs, URLs & document files', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#ai-step-5" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 05', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '5. Leads & Live Takeover', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( '0-100 lead score, CRM capture & human takeover', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+				</nav>
 
 				<!-- Step 1: REQUIRED - Connect AI Engine -->
-				<div class="dctc-zigzag-row">
+				<div id="ai-step-1" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 01', 'dragwyb-click-to-chat' ); ?></span>
@@ -467,10 +477,10 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						</div>
 						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Connect AI Engine Provider & API Key', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
-							<?php esc_html_e( 'Under "AI Engine & Prompt", configure your AI model provider credentials to power the intelligent responses.', 'dragwyb-click-to-chat' ); ?>
+							<?php esc_html_e( 'Under "AI Engine & Prompt", configure your AI model provider credentials to power intelligent, zero-delay responses.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
-							<li><strong><?php esc_html_e( 'Supported AI Providers:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'OpenAI (GPT-4o, GPT-4o-mini), Google Gemini (Gemini 1.5 Flash/Pro), Anthropic Claude (Claude 3.5 Sonnet), OpenRouter, Groq, DeepSeek, and Local Ollama.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Supported AI Providers:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'OpenAI (GPT-4o, GPT-4o-mini), Google Gemini (Gemini 1.5 Flash/Pro, Gemini 2.0), Anthropic Claude (Claude 3.5 Sonnet/Haiku), OpenRouter, Groq (Llama 3.3 70B), DeepSeek (Chat V3, Reasoner R1), and Local Ollama.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Model Recommendation:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'We recommend "gpt-4o-mini" or "gemini-1.5-flash" for ultra-fast replies under 500ms and minimal token cost.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Max Tokens & Temperature:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Keep temperature around 0.3 - 0.7 for accurate, factual, and customer-friendly answers.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
@@ -501,7 +511,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 2: REQUIRED - System Instructions Persona -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="ai-step-2" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -523,18 +533,18 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						</div>
 						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Define System Persona & Brand Guidelines', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
-							<?php esc_html_e( 'Set clear instructions so the bot knows how to introduce itself and handle customer inquiries.', 'dragwyb-click-to-chat' ); ?>
+							<?php esc_html_e( 'Set clear instructions so the bot knows how to introduce itself, maintain brand voice, and handle customer inquiries.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
 							<li><strong><?php esc_html_e( 'Role & Tone:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Define whether the tone is professional, friendly, enthusiastic, or technical.', 'dragwyb-click-to-chat' ); ?></li>
-							<li><strong><?php esc_html_e( 'Multilingual Support:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'The assistant automatically detects the visitor\'s language and replies in 50+ languages.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Multilingual Support:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'The assistant automatically detects the visitor\'s browser language and replies accurately in 50+ languages.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Guardrails & Boundaries:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Instruct the bot to stay on topic and prevent discussing competitor products.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<!-- Step 3: VISIBILITY RULES - Sitewide Display & Shortcodes -->
-				<div class="dctc-zigzag-row">
+				<div id="ai-step-3" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 03', 'dragwyb-click-to-chat' ); ?></span>
@@ -546,7 +556,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						</p>
 						<ul class="dctc-guide-bullet-list">
 							<li><strong><?php esc_html_e( 'Display on Entire Site:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'In "Chatbot Settings > Display Rules", toggle Sitewide display on or off.', 'dragwyb-click-to-chat' ); ?></li>
-							<li><strong><?php esc_html_e( 'Auto-Popup Greeting Delay:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Automatically expand the chatbot window after a 5s time delay to greet visitors.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Auto-Popup Greeting Delay:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Automatically expand the chatbot window after a 5s time delay to proactively greet visitors.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Manual Shortcode Embedding:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Embed the full interactive AI chatbot directly inside any page or contact hub with the shortcode.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
 						<div class="dctc-shortcode-copy-box" style="margin-top: 14px; display: inline-flex;">
@@ -579,7 +589,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 4: HIGHLIGHTED FEATURE - Knowledge Base Indexing (RAG) -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="ai-step-4" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -619,20 +629,20 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 						</p>
 						<ul class="dctc-guide-bullet-list">
 							<li><strong><?php esc_html_e( 'Auto-Sync on Post Update:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Whenever you edit or publish a post, the chatbot updates its memory instantly.', 'dragwyb-click-to-chat' ); ?></li>
-							<li><strong><?php esc_html_e( 'Vector Search Embeddings:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Pinecone vector database integration retrieves exact matching answers across thousands of articles in milliseconds.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Vector Search Embeddings:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Built-in database vector search and Pinecone integration retrieve exact matching answers across thousands of articles in milliseconds.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Private Knowledge Snippets:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Add internal pricing charts, return policies, and promo codes without publishing them on public pages.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
 					</div>
 				</div>
 
 				<!-- Step 5: HIGHLIGHTED FEATURE - Automated Lead Scoring & Support Center -->
-				<div class="dctc-zigzag-row">
+				<div id="ai-step-5" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 05', 'dragwyb-click-to-chat' ); ?></span>
 							<span class="dctc-chip-tag is-highlight">⭐ <?php esc_html_e( 'Highlighted Feature', 'dragwyb-click-to-chat' ); ?></span>
 						</div>
-						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Automated Lead Scoring & Support Center Handoff', 'dragwyb-click-to-chat' ); ?></h2>
+						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Automated Lead Scoring & Live Human Takeover', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
 							<?php esc_html_e( 'Collect customer inquiries, score leads automatically, and intervene with live human replies when needed.', 'dragwyb-click-to-chat' ); ?>
 						</p>
@@ -727,32 +737,37 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 					</div>
 				</div>
 
-				<!-- Quick Setup Checklist Map -->
-				<div class="dctc-guide-quick-map">
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
+				<!-- 5-Step Interactive Navigation Map -->
+				<nav class="dctc-guide-step-nav" aria-label="<?php esc_attr_e( 'Support Center setup steps', 'dragwyb-click-to-chat' ); ?>">
+					<a href="#support-step-1" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 01', 'dragwyb-click-to-chat' ); ?></span>
 						<strong><?php esc_html_e( '1. Ticket Categories', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Create Technical, Billing, Presales & Returns departments', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-required"><?php esc_html_e( 'REQUIRED', 'dragwyb-click-to-chat' ); ?></span>
+						<small><?php esc_html_e( 'Setup Technical, Billing, Presales & Returns departments', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#support-step-2" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-required"><?php esc_html_e( 'STEP 02', 'dragwyb-click-to-chat' ); ?></span>
 						<strong><?php esc_html_e( '2. Staff Agents', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Assign WordPress admins/editors to handle tickets', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'VISIBILITY', 'dragwyb-click-to-chat' ); ?></span>
+						<small><?php esc_html_e( 'Assign WordPress agents, color themes & capacity limits', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#support-step-3" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-visibility"><?php esc_html_e( 'STEP 03', 'dragwyb-click-to-chat' ); ?></span>
 						<strong><?php esc_html_e( '3. Customer Portals', 'dragwyb-click-to-chat' ); ?></strong>
 						<small><?php esc_html_e( 'Embed [dctc_support_portal] on your support page', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-					<div class="dctc-quick-map-item">
-						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'HIGHLIGHT', 'dragwyb-click-to-chat' ); ?></span>
-						<strong><?php esc_html_e( '4. SLA & Woo Context', 'dragwyb-click-to-chat' ); ?></strong>
-						<small><?php esc_html_e( 'Order history lookup, urgent SLA flags & auto-routing', 'dragwyb-click-to-chat' ); ?></small>
-					</div>
-				</div>
+					</a>
+					<a href="#support-step-4" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 04', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '4. WooCommerce & SLA', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'Order history lookup, urgent SLA flags & spend data', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+					<a href="#support-step-5" class="dctc-step-nav-item">
+						<span class="dctc-map-badge is-highlight"><?php esc_html_e( 'STEP 05', 'dragwyb-click-to-chat' ); ?></span>
+						<strong><?php esc_html_e( '5. Live Sync & Guests', 'dragwyb-click-to-chat' ); ?></strong>
+						<small><?php esc_html_e( 'AI chat escalation & secure guest token access', 'dragwyb-click-to-chat' ); ?></small>
+					</a>
+				</nav>
 
 				<!-- Step 1: REQUIRED - Ticket Categories & Routing -->
-				<div class="dctc-zigzag-row">
+				<div id="support-step-1" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 01', 'dragwyb-click-to-chat' ); ?></span>
@@ -763,8 +778,8 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 							<?php esc_html_e( 'In Support Center Settings, configure categories so incoming tickets are routed to the right team members.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
-							<li><strong><?php esc_html_e( 'Recommended Categories:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Technical Support, Billing & Invoices, Product Inquiries, and Returns / Refunds.', 'dragwyb-click-to-chat' ); ?></li>
-							<li><strong><?php esc_html_e( 'Custom Tags:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Tag tickets with keywords (e.g., bug, urgent, v1.2, refund-approved) for fast search and filtering.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Seeded Default Categories:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Product Support, WooCommerce & Orders, Technical & Bugs, Billing & License, and General Inquiries.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Custom Color & Tags:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Assign distinct color badges to categories and tag tickets with keywords (e.g., bug, urgent, v1.2, refund-approved) for fast identification.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
 					</div>
 					<div class="dctc-zigzag-visual">
@@ -779,16 +794,16 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 								<div class="dctc-mockup-item is-active">
 									<span class="dctc-mockup-icon" style="background:#3b82f6; color:#fff;">🛠️</span>
 									<div>
-										<strong><?php esc_html_e( 'Technical Support', 'dragwyb-click-to-chat' ); ?></strong>
-										<small><?php esc_html_e( 'Default Category • 12 Active Tickets', 'dragwyb-click-to-chat' ); ?></small>
+										<strong><?php esc_html_e( 'Technical & Bugs', 'dragwyb-click-to-chat' ); ?></strong>
+										<small><?php esc_html_e( 'High Priority • Auto-routed to Specialists', 'dragwyb-click-to-chat' ); ?></small>
 									</div>
 									<span class="dctc-mockup-tag"><?php esc_html_e( 'Active', 'dragwyb-click-to-chat' ); ?></span>
 								</div>
 								<div class="dctc-mockup-item is-active" style="margin-top:8px;">
 									<span class="dctc-mockup-icon" style="background:#10b981; color:#fff;">💳</span>
 									<div>
-										<strong><?php esc_html_e( 'Billing & Subscriptions', 'dragwyb-click-to-chat' ); ?></strong>
-										<small><?php esc_html_e( 'Auto-assigned to Finance team', 'dragwyb-click-to-chat' ); ?></small>
+										<strong><?php esc_html_e( 'Billing & License', 'dragwyb-click-to-chat' ); ?></strong>
+										<small><?php esc_html_e( 'Invoices & subscriptions queue', 'dragwyb-click-to-chat' ); ?></small>
 									</div>
 									<span class="dctc-mockup-tag"><?php esc_html_e( 'Active', 'dragwyb-click-to-chat' ); ?></span>
 								</div>
@@ -798,7 +813,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 2: REQUIRED - Staff Agents Assignment -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="support-step-2" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -835,7 +850,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 							<?php esc_html_e( 'Select WordPress users to act as support specialists. Assign tickets manually or let the system route them evenly.', 'dragwyb-click-to-chat' ); ?>
 						</p>
 						<ul class="dctc-guide-bullet-list">
-							<li><strong><?php esc_html_e( 'Agent Roles:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Any WordPress user with Administrator or Editor permissions can be assigned as a support specialist.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Agent Roles & Avatar Themes:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Assign custom avatar colors, agent seniority, and max active ticket limits per staff member.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Internal Private Notes:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Staff can write private internal notes on tickets that remain invisible to customers.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Auto Email Alerts:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Agents receive email alerts whenever a new ticket is assigned or a customer replies.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
@@ -843,26 +858,52 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 3: VISIBILITY - Customer Frontend Portals (Shortcodes) -->
-				<div class="dctc-zigzag-row">
+				<div id="support-step-3" class="dctc-zigzag-row">
 					<div class="dctc-zigzag-content">
 						<div class="dctc-step-badge-row">
 							<span class="dctc-step-chip"><?php esc_html_e( 'Step 03', 'dragwyb-click-to-chat' ); ?></span>
 							<span class="dctc-chip-tag is-visibility">🎯 <?php esc_html_e( 'Visibility & Customer Portals', 'dragwyb-click-to-chat' ); ?></span>
 						</div>
-						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Customer Support Portals (Shortcodes)', 'dragwyb-click-to-chat' ); ?></h2>
+						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Customer Support Portals & Embed Shortcodes', 'dragwyb-click-to-chat' ); ?></h2>
 						<p class="dctc-zigzag-desc">
-							<?php esc_html_e( 'Create a dedicated "Help / Support" page on your website and embed the customer support portal shortcodes.', 'dragwyb-click-to-chat' ); ?>
+							<?php esc_html_e( 'Create a dedicated "Help / Support" page on your website and embed any of the 3 flexible customer portal shortcodes.', 'dragwyb-click-to-chat' ); ?>
 						</p>
-						<div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
-							<div class="dctc-shortcode-copy-box">
-								<code>[dctc_support_portal]</code>
-								<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal]">
-									<span class="dctc-copy-text"><?php esc_html_e( 'Copy Shortcode', 'dragwyb-click-to-chat' ); ?></span>
-								</button>
+						<div style="display:flex; flex-direction:column; gap:14px; margin-top:14px;">
+							<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+								<div class="dctc-shortcode-copy-box" style="margin-bottom:6px;">
+									<code>[dctc_support_portal]</code>
+									<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal]">
+										<span class="dctc-copy-text"><?php esc_html_e( 'Copy Shortcode', 'dragwyb-click-to-chat' ); ?></span>
+									</button>
+								</div>
+								<p style="margin: 0; font-size: 12px; color: #64748b;">
+									<strong><?php esc_html_e( 'Full Customer Portal:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Complete self-service experience with ticket creation form, customer ticket history table, real-time message threading, file attachments, and guest token access.', 'dragwyb-click-to-chat' ); ?>
+								</p>
 							</div>
-							<p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">
-								<?php esc_html_e( 'Renders the complete self-service customer portal including interactive ticket submission form, user ticket history dashboard, real-time message threading, and file attachment support.', 'dragwyb-click-to-chat' ); ?>
-							</p>
+
+							<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+								<div class="dctc-shortcode-copy-box" style="margin-bottom:6px;">
+									<code>[dctc_support_portal_form]</code>
+									<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal_form]">
+										<span class="dctc-copy-text"><?php esc_html_e( 'Copy Shortcode', 'dragwyb-click-to-chat' ); ?></span>
+									</button>
+								</div>
+								<p style="margin: 0; font-size: 12px; color: #64748b;">
+									<strong><?php esc_html_e( 'Standalone Ticket Form:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Renders only the ticket submission form. Supports custom trigger button ID e.g. [dctc_support_portal_form trigger_btn_id="my-btn"].', 'dragwyb-click-to-chat' ); ?>
+								</p>
+							</div>
+
+							<div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px;">
+								<div class="dctc-shortcode-copy-box" style="margin-bottom:6px;">
+									<code>[dctc_support_portal_tickets]</code>
+									<button type="button" class="dctc-copy-btn" data-clipboard-text="[dctc_support_portal_tickets]">
+										<span class="dctc-copy-text"><?php esc_html_e( 'Copy Shortcode', 'dragwyb-click-to-chat' ); ?></span>
+									</button>
+								</div>
+								<p style="margin: 0; font-size: 12px; color: #64748b;">
+									<strong><?php esc_html_e( 'User Tickets History Table:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Renders a dedicated customer ticket list table with live search, category/priority/status filters, and pagination.', 'dragwyb-click-to-chat' ); ?>
+								</p>
+							</div>
 						</div>
 					</div>
 					<div class="dctc-zigzag-visual">
@@ -881,7 +922,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 									<?php esc_html_e( 'Subject: Order #8921 Delivery Question', 'dragwyb-click-to-chat' ); ?>
 								</div>
 								<div style="border:1px solid #e2e8f0; border-radius:6px; padding:8px 10px; font-size:11.5px; color:#94a3b8; margin-bottom:8px;">
-									<?php esc_html_e( 'Category: Shipping & Delivery', 'dragwyb-click-to-chat' ); ?>
+									<?php esc_html_e( 'Category: WooCommerce & Orders', 'dragwyb-click-to-chat' ); ?>
 								</div>
 								<div style="background:#7c3aed; color:#fff; text-align:center; padding:6px; border-radius:6px; font-size:11.5px; font-weight:700;">
 									<?php esc_html_e( 'Submit Ticket &rarr;', 'dragwyb-click-to-chat' ); ?>
@@ -892,7 +933,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 				</div>
 
 				<!-- Step 4: HIGHLIGHTED FEATURE - WooCommerce & SLA Metrics -->
-				<div class="dctc-zigzag-row is-reversed">
+				<div id="support-step-4" class="dctc-zigzag-row is-reversed">
 					<div class="dctc-zigzag-visual">
 						<div class="dctc-mockup-card">
 							<div class="dctc-mockup-header">
@@ -927,6 +968,50 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'chan
 							<li><strong><?php esc_html_e( 'Priority SLA Indicators:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Tag tickets with Urgent, High, or Normal priority flags with countdown response targets.', 'dragwyb-click-to-chat' ); ?></li>
 							<li><strong><?php esc_html_e( 'Complete Audit Timeline:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Full activity history recording every status change, reassignment, and reply timestamp.', 'dragwyb-click-to-chat' ); ?></li>
 						</ul>
+					</div>
+				</div>
+
+				<!-- Step 5: HIGHLIGHTED FEATURE - Live Handoff & Guest Token Access -->
+				<div id="support-step-5" class="dctc-zigzag-row">
+					<div class="dctc-zigzag-content">
+						<div class="dctc-step-badge-row">
+							<span class="dctc-step-chip"><?php esc_html_e( 'Step 05', 'dragwyb-click-to-chat' ); ?></span>
+							<span class="dctc-chip-tag is-highlight">⭐ <?php esc_html_e( 'Highlighted Feature', 'dragwyb-click-to-chat' ); ?></span>
+						</div>
+						<h2 class="dctc-zigzag-title"><?php esc_html_e( 'Real-Time Handoff & Secure Guest Token Access', 'dragwyb-click-to-chat' ); ?></h2>
+						<p class="dctc-zigzag-desc">
+							<?php esc_html_e( 'When visitors ask for human assistance in the AI chatbot, a support ticket is created seamlessly with real-time polling synchronization.', 'dragwyb-click-to-chat' ); ?>
+						</p>
+						<ul class="dctc-guide-bullet-list">
+							<li><strong><?php esc_html_e( 'Zero-Login Guest Access:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'Guest visitors receive a cryptographic access token allowing them to reply and track their ticket securely without registering an account.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Live Agent Handoff:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'When an agent replies from the admin dashboard, the chatbot sync endpoint pushes the reply instantly to the customer\'s screen.', 'dragwyb-click-to-chat' ); ?></li>
+							<li><strong><?php esc_html_e( 'Automated Reopen on Reply:', 'dragwyb-click-to-chat' ); ?></strong> <?php esc_html_e( 'If a customer responds to a resolved ticket, the status switches back to Open automatically.', 'dragwyb-click-to-chat' ); ?></li>
+						</ul>
+					</div>
+					<div class="dctc-zigzag-visual">
+						<div class="dctc-mockup-card">
+							<div class="dctc-mockup-header">
+								<span class="dctc-mockup-dot red"></span>
+								<span class="dctc-mockup-dot yellow"></span>
+								<span class="dctc-mockup-dot green"></span>
+								<span class="dctc-mockup-title"><?php esc_html_e( 'Live Agent Escalation', 'dragwyb-click-to-chat' ); ?></span>
+							</div>
+							<div class="dctc-mockup-body">
+								<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+									<div style="width:28px; height:28px; border-radius:50%; background:#4f46e5; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">AD</div>
+									<div>
+										<strong style="font-size:12px; color:#1e293b;">Aniket Dogra (Support Agent)</strong><br />
+										<small style="font-size:10px; color:#10b981;">● Connected Live</small>
+									</div>
+								</div>
+								<div style="background:#f1f5f9; border-radius:8px; padding:8px 10px; font-size:12px; color:#334155; margin-bottom:6px;">
+									"Hello! I am reviewing your order details now. Let me update your tracking code."
+								</div>
+								<div style="display:inline-block; font-size:10.5px; background:#f0fdf4; color:#15803d; padding:2px 8px; border-radius:10px; font-weight:600;">
+									✓ Synced via /dctc-ai/v1/chat/sync
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 

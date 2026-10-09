@@ -54,6 +54,7 @@ class DCTC_Frontend {
 	public function render_widget_html( $from_shortcode = false ) {
 		// Get all settings container
 		$settings = get_option( 'dctc_settings', array() );
+
 		if ( ! is_array( $settings ) ) {
 			$settings = array();
 		}

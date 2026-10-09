@@ -446,10 +446,10 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 												{ Icons.socialChat }
 											</div>
 											<h3 className="dctc-welcome-feature-card__title">
-												{ __( 'Social Chat', 'dragwyb-click-to-chat' ) }
+												{ __( '1. Social Chat Widget', 'dragwyb-click-to-chat' ) }
 											</h3>
 											<p className="dctc-welcome-feature-card__desc">
-												{ __( 'WhatsApp, phone, email and custom links.', 'dragwyb-click-to-chat' ) }
+												{ __( 'Floating 1-tap launcher for WhatsApp, Phone, Email & Telegram. Includes dynamic WhatsApp pre-filled messages with page title & URL tags.', 'dragwyb-click-to-chat' ) }
 											</p>
 										</div>
 
@@ -458,10 +458,10 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 												{ Icons.aiAssistant }
 											</div>
 											<h3 className="dctc-welcome-feature-card__title">
-												{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }
+												{ __( '2. Autonomous AI Assistant', 'dragwyb-click-to-chat' ) }
 											</h3>
 											<p className="dctc-welcome-feature-card__desc">
-												{ __( 'Automated answers, capture leads and assist customers.', 'dragwyb-click-to-chat' ) }
+												{ __( '24/7 intelligent agent trained on your website posts, FAQs & docs. Answers customer queries, captures leads, and calculates 0-100 buyer intent scores.', 'dragwyb-click-to-chat' ) }
 											</p>
 										</div>
 
@@ -470,10 +470,10 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 												{ Icons.supportCenter }
 											</div>
 											<h3 className="dctc-welcome-feature-card__title">
-												{ __( 'Support Center', 'dragwyb-click-to-chat' ) }
+												{ __( '3. Support Center Helpdesk', 'dragwyb-click-to-chat' ) }
 											</h3>
 											<p className="dctc-welcome-feature-card__desc">
-												{ __( 'Manage support tickets, assign agents and provide human support.', 'dragwyb-click-to-chat' ) }
+												{ __( 'Complete ticketing helpdesk with staff agent routing, WooCommerce order intelligence, and self-service frontend customer support portals.', 'dragwyb-click-to-chat' ) }
 											</p>
 										</div>
 									</div>
@@ -481,16 +481,16 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 									{ /* 4 Check Badges */ }
 									<div className="dctc-welcome-pills">
 										<span className="dctc-welcome-pill">
-											{ Icons.check } { __( 'Easy Setup', 'dragwyb-click-to-chat' ) }
+											{ Icons.check } { __( 'WhatsApp Dynamic Context', 'dragwyb-click-to-chat' ) }
 										</span>
 										<span className="dctc-welcome-pill">
-											{ Icons.check } { __( 'Fully Modular', 'dragwyb-click-to-chat' ) }
+											{ Icons.check } { __( 'Multi-AI Models (OpenAI, Gemini, Claude)', 'dragwyb-click-to-chat' ) }
 										</span>
 										<span className="dctc-welcome-pill">
-											{ Icons.check } { __( 'Works with WordPress', 'dragwyb-click-to-chat' ) }
+											{ Icons.check } { __( 'Helpdesk & Customer Portals', 'dragwyb-click-to-chat' ) }
 										</span>
 										<span className="dctc-welcome-pill">
-											{ Icons.check } { __( 'Grow Your Business', 'dragwyb-click-to-chat' ) }
+											{ Icons.check } { __( 'WooCommerce Order Insights', 'dragwyb-click-to-chat' ) }
 										</span>
 									</div>
 
@@ -590,7 +590,7 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 										{ __( 'Choose Your Features', 'dragwyb-click-to-chat' ) }
 									</h2>
 									<p className="dctc-screen-desc">
-										{ __( 'Select the features you want to enable. You can configure additional options and advanced settings later from your Dragwyb dashboard.', 'dragwyb-click-to-chat' ) }
+										{ __( 'Select the modules you want to enable. All features work seamlessly together and can be further customized anytime from your WordPress admin menu.', 'dragwyb-click-to-chat' ) }
 									</p>
 								</div>
 
@@ -609,25 +609,29 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 											</div>
 										</div>
 
+										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--social">
+											⚡ { __( 'Daily Use: 1-Tap WhatsApp & Direct Calls', 'dragwyb-click-to-chat' ) }
+										</span>
+
 										<h3 className="dctc-feature-select-card__title">
-											{ __( 'Social Chat (Click to Chat)', 'dragwyb-click-to-chat' ) }
+											{ __( 'Social Chat (Floating Widget)', 'dragwyb-click-to-chat' ) }
 										</h3>
 										<p className="dctc-feature-select-card__desc">
-											{ __( 'Connect customers directly via WhatsApp, phone, email and custom links.', 'dragwyb-click-to-chat' ) }
+											{ __( 'Direct visitor connection across 8+ messaging apps with personalized page context tags.', 'dragwyb-click-to-chat' ) }
 										</p>
 
 										<ul className="dctc-feature-select-card__bullets">
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'WhatsApp', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'WhatsApp with {title} & {url} tags', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Phone Call', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Phone Call, SMS & Messenger', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Email', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Desktop / Mobile device targeting', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Custom Link', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Gutenberg & Elementor [dctc-widget]', 'dragwyb-click-to-chat' ) }
 											</li>
 										</ul>
 									</div>
@@ -646,25 +650,29 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 											</div>
 										</div>
 
+										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--ai">
+											🤖 { __( 'Daily Use: 24/7 Q&A & Lead Scoring', 'dragwyb-click-to-chat' ) }
+										</span>
+
 										<h3 className="dctc-feature-select-card__title">
-											{ __( 'AI Assistant', 'dragwyb-click-to-chat' ) }
+											{ __( 'Autonomous AI Assistant', 'dragwyb-click-to-chat' ) }
 										</h3>
 										<p className="dctc-feature-select-card__desc">
-											{ __( 'Let AI answer customer questions, capture leads and automate support.', 'dragwyb-click-to-chat' ) }
+											{ __( 'Intelligent chatbot trained on your website content with automated lead scoring and CRM capture.', 'dragwyb-click-to-chat' ) }
 										</p>
 
 										<ul className="dctc-feature-select-card__bullets">
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Multi AI Providers', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'OpenAI, Gemini, Claude, Groq & Ollama', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Instant Responses', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'RAG Knowledge Base & Auto-Sync', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Lead Capture', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( '0-100 Buyer Urgency Lead Scoring', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Works with your content', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Live human takeover & chat transcripts', 'dragwyb-click-to-chat' ) }
 											</li>
 										</ul>
 									</div>
@@ -683,25 +691,29 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 											</div>
 										</div>
 
+										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--support">
+											🎫 { __( 'Daily Use: Ticket Queue & Agent Routing', 'dragwyb-click-to-chat' ) }
+										</span>
+
 										<h3 className="dctc-feature-select-card__title">
-											{ __( 'Support Center', 'dragwyb-click-to-chat' ) }
+											{ __( 'Support Center Helpdesk', 'dragwyb-click-to-chat' ) }
 										</h3>
 										<p className="dctc-feature-select-card__desc">
-											{ __( 'Manage support tickets, assign agents and provide human support.', 'dragwyb-click-to-chat' ) }
+											{ __( 'Complete helpdesk with staff rosters, customer self-service portals, and WooCommerce purchase insights.', 'dragwyb-click-to-chat' ) }
 										</p>
 
 										<ul className="dctc-feature-select-card__bullets">
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Ticket Management', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Ticket queues (Open, Pending, Resolved)', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Agent Assignment', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'Staff agent rosters & private notes', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Customer Portal', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( '3 Frontend Customer Portal shortcodes', 'dragwyb-click-to-chat' ) }
 											</li>
 											<li className="dctc-feature-select-card__bullet">
-												{ Icons.check } { __( 'Email Notifications', 'dragwyb-click-to-chat' ) }
+												{ Icons.check } { __( 'WooCommerce lifetime spend & order data', 'dragwyb-click-to-chat' ) }
 											</li>
 										</ul>
 									</div>
@@ -1010,9 +1022,10 @@ export default function OnboardingWizard( { open, onClose, showNotice } ) {
 													onChange={ ( e ) => setSupportSettings( ( prev ) => ( { ...prev, default_category: e.target.value } ) ) }
 												>
 													<option value="Product Support">Product Support</option>
-													<option value="General Inquiry">General Inquiry</option>
-													<option value="Billing & Account">Billing & Account</option>
-													<option value="Technical Support">Technical Support</option>
+													<option value="WooCommerce & Orders">WooCommerce & Orders</option>
+													<option value="Technical & Bugs">Technical & Bugs</option>
+													<option value="Billing & License">Billing & License</option>
+													<option value="General Inquiries">General Inquiries</option>
 												</select>
 												<p className="dctc-form-helper">
 													{ __( 'Initial category for new tickets.', 'dragwyb-click-to-chat' ) }

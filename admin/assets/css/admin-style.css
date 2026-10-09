@@ -1474,42 +1474,62 @@
     flex-shrink: 0;
 }
 
-/* Quick Setup Checklist Map Bar */
-.dctc-guide-quick-map {
+/* Quick Setup Checklist Map & Step Navigation Bar */
+.dctc-guide-quick-map,
+.dctc-guide-step-nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
-    padding: 16px 20px;
+    padding: 14px 16px;
     margin-bottom: 28px;
-    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
-.dctc-quick-map-item {
+.dctc-quick-map-item,
+.dctc-step-nav-item {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
+    text-decoration: none;
     border-right: 1px solid #f1f5f9;
-    padding-right: 14px;
+    padding-right: 10px;
+    padding-left: 6px;
+    transition: all 0.2s ease;
+    border-radius: 8px;
 }
 
-.dctc-quick-map-item:last-child {
+.dctc-step-nav-item:hover {
+    background: #f8fafc;
+}
+
+.dctc-step-nav-item:hover strong {
+    color: #4f46e5;
+}
+
+.dctc-quick-map-item:last-child,
+.dctc-step-nav-item:last-child {
     border-right: none;
     padding-right: 0;
 }
 
-.dctc-quick-map-item strong {
-    font-size: 13px;
+.dctc-quick-map-item strong,
+.dctc-step-nav-item strong {
+    font-size: 12px;
     font-weight: 700;
     color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.dctc-quick-map-item small {
-    font-size: 11.5px;
+.dctc-quick-map-item small,
+.dctc-step-nav-item small {
+    font-size: 11px;
     color: #64748b;
-    line-height: 1.4;
+    line-height: 1.35;
 }
 
 .dctc-map-badge {
