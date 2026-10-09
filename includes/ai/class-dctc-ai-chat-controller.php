@@ -2078,8 +2078,13 @@ CONVERSATION MEMORY:
 		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 		if ( $ticket && ! empty( $ticket['id'] ) ) {
 			$val = $is_responding ? 1 : 0;
-			DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'ai_response', $val );
-			DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'ai_response_waiting', $val );
+			DCTC_Support_Ticket_Service::update_ticket_meta_batch(
+				(int) $ticket['id'],
+				array(
+					'ai_response'         => $val,
+					'ai_response_waiting' => $val,
+				)
+			);
 		}
 	}
 
@@ -2106,14 +2111,7 @@ CONVERSATION MEMORY:
 			? $ticket['agent_name']
 			: '';
 
-		$ai_waiting = false;
-		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $ticket['id'] ) ) {
-			$meta_val = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $ticket['id'], 'ai_response_waiting', true );
-			if ( empty( $meta_val ) ) {
-				$meta_val = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $ticket['id'], 'ai_response', true );
-			}
-			$ai_waiting = ! empty( $meta_val );
-		}
+		$ai_waiting = ! empty( $ticket['ai_response_waiting'] ) || ! empty( $ticket['ai_response'] );
 
 		return array(
 			'id'                  => (int) $ticket['id'],

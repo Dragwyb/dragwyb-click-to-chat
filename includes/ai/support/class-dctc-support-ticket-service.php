@@ -18,11 +18,162 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DCTC_Support_Ticket_Service {
 
 	/**
-	 * Create a new support ticket (from chatbot, portal, or admin).
-	 *
-	 * @param array $data Ticket data.
-	 * @return array<string, mixed>|WP_Error
+	 * Canonical allowlist constants.
 	 */
+	const ALLOWED_STATUSES = array( 'open', 'pending', 'waiting_customer', 'waiting_agent', 'hold', 'resolved', 'closed', 'trash' );
+	const ALLOWED_PRIORITIES = array( 'low', 'normal', 'high', 'urgent' );
+	const ALLOWED_CONTROL_MODES = array( 'ai', 'human', 'hybrid' );
+	const ALLOWED_ORIGIN_TYPES = array( 'chatbot', 'support_portal', 'admin', 'email', 'api' );
+	const ALLOWED_REPLY_SURFACES = array( 'chatbot_widget', 'support_portal', 'admin_workspace', 'email', 'api' );
+	const ALLOWED_SENDER_TYPES = array( 'customer', 'agent', 'ai', 'system' );
+	const ALLOWED_ASSIGNMENT_METHODS = array( 'manual', 'round_robin', 'least_loaded', 'skill_match', 'escalation', 'fallback', 'auto' );
+
+	/**
+	 * Protected metadata keys that cannot be overridden by untrusted caller meta input.
+	 */
+	const PROTECTED_META_KEYS = array(
+		'guest_access_token',
+		'session_id',
+		'control_mode',
+		'origin_type',
+		'reply_surface',
+		'interaction_type',
+		'assigned_agent_id',
+		'assigned_team_id',
+		'category_id',
+		'_dctc_ticket_messages',
+		'first_response_at',
+		'resolved_at',
+		'closed_at',
+	);
+
+	/**
+	 * In-memory static cache for single ticket objects across the current request.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	private static $ticket_cache = array();
+
+	/**
+	 * In-memory mapping from session_id to ticket_id.
+	 *
+	 * @var array<string, int>
+	 */
+	private static $session_ticket_map = array();
+
+	/**
+	 * In-memory cache for WooCommerce product titles.
+	 *
+	 * @var array<int, string>|null
+	 */
+	private static $product_titles_cache = null;
+
+	/**
+	 * In-memory cache for DB categories list.
+	 *
+	 * @var array<int, array<string, mixed>>|null
+	 */
+	private static $categories_cache = null;
+
+	/**
+	 * Invalidate internal memory cache.
+	 *
+	 * @param int    $ticket_id Optional ticket ID.
+	 * @param string $session_id Optional session ID.
+	 * @return void
+	 */
+	public static function invalidate_cache( $ticket_id = 0, $session_id = '' ) {
+		if ( $ticket_id ) {
+			$tid_str = (string) $ticket_id;
+			unset( self::$ticket_cache[ $tid_str ] );
+			foreach ( self::$ticket_cache as $k => $v ) {
+				if ( is_array( $v ) && isset( $v['id'] ) && (int) $v['id'] === (int) $ticket_id ) {
+					unset( self::$ticket_cache[ $k ] );
+				}
+			}
+		}
+		if ( $session_id ) {
+			unset( self::$session_ticket_map[ (string) $session_id ] );
+		}
+		if ( ! $ticket_id && ! $session_id ) {
+			self::$ticket_cache         = array();
+			self::$session_ticket_map   = array();
+			self::$product_titles_cache = null;
+			self::$categories_cache     = null;
+		}
+	}
+
+	/**
+	 * Insert or update multiple ticket metadata entries in a single optimized batch query.
+	 *
+	 * @param int                  $ticket_id Ticket ID.
+	 * @param array<string, mixed> $meta_entries Key-value pairs.
+	 * @return bool
+	 */
+	public static function update_ticket_meta_batch( $ticket_id, array $meta_entries ) {
+		global $wpdb;
+		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_id = absint( $ticket_id );
+
+		if ( empty( $ticket_id ) || empty( $meta_entries ) ) {
+			return false;
+		}
+
+		// Security (SEC-13): Bound maximum batch size to prevent payload overflow
+		if ( count( $meta_entries ) > 50 ) {
+			$meta_entries = array_slice( $meta_entries, 0, 50, true );
+		}
+
+		$placeholders = array();
+		$values       = array();
+		$clean_keys   = array();
+
+		foreach ( $meta_entries as $meta_key => $meta_value ) {
+			$clean_key = sanitize_key( $meta_key );
+			if ( empty( $clean_key ) || null === $meta_value ) {
+				continue;
+			}
+
+			$val_str = is_array( $meta_value ) || is_object( $meta_value )
+				? wp_json_encode( $meta_value )
+				: (string) $meta_value;
+
+			// Security (SEC-13): Bound max serialized length per meta value to 65535 bytes
+			if ( strlen( $val_str ) > 65535 ) {
+				$val_str = substr( $val_str, 0, 65535 );
+			}
+
+			$placeholders[] = '(%d, %s, %s)';
+			$values[]       = $ticket_id;
+			$values[]       = $clean_key;
+			$values[]       = $val_str;
+			$clean_keys[]   = $clean_key;
+		}
+
+		if ( empty( $placeholders ) ) {
+			return false;
+		}
+
+		// Delete existing keys in a single prepared statement to prevent duplicates
+		$key_placeholders = implode( ',', array_fill( 0, count( $clean_keys ), '%s' ) );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE FROM `$table` WHERE ticket_id = %d AND meta_key IN ($key_placeholders)",
+				array_merge( array( $ticket_id ), $clean_keys )
+			)
+		);
+
+		// Batch insert in single prepared query
+		$sql = "INSERT INTO `$table` (`ticket_id`, `meta_key`, `meta_value`) VALUES " . implode( ', ', $placeholders );
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$result = $wpdb->query( $wpdb->prepare( $sql, $values ) );
+
+		self::invalidate_cache( $ticket_id );
+
+		return false !== $result;
+	}
+
 	/**
 	 * Create a new support ticket (from chatbot, portal, or admin).
 	 *
@@ -33,23 +184,79 @@ class DCTC_Support_Ticket_Service {
 		global $wpdb;
 		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
 
-		$subject     = ! empty( $data['subject'] ) ? sanitize_text_field( $data['subject'] ) : 'Support Request';
-		$session_id  = ! empty( $data['session_id'] ) ? sanitize_text_field( $data['session_id'] ) : 'sess_' . wp_generate_uuid4();
-		$user_id     = isset( $data['customer_wp_user_id'] ) ? absint( $data['customer_wp_user_id'] ) : get_current_user_id();
-		$email       = ! empty( $data['customer_email'] ) ? sanitize_email( $data['customer_email'] ) : '';
-		$name        = ! empty( $data['customer_name'] ) ? sanitize_text_field( $data['customer_name'] ) : '';
-		$status      = ! empty( $data['status'] ) ? sanitize_key( $data['status'] ) : 'open';
-		$priority    = ! empty( $data['priority'] ) ? sanitize_key( $data['priority'] ) : 'normal';
-		$control     = ! empty( $data['control_mode'] ) ? sanitize_key( $data['control_mode'] ) : 'ai';
-		$origin      = ! empty( $data['origin_type'] ) ? sanitize_key( $data['origin_type'] ) : 'chatbot';
-		$surface     = ! empty( $data['reply_surface'] ) ? sanitize_key( $data['reply_surface'] ) : 'chatbot_widget';
+		$subject = ! empty( $data['subject'] ) ? sanitize_text_field( $data['subject'] ) : 'Support Request';
+
+		// Security (SEC-10): Determine customer user identity safely
+		$user_id = 0;
+		if ( isset( $data['customer_wp_user_id'] ) && is_user_logged_in() ) {
+			$req_user_id = absint( $data['customer_wp_user_id'] );
+			$curr_user   = get_current_user_id();
+			// Non-staff callers can only create tickets under their own authenticated WP user ID
+			if ( $req_user_id === $curr_user || current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'create_ticket' ) ) ) {
+				$user_id = $req_user_id;
+			} else {
+				$user_id = $curr_user;
+			}
+		} elseif ( is_user_logged_in() ) {
+			$user_id = get_current_user_id();
+		}
+
+		$email = ! empty( $data['customer_email'] ) ? sanitize_email( $data['customer_email'] ) : '';
+		$name  = ! empty( $data['customer_name'] ) ? sanitize_text_field( $data['customer_name'] ) : '';
+
+		// Security (SEC-09): Allowlist validation for status, priority, control mode, origin, reply surface
+		$raw_status  = ! empty( $data['status'] ) ? sanitize_key( $data['status'] ) : 'open';
+		$status      = in_array( $raw_status, self::ALLOWED_STATUSES, true ) ? $raw_status : 'open';
+
+		$raw_prio    = ! empty( $data['priority'] ) ? sanitize_key( $data['priority'] ) : 'normal';
+		$priority    = in_array( $raw_prio, self::ALLOWED_PRIORITIES, true ) ? $raw_prio : 'normal';
+
+		$raw_control = ! empty( $data['control_mode'] ) ? sanitize_key( $data['control_mode'] ) : 'ai';
+		$control     = in_array( $raw_control, self::ALLOWED_CONTROL_MODES, true ) ? $raw_control : 'ai';
+
+		$raw_origin  = ! empty( $data['origin_type'] ) ? sanitize_key( $data['origin_type'] ) : 'chatbot';
+		$origin      = in_array( $raw_origin, self::ALLOWED_ORIGIN_TYPES, true ) ? $raw_origin : 'chatbot';
+
+		$raw_surface = ! empty( $data['reply_surface'] ) ? sanitize_key( $data['reply_surface'] ) : 'chatbot_widget';
+		$surface     = in_array( $raw_surface, self::ALLOWED_REPLY_SURFACES, true ) ? $raw_surface : 'chatbot_widget';
+
 		$interaction = ! empty( $data['interaction_type'] ) ? sanitize_key( $data['interaction_type'] ) : 'SUPPORT_TICKET';
 		$category_id = ! empty( $data['category_id'] ) ? absint( $data['category_id'] ) : 0;
 		$agent_id    = ! empty( $data['assigned_agent_id'] ) ? absint( $data['assigned_agent_id'] ) : 0;
 		$team_id     = ! empty( $data['assigned_team_id'] ) ? absint( $data['assigned_team_id'] ) : 0;
 		$ai_summary  = isset( $data['ai_summary'] ) ? sanitize_textarea_field( $data['ai_summary'] ) : '';
 		$confidence  = isset( $data['ai_classification_confidence'] ) ? floatval( $data['ai_classification_confidence'] ) : 0.0;
+
+		// Security (SEC-15): Verify agent eligibility if agent_id supplied
+		if ( $agent_id > 0 ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$is_valid_agent = $wpdb->get_var(
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+			);
+			if ( ! $is_valid_agent ) {
+				$agent_id = 0; // fallback to unassigned
+			}
+		}
+
+		// Security (SEC-06): Session validation and relinking protection
+		$session_id = '';
+		if ( ! empty( $data['session_id'] ) ) {
+			$cand_session = sanitize_text_field( $data['session_id'] );
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$existing_session = $wpdb->get_row(
+				$wpdb->prepare( "SELECT id, support_ticket_id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $cand_session )
+			);
+			// Reject relinking if session is already attached to an existing ticket
+			if ( $existing_session && ! empty( $existing_session->support_ticket_id ) ) {
+				$session_id = 'sess_' . wp_generate_uuid4();
+			} else {
+				$session_id = $cand_session;
+			}
+		} else {
+			$session_id = 'sess_' . wp_generate_uuid4();
+		}
 
 		// Intelligent Auto-Classification for Category & Product Tags if not explicitly provided
 		$query_content = $subject . ' ' . ( ! empty( $data['initial_message'] ) ? $data['initial_message'] : '' );
@@ -106,38 +313,51 @@ class DCTC_Support_Ticket_Service {
 
 		$ticket_id = $wpdb->insert_id;
 
-		// Save all extra metadata in dctc_support_ticket_meta
+		// Batch save initial metadata in a single fast prepared query
+		$meta_batch = array(
+			'control_mode'     => $control,
+			'origin_type'      => $origin,
+			'reply_surface'    => $surface,
+			'interaction_type' => $interaction,
+		);
 		if ( ! empty( $session_id ) ) {
-			self::update_ticket_meta( $ticket_id, 'session_id', $session_id );
+			$meta_batch['session_id'] = $session_id;
 		}
 		if ( ! empty( $guest_token ) ) {
-			self::update_ticket_meta( $ticket_id, 'guest_access_token', $guest_token );
+			$meta_batch['guest_access_token'] = $guest_token;
 		}
-		self::update_ticket_meta( $ticket_id, 'control_mode', $control );
-		self::update_ticket_meta( $ticket_id, 'origin_type', $origin );
-		self::update_ticket_meta( $ticket_id, 'reply_surface', $surface );
-		self::update_ticket_meta( $ticket_id, 'interaction_type', $interaction );
-
 		if ( $category_id ) {
-			self::update_ticket_meta( $ticket_id, 'category_id', $category_id );
+			$meta_batch['category_id'] = $category_id;
 		}
 		if ( $agent_id ) {
-			self::update_ticket_meta( $ticket_id, 'assigned_agent_id', $agent_id );
+			$meta_batch['assigned_agent_id'] = $agent_id;
 		}
 		if ( $team_id ) {
-			self::update_ticket_meta( $ticket_id, 'assigned_team_id', $team_id );
+			$meta_batch['assigned_team_id'] = $team_id;
 		}
 		if ( $confidence > 0 ) {
-			self::update_ticket_meta( $ticket_id, 'ai_classification_confidence', $confidence );
+			$meta_batch['ai_classification_confidence'] = $confidence;
 		}
 		if ( ! empty( $ai_summary ) ) {
-			self::update_ticket_meta( $ticket_id, 'ai_summary', $ai_summary );
+			$meta_batch['ai_summary'] = $ai_summary;
 		}
+
+		// Security (SEC-07): Prevent caller-supplied metadata from overwriting protected keys
+		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
+			foreach ( $data['meta'] as $mkey => $mval ) {
+				$clean_mkey = sanitize_key( $mkey );
+				if ( ! in_array( $clean_mkey, self::PROTECTED_META_KEYS, true ) ) {
+					$meta_batch[ $clean_mkey ] = $mval;
+				}
+			}
+		}
+
+		self::update_ticket_meta_batch( $ticket_id, $meta_batch );
 
 		// Ensure corresponding row in wp_dctc_ai_sessions exists and is linked
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$existing_session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s", $session_id )
+			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id )
 		);
 
 		if ( $existing_session ) {
@@ -149,28 +369,41 @@ class DCTC_Support_Ticket_Service {
 					'reply_surface'     => $surface,
 					'updated_at'        => current_time( 'mysql' ),
 				),
-				array( 'session_id' => $session_id )
+				array( 'session_id' => $session_id ),
+				array( '%d', '%s', '%s', '%s' ),
+				array( '%s' )
 			);
 		} else {
 			// Create new session entry for support portal origin
 			$initial_messages = array();
 			if ( ! empty( $data['initial_message'] ) ) {
+				$msg_uuid  = wp_generate_uuid4();
 				$msg_entry = array(
-					'role'       => 'user',
-					'content'    => wp_kses_post( $data['initial_message'] ),
-					'created_at' => current_time( 'mysql' ),
+					'id'          => $msg_uuid,
+					'uuid'        => $msg_uuid,
+					'role'        => 'user',
+					'sender_type' => 'customer',
+					'sender_name' => $name ? $name : 'Customer',
+					'content'     => wp_kses_post( $data['initial_message'] ),
+					'created_at'  => current_time( 'mysql' ),
 				);
 
+				// Security (SEC-11): Validate and bound attachments
 				if ( ! empty( $data['attachments'] ) && is_array( $data['attachments'] ) ) {
 					$sanitized_attachments = array();
-					foreach ( $data['attachments'] as $att ) {
+					$bounded_attachments   = array_slice( $data['attachments'], 0, 5 ); // max 5 attachments
+					foreach ( $bounded_attachments as $att ) {
 						if ( is_array( $att ) && ! empty( $att['url'] ) ) {
-							$sanitized_attachments[] = array(
-								'name' => ! empty( $att['name'] ) ? sanitize_text_field( $att['name'] ) : 'attachment',
-								'url'  => esc_url_raw( $att['url'] ),
-								'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
-								'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
-							);
+							$clean_url = esc_url_raw( $att['url'] );
+							$scheme    = wp_parse_url( $clean_url, PHP_URL_SCHEME );
+							if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
+								$sanitized_attachments[] = array(
+									'name' => ! empty( $att['name'] ) ? sanitize_file_name( $att['name'] ) : 'attachment',
+									'url'  => $clean_url,
+									'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
+									'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
+								);
+							}
 						}
 					}
 					if ( ! empty( $sanitized_attachments ) ) {
@@ -195,20 +428,14 @@ class DCTC_Support_Ticket_Service {
 					'created_at'        => current_time( 'mysql' ),
 					'updated_at'        => current_time( 'mysql' ),
 					'status'            => 'active',
-				)
+				),
+				array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
 			);
 		}
 
 		// Save tags if passed
 		if ( ! empty( $data['tags'] ) && is_array( $data['tags'] ) ) {
 			DCTC_Support_Tag_Service::set_ticket_tags( $ticket_id, $data['tags'] );
-		}
-
-		// Save custom ticket meta if passed
-		if ( ! empty( $data['meta'] ) && is_array( $data['meta'] ) ) {
-			foreach ( $data['meta'] as $mkey => $mval ) {
-				self::update_ticket_meta( $ticket_id, $mkey, $mval );
-			}
 		}
 
 		// Log ticket created event
@@ -256,6 +483,13 @@ class DCTC_Support_Ticket_Service {
 				'ai_summary'                   => $ai_summary,
 			)
 		);
+
+		// Seed in-memory cache
+		self::$ticket_cache[ (string) $ticket_id ] = $result;
+		self::$ticket_cache[ (string) $uuid ]      = $result;
+		if ( ! empty( $session_id ) ) {
+			self::$session_ticket_map[ $session_id ] = $ticket_id;
+		}
 
 		return $result;
 	}
@@ -587,9 +821,15 @@ class DCTC_Support_Ticket_Service {
 	 * Get single ticket details by ID or UUID.
 	 *
 	 * @param int|string $id_or_uuid Ticket primary key or UUID string.
+	 * @param bool       $force_refresh Whether to bypass static request cache.
 	 * @return array<string, mixed>|null
 	 */
-	public static function get_ticket( $id_or_uuid ) {
+	public static function get_ticket( $id_or_uuid, $force_refresh = false ) {
+		$cache_key = is_scalar( $id_or_uuid ) ? (string) $id_or_uuid : '';
+		if ( ! $force_refresh && ! empty( $cache_key ) && isset( self::$ticket_cache[ $cache_key ] ) ) {
+			return self::$ticket_cache[ $cache_key ];
+		}
+
 		global $wpdb;
 		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
 		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
@@ -603,7 +843,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$ticket = $wpdb->get_row( "SELECT t.* FROM `$table_tickets` t WHERE $where", ARRAY_A );
+		$ticket = $wpdb->get_row( "SELECT t.* FROM `$table_tickets` t WHERE $where LIMIT 1", ARRAY_A );
 
 		if ( ! $ticket ) {
 			return null;
@@ -637,7 +877,7 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $ticket['category_id'] ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$cat_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT name, color FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category'", $ticket['category_id'] ),
+				$wpdb->prepare( "SELECT name, color FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category' LIMIT 1", $ticket['category_id'] ),
 				ARRAY_A
 			);
 			if ( $cat_row ) {
@@ -655,7 +895,7 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $ticket['assigned_agent_id'] ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$agent_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT wp_user_id, support_role FROM `$table_agents` WHERE id = %d", $ticket['assigned_agent_id'] ),
+				$wpdb->prepare( "SELECT wp_user_id, support_role FROM `$table_agents` WHERE id = %d LIMIT 1", $ticket['assigned_agent_id'] ),
 				ARRAY_A
 			);
 			if ( $agent_row && ! empty( $agent_row['wp_user_id'] ) ) {
@@ -739,6 +979,13 @@ class DCTC_Support_Ticket_Service {
 			}
 		}
 
+		// Store in static cache
+		self::$ticket_cache[ (string) $ticket['id'] ]   = $ticket;
+		self::$ticket_cache[ (string) $ticket['uuid'] ] = $ticket;
+		if ( ! empty( $ticket['session_id'] ) ) {
+			self::$session_ticket_map[ $ticket['session_id'] ] = (int) $ticket['id'];
+		}
+
 		return $ticket;
 	}
 
@@ -756,37 +1003,47 @@ class DCTC_Support_Ticket_Service {
 	}
 
 	/**
-	 * Get ticket by connected session ID.
+	 * Get ticket by connected session ID with in-memory request caching.
 	 *
 	 * @param string $session_id Conversation session identifier.
+	 * @param bool   $force_refresh Whether to bypass static request cache.
 	 * @return array<string, mixed>|null
 	 */
-	public static function get_ticket_by_session_id( $session_id ) {
-		global $wpdb;
-		$table_sessions    = $wpdb->prefix . 'dctc_ai_sessions';
-		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
-
+	public static function get_ticket_by_session_id( $session_id, $force_refresh = false ) {
 		$session_id = sanitize_text_field( $session_id );
 		if ( empty( $session_id ) ) {
 			return null;
 		}
 
+		if ( ! $force_refresh && isset( self::$session_ticket_map[ $session_id ] ) ) {
+			$cached_id = self::$session_ticket_map[ $session_id ];
+			if ( $cached_id > 0 ) {
+				return self::get_ticket( $cached_id, $force_refresh );
+			}
+			return null;
+		}
+
+		global $wpdb;
+		$table_sessions    = $wpdb->prefix . 'dctc_ai_sessions';
+		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+
 		// 1. Check sessions table support_ticket_id
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$ticket_id = $wpdb->get_var(
+		$ticket_id = (int) $wpdb->get_var(
 			$wpdb->prepare( "SELECT support_ticket_id FROM `$table_sessions` WHERE session_id = %s AND support_ticket_id > 0 LIMIT 1", $session_id )
 		);
 
 		// 2. Check ticket meta session_id
 		if ( ! $ticket_id ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$ticket_id = $wpdb->get_var(
-				$wpdb->prepare( "SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'session_id' AND meta_value = %s ORDER BY meta_id DESC LIMIT 1", $session_id )
+			$ticket_id = (int) $wpdb->get_var(
+				$wpdb->prepare( "SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = %s AND meta_value = %s ORDER BY meta_id DESC LIMIT 1", 'session_id', $session_id )
 			);
 		}
 
-		if ( $ticket_id ) {
-			return self::get_ticket( (int) $ticket_id );
+		if ( $ticket_id > 0 ) {
+			self::$session_ticket_map[ $session_id ] = $ticket_id;
+			return self::get_ticket( $ticket_id, $force_refresh );
 		}
 
 		return null;
@@ -807,6 +1064,16 @@ class DCTC_Support_Ticket_Service {
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 		$ticket_id     = absint( $ticket_id );
 		$new_status    = sanitize_key( $new_status );
+
+		// Security (SEC-09): Allowlist check
+		if ( ! in_array( $new_status, self::ALLOWED_STATUSES, true ) ) {
+			return false;
+		}
+
+		// Security (SEC-02): Allowlist actor type
+		if ( ! in_array( $actor_type, self::ALLOWED_SENDER_TYPES, true ) ) {
+			$actor_type = 'agent';
+		}
 
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", $ticket_id ), ARRAY_A );
@@ -830,7 +1097,12 @@ class DCTC_Support_Ticket_Service {
 			$updates['closed_at'] = current_time( 'mysql' );
 		}
 
-		$wpdb->update( $table_tickets, $updates, array( 'id' => $ticket_id ) );
+		$res = $wpdb->update( $table_tickets, $updates, array( 'id' => $ticket_id ) );
+		if ( false === $res ) {
+			return false;
+		}
+
+		self::invalidate_cache( $ticket_id, ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '' );
 
 		// Determine event type
 		$event_type = 'status_changed';
@@ -881,13 +1153,18 @@ class DCTC_Support_Ticket_Service {
 		$ticket_id     = absint( $ticket_id );
 		$new_priority  = sanitize_key( $new_priority );
 
+		// Security (SEC-09): Allowlist check
+		if ( ! in_array( $new_priority, self::ALLOWED_PRIORITIES, true ) ) {
+			return false;
+		}
+
 		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$old_priority = $wpdb->get_var( $wpdb->prepare( "SELECT priority FROM `$table_tickets` WHERE id = %d", $ticket_id ) );
 		if ( ! $old_priority || $old_priority === $new_priority ) {
 			return false;
 		}
 
-		$wpdb->update(
+		$res = $wpdb->update(
 			$table_tickets,
 			array(
 				'priority'   => $new_priority,
@@ -895,6 +1172,11 @@ class DCTC_Support_Ticket_Service {
 			),
 			array( 'id' => $ticket_id )
 		);
+		if ( false === $res ) {
+			return false;
+		}
+
+		self::invalidate_cache( $ticket_id );
 
 		DCTC_Support_Event_Service::log_event(
 			$ticket_id,
@@ -926,6 +1208,11 @@ class DCTC_Support_Ticket_Service {
 
 		$ticket_id    = absint( $ticket_id );
 		$control_mode = sanitize_key( $control_mode );
+
+		// Security (SEC-09): Allowlist check
+		if ( ! in_array( $control_mode, self::ALLOWED_CONTROL_MODES, true ) ) {
+			return false;
+		}
 
 		$ticket = self::get_ticket( $ticket_id );
 		if ( ! $ticket ) {
@@ -960,6 +1247,8 @@ class DCTC_Support_Ticket_Service {
 			);
 		}
 
+		self::invalidate_cache( $ticket_id, $session_id );
+
 		$event_type = 'human' === $control_mode ? 'agent_control_started' : 'ai_control_resumed';
 
 		DCTC_Support_Event_Service::log_event(
@@ -990,14 +1279,30 @@ class DCTC_Support_Ticket_Service {
 		global $wpdb;
 		$table_tickets     = $wpdb->prefix . 'dctc_support_tickets';
 		$table_assignments = $wpdb->prefix . 'dctc_support_assignments';
+		$table_agents      = $wpdb->prefix . 'dctc_support_agents';
 
 		$ticket_id = absint( $ticket_id );
 		$agent_id  = absint( $agent_id );
 		$team_id   = absint( $team_id );
+		$method    = sanitize_key( $method );
+		if ( ! in_array( $method, self::ALLOWED_ASSIGNMENT_METHODS, true ) ) {
+			$method = 'manual';
+		}
 
 		$ticket = self::get_ticket( $ticket_id );
 		if ( ! $ticket ) {
 			return false;
+		}
+
+		// Security (SEC-15): Validate agent exists and is active
+		if ( $agent_id > 0 ) {
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$is_active = $wpdb->get_var(
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+			);
+			if ( ! $is_active ) {
+				return false;
+			}
 		}
 
 		$old_agent_id = (int) ( ! empty( $ticket['assigned_agent_id'] ) ? $ticket['assigned_agent_id'] : 0 );
@@ -1017,6 +1322,7 @@ class DCTC_Support_Ticket_Service {
 			array( 'updated_at' => current_time( 'mysql' ) ),
 			array( 'id' => $ticket_id )
 		);
+		self::invalidate_cache( $ticket_id );
 
 		// Record assignment history
 		$wpdb->insert(
@@ -1027,7 +1333,7 @@ class DCTC_Support_Ticket_Service {
 				'team_id'           => $team_id,
 				'assigned_by'       => $assigned_by ? absint( $assigned_by ) : get_current_user_id(),
 				'assignment_reason' => sanitize_text_field( $reason ),
-				'assignment_method' => sanitize_key( $method ),
+				'assignment_method' => $method,
 				'created_at'        => current_time( 'mysql' ),
 			)
 		);
@@ -1105,7 +1411,25 @@ class DCTC_Support_Ticket_Service {
 		$ticket_id   = absint( $ticket_id );
 		$message     = wp_kses_post( $message );
 		$sender_type = sanitize_key( $sender_type );
-		$user_id     = $user_id ? absint( $user_id ) : get_current_user_id();
+
+		// Security (SEC-02): Enforce allowed sender types
+		if ( ! in_array( $sender_type, self::ALLOWED_SENDER_TYPES, true ) ) {
+			$sender_type = 'customer';
+		}
+
+		// Security (SEC-10): Derive user ID safely
+		if ( is_user_logged_in() ) {
+			$current_user_id = get_current_user_id();
+			if ( $user_id && $user_id !== $current_user_id ) {
+				if ( ! current_user_can( 'manage_options' ) && ( ! class_exists( 'DCTC_Support_Permission_Service' ) || ! DCTC_Support_Permission_Service::current_user_can_support( 'reply_customer' ) ) ) {
+					$user_id = $current_user_id;
+				}
+			} else {
+				$user_id = $current_user_id;
+			}
+		} else {
+			$user_id = $user_id ? absint( $user_id ) : 0;
+		}
 
 		if ( empty( $message ) ) {
 			return new WP_Error( 'empty_message', __( 'Reply content cannot be empty.', 'dragwyb-click-to-chat' ) );
@@ -1133,7 +1457,11 @@ class DCTC_Support_Ticket_Service {
 		$user         = $user_id ? get_userdata( $user_id ) : null;
 		$display_name = $user ? $user->display_name : ( 'agent' === $sender_type ? 'Support Agent' : 'Customer' );
 
-		$new_msg = array(
+		// Security (SEC-08): Generate a unique UUID for every message
+		$msg_uuid = wp_generate_uuid4();
+		$new_msg  = array(
+			'id'          => $msg_uuid,
+			'uuid'        => $msg_uuid,
 			'role'        => 'agent' === $sender_type ? 'assistant' : 'user',
 			'sender_type' => $sender_type,
 			'sender_name' => $display_name,
@@ -1165,7 +1493,7 @@ class DCTC_Support_Ticket_Service {
 			if ( empty( $ticket['assigned_agent_id'] ) && $user_id ) {
 				$table_agents = $wpdb->prefix . 'dctc_support_agents';
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d", $user_id ), ARRAY_A );
+				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND is_active = 1", $user_id ), ARRAY_A );
 				if ( $agent_row ) {
 					self::update_ticket_meta( $ticket_id, 'assigned_agent_id', absint( $agent_row['id'] ) );
 					DCTC_Support_Agent_Service::update_workload( absint( $agent_row['id'] ) );
@@ -1208,6 +1536,8 @@ class DCTC_Support_Ticket_Service {
 				DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $message );
 			}
 		}
+
+		self::invalidate_cache( $ticket_id, $session_id );
 
 		return true;
 	}
@@ -1407,25 +1737,34 @@ class DCTC_Support_Ticket_Service {
 		$matched_id = 0;
 		$confidence = 0.5;
 
-		// 1. Detect WooCommerce Products if present
+		// 1. Detect WooCommerce Products if present (Optimized: fast DB query with transient & static caching)
 		$matched_product_name = '';
 		if ( post_type_exists( 'product' ) ) {
-			$products = get_posts(
-				array(
-					'post_type'      => 'product',
-					'post_status'    => 'publish',
-					'posts_per_page' => 100,
-					'orderby'        => 'title',
-					'order'          => 'ASC',
-				)
-			);
+			if ( null === self::$product_titles_cache ) {
+				$cached_titles = get_transient( 'dctc_wc_product_titles_cache' );
+				if ( false !== $cached_titles && is_array( $cached_titles ) ) {
+					self::$product_titles_cache = $cached_titles;
+				} else {
+					global $wpdb;
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+					$titles = $wpdb->get_col(
+						$wpdb->prepare(
+							"SELECT post_title FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY ID DESC LIMIT 50",
+							'product',
+							'publish'
+						)
+					);
+					self::$product_titles_cache = is_array( $titles ) ? $titles : array();
+					set_transient( 'dctc_wc_product_titles_cache', self::$product_titles_cache, HOUR_IN_SECONDS );
+				}
+			}
 
-			if ( ! empty( $products ) && is_array( $products ) ) {
-				foreach ( $products as $product ) {
-					$title_lower = mb_strtolower( $product->post_title );
+			if ( ! empty( self::$product_titles_cache ) ) {
+				foreach ( self::$product_titles_cache as $prod_title ) {
+					$title_lower = mb_strtolower( $prod_title );
 					if ( strlen( $title_lower ) >= 3 && false !== mb_strpos( $text_lower, $title_lower ) ) {
-						$matched_product_name = $product->post_title;
-						$tags[]               = $product->post_title;
+						$matched_product_name = $prod_title;
+						$tags[]               = $prod_title;
 						$confidence           = 0.90;
 						break;
 					}
@@ -1433,10 +1772,13 @@ class DCTC_Support_Ticket_Service {
 			}
 		}
 
-		// 2. Fetch categories from DB
-		$db_categories = class_exists( 'DCTC_Support_Category_Service' )
-			? DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) )
-			: array();
+		// 2. Fetch categories with static caching
+		if ( null === self::$categories_cache ) {
+			self::$categories_cache = class_exists( 'DCTC_Support_Category_Service' )
+				? DCTC_Support_Category_Service::get_categories( array( 'status' => 'active' ) )
+				: array();
+		}
+		$db_categories = is_array( self::$categories_cache ) ? self::$categories_cache : array();
 
 		// Check for specific category keywords
 		$category_keywords = array(
@@ -1575,7 +1917,7 @@ class DCTC_Support_Ticket_Service {
 	}
 
 	/**
-	 * Update or insert ticket metadata.
+	 * Update or insert ticket metadata with database result checking (SEC-14).
 	 *
 	 * @param int    $ticket_id Ticket ID.
 	 * @param string $meta_key Meta key.
@@ -1596,13 +1938,18 @@ class DCTC_Support_Ticket_Service {
 			? wp_json_encode( $meta_value )
 			: (string) $meta_value;
 
+		// Security (SEC-13): Bound max serialized length
+		if ( strlen( $val_str ) > 65535 ) {
+			$val_str = substr( $val_str, 0, 65535 );
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$existing = $wpdb->get_var(
 			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
 		);
 
 		if ( $existing ) {
-			$wpdb->update(
+			$res = $wpdb->update(
 				$table,
 				array( 'meta_value' => $val_str ),
 				array( 'meta_id' => (int) $existing ),
@@ -1610,7 +1957,7 @@ class DCTC_Support_Ticket_Service {
 				array( '%d' )
 			);
 		} else {
-			$wpdb->insert(
+			$res = $wpdb->insert(
 				$table,
 				array(
 					'ticket_id'  => $ticket_id,
@@ -1621,7 +1968,9 @@ class DCTC_Support_Ticket_Service {
 			);
 		}
 
-		return true;
+		self::invalidate_cache( $ticket_id );
+
+		return false !== $res;
 	}
 
 	/**
@@ -1642,7 +1991,7 @@ class DCTC_Support_Ticket_Service {
 
 		if ( ! empty( $meta_key ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->delete(
+			$res = $wpdb->delete(
 				$table,
 				array(
 					'ticket_id' => $ticket_id,
@@ -1652,14 +2001,16 @@ class DCTC_Support_Ticket_Service {
 			);
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-			$wpdb->delete(
+			$res = $wpdb->delete(
 				$table,
 				array( 'ticket_id' => $ticket_id ),
 				array( '%d' )
 			);
 		}
 
-		return true;
+		self::invalidate_cache( $ticket_id );
+
+		return false !== $res;
 	}
 
 	/**
@@ -1679,8 +2030,14 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$table_agents  = $wpdb->prefix . 'dctc_support_agents';
 		$core_updates  = array();
 		$actor_name    = 'Staff';
+
+		// Security (SEC-02): Allowlist actor type
+		if ( ! in_array( $actor_type, self::ALLOWED_SENDER_TYPES, true ) ) {
+			$actor_type = 'agent';
+		}
 
 		if ( $actor_id ) {
 			$u = get_userdata( $actor_id );
@@ -1691,7 +2048,7 @@ class DCTC_Support_Ticket_Service {
 
 		if ( isset( $data['status'] ) && ! empty( $data['status'] ) ) {
 			$new_status = sanitize_key( $data['status'] );
-			if ( $new_status !== $ticket['status'] ) {
+			if ( in_array( $new_status, self::ALLOWED_STATUSES, true ) && $new_status !== $ticket['status'] ) {
 				$core_updates['status'] = $new_status;
 				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 					DCTC_Support_Event_Service::log_event( $ticket['id'], 'status_changed', $actor_type, $actor_id, $actor_name, $ticket['status'], $new_status );
@@ -1701,7 +2058,7 @@ class DCTC_Support_Ticket_Service {
 
 		if ( isset( $data['priority'] ) && ! empty( $data['priority'] ) ) {
 			$new_priority = sanitize_key( $data['priority'] );
-			if ( $new_priority !== $ticket['priority'] ) {
+			if ( in_array( $new_priority, self::ALLOWED_PRIORITIES, true ) && $new_priority !== $ticket['priority'] ) {
 				$core_updates['priority'] = $new_priority;
 				if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 					DCTC_Support_Event_Service::log_event( $ticket['id'], 'priority_changed', $actor_type, $actor_id, $actor_name, $ticket['priority'], $new_priority );
@@ -1739,9 +2096,20 @@ class DCTC_Support_Ticket_Service {
 
 		if ( isset( $data['assigned_agent_id'] ) ) {
 			$agent_id = absint( $data['assigned_agent_id'] );
-			self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
-			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
-				DCTC_Support_Event_Service::log_event( $ticket['id'], 'agent_assigned', $actor_type, $actor_id, $actor_name, (string) $ticket['assigned_agent_id'], (string) $agent_id );
+			// Security (SEC-15): Validate agent exists and is active if assigning
+			if ( $agent_id > 0 ) {
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$is_valid = $wpdb->get_var(
+					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND is_active = 1 LIMIT 1", $agent_id )
+				);
+				if ( $is_valid ) {
+					self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
+					if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
+						DCTC_Support_Event_Service::log_event( $ticket['id'], 'agent_assigned', $actor_type, $actor_id, $actor_name, (string) $ticket['assigned_agent_id'], (string) $agent_id );
+					}
+				}
+			} else {
+				self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', 0 );
 			}
 		}
 
@@ -1762,14 +2130,16 @@ class DCTC_Support_Ticket_Service {
 			self::update_ticket_meta( $ticket['id'], 'is_flagged', $flag_val );
 		}
 
-		return self::get_ticket( $ticket['id'] );
+		self::invalidate_cache( $ticket['id'] );
+
+		return self::get_ticket( $ticket['id'], true );
 	}
 
 	/**
 	 * Edit a specific message in a ticket conversation.
 	 *
 	 * @param int|string $ticket_id_or_uuid Ticket ID or UUID.
-	 * @param string|int $message_id Message ID, UUID, timestamp or index.
+	 * @param string|int $message_id Message ID or UUID.
 	 * @param string     $new_content New message content HTML/text.
 	 * @return array<string, mixed>|WP_Error
 	 */
@@ -1797,20 +2167,12 @@ class DCTC_Support_Ticket_Service {
 
 		$edited        = false;
 		$clean_content = wp_kses_post( $new_content );
+		$target_id     = sanitize_text_field( (string) $message_id );
 
+		// Security (SEC-08): Match strictly by message ID or UUID (no ambiguous index/timestamp matching)
 		foreach ( $messages as $idx => &$msg ) {
-			$match = false;
-			if ( isset( $msg['id'] ) && (string) $msg['id'] === (string) $message_id ) {
-				$match = true;
-			} elseif ( isset( $msg['uuid'] ) && (string) $msg['uuid'] === (string) $message_id ) {
-				$match = true;
-			} elseif ( (string) $idx === (string) $message_id ) {
-				$match = true;
-			} elseif ( isset( $msg['created_at'] ) && (string) $msg['created_at'] === (string) $message_id ) {
-				$match = true;
-			}
-
-			if ( $match ) {
+			$msg_uuid = isset( $msg['uuid'] ) ? (string) $msg['uuid'] : ( isset( $msg['id'] ) ? (string) $msg['id'] : '' );
+			if ( ! empty( $msg_uuid ) && hash_equals( $msg_uuid, $target_id ) ) {
 				$msg['content']   = $clean_content;
 				$msg['edited_at'] = current_time( 'mysql' );
 				$msg['is_edited'] = true;
@@ -1840,6 +2202,8 @@ class DCTC_Support_Ticket_Service {
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
 
+		self::invalidate_cache( $ticket['id'], $session_id );
+
 		// Log activity audit trail event
 		if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 			$actor_id   = get_current_user_id();
@@ -1861,14 +2225,14 @@ class DCTC_Support_Ticket_Service {
 			);
 		}
 
-		return self::get_ticket( $ticket['id'] );
+		return self::get_ticket( $ticket['id'], true );
 	}
 
 	/**
 	 * Delete a specific message from a ticket conversation.
 	 *
 	 * @param int|string $ticket_id_or_uuid Ticket ID or UUID.
-	 * @param string|int $message_id Message ID, UUID, timestamp or index.
+	 * @param string|int $message_id Message ID or UUID.
 	 * @return array<string, mixed>|WP_Error
 	 */
 	public static function delete_ticket_message( $ticket_id_or_uuid, $message_id ) {
@@ -1895,20 +2259,12 @@ class DCTC_Support_Ticket_Service {
 
 		$deleted           = false;
 		$filtered_messages = array();
+		$target_id         = sanitize_text_field( (string) $message_id );
 
+		// Security (SEC-08): Match strictly by message ID or UUID
 		foreach ( $messages as $idx => $msg ) {
-			$match = false;
-			if ( isset( $msg['id'] ) && (string) $msg['id'] === (string) $message_id ) {
-				$match = true;
-			} elseif ( isset( $msg['uuid'] ) && (string) $msg['uuid'] === (string) $message_id ) {
-				$match = true;
-			} elseif ( (string) $idx === (string) $message_id ) {
-				$match = true;
-			} elseif ( isset( $msg['created_at'] ) && (string) $msg['created_at'] === (string) $message_id ) {
-				$match = true;
-			}
-
-			if ( $match && ! $deleted ) {
+			$msg_uuid = isset( $msg['uuid'] ) ? (string) $msg['uuid'] : ( isset( $msg['id'] ) ? (string) $msg['id'] : '' );
+			if ( ! empty( $msg_uuid ) && hash_equals( $msg_uuid, $target_id ) && ! $deleted ) {
 				$deleted = true;
 				continue;
 			}
@@ -1938,6 +2294,8 @@ class DCTC_Support_Ticket_Service {
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
 
+		self::invalidate_cache( $ticket['id'], $session_id );
+
 		// Log activity audit trail event
 		if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 			$actor_id   = get_current_user_id();
@@ -1955,6 +2313,30 @@ class DCTC_Support_Ticket_Service {
 			);
 		}
 
-		return self::get_ticket( $ticket['id'] );
+		return self::get_ticket( $ticket['id'], true );
+	}
+
+	/**
+	 * Filter ticket data for public or customer portal responses (SEC-05, SEC-16).
+	 * Strips internal notes, sensitive tokens, and staff-only metadata.
+	 *
+	 * @param array<string, mixed> $ticket Full ticket array.
+	 * @param bool                 $is_new_guest_creation Whether this is the initial response when a guest creates a ticket.
+	 * @return array<string, mixed>
+	 */
+	public static function filter_for_portal( array $ticket, $is_new_guest_creation = false ) {
+		$filtered = $ticket;
+		unset(
+			$filtered['notes'],
+			$filtered['internal_notes'],
+			$filtered['ai_classification_confidence']
+		);
+
+		// If this is not a brand new guest ticket creation response, omit the guest secret token from public output
+		if ( ! $is_new_guest_creation ) {
+			unset( $filtered['guest_access_token'] );
+		}
+
+		return $filtered;
 	}
 }

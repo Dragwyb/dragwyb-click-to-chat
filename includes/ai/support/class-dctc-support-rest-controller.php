@@ -1792,6 +1792,30 @@ class DCTC_Support_REST_Controller {
 	}
 
 	// -------------------------------------------------------------
+	// -------------------------------------------------------------
+	// Rate Limiting Helper (SEC-18)
+	// -------------------------------------------------------------
+
+	/**
+	 * Check rate limit for an action and IP address.
+	 *
+	 * @param string $action Action identifier.
+	 * @param int    $max_requests Maximum allowed requests.
+	 * @param int    $decay_seconds Time window in seconds.
+	 * @return bool True if allowed, false if limit exceeded.
+	 */
+	private function check_rate_limit( $action, $max_requests = 10, $decay_seconds = 3600 ) {
+		$ip    = ! empty( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
+		$key   = 'dctc_rl_' . md5( $action . '_' . $ip );
+		$count = (int) get_transient( $key );
+		if ( $count >= $max_requests ) {
+			return false;
+		}
+		set_transient( $key, $count + 1, $decay_seconds );
+		return true;
+	}
+
+	// -------------------------------------------------------------
 	// Customer Portal Endpoints
 	// -------------------------------------------------------------
 
@@ -1821,10 +1845,10 @@ class DCTC_Support_REST_Controller {
 
 		$result = DCTC_Support_Ticket_Service::get_tickets( $params );
 
-		// Security: Strip internal notes and sensitive staff-only metadata from all tickets returned to portal
+		// Security (SEC-05, SEC-16): Filter all returned tickets for portal viewer
 		if ( ! empty( $result['tickets'] ) && is_array( $result['tickets'] ) ) {
 			foreach ( $result['tickets'] as &$t ) {
-				unset( $t['notes'], $t['internal_notes'], $t['ai_classification_confidence'] );
+				$t = DCTC_Support_Ticket_Service::filter_for_portal( $t, false );
 			}
 		}
 
@@ -1834,6 +1858,17 @@ class DCTC_Support_REST_Controller {
 	public function create_portal_ticket( $request ) {
 		$params  = $request->get_json_params();
 		$user_id = get_current_user_id();
+
+		// Security (SEC-18): Rate limit ticket creation for guests (max 15/hour)
+		if ( ! $user_id && ! $this->check_rate_limit( 'create_portal_ticket', 15, 3600 ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Too many ticket submission attempts. Please try again later.', 'dragwyb-click-to-chat' ),
+				),
+				429
+			);
+		}
 
 		// If user is logged out, verify that guest ticket submissions are enabled
 		if ( ! $user_id ) {
@@ -1881,13 +1916,13 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		// Strip internal staff notes from response
-		unset( $ticket['notes'], $ticket['ai_classification_confidence'] );
+		// Security (SEC-05): For newly created guest tickets, return guest_access_token so the client can save it
+		$sanitized_ticket = DCTC_Support_Ticket_Service::filter_for_portal( $ticket, ! $user_id );
 
 		return new WP_REST_Response(
 			array(
 				'success' => true,
-				'ticket'  => $ticket,
+				'ticket'  => $sanitized_ticket,
 			),
 			201
 		);
@@ -1910,13 +1945,13 @@ class DCTC_Support_REST_Controller {
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
-		// Security: Customer authorization check
+		// Security (SEC-01, SEC-05): Customer authorization check with constant-time hash comparison
 		$is_owner = false;
 		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
 			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && $guest_token === $ticket['guest_access_token'] ) {
+		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
 			$is_owner = true;
-		} elseif ( current_user_can( 'manage_options' ) ) {
+		} elseif ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) {
 			$is_owner = true;
 		}
 
@@ -1930,14 +1965,13 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		// Strip internal notes and sensitive staff-only metadata from customer response
-		unset( $ticket['notes'] );
-		unset( $ticket['ai_classification_confidence'] );
+		// Security (SEC-05, SEC-16): Strip internal notes, tokens, and staff metadata
+		$sanitized_ticket = DCTC_Support_Ticket_Service::filter_for_portal( $ticket, false );
 
 		return new WP_REST_Response(
 			array(
 				'success' => true,
-				'ticket'  => $ticket,
+				'ticket'  => $sanitized_ticket,
 			),
 			200
 		);
@@ -1947,6 +1981,17 @@ class DCTC_Support_REST_Controller {
 		$uuid    = $request->get_param( 'uuid' );
 		$params  = $request->get_json_params();
 		$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
+
+		// Security (SEC-18): Rate limit replies (max 40 per 10 minutes)
+		if ( ! $this->check_rate_limit( 'portal_reply', 40, 600 ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Too many reply requests. Please wait a moment before trying again.', 'dragwyb-click-to-chat' ),
+				),
+				429
+			);
+		}
 
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 		if ( ! $ticket ) {
@@ -1962,10 +2007,11 @@ class DCTC_Support_REST_Controller {
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
+		// Security (SEC-01): Strict ownership check
 		$is_owner = false;
 		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
 			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && $guest_token === $ticket['guest_access_token'] ) {
+		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
 			$is_owner = true;
 		}
 
@@ -1991,12 +2037,12 @@ class DCTC_Support_REST_Controller {
 		}
 
 		$updated_ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket['id'] );
-		unset( $updated_ticket['notes'] );
+		$sanitized_ticket = DCTC_Support_Ticket_Service::filter_for_portal( $updated_ticket, false );
 
 		return new WP_REST_Response(
 			array(
 				'success' => true,
-				'ticket'  => $updated_ticket,
+				'ticket'  => $sanitized_ticket,
 			),
 			200
 		);
@@ -2018,10 +2064,11 @@ class DCTC_Support_REST_Controller {
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 
+		// Security (SEC-01): Strict ownership check
 		$is_owner = false;
 		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
 			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && $guest_token === $ticket['guest_access_token'] ) {
+		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
 			$is_owner = true;
 		}
 
