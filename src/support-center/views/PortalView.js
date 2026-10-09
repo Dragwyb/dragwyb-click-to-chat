@@ -271,12 +271,12 @@ export default function PortalView({
 	onShowNotice,
 }) {
 	const [settings, setSettings] = useState(initialSettings || DEFAULT_PORTAL_SETTINGS);
-	const [activeTab, setActiveTab] = useState('styling'); // styling, text, guest
+	const [activeTab, setActiveTab] = useState('styling'); // styling, text, guest, shortcodes
 	const [previewAuthMode, setPreviewAuthMode] = useState('logged_in'); // logged_in, logged_out
 	const [previewViewMode, setPreviewViewMode] = useState('list'); // list, modal, detail
 	const [saving, setSaving] = useState(false);
 	const [localNotice, setLocalNotice] = useState(null);
-	const [copiedShortcode, setCopiedShortcode] = useState(false);
+	const [copiedKey, setCopiedKey] = useState(null);
 
 	// Dynamic Taxonomies & Items State
 	const [rawTaxonomies, setRawTaxonomies] = useState([]);
@@ -423,10 +423,10 @@ export default function PortalView({
 		}
 	};
 
-	const copyShortcode = () => {
-		navigator.clipboard.writeText('[dctc_support_portal]');
-		setCopiedShortcode(true);
-		setTimeout(() => setCopiedShortcode(false), 2500);
+	const copyShortcodeText = (key, text) => {
+		navigator.clipboard.writeText(text);
+		setCopiedKey(key);
+		setTimeout(() => setCopiedKey(null), 2500);
 	};
 
 	function isDarkColor(hex) {
@@ -525,24 +525,34 @@ export default function PortalView({
 							</span>
 						</div>
 						<p style={{ margin: '4px 0 0', fontSize: '13.5px', color: '#64748b' }}>
-							{__('Design the frontend customer support portal, customize colors, border radius, headings, button texts, dynamic registered taxonomies, and guest ticket submissions.', 'dragwyb-click-to-chat')}
+							{__('Design your customer support portal, customize styling & theme colors, configure ticket forms, and use standalone shortcodes.', 'dragwyb-click-to-chat')}
 						</p>
 					</div>
 				</div>
 
-				<div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-					<div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px 10px', gap: '8px' }}>
-						<code style={{ fontWeight: 700, color: '#4f46e5', fontSize: '13px', background: 'transparent', padding: 0 }}>
+				<div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+					<button
+						type="button"
+						onClick={() => setActiveTab('shortcodes')}
+						className="button"
+						style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', height: '36px', padding: '0 14px', fontWeight: 600, background: '#f8fafc' }}
+					>
+						<span className="dashicons dashicons-shortcode" style={{ fontSize: '16px' }}></span>
+						{__('View All Shortcodes', 'dragwyb-click-to-chat')}
+					</button>
+
+					<div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px 8px', gap: '6px' }}>
+						<code style={{ fontWeight: 700, color: '#4f46e5', fontSize: '12.5px', background: 'transparent', padding: 0 }}>
 							[dctc_support_portal]
 						</code>
 						<button
 							type="button"
-							onClick={copyShortcode}
+							onClick={() => copyShortcodeText('hero_main', '[dctc_support_portal]')}
 							className="button button-small"
-							style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+							style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontWeight: 600 }}
 						>
-							<span className={`dashicons ${copiedShortcode ? 'dashicons-yes' : 'dashicons-clipboard'}`} style={{ fontSize: '15px' }}></span>
-							{copiedShortcode ? __('Copied!', 'dragwyb-click-to-chat') : __('Copy Shortcode', 'dragwyb-click-to-chat')}
+							<span className={`dashicons ${copiedKey === 'hero_main' ? 'dashicons-yes' : 'dashicons-clipboard'}`} style={{ fontSize: '14px' }}></span>
+							{copiedKey === 'hero_main' ? __('Copied!', 'dragwyb-click-to-chat') : __('Copy', 'dragwyb-click-to-chat')}
 						</button>
 					</div>
 
@@ -575,17 +585,17 @@ export default function PortalView({
 				<div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
 					{ /* Nav Subtabs */}
-					<div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '10px', padding: '4px', gap: '4px' }}>
+					<div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '10px', padding: '4px', gap: '4px', flexWrap: 'wrap' }}>
 						<button
 							type="button"
 							onClick={() => setActiveTab('styling')}
 							style={{
-								flex: 1,
-								padding: '8px 12px',
+								flex: '1 1 120px',
+								padding: '8px 10px',
 								border: 'none',
 								borderRadius: '8px',
 								fontWeight: 700,
-								fontSize: '12.5px',
+								fontSize: '12px',
 								cursor: 'pointer',
 								background: activeTab === 'styling' ? '#ffffff' : 'transparent',
 								color: activeTab === 'styling' ? '#4f46e5' : '#64748b',
@@ -600,12 +610,12 @@ export default function PortalView({
 							type="button"
 							onClick={() => setActiveTab('text')}
 							style={{
-								flex: 1,
-								padding: '8px 12px',
+								flex: '1 1 110px',
+								padding: '8px 10px',
 								border: 'none',
 								borderRadius: '8px',
 								fontWeight: 700,
-								fontSize: '12.5px',
+								fontSize: '12px',
 								cursor: 'pointer',
 								background: activeTab === 'text' ? '#ffffff' : 'transparent',
 								color: activeTab === 'text' ? '#4f46e5' : '#64748b',
@@ -620,12 +630,12 @@ export default function PortalView({
 							type="button"
 							onClick={() => setActiveTab('guest')}
 							style={{
-								flex: 1,
-								padding: '8px 12px',
+								flex: '1 1 120px',
+								padding: '8px 10px',
 								border: 'none',
 								borderRadius: '8px',
 								fontWeight: 700,
-								fontSize: '12.5px',
+								fontSize: '12px',
 								cursor: 'pointer',
 								background: activeTab === 'guest' ? '#ffffff' : 'transparent',
 								color: activeTab === 'guest' ? '#4f46e5' : '#64748b',
@@ -634,7 +644,27 @@ export default function PortalView({
 							}}
 						>
 							<span className="dashicons dashicons-admin-users" style={{ fontSize: '15px', marginRight: '4px', verticalAlign: 'middle' }}></span>
-							{__('Guest & Logged-Out', 'dragwyb-click-to-chat')}
+							{__('Guest Access', 'dragwyb-click-to-chat')}
+						</button>
+						<button
+							type="button"
+							onClick={() => setActiveTab('shortcodes')}
+							style={{
+								flex: '1 1 120px',
+								padding: '8px 10px',
+								border: 'none',
+								borderRadius: '8px',
+								fontWeight: 700,
+								fontSize: '12px',
+								cursor: 'pointer',
+								background: activeTab === 'shortcodes' ? '#ffffff' : 'transparent',
+								color: activeTab === 'shortcodes' ? '#4f46e5' : '#64748b',
+								boxShadow: activeTab === 'shortcodes' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+								transition: 'all 0.15s',
+							}}
+						>
+							<span className="dashicons dashicons-shortcode" style={{ fontSize: '15px', marginRight: '4px', verticalAlign: 'middle' }}></span>
+							{__('Shortcodes Guide', 'dragwyb-click-to-chat')}
 						</button>
 					</div>
 
@@ -1224,6 +1254,115 @@ export default function PortalView({
 							</div>
 						</div>
 					)}
+
+					{ /* Tab 4: Available Shortcodes Guide & Embed Options */}
+					{activeTab === 'shortcodes' && (
+						<div className="dctc-sc-panel-box">
+							<div className="dctc-sc-panel-header">
+								<div className="dctc-sc-panel-icon-wrap icon-indigo">
+									<span className="dashicons dashicons-shortcode"></span>
+								</div>
+								<div>
+									<h3>{__('Support Portal Shortcodes', 'dragwyb-click-to-chat')}</h3>
+									<p className="dctc-sc-panel-sub">{__('Copy shortcodes to display full portals, standalone ticket forms, or user tickets tables.', 'dragwyb-click-to-chat')}</p>
+								</div>
+							</div>
+
+							<div className="dctc-sc-settings-form-body" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+								{ /* Shortcode 1: Full Portal */}
+								<div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+											<span className="dashicons dashicons-desktop" style={{ color: '#4f46e5' }}></span>
+											<strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{__('1. Full Support Portal Shortcode', 'dragwyb-click-to-chat')}</strong>
+										</div>
+										<button
+											type="button"
+											onClick={() => copyShortcodeText('sc_portal', '[dctc_support_portal]')}
+											className="button button-small"
+											style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+										>
+											<span className={`dashicons ${copiedKey === 'sc_portal' ? 'dashicons-yes' : 'dashicons-clipboard'}`} style={{ fontSize: '14px' }}></span>
+											{copiedKey === 'sc_portal' ? __('Copied!', 'dragwyb-click-to-chat') : __('Copy Shortcode', 'dragwyb-click-to-chat')}
+										</button>
+									</div>
+									<p style={{ margin: '0 0 10px', fontSize: '12.5px', color: '#64748b' }}>
+										{__('Renders complete customer portal with header, new ticket modal launcher, multi-filter search bar, and conversation history.', 'dragwyb-click-to-chat')}
+									</p>
+									<code style={{ display: 'block', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '13px', color: '#4f46e5', fontWeight: 700 }}>
+										[dctc_support_portal]
+									</code>
+								</div>
+
+								{ /* Shortcode 2: Standalone Create Ticket Form / Custom Button Trigger */}
+								<div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+											<span className="dashicons dashicons-plus-alt2" style={{ color: '#059669' }}></span>
+											<strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{__('2. Create Ticket Form / Custom Trigger', 'dragwyb-click-to-chat')}</strong>
+										</div>
+										<button
+											type="button"
+											onClick={() => copyShortcodeText('sc_create_trigger', '[dctc_support_ticket_form trigger_id="my-custom-btn"]')}
+											className="button button-small"
+											style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+										>
+											<span className={`dashicons ${copiedKey === 'sc_create_trigger' ? 'dashicons-yes' : 'dashicons-clipboard'}`} style={{ fontSize: '14px' }}></span>
+											{copiedKey === 'sc_create_trigger' ? __('Copied!', 'dragwyb-click-to-chat') : __('Copy Shortcode', 'dragwyb-click-to-chat')}
+										</button>
+									</div>
+									<p style={{ margin: '0 0 10px', fontSize: '12.5px', color: '#64748b' }}>
+										{__('Trigger create ticket popup on any custom button by ID/class, or embed directly inline on any landing page.', 'dragwyb-click-to-chat')}
+									</p>
+									<div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+										<div>
+											<span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>{__('Custom Button Trigger (ID or Selector):', 'dragwyb-click-to-chat')}</span>
+											<code style={{ display: 'block', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '7px 10px', fontSize: '12.5px', color: '#059669', fontWeight: 700 }}>
+												[dctc_support_ticket_form trigger_id="my-custom-btn"]
+											</code>
+										</div>
+										<div>
+											<span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', display: 'block', marginBottom: '2px' }}>{__('Inline Standalone Form in Page:', 'dragwyb-click-to-chat')}</span>
+											<code style={{ display: 'block', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '7px 10px', fontSize: '12.5px', color: '#059669', fontWeight: 700 }}>
+												[dctc_support_ticket_form inline="true"]
+											</code>
+										</div>
+									</div>
+									<div style={{ marginTop: '10px', fontSize: '11.5px', color: '#64748b' }}>
+										<strong>{__('Optional Attributes:', 'dragwyb-click-to-chat')}</strong> <code>trigger_id</code>, <code>inline</code>, <code>category_id</code>, <code>title</code>, <code>subtitle</code>, <code>button_text</code>
+									</div>
+								</div>
+
+								{ /* Shortcode 3: User Tickets Table with Search & Multi-Filters */}
+								<div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px' }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+										<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+											<span className="dashicons dashicons-list-view" style={{ color: '#0284c7' }}></span>
+											<strong style={{ fontSize: '13.5px', color: '#0f172a' }}>{__('3. User Tickets Table with Search & Filters', 'dragwyb-click-to-chat')}</strong>
+										</div>
+										<button
+											type="button"
+											onClick={() => copyShortcodeText('sc_table', '[dctc_support_user_tickets]')}
+											className="button button-small"
+											style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+										>
+											<span className={`dashicons ${copiedKey === 'sc_table' ? 'dashicons-yes' : 'dashicons-clipboard'}`} style={{ fontSize: '14px' }}></span>
+											{copiedKey === 'sc_table' ? __('Copied!', 'dragwyb-click-to-chat') : __('Copy Shortcode', 'dragwyb-click-to-chat')}
+										</button>
+									</div>
+									<p style={{ margin: '0 0 10px', fontSize: '12.5px', color: '#64748b' }}>
+										{__('Renders standalone table of logged-in user tickets with search bar, status filter, and category filter.', 'dragwyb-click-to-chat')}
+									</p>
+									<code style={{ display: 'block', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '13px', color: '#0284c7', fontWeight: 700 }}>
+										[dctc_support_user_tickets per_page="10" show_filters="true"]
+									</code>
+									<div style={{ marginTop: '10px', fontSize: '11.5px', color: '#64748b' }}>
+										<strong>{__('Optional Attributes:', 'dragwyb-click-to-chat')}</strong> <code>status="open|pending|resolved|closed|all"</code>, <code>category_id</code>, <code>per_page="10"</code>, <code>show_search="true|false"</code>, <code>show_filters="true|false"</code>, <code>show_create_button="true|false"</code>
+									</div>
+								</div>
+							</div>
+						</div>
+					)}
 				</div>
 
 				{ /* Right Column: Real-Time Live Interactive Preview */}
@@ -1375,20 +1514,62 @@ export default function PortalView({
 									{ /* View: List for Logged-In */}
 									{previewViewMode === 'list' && previewAuthMode === 'logged_in' && (
 										<div>
-											<div style={{ marginBottom: '14px' }}>
-												<input
-													type="text"
-													disabled
-													placeholder={settings.search_placeholder || 'Search your tickets by subject or number...'}
-													style={{
-														width: '100%',
-														background: previewInputBg,
-														border: `1px solid ${previewInputBorder}`,
-														borderRadius: previewBtnRadius,
-														padding: '8px 12px',
-														fontSize: '12.5px',
-													}}
-												/>
+											<div style={{ display: 'flex', gap: '10px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+												<div style={{ flex: '1 1 200px', position: 'relative' }}>
+													<input
+														type="text"
+														disabled
+														placeholder={settings.search_placeholder || 'Search your tickets by subject or number...'}
+														style={{
+															width: '100%',
+															background: previewInputBg,
+															color: previewInputText,
+															border: `1px solid ${previewInputBorder}`,
+															borderRadius: previewBtnRadius,
+															padding: '8px 12px',
+															fontSize: '12.5px',
+														}}
+													/>
+												</div>
+												<div style={{ flex: '0 1 130px' }}>
+													<select
+														disabled
+														style={{
+															width: '100%',
+															background: previewInputBg,
+															color: previewInputText,
+															border: `1px solid ${previewInputBorder}`,
+															borderRadius: previewBtnRadius,
+															padding: '8px 10px',
+															fontSize: '12px',
+														}}
+													>
+														<option>All Statuses</option>
+														<option>Open</option>
+														<option>Pending</option>
+														<option>Resolved</option>
+														<option>Closed</option>
+													</select>
+												</div>
+												<div style={{ flex: '0 1 140px' }}>
+													<select
+														disabled
+														style={{
+															width: '100%',
+															background: previewInputBg,
+															color: previewInputText,
+															border: `1px solid ${previewInputBorder}`,
+															borderRadius: previewBtnRadius,
+															padding: '8px 10px',
+															fontSize: '12px',
+														}}
+													>
+														<option>All Categories</option>
+														<option>Product Support</option>
+														<option>WooCommerce & Orders</option>
+														<option>General Inquiry</option>
+													</select>
+												</div>
 											</div>
 
 											{ /* Sample Mock Ticket 1 (Clickable to switch to detail) */}
