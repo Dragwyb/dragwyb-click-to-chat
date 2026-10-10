@@ -353,21 +353,19 @@ class DCTC_AI_Chat_Controller {
 							esc_html( $provided_email )
 						);
 					}
-				} else {
-					if ( $has_support_page ) {
+				} elseif ( $has_support_page ) {
 						$resp_msg = sprintf(
 							/* translators: 1: Email, 2: Support URL */
 							__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon. You can also contact us or view updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
 							esc_html( $provided_email ),
 							$support_url
 						);
-					} else {
-						$resp_msg = sprintf(
-							/* translators: 1: Email */
-							__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon.', 'dragwyb-click-to-chat' ),
-							esc_html( $provided_email )
-						);
-					}
+				} else {
+					$resp_msg = sprintf(
+						/* translators: 1: Email */
+						__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon.', 'dragwyb-click-to-chat' ),
+						esc_html( $provided_email )
+					);
 				}
 
 				return $this->save_and_respond(
@@ -1337,8 +1335,12 @@ class DCTC_AI_Chat_Controller {
 		$has_support_url       = ! empty( $bot['support_url'] );
 		$support_url           = $has_support_url ? esc_url_raw( $bot['support_url'] ) : '';
 		$bot_name              = ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant';
-		$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : true;
+		$enable_support_ticket = false;
 		$enable_lead_capture   = ! empty( $bot['enable_lead_capture'] );
+
+		if ( DCTC_Helper::is_support_enabled() ) {
+			$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : false;
+		}
 
 		$system_message = '';
 
@@ -1370,17 +1372,15 @@ OFF-TOPIC, UNRELATED, OR CUSTOMIZATION REQUESTS:
 			} else {
 				$system_message .= "  3. If they need custom development, specialized CSS styling, or custom assistance, provide a helpful response inviting them to share their email address here so our specialists can follow up with them.\n\n";
 			}
-		} else {
-			if ( $has_support_url ) {
+		} elseif ( $has_support_url ) {
 				$system_message .= "  3. If they need custom development, specialized CSS styling, or custom assistance, encourage them to reach out directly to our human support team via [Contact Support]({$support_url}). Do NOT ask for their email address.\n\n";
-			} else {
-				$system_message .= "  3. Provide a warm, polite human reply explaining what you can assist with based on official documentation. Do NOT ask for their email address.\n\n";
-			}
+		} else {
+			$system_message .= "  3. Provide a warm, polite human reply explaining what you can assist with based on official documentation. Do NOT ask for their email address.\n\n";
 		}
 
-		$system_message .= "STRICT LINK & URL INTEGRITY RULES:
+		$system_message .= 'STRICT LINK & URL INTEGRITY RULES:
 - NEVER invent, fabricate, or guess URLs (such as /features, /pricing, /tickets, /support-desk, /contact-us, /docs, /help, /refund, example.com, yoursite.com, etc.).
-";
+';
 		if ( $has_support_url ) {
 			$system_message .= "- ONLY generate markdown links if the exact URL is explicitly given in the retrieved context or if it is the official support link: [Contact Support]({$support_url}).\n";
 			$system_message .= "- If the user asks how to get help or submit a ticket, direct them to [Contact Support]({$support_url}).\n";
