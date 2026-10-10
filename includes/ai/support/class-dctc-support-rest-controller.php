@@ -635,6 +635,7 @@ class DCTC_Support_REST_Controller {
 
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$now_time       = current_time( 'mysql' );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_sessions,
 			array( 'updated_at' => $now_time ),
@@ -645,6 +646,7 @@ class DCTC_Support_REST_Controller {
 		$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
 		if ( $ticket && ! empty( $ticket['id'] ) ) {
 			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_tickets,
 				array( 'customer_last_seen_at' => $now_time ),
@@ -700,6 +702,7 @@ class DCTC_Support_REST_Controller {
 
 		global $wpdb;
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$updated      = $wpdb->update(
 			$table_agents,
 			array(

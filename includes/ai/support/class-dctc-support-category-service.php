@@ -28,7 +28,7 @@ class DCTC_Support_Category_Service {
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$table_meta  = $wpdb->prefix . 'dctc_support_term_meta';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_terms'" );
 		if ( ! $table_exists ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
@@ -50,7 +50,7 @@ class DCTC_Support_Category_Service {
 			$where .= $wpdb->prepare( ' AND parent_id = %d', absint( $args['parent_id'] ) );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
 			ARRAY_A
@@ -60,7 +60,7 @@ class DCTC_Support_Category_Service {
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$rows = $wpdb->get_results(
 					"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
 					ARRAY_A
@@ -77,7 +77,7 @@ class DCTC_Support_Category_Service {
 
 		if ( ! empty( $term_ids ) ) {
 			$ids_in = implode( ',', array_map( 'absint', $term_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$meta_rows = $wpdb->get_results(
 				"SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($ids_in)",
 				ARRAY_A
@@ -96,10 +96,10 @@ class DCTC_Support_Category_Service {
 			$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 			$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
 
-			$req_skills = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
+			$req_skills             = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
 			$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
 
-			$sub_tax = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
+			$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 			$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
 
 			$row['requires_human'] = isset( $meta['requires_human'] ) ? (int) $meta['requires_human'] : 0;
@@ -124,7 +124,7 @@ class DCTC_Support_Category_Service {
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$category_id = absint( $category_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category'", $category_id ),
 			ARRAY_A
@@ -141,10 +141,10 @@ class DCTC_Support_Category_Service {
 		$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 		$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
 
-		$req_skills = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
+		$req_skills             = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
 		$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
 
-		$sub_tax = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
+		$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 		$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
 
 		$row['requires_human'] = isset( $meta['requires_human'] ) ? (int) $meta['requires_human'] : 0;
@@ -213,12 +213,14 @@ class DCTC_Support_Category_Service {
 		);
 
 		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update( $table_terms, $term_fields, array( 'id' => $id ) );
 			$term_id = $id;
 		} else {
 			$term_fields['created_at'] = current_time( 'mysql' );
-			$inserted                  = $wpdb->insert( $table_terms, $term_fields );
-			$term_id                   = $inserted ? (int) $wpdb->insert_id : 0;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$inserted = $wpdb->insert( $table_terms, $term_fields );
+			$term_id  = $inserted ? (int) $wpdb->insert_id : 0;
 		}
 
 		if ( ! $term_id ) {

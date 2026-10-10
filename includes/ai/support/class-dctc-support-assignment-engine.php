@@ -170,6 +170,7 @@ class DCTC_Support_Assignment_Engine {
 		// Update agent's last_assigned_at timestamp
 		global $wpdb;
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_agents,
 			array( 'last_assigned_at' => current_time( 'mysql' ) ),

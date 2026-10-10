@@ -30,7 +30,7 @@ class DCTC_Support_Product_Service {
 		$table_meta  = $wpdb->prefix . 'dctc_support_term_meta';
 		$table_rel   = $wpdb->prefix . 'dctc_support_term_relationships';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table_terms'" );
 		if ( ! $table_exists ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
@@ -71,15 +71,15 @@ class DCTC_Support_Product_Service {
 			);
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		$rows = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$rows     = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
 		$products = is_array( $rows ) ? $rows : array();
 
 		// If no custom products yet and WooCommerce is active, automatically sync WooCommerce products
 		if ( empty( $products ) && empty( $args['search'] ) && empty( $args['category_id'] ) && post_type_exists( 'product' ) ) {
 			self::sync_woocommerce_products();
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$rows = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$rows     = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
 			$products = is_array( $rows ) ? $rows : array();
 		}
 
@@ -92,7 +92,7 @@ class DCTC_Support_Product_Service {
 
 		if ( ! empty( $term_ids ) ) {
 			$ids_in = implode( ',', array_map( 'absint', $term_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$meta_rows = $wpdb->get_results(
 				"SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($ids_in)",
 				ARRAY_A
@@ -128,7 +128,7 @@ class DCTC_Support_Product_Service {
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$product_id  = absint( $product_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'product'", $product_id ),
 			ARRAY_A
@@ -189,12 +189,14 @@ class DCTC_Support_Product_Service {
 		);
 
 		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update( $table_terms, $fields, array( 'id' => $id ) );
 			$product_id = $id;
 		} else {
 			$fields['created_at'] = current_time( 'mysql' );
-			$inserted             = $wpdb->insert( $table_terms, $fields );
-			$product_id           = $inserted ? (int) $wpdb->insert_id : 0;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$inserted   = $wpdb->insert( $table_terms, $fields );
+			$product_id = $inserted ? (int) $wpdb->insert_id : 0;
 		}
 
 		if ( ! $product_id ) {
@@ -210,7 +212,7 @@ class DCTC_Support_Product_Service {
 		}
 
 		// Sync Category Relationship
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete(
 			$table_rel,
 			array(
@@ -222,6 +224,7 @@ class DCTC_Support_Product_Service {
 		);
 
 		if ( $category_id > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert(
 				$table_rel,
 				array(
@@ -275,25 +278,27 @@ class DCTC_Support_Product_Service {
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$table_meta  = $wpdb->prefix . 'dctc_support_term_meta';
 
-		$wc_posts = get_posts( array(
-			'post_type'      => 'product',
-			'post_status'    => 'publish',
-			'posts_per_page' => 200,
-			'orderby'        => 'title',
-			'order'          => 'ASC',
-		) );
+		$wc_posts = get_posts(
+			array(
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
+				'posts_per_page' => 200,
+				'orderby'        => 'title',
+				'order'          => 'ASC',
+			)
+		);
 
 		$synced = 0;
 		foreach ( $wc_posts as $p ) {
 			$slug = $p->post_name ? $p->post_name : sanitize_title( $p->post_title );
 
 			// Check if already exists by wc_product_id meta or slug
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_by_meta = $wpdb->get_var(
 				$wpdb->prepare( "SELECT term_id FROM `$table_meta` WHERE meta_key = 'wc_product_id' AND meta_value = %s", (string) $p->ID )
 			);
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_by_slug = $wpdb->get_var(
 				$wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND slug = %s", $slug )
 			);
@@ -311,6 +316,7 @@ class DCTC_Support_Product_Service {
 			}
 
 			if ( ! $term_id ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table_terms,
 					array(
@@ -325,8 +331,9 @@ class DCTC_Support_Product_Service {
 					)
 				);
 				$term_id = (int) $wpdb->insert_id;
-				$synced++;
+				++$synced;
 			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$table_terms,
 					array(

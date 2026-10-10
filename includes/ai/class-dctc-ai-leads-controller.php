@@ -143,11 +143,12 @@ class DCTC_AI_Leads_Controller {
 		if ( ! empty( $session_id ) ) {
 			global $wpdb;
 			$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->update(
 				$table_sessions,
 				array(
 					'lead_id' => $lead_id,
-					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ),
+					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ), //phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
 				),
 				array( 'session_id' => $session_id )
 			);
@@ -241,6 +242,7 @@ class DCTC_AI_Leads_Controller {
 						// Fallback via DCTC_Support_Ticket_Service
 						if ( ! empty( $email ) ) {
 							global $wpdb;
+							// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 							$wpdb->update(
 								$wpdb->prefix . 'dctc_support_tickets',
 								array(
@@ -256,6 +258,7 @@ class DCTC_AI_Leads_Controller {
 						}
 						if ( ! empty( $name ) ) {
 							global $wpdb;
+							// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 							$wpdb->update( $wpdb->prefix . 'dctc_support_tickets', array( 'customer_name' => $name ), array( 'id' => $ticket_id ) );
 						}
 						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'lead_id', $lead_id );
@@ -364,6 +367,7 @@ class DCTC_AI_Leads_Controller {
 			);
 
 			// 3a. Update session table
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$session_row = $wpdb->get_row( $wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
 			if ( $session_row ) {
 				$current_msgs = ! empty( $session_row['content'] ) ? json_decode( $session_row['content'], true ) : array();
@@ -387,6 +391,7 @@ class DCTC_AI_Leads_Controller {
 				$current_msgs   = array_slice( $current_msgs, -50 );
 				$encoded_msgs   = wp_json_encode( $current_msgs );
 
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$table_sessions,
 					array(
@@ -474,6 +479,7 @@ class DCTC_AI_Leads_Controller {
 			'factor' => __( 'Contact Information', 'dragwyb-click-to-chat' ),
 			'points' => $contact_pts,
 			'max'    => 55,
+			/* translators: %d: Contact points */
 			'detail' => sprintf( __( 'Name (+15), Email (+20), Phone (+20) -> %d pts', 'dragwyb-click-to-chat' ), $contact_pts ),
 		);
 		$total      += $contact_pts;
@@ -495,6 +501,7 @@ class DCTC_AI_Leads_Controller {
 				'factor' => __( 'Budget Specified', 'dragwyb-click-to-chat' ),
 				'points' => $budget_pts,
 				'max'    => 20,
+				/* translators: 1: Budget range, 2: Budget points */
 				'detail' => sprintf( __( 'Budget range "%1$s" -> +%2$d pts', 'dragwyb-click-to-chat' ), esc_html( $params['budget'] ), $budget_pts ),
 			);
 			$total      += $budget_pts;
@@ -517,6 +524,7 @@ class DCTC_AI_Leads_Controller {
 				'factor' => __( 'Purchase Timeline', 'dragwyb-click-to-chat' ),
 				'points' => $timeline_pts,
 				'max'    => 15,
+				/* translators: 1: Timeline description, 2: Timeline points */
 				'detail' => sprintf( __( 'Timeline "%1$s" -> +%2$d pts', 'dragwyb-click-to-chat' ), esc_html( $params['timeline'] ), $timeline_pts ),
 			);
 			$total      += $timeline_pts;
@@ -539,6 +547,7 @@ class DCTC_AI_Leads_Controller {
 				'factor' => __( 'Business & Interest Specificity', 'dragwyb-click-to-chat' ),
 				'points' => min( 20, $profile_pts ),
 				'max'    => 20,
+				/* translators: %d: Specificity points */
 				'detail' => sprintf( __( 'Company, size & product interest specified -> +%d pts', 'dragwyb-click-to-chat' ), min( 20, $profile_pts ) ),
 			);
 			$total      += min( 20, $profile_pts );
@@ -575,6 +584,7 @@ class DCTC_AI_Leads_Controller {
 				'factor' => __( 'AI Buying Intent & Urgency', 'dragwyb-click-to-chat' ),
 				'points' => $intent_pts,
 				'max'    => 15,
+				/* translators: 1: Intent level, 2: Matched signals, 3: Intent points */
 				'detail' => sprintf( __( 'Intent level: %1$s (signals: %2$s) -> +%3$d pts', 'dragwyb-click-to-chat' ), ucfirst( $intent_level ), ! empty( $matched ) ? implode( ', ', array_slice( $matched, 0, 3 ) ) : __( 'detailed requirement', 'dragwyb-click-to-chat' ), $intent_pts ),
 			);
 			$total      += $intent_pts;
@@ -716,19 +726,21 @@ class DCTC_AI_Leads_Controller {
 			);
 		}
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen
 		$output = fopen( 'php://temp', 'r+' );
 		foreach ( $csv_rows as $row ) {
 			fputcsv( $output, $row );
 		}
 		rewind( $output );
 		$csv_content = stream_get_contents( $output );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose
 		fclose( $output );
 
 		return new \WP_REST_Response(
 			array(
 				'success'  => true,
 				'csv'      => $csv_content,
-				'filename' => 'leads-export-' . date( 'Y-m-d-His' ) . '.csv',
+				'filename' => 'leads-export-' . gmdate( 'Y-m-d-His' ) . '.csv',
 			),
 			200
 		);
@@ -762,20 +774,9 @@ class DCTC_AI_Leads_Controller {
 			! empty( $lead['name'] ) ? $lead['name'] : ( ! empty( $lead['email'] ) ? $lead['email'] : __( 'Visitor', 'dragwyb-click-to-chat' ) )
 		);
 
+		/* translators: 1: Name, 2: Email, 3: Phone, 4: Company, 5: Lead score, 6: Requirement, 7: Source URL, 8: Captured timestamp, 9: Admin URL */
 		$body = sprintf(
-			__(
-				"A new prospective lead has been captured by your AI Chatbot!\n\n" .
-				"• Name: %s\n" .
-				"• Email: %s\n" .
-				"• Phone: %s\n" .
-				"• Company: %s\n" .
-				"• Lead Score: %d / 100\n" .
-				"• Requirement: %s\n" .
-				"• Source Page: %s\n" .
-				"• Captured At: %s\n\n" .
-				"View and manage all leads in your WordPress dashboard:\n%s\n",
-				'dragwyb-click-to-chat'
-			),
+			__( "A new prospective lead has been captured by your AI Chatbot!\n\n• Name: %1\$s\n• Email: %2\$s\n• Phone: %3\$s\n• Company: %4\$s\n• Lead Score: %5\$d / 100\n• Requirement: %6\$s\n• Source Page: %7\$s\n• Captured At: %8\$s\n\nView and manage all leads in your WordPress dashboard:\n%9\$s\n", 'dragwyb-click-to-chat' ),
 			! empty( $lead['name'] ) ? $lead['name'] : '-',
 			! empty( $lead['email'] ) ? $lead['email'] : '-',
 			! empty( $lead['phone'] ) ? $lead['phone'] : '-',
@@ -819,6 +820,7 @@ class DCTC_AI_Leads_Controller {
 				'body'      => wp_json_encode( $payload ),
 				'timeout'   => 10,
 				'blocking'  => false, // Non-blocking asynchronous dispatch
+				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Using core WordPress filter https_local_ssl_verify.
 				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
 			)
 		);

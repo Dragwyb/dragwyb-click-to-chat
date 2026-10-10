@@ -20,12 +20,12 @@ class DCTC_Support_Ticket_Service {
 	/**
 	 * Canonical allowlist constants.
 	 */
-	const ALLOWED_STATUSES = array( 'open', 'pending', 'waiting_customer', 'waiting_agent', 'hold', 'resolved', 'closed', 'trash' );
-	const ALLOWED_PRIORITIES = array( 'low', 'normal', 'high', 'urgent' );
-	const ALLOWED_CONTROL_MODES = array( 'ai', 'human', 'hybrid' );
-	const ALLOWED_ORIGIN_TYPES = array( 'chatbot', 'support_portal', 'admin', 'email', 'api' );
-	const ALLOWED_REPLY_SURFACES = array( 'chatbot_widget', 'support_portal', 'admin_workspace', 'email', 'api' );
-	const ALLOWED_SENDER_TYPES = array( 'customer', 'agent', 'ai', 'system' );
+	const ALLOWED_STATUSES           = array( 'open', 'pending', 'waiting_customer', 'waiting_agent', 'hold', 'resolved', 'closed', 'trash' );
+	const ALLOWED_PRIORITIES         = array( 'low', 'normal', 'high', 'urgent' );
+	const ALLOWED_CONTROL_MODES      = array( 'ai', 'human', 'hybrid' );
+	const ALLOWED_ORIGIN_TYPES       = array( 'chatbot', 'support_portal', 'admin', 'email', 'api' );
+	const ALLOWED_REPLY_SURFACES     = array( 'chatbot_widget', 'support_portal', 'admin_workspace', 'email', 'api' );
+	const ALLOWED_SENDER_TYPES       = array( 'customer', 'agent', 'ai', 'system' );
 	const ALLOWED_ASSIGNMENT_METHODS = array( 'manual', 'round_robin', 'least_loaded', 'skill_match', 'escalation', 'fallback', 'auto' );
 
 	/**
@@ -156,7 +156,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Delete existing keys in a single prepared statement to prevent duplicates
 		$key_placeholders = implode( ',', array_fill( 0, count( $clean_keys ), '%s' ) );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpdb->query(
 			$wpdb->prepare(
 				"DELETE FROM `$table` WHERE ticket_id = %d AND meta_key IN ($key_placeholders)",
@@ -166,7 +166,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Batch insert in single prepared query
 		$sql = "INSERT INTO `$table` (`ticket_id`, `meta_key`, `meta_value`) VALUES " . implode( ', ', $placeholders );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$result = $wpdb->query( $wpdb->prepare( $sql, $values ) );
 
 		self::invalidate_cache( $ticket_id );
@@ -207,17 +207,17 @@ class DCTC_Support_Ticket_Service {
 		$name  = ! empty( $data['customer_name'] ) ? sanitize_text_field( $data['customer_name'] ) : '';
 
 		// Security (SEC-09): Allowlist validation for status, priority, control mode, origin, reply surface
-		$raw_status  = ! empty( $data['status'] ) ? sanitize_key( $data['status'] ) : 'open';
-		$status      = in_array( $raw_status, self::ALLOWED_STATUSES, true ) ? $raw_status : 'open';
+		$raw_status = ! empty( $data['status'] ) ? sanitize_key( $data['status'] ) : 'open';
+		$status     = in_array( $raw_status, self::ALLOWED_STATUSES, true ) ? $raw_status : 'open';
 
-		$raw_prio    = ! empty( $data['priority'] ) ? sanitize_key( $data['priority'] ) : 'normal';
-		$priority    = in_array( $raw_prio, self::ALLOWED_PRIORITIES, true ) ? $raw_prio : 'normal';
+		$raw_prio = ! empty( $data['priority'] ) ? sanitize_key( $data['priority'] ) : 'normal';
+		$priority = in_array( $raw_prio, self::ALLOWED_PRIORITIES, true ) ? $raw_prio : 'normal';
 
 		$raw_control = ! empty( $data['control_mode'] ) ? sanitize_key( $data['control_mode'] ) : 'ai';
 		$control     = in_array( $raw_control, self::ALLOWED_CONTROL_MODES, true ) ? $raw_control : 'ai';
 
-		$raw_origin  = ! empty( $data['origin_type'] ) ? sanitize_key( $data['origin_type'] ) : 'chatbot';
-		$origin      = in_array( $raw_origin, self::ALLOWED_ORIGIN_TYPES, true ) ? $raw_origin : 'chatbot';
+		$raw_origin = ! empty( $data['origin_type'] ) ? sanitize_key( $data['origin_type'] ) : 'chatbot';
+		$origin     = in_array( $raw_origin, self::ALLOWED_ORIGIN_TYPES, true ) ? $raw_origin : 'chatbot';
 
 		$raw_surface = ! empty( $data['reply_surface'] ) ? sanitize_key( $data['reply_surface'] ) : 'chatbot_widget';
 		$surface     = in_array( $raw_surface, self::ALLOWED_REPLY_SURFACES, true ) ? $raw_surface : 'chatbot_widget';
@@ -231,7 +231,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Security (SEC-15): Verify agent eligibility if agent_id supplied
 		if ( $agent_id > 0 ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$is_valid_agent = $wpdb->get_var(
 				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 			);
@@ -244,7 +244,7 @@ class DCTC_Support_Ticket_Service {
 		$session_id = '';
 		if ( ! empty( $data['session_id'] ) ) {
 			$cand_session = sanitize_text_field( $data['session_id'] );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_session = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, support_ticket_id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $cand_session )
 			);
@@ -301,6 +301,7 @@ class DCTC_Support_Ticket_Service {
 			'updated_at'                    => current_time( 'mysql' ),
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$inserted = $wpdb->insert(
 			$table_tickets,
 			$core_fields,
@@ -355,12 +356,13 @@ class DCTC_Support_Ticket_Service {
 		self::update_ticket_meta_batch( $ticket_id, $meta_batch );
 
 		// Ensure corresponding row in wp_dctc_ai_sessions exists and is linked
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing_session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id )
 		);
 
 		if ( $existing_session ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -414,6 +416,7 @@ class DCTC_Support_Ticket_Service {
 				$initial_messages[] = $msg_entry;
 			}
 
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert(
 				$table_sessions,
 				array(
@@ -667,12 +670,11 @@ class DCTC_Support_Ticket_Service {
 		$order           = ( ! empty( $args['order'] ) && 'ASC' === strtoupper( $args['order'] ) ) ? 'ASC' : 'DESC';
 
 		// Count total
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` t WHERE $where" );
 
 		// Query page rows from clean tickets table
-		$sql = "SELECT t.* FROM `$table_tickets` t WHERE $where ORDER BY t.`$orderby` $order LIMIT %d OFFSET %d";
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$sql  = "SELECT t.* FROM `$table_tickets` t WHERE $where ORDER BY t.`$orderby` $order LIMIT %d OFFSET %d";
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $per_page, $offset ), ARRAY_A );
 
 		if ( is_array( $rows ) && ! empty( $rows ) ) {
@@ -680,7 +682,6 @@ class DCTC_Support_Ticket_Service {
 			$ids_in     = implode( ',', array_map( 'absint', $ticket_ids ) );
 
 			// Batch load all metadata for these tickets
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$meta_rows = $wpdb->get_results( "SELECT ticket_id, meta_key, meta_value FROM `$table_ticket_meta` WHERE ticket_id IN ($ids_in)", ARRAY_A );
 			$meta_map  = array();
 			if ( is_array( $meta_rows ) ) {
@@ -708,8 +709,7 @@ class DCTC_Support_Ticket_Service {
 			$cats_map = array();
 			if ( ! empty( $cat_ids ) ) {
 				$c_ids_in = implode( ',', array_unique( $cat_ids ) );
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$c_rows = $wpdb->get_results( "SELECT id, name, color FROM `$table_terms` WHERE id IN ($c_ids_in)", ARRAY_A );
+				$c_rows   = $wpdb->get_results( "SELECT id, name, color FROM `$table_terms` WHERE id IN ($c_ids_in)", ARRAY_A );
 				if ( is_array( $c_rows ) ) {
 					foreach ( $c_rows as $cr ) {
 						$cats_map[ (int) $cr['id'] ] = $cr;
@@ -721,8 +721,7 @@ class DCTC_Support_Ticket_Service {
 			$agents_map = array();
 			if ( ! empty( $agent_ids ) ) {
 				$a_ids_in = implode( ',', array_unique( $agent_ids ) );
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$a_rows = $wpdb->get_results( "SELECT id, wp_user_id, support_role FROM `$table_agents` WHERE id IN ($a_ids_in)", ARRAY_A );
+				$a_rows   = $wpdb->get_results( "SELECT id, wp_user_id, support_role FROM `$table_agents` WHERE id IN ($a_ids_in)", ARRAY_A );
 				if ( is_array( $a_rows ) ) {
 					foreach ( $a_rows as $ar ) {
 						$agents_map[ (int) $ar['id'] ] = $ar;
@@ -732,13 +731,13 @@ class DCTC_Support_Ticket_Service {
 
 			// Batch load linked chat sessions
 			$sessions_map = array();
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$s_rows = $wpdb->get_results( "SELECT id, session_id, support_ticket_id, content FROM `$table_sessions` WHERE support_ticket_id IN ($ids_in)", ARRAY_A );
+			$s_rows       = $wpdb->get_results( "SELECT id, session_id, support_ticket_id, content FROM `$table_sessions` WHERE support_ticket_id IN ($ids_in)", ARRAY_A );
 			if ( is_array( $s_rows ) ) {
 				foreach ( $s_rows as $sr ) {
 					$sessions_map[ (int) $sr['support_ticket_id'] ] = $sr;
 				}
 			}
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 			foreach ( $rows as &$row ) {
 				$t_id   = (int) $row['id'];
@@ -842,7 +841,7 @@ class DCTC_Support_Ticket_Service {
 			$where = $wpdb->prepare( 't.uuid = %s', sanitize_text_field( $id_or_uuid ) );
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$ticket = $wpdb->get_row( "SELECT t.* FROM `$table_tickets` t WHERE $where LIMIT 1", ARRAY_A );
 
 		if ( ! $ticket ) {
@@ -875,7 +874,6 @@ class DCTC_Support_Ticket_Service {
 		$ticket['category_name']  = '';
 		$ticket['category_color'] = '#4F46E5';
 		if ( ! empty( $ticket['category_id'] ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$cat_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT name, color FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category' LIMIT 1", $ticket['category_id'] ),
 				ARRAY_A
@@ -893,7 +891,6 @@ class DCTC_Support_Ticket_Service {
 		$ticket['agent_avatar']     = '';
 
 		if ( ! empty( $ticket['assigned_agent_id'] ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$agent_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT wp_user_id, support_role FROM `$table_agents` WHERE id = %d LIMIT 1", $ticket['assigned_agent_id'] ),
 				ARRAY_A
@@ -913,19 +910,18 @@ class DCTC_Support_Ticket_Service {
 		// Retrieve conversation messages from sessions table (by session_id or support_ticket_id)
 		$session_row = null;
 		if ( ! empty( $ticket['session_id'] ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$session_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $ticket['session_id'] ),
 				ARRAY_A
 			);
 		}
 		if ( ! $session_row ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$session_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $ticket_id ),
 				ARRAY_A
 			);
 		}
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		$ticket['has_session'] = ! empty( $session_row );
 		$session_content       = $session_row ? $session_row['content'] : '';
@@ -1028,14 +1024,14 @@ class DCTC_Support_Ticket_Service {
 		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 
 		// 1. Check sessions table support_ticket_id
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$ticket_id = (int) $wpdb->get_var(
 			$wpdb->prepare( "SELECT support_ticket_id FROM `$table_sessions` WHERE session_id = %s AND support_ticket_id > 0 LIMIT 1", $session_id )
 		);
 
 		// 2. Check ticket meta session_id
 		if ( ! $ticket_id ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$ticket_id = (int) $wpdb->get_var(
 				$wpdb->prepare( "SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = %s AND meta_value = %s ORDER BY meta_id DESC LIMIT 1", 'session_id', $session_id )
 			);
@@ -1075,7 +1071,7 @@ class DCTC_Support_Ticket_Service {
 			$actor_type = 'agent';
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$ticket = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_tickets` WHERE id = %d", $ticket_id ), ARRAY_A );
 		if ( ! $ticket ) {
 			return false;
@@ -1097,6 +1093,7 @@ class DCTC_Support_Ticket_Service {
 			$updates['closed_at'] = current_time( 'mysql' );
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$res = $wpdb->update( $table_tickets, $updates, array( 'id' => $ticket_id ) );
 		if ( false === $res ) {
 			return false;
@@ -1158,12 +1155,13 @@ class DCTC_Support_Ticket_Service {
 			return false;
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$old_priority = $wpdb->get_var( $wpdb->prepare( "SELECT priority FROM `$table_tickets` WHERE id = %d", $ticket_id ) );
 		if ( ! $old_priority || $old_priority === $new_priority ) {
 			return false;
 		}
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$res = $wpdb->update(
 			$table_tickets,
 			array(
@@ -1228,6 +1226,7 @@ class DCTC_Support_Ticket_Service {
 		self::update_ticket_meta( $ticket_id, 'control_mode', $control_mode );
 
 		// Touch ticket updated_at
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_tickets,
 			array( 'updated_at' => current_time( 'mysql' ) ),
@@ -1237,6 +1236,7 @@ class DCTC_Support_Ticket_Service {
 		$session_id = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		if ( ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -1296,7 +1296,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Security (SEC-15): Validate agent exists and is active
 		if ( $agent_id > 0 ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$is_active = $wpdb->get_var(
 				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 			);
@@ -1317,6 +1317,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// Touch ticket updated_at
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_tickets,
 			array( 'updated_at' => current_time( 'mysql' ) ),
@@ -1325,6 +1326,7 @@ class DCTC_Support_Ticket_Service {
 		self::invalidate_cache( $ticket_id );
 
 		// Record assignment history
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->insert(
 			$table_assignments,
 			array(
@@ -1443,7 +1445,7 @@ class DCTC_Support_Ticket_Service {
 		$session_id = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
 			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
 		) : null;
@@ -1473,6 +1475,7 @@ class DCTC_Support_Ticket_Service {
 		$messages   = array_slice( $messages, -100 ); // keep last 100 messages
 
 		if ( ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -1492,7 +1495,7 @@ class DCTC_Support_Ticket_Service {
 			}
 			if ( empty( $ticket['assigned_agent_id'] ) && $user_id ) {
 				$table_agents = $wpdb->prefix . 'dctc_support_agents';
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$agent_row = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), ARRAY_A );
 				if ( $agent_row ) {
 					self::update_ticket_meta( $ticket_id, 'assigned_agent_id', absint( $agent_row['id'] ) );
@@ -1516,6 +1519,7 @@ class DCTC_Support_Ticket_Service {
 				$ticket_updates['status'] = 'waiting_customer';
 			}
 		}
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update( $table_tickets, $ticket_updates, array( 'id' => $ticket_id ) );
 
 		// Log event
@@ -1559,7 +1563,7 @@ class DCTC_Support_Ticket_Service {
 		$wp_user = get_userdata( $user_id );
 
 		// Find agent record
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$agent = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ),
 			ARRAY_A
@@ -1571,19 +1575,13 @@ class DCTC_Support_Ticket_Service {
 		$today = current_time( 'Y-m-d' );
 
 		// Metrics
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$total_tickets = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status != 'trash'" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$total_open = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status NOT IN ('resolved', 'closed', 'trash')" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$total_pending = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer', 'waiting_agent', 'hold')" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_tickets  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status != 'trash'" );
+		$total_open     = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status NOT IN ('resolved', 'closed', 'trash')" );
+		$total_pending  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer', 'waiting_agent', 'hold')" );
 		$total_resolved = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('resolved', 'closed')" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$today_created = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today ) );
+		$today_created  = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today ) );
 
 		// AI Bot Tickets Count
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$total_ai_bot = (int) $wpdb->get_var(
 			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
 			 INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id 
@@ -1597,18 +1595,17 @@ class DCTC_Support_Ticket_Service {
 		$agent_ids_check    = array_filter( array_unique( array( $agent_id, $user_id ) ) );
 		$agent_placeholders = ! empty( $agent_ids_check ) ? implode( ',', array_map( 'absint', $agent_ids_check ) ) : '0';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$my_active = (int) $wpdb->get_var(
 			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value IN ($agent_placeholders) AND t.status IN ('open', 'pending', 'waiting_customer')"
 		);
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$my_today_assigned = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value IN ($agent_placeholders) AND DATE(t.created_at) = %s AND t.status != 'trash'",
 				$today
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		// If user is admin and has no individual assigned tickets, show site active open/pending
 		if ( $is_admin && 0 === $my_active && $total_open > 0 ) {
@@ -1620,7 +1617,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// Control mode breakdown
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$human_controlled = (int) $wpdb->get_var(
 			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status NOT IN ('resolved', 'closed', 'trash')"
 		);
@@ -1645,16 +1642,14 @@ class DCTC_Support_Ticket_Service {
 			FROM `$table_events` e 
 			LEFT JOIN `$table_tickets` t ON e.ticket_id = t.id 
 			ORDER BY e.created_at DESC LIMIT 6";
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$recent_events = $wpdb->get_results( $recent_sql, ARRAY_A );
 
 		// Detailed status breakdown
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$count_new = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'new'" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$count_closed = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'closed'" );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$count_new           = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'new'" );
+		$count_closed        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'closed'" );
 		$count_resolved_only = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'resolved'" );
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		$status_breakdown = array(
 			'new'      => $count_new,
@@ -1668,25 +1663,23 @@ class DCTC_Support_Ticket_Service {
 		$daily_trends = array();
 		for ( $i = 6; $i >= 0; $i-- ) {
 			$day_ts   = strtotime( "-{$i} days", current_time( 'timestamp' ) );
-			$day_date = date( 'Y-m-d', $day_ts );
-			$day_lbl  = date( 'M d', $day_ts );
+			$day_date = gmdate( 'Y-m-d', $day_ts );
+			$day_lbl  = gmdate( 'M d', $day_ts );
 
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$day_new = (int) $wpdb->get_var(
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$day_new      = (int) $wpdb->get_var(
 				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $day_date )
 			);
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$day_open = (int) $wpdb->get_var(
+			$day_open     = (int) $wpdb->get_var(
 				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status NOT IN ('resolved', 'closed', 'trash')", $day_date )
 			);
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$day_pending = (int) $wpdb->get_var(
+			$day_pending  = (int) $wpdb->get_var(
 				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status IN ('pending', 'waiting_customer')", $day_date )
 			);
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$day_resolved = (int) $wpdb->get_var(
 				$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(updated_at) = %s AND status IN ('resolved', 'closed')", $day_date )
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 			$daily_trends[] = array(
 				'date'      => $day_lbl,
@@ -1747,7 +1740,7 @@ class DCTC_Support_Ticket_Service {
 				} else {
 					global $wpdb;
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-					$titles = $wpdb->get_col(
+					$titles                     = $wpdb->get_col(
 						$wpdb->prepare(
 							"SELECT post_title FROM {$wpdb->posts} WHERE post_type = %s AND post_status = %s ORDER BY ID DESC LIMIT 50",
 							'product',
@@ -1874,18 +1867,18 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		$meta_key = sanitize_key( $meta_key );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		if ( $single ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$val = $wpdb->get_var(
 				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE ticket_id = %d AND meta_key = %s LIMIT 1", $ticket_id, $meta_key )
 			);
 			return $val;
 		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			return $wpdb->get_col(
 				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
 			);
 		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 	}
 
 	/**
@@ -1899,7 +1892,7 @@ class DCTC_Support_Ticket_Service {
 		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
 		$ticket_id = absint( $ticket_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE ticket_id = %d", $ticket_id ),
 			ARRAY_A
@@ -1943,12 +1936,13 @@ class DCTC_Support_Ticket_Service {
 			$val_str = substr( $val_str, 0, 65535 );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_var(
 			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
 		);
 
 		if ( $existing ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$res = $wpdb->update(
 				$table,
 				array( 'meta_value' => $val_str ),
@@ -1957,6 +1951,7 @@ class DCTC_Support_Ticket_Service {
 				array( '%d' )
 			);
 		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$res = $wpdb->insert(
 				$table,
 				array(
@@ -1990,7 +1985,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		if ( ! empty( $meta_key ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$res = $wpdb->delete(
 				$table,
 				array(
@@ -2000,7 +1995,7 @@ class DCTC_Support_Ticket_Service {
 				array( '%d', '%s' )
 			);
 		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$res = $wpdb->delete(
 				$table,
 				array( 'ticket_id' => $ticket_id ),
@@ -2072,6 +2067,7 @@ class DCTC_Support_Ticket_Service {
 
 		if ( ! empty( $core_updates ) ) {
 			$core_updates['updated_at'] = current_time( 'mysql' );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update( $table_tickets, $core_updates, array( 'id' => $ticket['id'] ) );
 		}
 
@@ -2098,7 +2094,7 @@ class DCTC_Support_Ticket_Service {
 			$agent_id = absint( $data['assigned_agent_id'] );
 			// Security (SEC-15): Validate agent exists and is active if assigning
 			if ( $agent_id > 0 ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$is_valid = $wpdb->get_var(
 					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
 				);
@@ -2154,7 +2150,7 @@ class DCTC_Support_Ticket_Service {
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
 			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
 		) : null;
@@ -2186,6 +2182,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		if ( ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -2200,6 +2197,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Touch ticket updated_at
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
 
 		self::invalidate_cache( $ticket['id'], $session_id );
@@ -2246,7 +2244,7 @@ class DCTC_Support_Ticket_Service {
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
 			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
 		) : null;
@@ -2278,6 +2276,7 @@ class DCTC_Support_Ticket_Service {
 		$filtered_messages = array_values( $filtered_messages );
 
 		if ( ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -2292,6 +2291,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Touch ticket updated_at
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update( $table_tickets, array( 'updated_at' => current_time( 'mysql' ) ), array( 'id' => $ticket['id'] ) );
 
 		self::invalidate_cache( $ticket['id'], $session_id );

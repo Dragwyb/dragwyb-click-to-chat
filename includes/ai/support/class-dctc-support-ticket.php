@@ -135,7 +135,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		// Check session table by session_id or support_ticket_id
 		$session_row = null;
 		if ( ! empty( $this->session_id ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $this->session_id ),
 				ARRAY_A
@@ -143,7 +143,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		}
 
 		if ( ! $session_row ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $this->id ),
 				ARRAY_A
@@ -199,7 +199,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		// Direct query fallback if key was inserted recently
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-			$val = DCTC_Support_Ticket_Service::get_ticket_meta( $this->id, $key, $single );
+			$val                      = DCTC_Support_Ticket_Service::get_ticket_meta( $this->id, $key, $single );
 			$this->meta_cache[ $key ] = $val;
 			return $val;
 		}
@@ -243,24 +243,25 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 			return false;
 		}
 
-		$key = sanitize_key( $key );
+		$key             = sanitize_key( $key );
 		$sanitized_value = $this->sanitize_meta_value( $value, $sanitize_type );
 
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$result = DCTC_Support_Ticket_Service::update_ticket_meta( $this->id, $key, $sanitized_value );
 		} else {
 			global $wpdb;
-			$table = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$table   = $wpdb->prefix . 'dctc_support_ticket_meta';
 			$val_str = is_array( $sanitized_value ) || is_object( $sanitized_value )
 				? wp_json_encode( $sanitized_value )
 				: (string) $sanitized_value;
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$existing = $wpdb->get_var(
 				$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $this->id, $key )
 			);
 
 			if ( $existing ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$table,
 					array( 'meta_value' => $val_str ),
@@ -269,6 +270,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 					array( '%d' )
 				);
 			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table,
 					array(
@@ -322,7 +324,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( is_array( $value ) ) {
 			$cleaned = array();
 			foreach ( $value as $k => $v ) {
-				$clean_k = is_string( $k ) ? sanitize_key( $k ) : $k;
+				$clean_k             = is_string( $k ) ? sanitize_key( $k ) : $k;
 				$cleaned[ $clean_k ] = $this->sanitize_meta_value( $v, $sanitize_type );
 			}
 			return $cleaned;
@@ -387,6 +389,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 
 		// 1. Update tickets table
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_tickets,
 			array(
@@ -400,6 +403,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		// 2. Update session table
 		if ( ! empty( $this->session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -416,7 +420,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$this->update_meta( 'customer_email', $clean_email, 'email' );
 
 		// 4. Update local state
-		$this->customer_email = $clean_email;
+		$this->customer_email             = $clean_email;
 		$this->raw_data['customer_email'] = $clean_email;
 
 		return true;
@@ -437,7 +441,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$this->update_meta( 'customer_phone', $clean_phone, 'auto' );
 		$this->update_meta( 'phone', $clean_phone, 'auto' );
 
-		$this->customer_phone = $clean_phone;
+		$this->customer_phone             = $clean_phone;
 		$this->raw_data['customer_phone'] = $clean_phone;
 
 		return true;
@@ -462,6 +466,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		global $wpdb;
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_tickets,
 			array(
@@ -475,7 +480,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		$this->update_meta( 'customer_name', $clean_name, 'auto' );
 
-		$this->customer_name = $clean_name;
+		$this->customer_name             = $clean_name;
 		$this->raw_data['customer_name'] = $clean_name;
 
 		return true;
@@ -498,7 +503,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$res = DCTC_Support_Ticket_Service::change_status( $this->id, $status, $actor_type, $actor_id, $actor_name );
 			if ( $res ) {
-				$this->status = sanitize_key( $status );
+				$this->status             = sanitize_key( $status );
 				$this->raw_data['status'] = $this->status;
 				return true;
 			}
@@ -524,7 +529,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$res = DCTC_Support_Ticket_Service::change_priority( $this->id, $priority, $actor_type, $actor_id, $actor_name );
 			if ( $res ) {
-				$this->priority = sanitize_key( $priority );
+				$this->priority             = sanitize_key( $priority );
 				$this->raw_data['priority'] = $this->priority;
 				return true;
 			}
@@ -619,7 +624,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( $lead_id > 0 && class_exists( 'DCTC_AI_DB' ) && ( empty( $budget ) || empty( $company ) || empty( $requirement ) ) ) {
 			global $wpdb;
 			$table_leads = $wpdb->prefix . 'dctc_ai_leads';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$lead_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT * FROM `$table_leads` WHERE id = %d LIMIT 1", $lead_id ),
 				ARRAY_A
@@ -639,22 +644,22 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$wc_product_info = $this->get_woocommerce_product_info();
 
 		return array(
-			'has_ai_content'    => ( $lead_id > 0 || ! empty( $budget ) || ! empty( $company ) || ! empty( $requirement ) || ! empty( $this->customer_phone ) || ! empty( $interest ) || ! empty( $wc_product_info ) || ! empty( $ai_summary ) ),
-			'lead_id'           => $lead_id,
-			'customer_name'     => $this->customer_name,
-			'customer_email'    => $this->customer_email,
-			'customer_phone'    => $this->customer_phone,
-			'company'           => $company,
-			'company_size'      => $company_size,
-			'budget'            => $budget,
-			'timeline'          => $timeline,
-			'interest'          => $interest,
-			'requirement'       => $requirement,
-			'lead_score'        => $lead_score,
-			'intent_level'      => $intent_level,
-			'ai_summary'        => $ai_summary,
-			'source_url'        => $source_url,
-			'wc_product_info'   => $wc_product_info,
+			'has_ai_content'  => ( $lead_id > 0 || ! empty( $budget ) || ! empty( $company ) || ! empty( $requirement ) || ! empty( $this->customer_phone ) || ! empty( $interest ) || ! empty( $wc_product_info ) || ! empty( $ai_summary ) ),
+			'lead_id'         => $lead_id,
+			'customer_name'   => $this->customer_name,
+			'customer_email'  => $this->customer_email,
+			'customer_phone'  => $this->customer_phone,
+			'company'         => $company,
+			'company_size'    => $company_size,
+			'budget'          => $budget,
+			'timeline'        => $timeline,
+			'interest'        => $interest,
+			'requirement'     => $requirement,
+			'lead_score'      => $lead_score,
+			'intent_level'    => $intent_level,
+			'ai_summary'      => $ai_summary,
+			'source_url'      => $source_url,
+			'wc_product_info' => $wc_product_info,
 		);
 	}
 
@@ -690,11 +695,12 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 			$new_entry['meta'] = $this->sanitize_meta_value( $meta, 'auto' );
 		}
 
-		$current_messages = $this->get_chats();
+		$current_messages   = $this->get_chats();
 		$current_messages[] = $new_entry;
-		$messages_json = wp_json_encode( array_slice( $current_messages, -50 ) );
+		$messages_json      = wp_json_encode( array_slice( $current_messages, -50 ) );
 
 		if ( ! empty( $this->session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
@@ -706,6 +712,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 				array( '%s' )
 			);
 		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(

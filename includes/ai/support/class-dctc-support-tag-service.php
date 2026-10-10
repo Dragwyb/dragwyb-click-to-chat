@@ -26,7 +26,7 @@ class DCTC_Support_Tag_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_terms';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" );
 		if ( ! $table_exists ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
@@ -37,17 +37,16 @@ class DCTC_Support_Tag_Service {
 			}
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );
 
 		if ( empty( $tags ) ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$tags = $wpdb->get_results( "SELECT * FROM `$table` WHERE taxonomy_slug = 'tag' ORDER BY name ASC", ARRAY_A );
 			}
 		}
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return is_array( $tags ) ? $tags : array();
 	}
@@ -87,11 +86,13 @@ class DCTC_Support_Tag_Service {
 		);
 
 		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$updated = $wpdb->update( $table, $fields, array( 'id' => $id ) );
 			return false !== $updated ? $id : false;
 		} else {
 			$fields['created_at'] = current_time( 'mysql' );
-			$inserted             = $wpdb->insert( $table, $fields );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$inserted = $wpdb->insert( $table, $fields );
 			return $inserted ? $wpdb->insert_id : false;
 		}
 	}

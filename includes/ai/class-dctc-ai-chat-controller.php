@@ -1226,7 +1226,8 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		global $wpdb;
-		$table   = $wpdb->prefix . 'dctc_ai_sessions';
+		$table = $wpdb->prefix . 'dctc_ai_sessions';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		$session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM {$table} WHERE session_id = %s", $session_id ),
 			ARRAY_A
@@ -1303,6 +1304,7 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 			$summary_data = array(
+				/* translators: %s: First customer message snippet */
 				'goal'        => ! empty( $first_user_msg ) ? sprintf( __( 'Customer inquired about: %s', 'dragwyb-click-to-chat' ), substr( $first_user_msg, 0, 100 ) ) : __( 'General conversation with AI Assistant', 'dragwyb-click-to-chat' ),
 				'questions'   => array( ! empty( $first_user_msg ) ? substr( $first_user_msg, 0, 100 ) : __( 'General inquiry', 'dragwyb-click-to-chat' ) ),
 				'topics'      => array( __( 'General', 'dragwyb-click-to-chat' ) ),
@@ -1691,7 +1693,8 @@ HIDDEN INTENT METADATA TAG:
 		$site_host   = wp_parse_url( $home_url, PHP_URL_HOST );
 		$support_url = ! empty( $bot['support_url'] ) ? esc_url_raw( $bot['support_url'] ) : home_url();
 
-		// Common placeholder hosts that LLMs hallucinate
+		// Common placeholder hosts that LLMs hallucinate (filter list)
+		// phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Placeholder domain list for AI hallucination detection.
 		$dummy_hosts = array(
 			'example.com',
 			'example.org',
@@ -2117,6 +2120,7 @@ HIDDEN INTENT METADATA TAG:
 				if ( ! empty( $email ) && empty( $ticket['customer_email'] ) ) {
 					$ticket_updates['customer_email'] = sanitize_email( $email );
 				}
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$table_tickets,
 					$ticket_updates,
@@ -2124,6 +2128,7 @@ HIDDEN INTENT METADATA TAG:
 				);
 
 				// Sync ticket messages meta from session table
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$session_content = $wpdb->get_var(
 					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
 				);
@@ -2650,7 +2655,7 @@ HIDDEN INTENT METADATA TAG:
 
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
 
 		$ticket_info = $this->get_session_ticket_info( $session_id );
@@ -2659,6 +2664,7 @@ HIDDEN INTENT METADATA TAG:
 
 		if ( $has_ticket && ! empty( $ticket_info['id'] ) ) {
 			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_tickets,
 				array( 'customer_last_seen_at' => current_time( 'mysql' ) ),

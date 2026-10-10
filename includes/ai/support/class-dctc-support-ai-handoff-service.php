@@ -34,7 +34,7 @@ class DCTC_Support_AI_Handoff_Service {
 		}
 
 		// Safely query session record using SELECT * to prevent MySQL unknown column errors
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ),
 			ARRAY_A
@@ -74,9 +74,12 @@ class DCTC_Support_AI_Handoff_Service {
 					$now            = current_time( 'timestamp' );
 
 					if ( is_array( $viewing_users ) && ! empty( $viewing_users ) ) {
-						$active = array_filter( $viewing_users, function( $v ) use ( $now ) {
-							return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
-						} );
+						$active = array_filter(
+							$viewing_users,
+							function ( $v ) use ( $now ) {
+								return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
+							}
+						);
 						if ( ! empty( $active ) ) {
 							$is_agent_viewing = true;
 						}
@@ -108,6 +111,7 @@ class DCTC_Support_AI_Handoff_Service {
 				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 					DCTC_Support_Ticket_Service::set_control_mode( $ticket_id, 'ai', 'system', 0, 'Auto-Fallback: Agent wait timeout' );
 				} else {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$wpdb->update(
 						$table_sessions,
 						array(
@@ -193,12 +197,11 @@ class DCTC_Support_AI_Handoff_Service {
 		global $wpdb;
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-		$table_agents   = $wpdb->prefix . 'dctc_support_agents';
 
 		$session_id = sanitize_text_field( $session_id );
 		$prompt     = sanitize_textarea_field( $prompt );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ),
 			ARRAY_A
@@ -224,6 +227,7 @@ class DCTC_Support_AI_Handoff_Service {
 		}
 
 		// Persist message to session
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_sessions,
 			array(
@@ -257,6 +261,7 @@ class DCTC_Support_AI_Handoff_Service {
 				if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
 					DCTC_Support_Ticket_Service::change_status( $ticket_id, 'open', 'customer', $user_id, $sender_name );
 				} else {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$wpdb->update(
 						$table_tickets,
 						array(

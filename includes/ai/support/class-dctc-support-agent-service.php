@@ -42,7 +42,7 @@ class DCTC_Support_Agent_Service {
 			$where .= $wpdb->prepare( ' AND availability_status = %s', sanitize_key( $args['availability_status'] ) );
 		}
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( "SELECT * FROM `$table` WHERE $where ORDER BY id ASC", ARRAY_A );
 
 		if ( ! is_array( $rows ) ) {
@@ -50,7 +50,7 @@ class DCTC_Support_Agent_Service {
 		}
 
 		foreach ( $rows as &$row ) {
-			$user = get_userdata( $row['wp_user_id'] );
+			$user                = get_userdata( $row['wp_user_id'] );
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
@@ -76,14 +76,14 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $agent_id ) ),
 			ARRAY_A
 		);
 
 		if ( $row ) {
-			$user = get_userdata( $row['wp_user_id'] );
+			$user                = get_userdata( $row['wp_user_id'] );
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
@@ -109,14 +109,14 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table` WHERE wp_user_id = %d", absint( $wp_user_id ) ),
 			ARRAY_A
 		);
 
 		if ( $row ) {
-			$user = get_userdata( $row['wp_user_id'] );
+			$user                = get_userdata( $row['wp_user_id'] );
 			$row['display_name'] = $user ? $user->display_name : 'Agent #' . $row['id'];
 			$row['user_email']   = $user ? $user->user_email : '';
 			$row['avatar_url']   = get_avatar_url( $row['wp_user_id'], array( 'size' => 64 ) );
@@ -147,16 +147,18 @@ class DCTC_Support_Agent_Service {
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
 		// Ensure color column exists in database
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$col_check = $wpdb->get_results( "SHOW COLUMNS FROM `$table` LIKE 'color'" );
 		if ( empty( $col_check ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$wpdb->query( "ALTER TABLE `$table` ADD `color` varchar(30) DEFAULT '#4f46e5' NOT NULL AFTER `seniority`" );
 		}
 
-		$id                         = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
-		$wp_user_id                 = ! empty( $data['wp_user_id'] ) ? absint( $data['wp_user_id'] ) : 0;
-		$support_role               = ! empty( $data['support_role'] ) ? sanitize_key( $data['support_role'] ) : 'support';
-		$seniority                  = ! empty( $data['seniority'] ) ? sanitize_key( $data['seniority'] ) : 'support';
-		$color                      = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '';
+		$id           = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
+		$wp_user_id   = ! empty( $data['wp_user_id'] ) ? absint( $data['wp_user_id'] ) : 0;
+		$support_role = ! empty( $data['support_role'] ) ? sanitize_key( $data['support_role'] ) : 'support';
+		$seniority    = ! empty( $data['seniority'] ) ? sanitize_key( $data['seniority'] ) : 'support';
+		$color        = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '';
 		if ( empty( $color ) && ! empty( $data['color'] ) ) {
 			$color = sanitize_text_field( $data['color'] );
 		}
@@ -183,7 +185,7 @@ class DCTC_Support_Agent_Service {
 
 		// Check if an agent record with this wp_user_id already exists to prevent duplicate key error.
 		if ( ! $id && $wp_user_id ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_id = $wpdb->get_var(
 				$wpdb->prepare( "SELECT id FROM `$table` WHERE wp_user_id = %d LIMIT 1", $wp_user_id )
 			);
@@ -208,6 +210,7 @@ class DCTC_Support_Agent_Service {
 
 		if ( $id ) {
 			$wpdb->suppress_errors( true );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$updated = $wpdb->update( $table, $fields, array( 'id' => $id ) );
 			$wpdb->suppress_errors( false );
 			return false !== $updated ? $id : false;
@@ -217,6 +220,7 @@ class DCTC_Support_Agent_Service {
 			$fields['notification_preferences'] = wp_json_encode( array( 'all' => true ) );
 			$fields['created_at']               = current_time( 'mysql' );
 			$wpdb->suppress_errors( true );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$inserted = $wpdb->insert( $table, $fields );
 			$wpdb->suppress_errors( false );
 			return $inserted ? $wpdb->insert_id : false;
@@ -237,7 +241,7 @@ class DCTC_Support_Agent_Service {
 		$agent_id          = absint( $agent_id );
 
 		// Active tickets are those in open, pending, waiting_customer states
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
@@ -248,6 +252,7 @@ class DCTC_Support_Agent_Service {
 			)
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_agents,
 			array( 'current_active_tickets' => $count ),
@@ -273,6 +278,7 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->delete( $table, array( 'id' => absint( $agent_id ) ), array( '%d' ) );
 		return (bool) $deleted;
 	}

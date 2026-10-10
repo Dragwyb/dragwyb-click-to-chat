@@ -214,7 +214,6 @@ class DCTC_Support_DB {
 		) $charset_collate;";
 		dbDelta( $sql_events );
 
-
 		// 9. Support Assignments History Table
 		$table_assignments = $wpdb->prefix . 'dctc_support_assignments';
 		$sql_assignments   = "CREATE TABLE `$table_assignments` (
@@ -274,7 +273,7 @@ class DCTC_Support_DB {
 		$table_term_meta  = $wpdb->prefix . 'dctc_support_term_meta';
 
 		// Seed Taxonomies (category, tag, product)
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count_tax = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_taxonomies`" );
 		if ( 0 === $count_tax ) {
 			$default_taxonomies = array(
@@ -314,6 +313,7 @@ class DCTC_Support_DB {
 			);
 
 			foreach ( $default_taxonomies as $dt ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table_taxonomies,
 					array(
@@ -335,7 +335,7 @@ class DCTC_Support_DB {
 		}
 
 		// Seed Category Terms
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count_categories = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_terms` WHERE taxonomy_slug = %s", 'category' ) );
 
 		if ( 0 === $count_categories ) {
@@ -387,6 +387,7 @@ class DCTC_Support_DB {
 			);
 
 			foreach ( $default_categories as $idx => $cat ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table_terms,
 					array(
@@ -417,6 +418,7 @@ class DCTC_Support_DB {
 						'sub_taxonomies'   => wp_json_encode( array( 'product', 'tag' ) ),
 					);
 					foreach ( $meta_fields as $mkey => $mval ) {
+						// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 						$wpdb->insert(
 							$table_term_meta,
 							array(
@@ -431,19 +433,40 @@ class DCTC_Support_DB {
 		}
 
 		// Seed Tag Terms
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count_tags = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_terms` WHERE taxonomy_slug = %s", 'tag' ) );
 
 		if ( 0 === $count_tags ) {
 			$default_tags = array(
-				array( 'name' => 'Urgent', 'slug' => 'urgent', 'color' => '#EF4444' ),
-				array( 'name' => 'WooCommerce', 'slug' => 'woocommerce', 'color' => '#9333EA' ),
-				array( 'name' => 'Bug', 'slug' => 'bug', 'color' => '#F59E0B' ),
-				array( 'name' => 'Refund', 'slug' => 'refund', 'color' => '#DC2626' ),
-				array( 'name' => 'Feature Request', 'slug' => 'feature-request', 'color' => '#3B82F6' ),
+				array(
+					'name'  => 'Urgent',
+					'slug'  => 'urgent',
+					'color' => '#EF4444',
+				),
+				array(
+					'name'  => 'WooCommerce',
+					'slug'  => 'woocommerce',
+					'color' => '#9333EA',
+				),
+				array(
+					'name'  => 'Bug',
+					'slug'  => 'bug',
+					'color' => '#F59E0B',
+				),
+				array(
+					'name'  => 'Refund',
+					'slug'  => 'refund',
+					'color' => '#DC2626',
+				),
+				array(
+					'name'  => 'Feature Request',
+					'slug'  => 'feature-request',
+					'color' => '#3B82F6',
+				),
 			);
 
 			foreach ( $default_tags as $idx => $tag ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table_terms,
 					array(
@@ -493,13 +516,19 @@ class DCTC_Support_DB {
 
 		// Auto-register the current admin user as a Support Administrator agent if no agents exist
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count_agents = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_agents`" );
 
 		if ( 0 === $count_agents ) {
-			$admins = get_users( array( 'role' => 'administrator', 'number' => 1 ) );
+			$admins = get_users(
+				array(
+					'role'   => 'administrator',
+					'number' => 1,
+				)
+			);
 			if ( ! empty( $admins ) ) {
 				$first_admin = $admins[0];
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->insert(
 					$table_agents,
 					array(
@@ -532,7 +561,7 @@ class DCTC_Support_DB {
 		global $wpdb;
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$max_number = $wpdb->get_var( "SELECT MAX(ticket_number) FROM `$table_tickets`" );
 
 		return $max_number ? ( (int) $max_number + 1 ) : 10001;

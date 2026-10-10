@@ -25,10 +25,10 @@ class DCTC_Support_Note_Service {
 	/**
 	 * Add an internal note to a ticket.
 	 *
-	 * @param int         $ticket_id Ticket ID.
-	 * @param string      $content   Note content.
-	 * @param bool        $is_pinned Whether note is pinned.
-	 * @param int|null    $user_id   Optional agent user ID.
+	 * @param int      $ticket_id Ticket ID.
+	 * @param string   $content   Note content.
+	 * @param bool     $is_pinned Whether note is pinned.
+	 * @param int|null $user_id   Optional agent user ID.
 	 * @return int|false  Inserted note ID (meta_id) or false on failure.
 	 */
 	public static function add_note( $ticket_id, $content, $is_pinned = false, $user_id = null ) {
@@ -49,7 +49,7 @@ class DCTC_Support_Note_Service {
 		global $wpdb;
 		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 
-		$uuid = wp_generate_uuid4();
+		$uuid         = wp_generate_uuid4();
 		$note_payload = array(
 			'uuid'             => $uuid,
 			'ticket_id'        => $ticket_id,
@@ -63,6 +63,7 @@ class DCTC_Support_Note_Service {
 			'updated_at'       => current_time( 'mysql' ),
 		);
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$inserted = $wpdb->insert(
 			$table_meta,
 			array(
@@ -107,7 +108,7 @@ class DCTC_Support_Note_Service {
 		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 		$ticket_id  = absint( $ticket_id );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT meta_id, meta_value FROM `$table_meta` WHERE ticket_id = %d AND meta_key = %s ORDER BY meta_id ASC",
@@ -134,12 +135,15 @@ class DCTC_Support_Note_Service {
 		}
 
 		// Sort notes: pinned first, then chronological
-		usort( $notes, function( $a, $b ) {
-			if ( (int) $a['is_pinned'] !== (int) $b['is_pinned'] ) {
-				return (int) $b['is_pinned'] - (int) $a['is_pinned'];
+		usort(
+			$notes,
+			function ( $a, $b ) {
+				if ( (int) $a['is_pinned'] !== (int) $b['is_pinned'] ) {
+					return (int) $b['is_pinned'] - (int) $a['is_pinned'];
+				}
+				return (int) $a['id'] - (int) $b['id'];
 			}
-			return (int) $a['id'] - (int) $b['id'];
-		} );
+		);
 
 		return $notes;
 	}
@@ -159,6 +163,7 @@ class DCTC_Support_Note_Service {
 		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 		$note_id    = absint( $note_id );
 
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->delete(
 			$table_meta,
 			array(

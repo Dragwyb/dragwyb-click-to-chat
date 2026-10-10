@@ -26,7 +26,7 @@ class DCTC_Support_Taxonomy_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_taxonomies';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$table_exists = $wpdb->get_var( "SHOW TABLES LIKE '$table'" );
 		if ( ! $table_exists ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
@@ -37,14 +37,14 @@ class DCTC_Support_Taxonomy_Service {
 			}
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( "SELECT * FROM `$table` ORDER BY display_order ASC, name ASC", ARRAY_A );
 
 		if ( empty( $rows ) ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$rows = $wpdb->get_results( "SELECT * FROM `$table` ORDER BY display_order ASC, name ASC", ARRAY_A );
 			}
 		}
@@ -72,7 +72,7 @@ class DCTC_Support_Taxonomy_Service {
 		$table = $wpdb->prefix . 'dctc_support_taxonomies';
 		$slug  = sanitize_title( $slug );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table` WHERE slug = %s", $slug ),
 			ARRAY_A
@@ -131,13 +131,15 @@ class DCTC_Support_Taxonomy_Service {
 			'updated_at'    => current_time( 'mysql' ),
 		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table` WHERE slug = %s", $slug ) );
 
 		if ( $existing_id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update( $table, $fields, array( 'id' => (int) $existing_id ) );
 		} else {
 			$fields['created_at'] = current_time( 'mysql' );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert( $table, $fields );
 		}
 
@@ -167,26 +169,23 @@ class DCTC_Support_Taxonomy_Service {
 		$table_relationships = $wpdb->prefix . 'dctc_support_term_relationships';
 
 		// Get all term IDs under this taxonomy to clean up meta & relationships
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$term_ids = $wpdb->get_col( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s", $slug ) );
 
 		if ( ! empty( $term_ids ) ) {
 			$ids_placeholder = implode( ',', array_map( 'absint', $term_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->query( "DELETE FROM `$table_term_meta` WHERE term_id IN ($ids_placeholder)" );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$wpdb->query( "DELETE FROM `$table_relationships` WHERE term_id IN ($ids_placeholder) OR (object_id IN ($ids_placeholder) AND object_type = 'term')" );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			$wpdb->delete( $table_terms, array( 'taxonomy_slug' => $slug ), array( '%s' ) );
 		}
 
 		// Delete taxonomy relationships
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$wpdb->delete( $table_relationships, array( 'taxonomy_slug' => $slug ), array( '%s' ) );
 
 		// Delete taxonomy record
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$deleted = $wpdb->delete( $table_taxonomies, array( 'slug' => $slug ), array( '%s' ) );
+
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		return (bool) $deleted;
 	}
@@ -217,7 +216,7 @@ class DCTC_Support_Taxonomy_Service {
 			$where .= $wpdb->prepare( ' AND status = %s', sanitize_key( $args['status'] ) );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results( "SELECT * FROM `$table` WHERE $where ORDER BY display_order ASC, name ASC", ARRAY_A );
 
 		return is_array( $rows ) ? $rows : array();
@@ -233,7 +232,7 @@ class DCTC_Support_Taxonomy_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_terms';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $term_id ) ),
 			ARRAY_A
@@ -291,11 +290,13 @@ class DCTC_Support_Taxonomy_Service {
 		);
 
 		if ( $id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$updated = $wpdb->update( $table, $fields, array( 'id' => $id ) );
 			return false !== $updated ? $id : false;
 		} else {
 			$fields['created_at'] = current_time( 'mysql' );
-			$inserted             = $wpdb->insert( $table, $fields );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$inserted = $wpdb->insert( $table, $fields );
 			return $inserted ? $wpdb->insert_id : false;
 		}
 	}
@@ -329,17 +330,27 @@ class DCTC_Support_Taxonomy_Service {
 		$table_relationships = $wpdb->prefix . 'dctc_support_term_relationships';
 
 		// Clean up meta and relationships
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete( $table_term_meta, array( 'term_id' => $term_id ), array( '%d' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete( $table_relationships, array( 'term_id' => $term_id ), array( '%d' ) );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete( $table_relationships, array( 'object_id' => $term_id, 'object_type' => 'term' ), array( '%d', '%s' ) );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->delete(
+			$table_relationships,
+			array(
+				'object_id'   => $term_id,
+				'object_type' => 'term',
+			),
+			array( '%d', '%s' )
+		);
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$deleted = $wpdb->delete(
 			$table_terms,
-			array( 'id' => $term_id, 'taxonomy_slug' => $taxonomy_slug ),
+			array(
+				'id'            => $term_id,
+				'taxonomy_slug' => $taxonomy_slug,
+			),
 			array( '%d', '%s' )
 		);
 
@@ -363,16 +374,15 @@ class DCTC_Support_Taxonomy_Service {
 			return self::get_all_term_meta( $term_id );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		$meta_key = sanitize_key( $meta_key );
 		if ( $single ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$val = $wpdb->get_var(
 				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s LIMIT 1", $term_id, $meta_key )
 			);
 			return $val;
 		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			return $wpdb->get_col(
 				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key )
 			);
@@ -390,7 +400,7 @@ class DCTC_Support_Taxonomy_Service {
 		$table   = $wpdb->prefix . 'dctc_support_term_meta';
 		$term_id = absint( $term_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE term_id = %d", $term_id ),
 			ARRAY_A
@@ -428,12 +438,13 @@ class DCTC_Support_Taxonomy_Service {
 			? wp_json_encode( $meta_value )
 			: (string) $meta_value;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_var(
 			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key )
 		);
 
 		if ( $existing ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table,
 				array( 'meta_value' => $val_str ),
@@ -442,6 +453,7 @@ class DCTC_Support_Taxonomy_Service {
 				array( '%d' )
 			);
 		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert(
 				$table,
 				array(
@@ -473,14 +485,17 @@ class DCTC_Support_Taxonomy_Service {
 		}
 
 		if ( ! empty( $meta_key ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->delete(
 				$table,
-				array( 'term_id' => $term_id, 'meta_key' => sanitize_key( $meta_key ) ),
+				array(
+					'term_id'  => $term_id,
+					'meta_key' => sanitize_key( $meta_key ),
+				),
 				array( '%d', '%s' )
 			);
 		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->delete(
 				$table,
 				array( 'term_id' => $term_id ),
@@ -511,7 +526,7 @@ class DCTC_Support_Taxonomy_Service {
 			$where .= $wpdb->prepare( ' AND r.taxonomy_slug = %s', sanitize_title( $taxonomy_slug ) );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			"SELECT t.* FROM `$table_terms` t INNER JOIN `$table_rel` r ON t.id = r.term_id WHERE $where ORDER BY t.name ASC",
 			ARRAY_A
@@ -523,10 +538,10 @@ class DCTC_Support_Taxonomy_Service {
 	/**
 	 * Set / Sync terms for an object.
 	 *
-	 * @param int          $object_id Object ID.
-	 * @param array        $terms_input Array of term IDs or names.
-	 * @param string       $taxonomy_slug Taxonomy slug.
-	 * @param string       $object_type Object type ('ticket', 'term', etc.).
+	 * @param int    $object_id Object ID.
+	 * @param array  $terms_input Array of term IDs or names.
+	 * @param string $taxonomy_slug Taxonomy slug.
+	 * @param string $object_type Object type ('ticket', 'term', etc.).
 	 * @return bool
 	 */
 	public static function set_object_terms( $object_id, $terms_input = array(), $taxonomy_slug = 'tag', $object_type = 'ticket' ) {
@@ -540,7 +555,7 @@ class DCTC_Support_Taxonomy_Service {
 		$terms_input   = is_array( $terms_input ) ? $terms_input : array();
 
 		// Delete existing associations for this object and taxonomy
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->delete(
 			$table_rel,
 			array(
@@ -567,7 +582,7 @@ class DCTC_Support_Taxonomy_Service {
 				}
 
 				// Find or create term
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$existing_id = $wpdb->get_var(
 					$wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)", $taxonomy_slug, $slug, $name )
 				);
@@ -575,6 +590,7 @@ class DCTC_Support_Taxonomy_Service {
 				if ( $existing_id ) {
 					$term_ids[] = (int) $existing_id;
 				} else {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$wpdb->insert(
 						$table_terms,
 						array(
@@ -597,6 +613,7 @@ class DCTC_Support_Taxonomy_Service {
 
 		$term_ids = array_unique( array_filter( $term_ids ) );
 		foreach ( $term_ids as $term_id ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->replace(
 				$table_rel,
 				array(
