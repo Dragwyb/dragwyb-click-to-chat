@@ -68,8 +68,8 @@ class DCTC_Support_Note_Service {
 			$table_meta,
 			array(
 				'ticket_id'  => $ticket_id,
-				'meta_key'   => self::META_KEY,
-				'meta_value' => wp_json_encode( $note_payload ),
+				'meta_key'   => self::META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+				'meta_value' => wp_json_encode( $note_payload ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 			),
 			array( '%d', '%s', '%s' )
 		);
@@ -168,7 +168,7 @@ class DCTC_Support_Note_Service {
 			$table_meta,
 			array(
 				'meta_id'  => $note_id,
-				'meta_key' => self::META_KEY,
+				'meta_key' => self::META_KEY, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 			),
 			array( '%d', '%s' )
 		);

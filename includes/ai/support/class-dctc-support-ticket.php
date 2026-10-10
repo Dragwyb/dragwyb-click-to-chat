@@ -264,7 +264,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update(
 					$table,
-					array( 'meta_value' => $val_str ),
+					array( 'meta_value' => $val_str ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 					array( 'meta_id' => (int) $existing ),
 					array( '%s' ),
 					array( '%d' )
@@ -275,8 +275,8 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 					$table,
 					array(
 						'ticket_id'  => $this->id,
-						'meta_key'   => $key,
-						'meta_value' => $val_str,
+						'meta_key'   => $key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+						'meta_value' => $val_str, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 					),
 					array( '%d', '%s', '%s' )
 				);

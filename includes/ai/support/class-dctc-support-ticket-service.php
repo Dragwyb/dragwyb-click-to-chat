@@ -1945,7 +1945,7 @@ class DCTC_Support_Ticket_Service {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$res = $wpdb->update(
 				$table,
-				array( 'meta_value' => $val_str ),
+				array( 'meta_value' => $val_str ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 				array( 'meta_id' => (int) $existing ),
 				array( '%s' ),
 				array( '%d' )
@@ -1956,8 +1956,8 @@ class DCTC_Support_Ticket_Service {
 				$table,
 				array(
 					'ticket_id'  => $ticket_id,
-					'meta_key'   => $meta_key,
-					'meta_value' => $val_str,
+					'meta_key'   => $meta_key, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+					'meta_value' => $val_str, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 				),
 				array( '%d', '%s', '%s' )
 			);
@@ -1990,7 +1990,7 @@ class DCTC_Support_Ticket_Service {
 				$table,
 				array(
 					'ticket_id' => $ticket_id,
-					'meta_key'  => sanitize_key( $meta_key ),
+					'meta_key'  => sanitize_key( $meta_key ), // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
 				),
 				array( '%d', '%s' )
 			);

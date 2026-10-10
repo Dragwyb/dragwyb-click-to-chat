@@ -423,8 +423,8 @@ class DCTC_Support_DB {
 							$table_term_meta,
 							array(
 								'term_id'    => $term_id,
-								'meta_key'   => $mkey,
-								'meta_value' => (string) $mval,
+								'meta_key'   => $mkey, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+								'meta_value' => (string) $mval, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_value
 							)
 						);
 					}
