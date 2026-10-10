@@ -143,7 +143,7 @@ class DCTC_AI_Provider_Manager {
 		if ( ! $primary_adapter ) {
 			// Fallback to any registered provider (e.g. OpenAI or Google)
 			if ( ! empty( $this->providers ) ) {
-				$primary_adapter = reset( $this->providers );
+				$primary_adapter  = reset( $this->providers );
 				$primary_provider = $primary_adapter->get_id();
 			} else {
 				throw new \Exception(
@@ -188,6 +188,6 @@ class DCTC_AI_Provider_Manager {
 		}
 
 		// Re-throw primary exception if fallback is not available
-		throw new \Exception( $primary_error ? $primary_error->getMessage() : __( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
+		throw new \Exception( $primary_error ? esc_html( $primary_error->getMessage() ) : esc_html__( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
 	}
 }

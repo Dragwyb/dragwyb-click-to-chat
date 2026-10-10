@@ -26,7 +26,7 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 	public function chat( $prompt, $system_message, $model, array $options = array() ) {
 		$key = $this->get_api_key();
 		if ( empty( $key ) ) {
-			throw new \Exception( __( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
+			throw new \Exception( esc_html__( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
 		}
 
 		$model       = ! empty( $model ) ? $model : 'gpt-4o-mini';
@@ -75,74 +75,74 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 			} catch ( \Throwable $e ) {
 				// Fall back to direct HTTP on SDK exception
 			}
-		}
-
-		// Direct HTTP fallback
-		$messages = array();
-		if ( ! empty( $system_message ) ) {
-			$messages[] = array(
-				'role'    => 'system',
-				'content' => $system_message,
-			);
-		}
-
-		$attachments = isset( $options['attachments'] ) && is_array( $options['attachments'] ) ? $options['attachments'] : array();
-		if ( ! empty( $attachments ) ) {
-			$user_content = array();
-			if ( ! empty( $prompt ) ) {
-				$user_content[] = array(
-					'type' => 'text',
-					'text' => trim( $prompt ),
+		} else {
+			// Direct HTTP fallback
+			$messages = array();
+			if ( ! empty( $system_message ) ) {
+				$messages[] = array(
+					'role'    => 'system',
+					'content' => $system_message,
 				);
 			}
-			foreach ( $attachments as $att ) {
-				if ( ! empty( $att['type'] ) && $att['type'] === 'image' && ! empty( $att['url'] ) ) {
-					$user_content[] = array(
-						'type'      => 'image_url',
-						'image_url' => array( 'url' => esc_url_raw( $att['url'] ) ),
-					);
-				} elseif ( ! empty( $att['name'] ) ) {
+
+			$attachments = isset( $options['attachments'] ) && is_array( $options['attachments'] ) ? $options['attachments'] : array();
+			if ( ! empty( $attachments ) ) {
+				$user_content = array();
+				if ( ! empty( $prompt ) ) {
 					$user_content[] = array(
 						'type' => 'text',
-						'text' => sprintf( '[Attached File: %s (%s) - %s]', sanitize_file_name( $att['name'] ), sanitize_text_field( $att['mime'] ?? '' ), esc_url_raw( $att['url'] ?? '' ) ),
+						'text' => trim( $prompt ),
 					);
 				}
+				foreach ( $attachments as $att ) {
+					if ( ! empty( $att['type'] ) && $att['type'] === 'image' && ! empty( $att['url'] ) ) {
+						$user_content[] = array(
+							'type'      => 'image_url',
+							'image_url' => array( 'url' => esc_url_raw( $att['url'] ) ),
+						);
+					} elseif ( ! empty( $att['name'] ) ) {
+						$user_content[] = array(
+							'type' => 'text',
+							'text' => sprintf( '[Attached File: %s (%s) - %s]', sanitize_file_name( $att['name'] ), sanitize_text_field( $att['mime'] ?? '' ), esc_url_raw( $att['url'] ?? '' ) ),
+						);
+					}
+				}
+				$messages[] = array(
+					'role'    => 'user',
+					'content' => $user_content,
+				);
+			} else {
+				$messages[] = array(
+					'role'    => 'user',
+					'content' => trim( $prompt ),
+				);
 			}
-			$messages[] = array(
-				'role'    => 'user',
-				'content' => $user_content,
+
+			$payload = array(
+				'model'       => $model,
+				'messages'    => $messages,
+				'temperature' => $temperature,
+				'max_tokens'  => $max_tokens,
 			);
-		} else {
-			$messages[] = array(
-				'role'    => 'user',
-				'content' => trim( $prompt ),
+
+			$response = $this->http_post(
+				'https://api.openai.com/v1/chat/completions', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- fallback option If WP AI not available
+				$payload,
+				array( 'Authorization' => 'Bearer ' . $key )
 			);
+
+			if ( isset( $response['choices'][0]['message']['content'] ) ) {
+				return trim( $response['choices'][0]['message']['content'] );
+			}
 		}
 
-		$payload = array(
-			'model'       => $model,
-			'messages'    => $messages,
-			'temperature' => $temperature,
-			'max_tokens'  => $max_tokens,
-		);
-
-		$response = $this->http_post(
-			'https://api.openai.com/v1/chat/completions',
-			$payload,
-			array( 'Authorization' => 'Bearer ' . $key )
-		);
-
-		if ( isset( $response['choices'][0]['message']['content'] ) ) {
-			return trim( $response['choices'][0]['message']['content'] );
-		}
-
-		throw new \Exception( __( 'OpenAI returned an empty response.', 'dragwyb-click-to-chat' ) );
+		throw new \Exception( esc_html__( 'OpenAI returned an empty response.', 'dragwyb-click-to-chat' ) );
 	}
 
 	public function embed( array $texts, $model = '' ) {
 		$key = $this->get_api_key();
 		if ( empty( $key ) ) {
-			throw new \Exception( __( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
+			throw new \Exception( esc_html__( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
 		}
 
 		$model = ! empty( $model ) ? $model : 'text-embedding-3-small';
@@ -153,7 +153,7 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 		);
 
 		$response = $this->http_post(
-			'https://api.openai.com/v1/embeddings',
+			'https://api.openai.com/v1/embeddings', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
 			$payload,
 			array( 'Authorization' => 'Bearer ' . $key )
 		);
@@ -168,7 +168,7 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 			return $vectors;
 		}
 
-		throw new \Exception( __( 'Failed to generate embeddings with OpenAI.', 'dragwyb-click-to-chat' ) );
+		throw new \Exception( esc_html__( 'Failed to generate embeddings with OpenAI.', 'dragwyb-click-to-chat' ) );
 	}
 
 	public function get_models() {
@@ -216,7 +216,7 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 
 		try {
 			$response = $this->http_get(
-				'https://api.openai.com/v1/models',
+				'https://api.openai.com/v1/models', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
 				array(
 					'Authorization' => 'Bearer ' . $api_key,
 				),

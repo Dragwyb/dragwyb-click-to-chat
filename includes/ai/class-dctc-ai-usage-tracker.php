@@ -181,7 +181,7 @@ class DCTC_AI_Usage_Tracker {
 
 		$message = sprintf(
 			/* translators: 1: Site name, 2: Percentage, 3: Current requests, 4: Budget limit, 5: Settings URL */
-			__( "Hello Admin,\n\nYour AI Chatbot on %1$s has reached %2$d%% of its monthly request budget.\n\n- Current Usage: %3$d requests\n- Monthly Budget Limit: %4$d requests\n\nYou can review or adjust your budget limits at:\n%5$s\n\nBest regards,\nDragwyb AI Assistant", 'dragwyb-click-to-chat' ),
+			__( 'Hello Admin,\n\nYour AI Chatbot on %1$s has reached %2$d%% of its monthly request budget.\n\n- Current Usage: %3$d requests\n- Monthly Budget Limit: %4$d requests\n\nYou can review or adjust your budget limits at:\n%5$s\n\nBest regards,\nDragwyb AI Assistant', 'dragwyb-click-to-chat' ),
 			$site_name,
 			$threshold,
 			$current,

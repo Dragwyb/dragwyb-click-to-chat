@@ -89,76 +89,76 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 			} catch ( \Throwable $e ) {
 				// Fall back to direct REST API
 			}
-		}
+		} else {
+			// Direct Google Generative Language REST API
+			$url = sprintf(
+				'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint for fallback if WP AI Client is not available
+				rawurlencode( $model ),
+				rawurlencode( $key )
+			);
 
-		// Direct Google Generative Language REST API
-		$url = sprintf(
-			'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s',
-			rawurlencode( $model ),
-			rawurlencode( $key )
-		);
-
-		$attachments = isset( $options['attachments'] ) && is_array( $options['attachments'] ) ? $options['attachments'] : array();
-		$user_parts  = array();
-		if ( ! empty( $prompt ) ) {
-			$user_parts[] = array( 'text' => trim( $prompt ) );
-		}
-		if ( ! empty( $attachments ) ) {
-			foreach ( $attachments as $att ) {
-				if ( ! empty( $att['type'] ) && $att['type'] === 'image' && ! empty( $att['url'] ) ) {
-					$att_id    = ! empty( $att['attachmentId'] ) ? intval( $att['attachmentId'] ) : 0;
-					$file_path = $att_id ? get_attached_file( $att_id ) : '';
-					if ( $file_path && file_exists( $file_path ) ) {
-						// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
-						$image_data   = base64_encode( file_get_contents( $file_path ) );
-						$mime_type    = ! empty( $att['mime'] ) ? $att['mime'] : 'image/jpeg';
+			$attachments = isset( $options['attachments'] ) && is_array( $options['attachments'] ) ? $options['attachments'] : array();
+			$user_parts  = array();
+			if ( ! empty( $prompt ) ) {
+				$user_parts[] = array( 'text' => trim( $prompt ) );
+			}
+			if ( ! empty( $attachments ) ) {
+				foreach ( $attachments as $att ) {
+					if ( ! empty( $att['type'] ) && $att['type'] === 'image' && ! empty( $att['url'] ) ) {
+						$att_id    = ! empty( $att['attachmentId'] ) ? intval( $att['attachmentId'] ) : 0;
+						$file_path = $att_id ? get_attached_file( $att_id ) : '';
+						if ( $file_path && file_exists( $file_path ) ) {
+							// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+							$image_data   = base64_encode( file_get_contents( $file_path ) );
+							$mime_type    = ! empty( $att['mime'] ) ? $att['mime'] : 'image/jpeg';
+							$user_parts[] = array(
+								'inline_data' => array(
+									'mime_type' => $mime_type,
+									'data'      => $image_data,
+								),
+							);
+						} else {
+							$user_parts[] = array(
+								'text' => sprintf( '[Attached Image: %s - %s]', sanitize_file_name( $att['name'] ), esc_url_raw( $att['url'] ) ),
+							);
+						}
+					} elseif ( ! empty( $att['name'] ) ) {
 						$user_parts[] = array(
-							'inline_data' => array(
-								'mime_type' => $mime_type,
-								'data'      => $image_data,
-							),
-						);
-					} else {
-						$user_parts[] = array(
-							'text' => sprintf( '[Attached Image: %s - %s]', sanitize_file_name( $att['name'] ), esc_url_raw( $att['url'] ) ),
+							'text' => sprintf( '[Attached File: %s (%s) - %s]', sanitize_file_name( $att['name'] ), sanitize_text_field( $att['mime'] ?? '' ), esc_url_raw( $att['url'] ?? '' ) ),
 						);
 					}
-				} elseif ( ! empty( $att['name'] ) ) {
-					$user_parts[] = array(
-						'text' => sprintf( '[Attached File: %s (%s) - %s]', sanitize_file_name( $att['name'] ), sanitize_text_field( $att['mime'] ?? '' ), esc_url_raw( $att['url'] ?? '' ) ),
-					);
 				}
 			}
-		}
-		if ( empty( $user_parts ) ) {
-			$user_parts[] = array( 'text' => 'Analyze the provided content.' );
-		}
+			if ( empty( $user_parts ) ) {
+				$user_parts[] = array( 'text' => 'Analyze the provided content.' );
+			}
 
-		$payload = array(
-			'contents'         => array(
-				array(
-					'role'  => 'user',
-					'parts' => $user_parts,
+			$payload = array(
+				'contents'         => array(
+					array(
+						'role'  => 'user',
+						'parts' => $user_parts,
+					),
 				),
-			),
-			'generationConfig' => array(
-				'temperature'     => $temperature,
-				'maxOutputTokens' => $max_tokens,
-			),
-		);
-
-		if ( ! empty( $system_message ) ) {
-			$payload['systemInstruction'] = array(
-				'parts' => array(
-					array( 'text' => $system_message ),
+				'generationConfig' => array(
+					'temperature'     => $temperature,
+					'maxOutputTokens' => $max_tokens,
 				),
 			);
-		}
 
-		$response = $this->http_post( $url, $payload, array() );
+			if ( ! empty( $system_message ) ) {
+				$payload['systemInstruction'] = array(
+					'parts' => array(
+						array( 'text' => $system_message ),
+					),
+				);
+			}
 
-		if ( isset( $response['candidates'][0]['content']['parts'][0]['text'] ) ) {
-			return trim( $response['candidates'][0]['content']['parts'][0]['text'] );
+			$response = $this->http_post( $url, $payload, array() );
+
+			if ( isset( $response['candidates'][0]['content']['parts'][0]['text'] ) ) {
+				return trim( $response['candidates'][0]['content']['parts'][0]['text'] );
+			}
 		}
 
 		throw new \Exception( esc_html__( 'Google Gemini returned an empty response.', 'dragwyb-click-to-chat' ) );
@@ -176,7 +176,7 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 		}
 
 		$url = sprintf(
-			'https://generativelanguage.googleapis.com/v1beta/models/%s:batchEmbedContents?key=%s',
+			'https://generativelanguage.googleapis.com/v1beta/models/%s:batchEmbedContents?key=%s', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint for embeddings
 			rawurlencode( $model ),
 			rawurlencode( $key )
 		);
@@ -221,7 +221,7 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 		}
 
 		try {
-			$url      = sprintf( 'https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode( $key ) );
+			$url      = sprintf( 'https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode( $key ) ); // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint for get available models from google
 			$response = $this->http_get( $url, array(), 15 );
 
 			if ( isset( $response['models'] ) && is_array( $response['models'] ) ) {
@@ -254,7 +254,7 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 		}
 
 		try {
-			$url      = sprintf( 'https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode( $api_key ) );
+			$url      = sprintf( 'https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode( $api_key ) ); // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
 			$response = $this->http_get( $url, array(), 15 );
 
 			if ( isset( $response['models'] ) && is_array( $response['models'] ) ) {

@@ -112,7 +112,7 @@ class DCTC_AI_Embedding_Manager {
 
 		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
 		$response = wp_remote_post(
-			'https://api.openai.com/v1/embeddings',
+			'https://api.openai.com/v1/embeddings', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
 			array(
 				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
@@ -171,7 +171,7 @@ class DCTC_AI_Embedding_Manager {
 
 		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
 		$response = wp_remote_post(
-			'https://generativelanguage.googleapis.com/v1beta/' . $model_path . ':embedContent?key=' . $api_key,
+			'https://generativelanguage.googleapis.com/v1beta/' . $model_path . ':embedContent?key=' . $api_key, // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
 			array(
 				'headers' => array(
 					'Content-Type' => 'application/json',
