@@ -655,17 +655,34 @@ class DCTC_AI_Chat_Controller {
 
 			if ( ! empty( $known_user_email ) ) {
 				$system_message .= sprintf( "\n\nCRITICAL USER CONTEXT: The user is LOGGED IN or their EMAIL IS ALREADY KNOWN (%s).\n- Do NOT ask for their email address under any circumstances.\n", $known_user_email );
-				if ( $ask_lead_email || $ask_support_email ) {
+
+				// Support queries rule for logged-in user
+				if ( $ask_support_email ) {
 					if ( $has_support_page_ctx ) {
-						$system_message .= sprintf( "- If the inquiry relates to product purchase, sales quotation, troubleshooting, or support: Let them know that we have received their request and our team will follow up directly at %s. You may also provide: [Contact Support](%s).\n", $known_user_email, $support_url_context );
+						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Let them know that a support request has been logged and our team will follow up directly at %s. You may also provide: [Contact Support](%s).\n", $known_user_email, $support_url_context );
 					} else {
-						$system_message .= sprintf( "- If the inquiry relates to product purchase, sales quotation, troubleshooting, or support: Let them know that we have received their request and our team will follow up directly at %s.\n", $known_user_email );
+						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Let them know that a support request has been logged and our team will follow up directly at %s.\n", $known_user_email );
 					}
 				} else {
 					if ( $has_support_page_ctx ) {
-						$system_message .= sprintf( "- Provide a helpful, normal human reply based on the knowledge base. If they need human assistance, share [Contact Support](%s).\n", $support_url_context );
+						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT claim our team will follow up at their email. Provide troubleshooting steps from knowledge, and invite them to visit [Contact Support](%s) if they need human assistance.\n", $support_url_context );
 					} else {
-						$system_message .= "- Provide a helpful, normal human reply based on the knowledge base.\n";
+						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT claim our team will follow up at their email. Provide a helpful, normal human reply based strictly on available knowledge.\n";
+					}
+				}
+
+				// Lead / Sales queries rule for logged-in user
+				if ( $ask_lead_email ) {
+					if ( $has_support_page_ctx ) {
+						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Let them know that we have received their inquiry and our team will follow up directly at %s, or they can visit [Contact Support](%s).\n", $known_user_email, $support_url_context );
+					} else {
+						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Let them know that we have received their inquiry and our team will follow up directly at %s.\n", $known_user_email );
+					}
+				} else {
+					if ( $has_support_page_ctx ) {
+						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT claim our team will follow up. Provide product details and share [Contact Support](%s) if they wish to contact our team.\n", $support_url_context );
+					} else {
+						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT claim our team will follow up. Provide product details based on available knowledge.\n";
 					}
 				}
 			} elseif ( $email_already_requested ) {
