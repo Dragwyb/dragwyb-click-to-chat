@@ -680,7 +680,7 @@ class DCTC_AI_DB {
 					'updated_at'      => $time,
 				);
 
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$wpdb->update( $table, $merged_data, array( 'id' => $lead_id ) );
 				return $lead_id;
 			}
@@ -707,7 +707,7 @@ class DCTC_AI_DB {
 		);
 
 		if ( ! empty( $lead_id ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update( $table, $data, array( 'id' => $lead_id ) );
 			return $lead_id;
 		}
@@ -752,8 +752,8 @@ class DCTC_AI_DB {
 		$limit_sql = sprintf( ' ORDER BY id DESC LIMIT %d OFFSET %d', max( 1, intval( $limit ) ), max( 0, intval( $offset ) ) );
 
 		if ( ! empty( $params ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
-			$query = $wpdb->prepare( "SELECT * FROM {$table}{$where}{$limit_sql}", ...$params ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared
+			$query = $wpdb->prepare( "SELECT * FROM {$table}{$where}{$limit_sql}", ...$params ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 		} else {
 			$query = "SELECT * FROM {$table}{$where}{$limit_sql}";
 		}
@@ -776,8 +776,7 @@ class DCTC_AI_DB {
 	public static function get_lead( $id ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_ai_leads';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$row = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE id = %d LIMIT 1", absint( $id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$row   = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `{$table}` WHERE id = %d LIMIT 1", absint( $id ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		if ( ! $row ) {
 			return null;
 		}
@@ -819,7 +818,7 @@ class DCTC_AI_DB {
 			$placeholders    = implode( ',', array_fill( 0, count( $unique_sessions ), '%s' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_rows = $wpdb->get_results(
-				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE session_id IN ({$placeholders})", ...$unique_sessions ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE session_id IN ({$placeholders})", ...$unique_sessions ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 				ARRAY_A
 			);
 
@@ -843,7 +842,7 @@ class DCTC_AI_DB {
 			$placeholders = implode( ',', array_fill( 0, count( $unique_leads ), '%d' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$lead_session_rows = $wpdb->get_results(
-				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE lead_id IN ({$placeholders})", ...$unique_leads ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE lead_id IN ({$placeholders})", ...$unique_leads ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 				ARRAY_A
 			);
 

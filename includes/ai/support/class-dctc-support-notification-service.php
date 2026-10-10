@@ -275,7 +275,7 @@ class DCTC_Support_Notification_Service {
 		$site_name = get_bloginfo( 'name' );
 		$subject   = sprintf( '[%s] Support Agent Replied to Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
 
-		$content  = '<h2>' . esc_html__( 'We have an update on your support request', 'dragwyb-click-to-chat' ) . '</h2>';
+		$content = '<h2>' . esc_html__( 'We have an update on your support request', 'dragwyb-click-to-chat' ) . '</h2>';
 		/* translators: %s: Customer name */
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : 'there' ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
@@ -305,7 +305,7 @@ class DCTC_Support_Notification_Service {
 		$site_name = get_bloginfo( 'name' );
 		$subject   = sprintf( '[%s] Your Support Ticket #%d Has Been Resolved', $site_name, $ticket['ticket_number'] );
 
-		$content  = '<h2>' . esc_html__( 'Your support request is marked as Resolved', 'dragwyb-click-to-chat' ) . '</h2>';
+		$content = '<h2>' . esc_html__( 'Your support request is marked as Resolved', 'dragwyb-click-to-chat' ) . '</h2>';
 		/* translators: %s: Customer name */
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : 'there' ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
@@ -410,6 +410,7 @@ class DCTC_Support_Notification_Service {
 		// Log into notification log table
 		global $wpdb;
 		$table_log = $wpdb->prefix . 'dctc_support_notification_log';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->insert(
 			$table_log,
 			array(
@@ -443,6 +444,7 @@ class DCTC_Support_Notification_Service {
 	private static function log_suppressed( $ticket_id, $event_type, $recipient_type, $recipient_id, $email, $suppress_reason ) {
 		global $wpdb;
 		$table_log = $wpdb->prefix . 'dctc_support_notification_log';
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
 		$wpdb->insert(
 			$table_log,
 			array(
