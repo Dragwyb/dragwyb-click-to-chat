@@ -34,9 +34,9 @@ class DCTC_Support_AI_Handoff_Service {
 		}
 
 		// Safely query session record using SELECT * to prevent MySQL unknown column errors
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ),
+			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -201,9 +201,9 @@ class DCTC_Support_AI_Handoff_Service {
 		$session_id = sanitize_text_field( $session_id );
 		$prompt     = sanitize_textarea_field( $prompt );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ),
+			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 

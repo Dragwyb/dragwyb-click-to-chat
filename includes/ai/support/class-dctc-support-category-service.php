@@ -50,9 +50,9 @@ class DCTC_Support_Category_Service {
 			$where .= $wpdb->prepare( ' AND parent_id = %d', absint( $args['parent_id'] ) );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
+			"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -60,9 +60,9 @@ class DCTC_Support_Category_Service {
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! empty( $support_settings['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 				DCTC_Support_DB::seed_default_data();
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$rows = $wpdb->get_results(
-					"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC",
+					"SELECT * FROM `$table_terms` WHERE $where ORDER BY display_order ASC, name ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					ARRAY_A
 				);
 			}
@@ -77,9 +77,9 @@ class DCTC_Support_Category_Service {
 
 		if ( ! empty( $term_ids ) ) {
 			$ids_in = implode( ',', array_map( 'absint', $term_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$meta_rows = $wpdb->get_results(
-				"SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($ids_in)",
+				$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN (%s)", $ids_in ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 			if ( is_array( $meta_rows ) ) {
@@ -124,9 +124,9 @@ class DCTC_Support_Category_Service {
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$category_id = absint( $category_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category'", $category_id ),
+			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'category'", $category_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 

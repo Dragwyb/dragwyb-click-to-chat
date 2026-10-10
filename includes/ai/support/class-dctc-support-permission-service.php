@@ -216,9 +216,9 @@ class DCTC_Support_Permission_Service {
 		// Look up agent record
 		global $wpdb;
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$agent = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ),
+			$wpdb->prepare( "SELECT * FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -305,9 +305,9 @@ class DCTC_Support_Permission_Service {
 		// Check if user is the assigned agent
 		global $wpdb;
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$agent = $wpdb->get_row(
-			$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ),
+			$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 

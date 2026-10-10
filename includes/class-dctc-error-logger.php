@@ -296,9 +296,9 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			$limit      = max( 1, min( absint( $limit ), self::MAX_LOGS_LIMIT ) );
 			$offset     = max( 0, absint( $offset ) );
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching,  WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query = $wpdb->prepare(
-				"SELECT id, error_type, provider, model, user_message, model_error, file, line, code, context, created_at FROM {$table_name} ORDER BY id DESC LIMIT %d OFFSET %d",
+				"SELECT id, error_type, provider, model, user_message, model_error, file, line, code, context, created_at FROM {$table_name} ORDER BY id DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$limit,
 				$offset
 			);
@@ -340,8 +340,8 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			global $wpdb;
 			$table_name = esc_sql( self::get_table_name() );
 
-			// phpcs:ingore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 			return absint( $count );
 		}
@@ -458,9 +458,9 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			// Calculate cutoff date in MySQL format based on current site time.
 			$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
 
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query   = $wpdb->prepare(
-				"DELETE FROM {$table_name} WHERE created_at < %s",
+				"DELETE FROM {$table_name} WHERE created_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$cutoff
 			);
 			$deleted = $wpdb->query( $query );

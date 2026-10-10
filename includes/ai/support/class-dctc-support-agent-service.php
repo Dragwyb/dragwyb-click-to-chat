@@ -76,9 +76,9 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $agent_id ) ),
+			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $agent_id ) ), //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -109,9 +109,9 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table` WHERE wp_user_id = %d", absint( $wp_user_id ) ),
+			$wpdb->prepare( "SELECT * FROM `$table` WHERE wp_user_id = %d", absint( $wp_user_id ) ), //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -185,9 +185,9 @@ class DCTC_Support_Agent_Service {
 
 		// Check if an agent record with this wp_user_id already exists to prevent duplicate key error.
 		if ( ! $id && $wp_user_id ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_id = $wpdb->get_var(
-				$wpdb->prepare( "SELECT id FROM `$table` WHERE wp_user_id = %d LIMIT 1", $wp_user_id )
+				$wpdb->prepare( "SELECT id FROM `$table` WHERE wp_user_id = %d LIMIT 1", $wp_user_id ) //phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 			if ( $existing_id ) {
 				$id = absint( $existing_id );
@@ -241,7 +241,8 @@ class DCTC_Support_Agent_Service {
 		$agent_id          = absint( $agent_id );
 
 		// Active tickets are those in open, pending, waiting_customer states
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
@@ -251,6 +252,7 @@ class DCTC_Support_Agent_Service {
 				$agent_id
 			)
 		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(

@@ -148,7 +148,7 @@ class DCTC_AI_Leads_Controller {
 				$table_sessions,
 				array(
 					'lead_id' => $lead_id,
-					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ), //phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter
+					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ), //phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				),
 				array( 'session_id' => $session_id )
 			);

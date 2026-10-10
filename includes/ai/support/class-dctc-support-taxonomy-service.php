@@ -72,9 +72,9 @@ class DCTC_Support_Taxonomy_Service {
 		$table = $wpdb->prefix . 'dctc_support_taxonomies';
 		$slug  = sanitize_title( $slug );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table` WHERE slug = %s", $slug ),
+			$wpdb->prepare( "SELECT * FROM `$table` WHERE slug = %s", $slug ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -232,9 +232,9 @@ class DCTC_Support_Taxonomy_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_terms';
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		return $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $term_id ) ),
+			$wpdb->prepare( "SELECT * FROM `$table` WHERE id = %d", absint( $term_id ) ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 	}
@@ -376,15 +376,15 @@ class DCTC_Support_Taxonomy_Service {
 
 		$meta_key = sanitize_key( $meta_key );
 		if ( $single ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$val = $wpdb->get_var(
-				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s LIMIT 1", $term_id, $meta_key )
+				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s LIMIT 1", $term_id, $meta_key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 			return $val;
 		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			return $wpdb->get_col(
-				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key )
+				$wpdb->prepare( "SELECT meta_value FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 		}
 	}
@@ -400,9 +400,9 @@ class DCTC_Support_Taxonomy_Service {
 		$table   = $wpdb->prefix . 'dctc_support_term_meta';
 		$term_id = absint( $term_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE term_id = %d", $term_id ),
+			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE term_id = %d", $term_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -438,9 +438,9 @@ class DCTC_Support_Taxonomy_Service {
 			? wp_json_encode( $meta_value )
 			: (string) $meta_value;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_var(
-			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key )
+			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE term_id = %d AND meta_key = %s", $term_id, $meta_key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
 		if ( $existing ) {
@@ -526,9 +526,9 @@ class DCTC_Support_Taxonomy_Service {
 			$where .= $wpdb->prepare( ' AND r.taxonomy_slug = %s', sanitize_title( $taxonomy_slug ) );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			"SELECT t.* FROM `$table_terms` t INNER JOIN `$table_rel` r ON t.id = r.term_id WHERE $where ORDER BY t.name ASC",
+			"SELECT t.* FROM `$table_terms` t INNER JOIN `$table_rel` r ON t.id = r.term_id WHERE $where ORDER BY t.name ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -582,9 +582,9 @@ class DCTC_Support_Taxonomy_Service {
 				}
 
 				// Find or create term
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$existing_id = $wpdb->get_var(
-					$wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)", $taxonomy_slug, $slug, $name )
+					$wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)", $taxonomy_slug, $slug, $name ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				);
 
 				if ( $existing_id ) {

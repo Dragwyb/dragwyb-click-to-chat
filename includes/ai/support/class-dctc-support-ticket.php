@@ -137,7 +137,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( ! empty( $this->session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $this->session_id ),
+				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $this->session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 		}
@@ -145,7 +145,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		if ( ! $session_row ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $this->id ),
+				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $this->id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 		}
@@ -257,7 +257,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$existing = $wpdb->get_var(
-				$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $this->id, $key )
+				$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $this->id, $key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 
 			if ( $existing ) {
@@ -626,7 +626,7 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 			$table_leads = $wpdb->prefix . 'dctc_ai_leads';
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$lead_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT * FROM `$table_leads` WHERE id = %d LIMIT 1", $lead_id ),
+				$wpdb->prepare( "SELECT * FROM `$table_leads` WHERE id = %d LIMIT 1", $lead_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 			if ( $lead_row ) {

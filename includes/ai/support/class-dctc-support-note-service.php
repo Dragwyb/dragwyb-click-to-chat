@@ -108,10 +108,10 @@ class DCTC_Support_Note_Service {
 		$table_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 		$ticket_id  = absint( $ticket_id );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT meta_id, meta_value FROM `$table_meta` WHERE ticket_id = %d AND meta_key = %s ORDER BY meta_id ASC",
+				"SELECT meta_id, meta_value FROM `$table_meta` WHERE ticket_id = %d AND meta_key = %s ORDER BY meta_id ASC", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$ticket_id,
 				self::META_KEY
 			),

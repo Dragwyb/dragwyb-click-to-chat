@@ -156,10 +156,10 @@ class DCTC_Support_Ticket_Service {
 
 		// Delete existing keys in a single prepared statement to prevent duplicates
 		$key_placeholders = implode( ',', array_fill( 0, count( $clean_keys ), '%s' ) );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpdb->query(
 			$wpdb->prepare(
-				"DELETE FROM `$table` WHERE ticket_id = %d AND meta_key IN ($key_placeholders)",
+				"DELETE FROM `$table` WHERE ticket_id = %d AND meta_key IN ($key_placeholders)", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				array_merge( array( $ticket_id ), $clean_keys )
 			)
 		);
@@ -231,9 +231,9 @@ class DCTC_Support_Ticket_Service {
 
 		// Security (SEC-15): Verify agent eligibility if agent_id supplied
 		if ( $agent_id > 0 ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$is_valid_agent = $wpdb->get_var(
-				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 			if ( ! $is_valid_agent ) {
 				$agent_id = 0; // fallback to unassigned
@@ -244,9 +244,9 @@ class DCTC_Support_Ticket_Service {
 		$session_id = '';
 		if ( ! empty( $data['session_id'] ) ) {
 			$cand_session = sanitize_text_field( $data['session_id'] );
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_session = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, support_ticket_id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $cand_session )
+				$wpdb->prepare( "SELECT id, support_ticket_id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $cand_session ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 			// Reject relinking if session is already attached to an existing ticket
 			if ( $existing_session && ! empty( $existing_session->support_ticket_id ) ) {
@@ -356,9 +356,9 @@ class DCTC_Support_Ticket_Service {
 		self::update_ticket_meta_batch( $ticket_id, $meta_batch );
 
 		// Ensure corresponding row in wp_dctc_ai_sessions exists and is linked
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing_session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id )
+			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
 		if ( $existing_session ) {
@@ -546,14 +546,14 @@ class DCTC_Support_Ticket_Service {
 		$mode_val = ! empty( $args['ticket_type'] ) ? $args['ticket_type'] : ( ! empty( $args['control_mode'] ) ? $args['control_mode'] : '' );
 		if ( ! empty( $mode_val ) && 'all' !== $mode_val ) {
 			if ( 'human' === $mode_val ) {
-				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode' AND meta_value = %s) OR (t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode') AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant'))))", 'human' );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode' AND meta_value = %s) OR (t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'control_mode') AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant'))))", 'human' ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			} elseif ( in_array( $mode_val, array( 'ai', 'ai_bot', 'bot', 'chatbot' ), true ) ) {
 				$where .= " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'origin_type' AND meta_value IN ('chatbot', 'ai', 'ai_assistant')) OR (meta_key = 'control_mode' AND meta_value = 'ai') OR (meta_key = 'session_id' AND meta_value != '' AND meta_value IS NOT NULL)))";
 			}
 		}
 
 		if ( ! empty( $args['origin_type'] ) && 'all' !== $args['origin_type'] ) {
-			$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value = %s)", sanitize_key( $args['origin_type'] ) );
+			$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'origin_type' AND meta_value = %s)", sanitize_key( $args['origin_type'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 
 		// Category filter
@@ -561,9 +561,9 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $cat_val ) && 'all' !== $cat_val ) {
 			if ( is_numeric( $cat_val ) ) {
 				$cat_id = absint( $cat_val );
-				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_id' AND meta_value = %d) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id = %d))", $cat_id, $cat_id );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_id' AND meta_value = %d) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id = %d))", $cat_id, $cat_id ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			} else {
-				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_name' AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s))))", sanitize_text_field( $cat_val ), sanitize_title( $cat_val ), sanitize_text_field( $cat_val ) );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'category_name' AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'category' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s))))", sanitize_text_field( $cat_val ), sanitize_title( $cat_val ), sanitize_text_field( $cat_val ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			}
 		}
 
@@ -572,9 +572,9 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $prod_val ) && 'all' !== $prod_val ) {
 			if ( is_numeric( $prod_val ) ) {
 				$prod_id = absint( $prod_val );
-				$where  .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'product_id' AND meta_value = %s) OR (meta_key = 'product' AND meta_value = %s)) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id = %d))", (string) $prod_id, (string) $prod_id, $prod_id );
+				$where  .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE (meta_key = 'product_id' AND meta_value = %s) OR (meta_key = 'product' AND meta_value = %s)) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id = %d))", (string) $prod_id, (string) $prod_id, $prod_id ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			} else {
-				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key IN ('product', 'product_name') AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s))))", sanitize_text_field( $prod_val ), sanitize_title( $prod_val ), sanitize_text_field( $prod_val ) );
+				$where .= $wpdb->prepare( " AND (t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key IN ('product', 'product_name') AND meta_value = %s) OR t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'product' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s))))", sanitize_text_field( $prod_val ), sanitize_title( $prod_val ), sanitize_text_field( $prod_val ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			}
 		}
 
@@ -583,9 +583,9 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $tag_val ) && 'all' !== $tag_val ) {
 			if ( is_numeric( $tag_val ) ) {
 				$tag_id = absint( $tag_val );
-				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id = %d)", $tag_id );
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id = %d)", $tag_id ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			} else {
-				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'tag' AND (slug = %s OR name = %s)))", sanitize_title( $tag_val ), sanitize_text_field( $tag_val ) );
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = 'tag' AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'tag' AND (slug = %s OR name = %s)))", sanitize_title( $tag_val ), sanitize_text_field( $tag_val ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			}
 		}
 
@@ -622,9 +622,9 @@ class DCTC_Support_Ticket_Service {
 				foreach ( $tax_terms as $tax_slug => $term_val ) {
 					if ( ! empty( $term_val ) && 'all' !== $term_val ) {
 						if ( is_numeric( $term_val ) ) {
-							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id = %d)", sanitize_title( $tax_slug ), absint( $term_val ) );
+							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id = %d)", sanitize_title( $tax_slug ), absint( $term_val ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 						} else {
-							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)))", sanitize_title( $tax_slug ), sanitize_title( $tax_slug ), sanitize_title( $term_val ), sanitize_text_field( $term_val ) );
+							$where .= $wpdb->prepare( " AND t.id IN (SELECT object_id FROM `$table_rel` WHERE taxonomy_slug = %s AND term_id IN (SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)))", sanitize_title( $tax_slug ), sanitize_title( $tax_slug ), sanitize_title( $term_val ), sanitize_text_field( $term_val ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 						}
 					}
 				}
@@ -637,7 +637,7 @@ class DCTC_Support_Ticket_Service {
 			if ( 'unassigned' === $agent_arg || 0 === (int) $agent_arg || '0' === (string) $agent_arg ) {
 				$where .= " AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value != '0' AND meta_value != '')";
 			} else {
-				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value = %s)", (string) absint( $agent_arg ) );
+				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value = %s)", (string) absint( $agent_arg ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			}
 		}
 
@@ -646,10 +646,12 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		if ( ! empty( $args['guest_access_token'] ) ) {
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			$where .= $wpdb->prepare(
 				" AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'guest_access_token' AND meta_value = %s)",
 				sanitize_text_field( $args['guest_access_token'] )
 			);
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		}
 
 		// Search
@@ -1024,16 +1026,16 @@ class DCTC_Support_Ticket_Service {
 		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
 
 		// 1. Check sessions table support_ticket_id
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$ticket_id = (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT support_ticket_id FROM `$table_sessions` WHERE session_id = %s AND support_ticket_id > 0 LIMIT 1", $session_id )
+			$wpdb->prepare( "SELECT support_ticket_id FROM `$table_sessions` WHERE session_id = %s AND support_ticket_id > 0 LIMIT 1", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
 		// 2. Check ticket meta session_id
 		if ( ! $ticket_id ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$ticket_id = (int) $wpdb->get_var(
-				$wpdb->prepare( "SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = %s AND meta_value = %s ORDER BY meta_id DESC LIMIT 1", 'session_id', $session_id )
+				$wpdb->prepare( "SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = %s AND meta_value = %s ORDER BY meta_id DESC LIMIT 1", 'session_id', $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 		}
 
@@ -1296,9 +1298,9 @@ class DCTC_Support_Ticket_Service {
 
 		// Security (SEC-15): Validate agent exists and is active
 		if ( $agent_id > 0 ) {
-			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$is_active = $wpdb->get_var(
-				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
+				$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			);
 			if ( ! $is_active ) {
 				return false;
@@ -1445,9 +1447,9 @@ class DCTC_Support_Ticket_Service {
 		$session_id = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		) : null;
 
 		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
@@ -1617,9 +1619,9 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// Control mode breakdown
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$human_controlled = (int) $wpdb->get_var(
-			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status NOT IN ('resolved', 'closed', 'trash')"
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'control_mode' AND tm.meta_value = 'human' AND t.status NOT IN ('resolved', 'closed', 'trash')" // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 		$ai_controlled    = max( 0, $total_open - $human_controlled );
 
@@ -1892,9 +1894,9 @@ class DCTC_Support_Ticket_Service {
 		$table     = $wpdb->prefix . 'dctc_support_ticket_meta';
 		$ticket_id = absint( $ticket_id );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
-			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE ticket_id = %d", $ticket_id ),
+			$wpdb->prepare( "SELECT meta_key, meta_value FROM `$table` WHERE ticket_id = %d", $ticket_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -1936,9 +1938,9 @@ class DCTC_Support_Ticket_Service {
 			$val_str = substr( $val_str, 0, 65535 );
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing = $wpdb->get_var(
-			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key )
+			$wpdb->prepare( "SELECT meta_id FROM `$table` WHERE ticket_id = %d AND meta_key = %s", $ticket_id, $meta_key ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
 		if ( $existing ) {
@@ -2094,9 +2096,9 @@ class DCTC_Support_Ticket_Service {
 			$agent_id = absint( $data['assigned_agent_id'] );
 			// Security (SEC-15): Validate agent exists and is active if assigning
 			if ( $agent_id > 0 ) {
-				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$is_valid = $wpdb->get_var(
-					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id )
+					$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE id = %d AND active = 1 LIMIT 1", $agent_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				);
 				if ( $is_valid ) {
 					self::update_ticket_meta( $ticket['id'], 'assigned_agent_id', $agent_id );
@@ -2150,9 +2152,9 @@ class DCTC_Support_Ticket_Service {
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		) : null;
 
 		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
@@ -2244,9 +2246,9 @@ class DCTC_Support_Ticket_Service {
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
 		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		) : null;
 
 		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();

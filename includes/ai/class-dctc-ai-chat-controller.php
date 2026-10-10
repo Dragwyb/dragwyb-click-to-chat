@@ -645,13 +645,13 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 
-			$has_support_page_ctx  = ! empty( $bot['support_url'] );
-			$support_url_context   = $has_support_page_ctx ? esc_url_raw( $bot['support_url'] ) : '';
-			$enable_lead_capture   = ! empty( $bot['enable_lead_capture'] ) && 'false' !== (string) $bot['enable_lead_capture'];
-			$is_support_connected  = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ( ! empty( $bot['enable_support_escalation'] ) && 'false' !== (string) $bot['enable_support_escalation'] );
+			$has_support_page_ctx = ! empty( $bot['support_url'] );
+			$support_url_context  = $has_support_page_ctx ? esc_url_raw( $bot['support_url'] ) : '';
+			$enable_lead_capture  = ! empty( $bot['enable_lead_capture'] ) && 'false' !== (string) $bot['enable_lead_capture'];
+			$is_support_connected = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ( ! empty( $bot['enable_support_escalation'] ) && 'false' !== (string) $bot['enable_support_escalation'] );
 
-			$ask_support_email     = $is_support_connected;
-			$ask_lead_email        = $enable_lead_capture || $is_support_connected;
+			$ask_support_email = $is_support_connected;
+			$ask_lead_email    = $enable_lead_capture || $is_support_connected;
 
 			if ( ! empty( $known_user_email ) ) {
 				$system_message .= sprintf( "\n\nCRITICAL USER CONTEXT: The user is LOGGED IN or their EMAIL IS ALREADY KNOWN (%s).\n- Do NOT ask for their email address under any circumstances.\n", $known_user_email );
@@ -663,12 +663,10 @@ class DCTC_AI_Chat_Controller {
 					} else {
 						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Let them know that a support request has been logged and our team will follow up directly at %s.\n", $known_user_email );
 					}
-				} else {
-					if ( $has_support_page_ctx ) {
+				} elseif ( $has_support_page_ctx ) {
 						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT claim our team will follow up at their email. Provide troubleshooting steps from knowledge, and invite them to visit [Contact Support](%s) if they need human assistance.\n", $support_url_context );
-					} else {
-						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT claim our team will follow up at their email. Provide a helpful, normal human reply based strictly on available knowledge.\n";
-					}
+				} else {
+					$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT claim our team will follow up at their email. Provide a helpful, normal human reply based strictly on available knowledge.\n";
 				}
 
 				// Lead / Sales queries rule for logged-in user
@@ -678,12 +676,10 @@ class DCTC_AI_Chat_Controller {
 					} else {
 						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Let them know that we have received their inquiry and our team will follow up directly at %s.\n", $known_user_email );
 					}
-				} else {
-					if ( $has_support_page_ctx ) {
+				} elseif ( $has_support_page_ctx ) {
 						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT claim our team will follow up. Provide product details and share [Contact Support](%s) if they wish to contact our team.\n", $support_url_context );
-					} else {
-						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT claim our team will follow up. Provide product details based on available knowledge.\n";
-					}
+				} else {
+					$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT claim our team will follow up. Provide product details based on available knowledge.\n";
 				}
 			} elseif ( $email_already_requested ) {
 				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST and you have ALREADY asked for their email in this session.\n- Do NOT ask for their email again.\n";
@@ -702,12 +698,10 @@ class DCTC_AI_Chat_Controller {
 					} else {
 						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Provide helpful answers and invite them to share their email address here so our team can follow up.\n";
 					}
-				} else {
-					if ( $has_support_page_ctx ) {
+				} elseif ( $has_support_page_ctx ) {
 						$system_message .= sprintf( "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT ask for their email address under any circumstances. Provide helpful solutions based on knowledge, and direct them to [Contact Support](%s) if they need human assistance.\n", $support_url_context );
-					} else {
-						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT ask for their email address under any circumstances. Provide a normal, helpful human reply based strictly on available knowledge without asking for email.\n";
-					}
+				} else {
+					$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT ask for their email address under any circumstances. Provide a normal, helpful human reply based strictly on available knowledge without asking for email.\n";
 				}
 
 				// Lead / Sales queries rule
@@ -717,12 +711,10 @@ class DCTC_AI_Chat_Controller {
 					} else {
 						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Provide product details and invite them to share their email address here so our sales team can assist.\n";
 					}
-				} else {
-					if ( $has_support_page_ctx ) {
+				} elseif ( $has_support_page_ctx ) {
 						$system_message .= sprintf( "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT ask for their email address. Provide product details and share [Contact Support](%s) if they wish to contact our team.\n", $support_url_context );
-					} else {
-						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT ask for their email address. Provide product details and a normal, helpful human reply based on available knowledge.\n";
-					}
+				} else {
+					$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT ask for their email address. Provide product details and a normal, helpful human reply based on available knowledge.\n";
 				}
 
 				$system_message .= "- Never end with generic robotic filler like 'How can I help you today?'.\n";
@@ -817,8 +809,8 @@ class DCTC_AI_Chat_Controller {
 			$enable_lead_capture   = ! empty( $bot['enable_lead_capture'] ) && 'false' !== (string) $bot['enable_lead_capture'];
 			$is_support_connected  = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ( ! empty( $bot['enable_support_escalation'] ) && 'false' !== (string) $bot['enable_support_escalation'] );
 
-			$ask_support_email     = $is_support_connected;
-			$ask_lead_email        = $enable_lead_capture || $is_support_connected;
+			$ask_support_email = $is_support_connected;
+			$ask_lead_email    = $enable_lead_capture || $is_support_connected;
 
 			$rule_class  = self::classify_user_intent( $prompt );
 			$is_greeting = ( ! empty( $rule_class['category'] ) && 'greeting' === $rule_class['category'] );
@@ -1227,9 +1219,9 @@ class DCTC_AI_Chat_Controller {
 
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_ai_sessions';
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM {$table} WHERE session_id = %s", $session_id ),
+			$wpdb->prepare( "SELECT * FROM {$table} WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
@@ -1458,16 +1450,16 @@ class DCTC_AI_Chat_Controller {
 	 * Build comprehensive system prompt with strict domain grounding and custom support referral.
 	 */
 	private function build_system_prompt( $bot, $settings ) {
-		$site_name             = get_bloginfo( 'name' );
-		$has_support_url       = ! empty( $bot['support_url'] );
-		$support_url           = $has_support_url ? esc_url_raw( $bot['support_url'] ) : '';
-		$bot_name              = ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant';
+		$site_name       = get_bloginfo( 'name' );
+		$has_support_url = ! empty( $bot['support_url'] );
+		$support_url     = $has_support_url ? esc_url_raw( $bot['support_url'] ) : '';
+		$bot_name        = ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant';
 
-		$enable_lead_capture   = ! empty( $bot['enable_lead_capture'] ) && 'false' !== (string) $bot['enable_lead_capture'];
-		$is_support_connected  = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ( ! empty( $bot['enable_support_escalation'] ) && 'false' !== (string) $bot['enable_support_escalation'] );
+		$enable_lead_capture  = ! empty( $bot['enable_lead_capture'] ) && 'false' !== (string) $bot['enable_lead_capture'];
+		$is_support_connected = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ( ! empty( $bot['enable_support_escalation'] ) && 'false' !== (string) $bot['enable_support_escalation'] );
 
-		$ask_support_email     = $is_support_connected;
-		$ask_lead_email        = $enable_lead_capture || $is_support_connected;
+		$ask_support_email = $is_support_connected;
+		$ask_lead_email    = $enable_lead_capture || $is_support_connected;
 
 		$system_message = '';
 
@@ -1647,14 +1639,14 @@ LANGUAGE & TONE:
 		}
 
 		// WooCommerce order tracking & Hidden Intent
-		$system_message .= "WOOCOMMERCE ORDER TRACKING:
+		$system_message .= 'WOOCOMMERCE ORDER TRACKING:
 - When a user asks to track their order status, package delivery, or mentions an order number (#1234):
   1. Assist them with tracking and checking order status.
   2. Set the intent tag to `order_tracking`.
 
 HIDDEN INTENT METADATA TAG:
 - At the very end of your response, always append a hidden intent metadata tag in this exact format:
-";
+';
 
 		$allowed_intents = 'order_tracking|general_qa';
 		if ( $ask_lead_email ) {
@@ -2128,9 +2120,9 @@ HIDDEN INTENT METADATA TAG:
 				);
 
 				// Sync ticket messages meta from session table
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$session_content = $wpdb->get_var(
-					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id )
+					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				);
 				if ( ! empty( $session_content ) ) {
 					$all_msgs = json_decode( $session_content, true );

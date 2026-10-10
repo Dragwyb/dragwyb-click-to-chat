@@ -94,10 +94,10 @@ class DCTC_Support_Event_Service {
 		$order_clean = strtoupper( $order ) === 'DESC' ? 'DESC' : 'ASC';
 		$limit_val   = max( 1, min( 500, absint( $limit ) ) );
 
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT * FROM `$table_events` WHERE ticket_id = %d ORDER BY created_at {$order_clean} LIMIT %d",
+				"SELECT * FROM `$table_events` WHERE ticket_id = %d ORDER BY created_at {$order_clean} LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$ticket_id,
 				$limit_val
 			),
