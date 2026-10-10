@@ -23,7 +23,7 @@ class DCTC_AI_Retriever {
 	 */
 	private function get_settings() {
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		return isset( $settings['rag'] ) ? $settings['rag'] : [];
+		return isset( $settings['rag'] ) ? $settings['rag'] : array();
 	}
 
 	/**
@@ -35,7 +35,7 @@ class DCTC_AI_Retriever {
 	 */
 	public function search( $query_embedding, $limit = 5 ) {
 		if ( empty( $query_embedding ) || ! is_array( $query_embedding ) ) {
-			return [];
+			return array();
 		}
 
 		$settings = $this->get_settings();
@@ -46,7 +46,7 @@ class DCTC_AI_Retriever {
 		try {
 			$vector_db = $this->get_vector_db( $vector_db_provider );
 			if ( ! $vector_db ) {
-				return [];
+				return array();
 			}
 
 			$results = $vector_db->search( $query_embedding, $limit );
@@ -56,7 +56,7 @@ class DCTC_AI_Retriever {
 			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
 				error_log( 'Dragwyb AI AI Retriever Search Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
 			}
-			return [];
+			return array();
 		}
 	}
 
@@ -70,7 +70,7 @@ class DCTC_AI_Retriever {
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-vector-db-factory.php';
 
 		$settings = $this->get_settings();
-		$config   = ! empty( $settings['vector_db'] ) ? $settings['vector_db'] : [];
+		$config   = ! empty( $settings['vector_db'] ) ? $settings['vector_db'] : array();
 
 		return DCTC_AI_Vector_DB_Factory::create( $provider, $config );
 	}
@@ -83,17 +83,17 @@ class DCTC_AI_Retriever {
 	 */
 	private function format_results( $results ) {
 		if ( empty( $results ) ) {
-			return [];
+			return array();
 		}
 
-		$formatted = [];
+		$formatted = array();
 		global $wpdb;
 
 		$chunks_table    = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 		$documents_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
 		$settings         = $this->get_settings();
-		$configured_types = ! empty( $settings['post_types'] ) ? $settings['post_types'] : [ 'post', 'page' ];
+		$configured_types = ! empty( $settings['post_types'] ) ? $settings['post_types'] : array( 'post', 'page' );
 		$registered_types = get_post_types();
 		$min_confidence   = isset( $settings['min_confidence'] ) ? (float) $settings['min_confidence'] : 0.65;
 
@@ -134,13 +134,13 @@ class DCTC_AI_Retriever {
 					continue;
 				}
 
-				$formatted[] = [
+				$formatted[] = array(
 					'chunk_id'   => $chunk['id'],
 					'content'    => $chunk['content'],
 					'similarity' => $result['similarity'] ?? 0,
 					'title'      => $document['title'] ?? 'Unknown',
 					'url'        => $document['url'] ?? '',
-				];
+				);
 			}
 		}
 
@@ -158,22 +158,22 @@ class DCTC_AI_Retriever {
 		$chunks_table    = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 		$documents_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Safe table names, direct queries.
-		$total_chunks = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table}" );
-		$total_documents = $wpdb->get_var( "SELECT COUNT(*) FROM {$documents_table}" );
-		$pending_chunks = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table} WHERE embedding_status = 'pending'" );
-		$completed_chunks = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table} WHERE embedding_status = 'completed'" );
-		$total_tokens = $wpdb->get_var( "SELECT SUM(tokens_count) FROM {$chunks_table}" );
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$total_chunks       = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table}" );
+		$total_documents    = $wpdb->get_var( "SELECT COUNT(*) FROM {$documents_table}" );
+		$pending_chunks     = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table} WHERE embedding_status = 'pending'" );
+		$completed_chunks   = $wpdb->get_var( "SELECT COUNT(*) FROM {$chunks_table} WHERE embedding_status = 'completed'" );
+		$total_tokens       = $wpdb->get_var( "SELECT SUM(tokens_count) FROM {$chunks_table}" );
 		$indexed_post_types = $wpdb->get_col( "SELECT DISTINCT post_type FROM {$documents_table} WHERE post_type != ''" );
-		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
-		return [
-			'total_documents'   => $total_documents ?? 0,
-			'total_chunks'      => $total_chunks ?? 0,
-			'pending_embeddings' => $pending_chunks ?? 0,
+		return array(
+			'total_documents'      => $total_documents ?? 0,
+			'total_chunks'         => $total_chunks ?? 0,
+			'pending_embeddings'   => $pending_chunks ?? 0,
 			'completed_embeddings' => $completed_chunks ?? 0,
-			'total_tokens'      => $total_tokens ?? 0,
-			'indexed_post_types' => $indexed_post_types ?? [],
-		];
+			'total_tokens'         => $total_tokens ?? 0,
+			'indexed_post_types'   => $indexed_post_types ?? array(),
+		);
 	}
 }
