@@ -166,7 +166,7 @@ class DCTC_Support_Ticket_Service {
 
 		// Batch insert in single prepared query
 		$sql = "INSERT INTO `$table` (`ticket_id`, `meta_key`, `meta_value`) VALUES " . implode( ', ', $placeholders );
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.NotPrepared
 		$result = $wpdb->query( $wpdb->prepare( $sql, $values ) );
 
 		self::invalidate_cache( $ticket_id );
@@ -676,7 +676,8 @@ class DCTC_Support_Ticket_Service {
 		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` t WHERE $where" );
 
 		// Query page rows from clean tickets table
-		$sql  = "SELECT t.* FROM `$table_tickets` t WHERE $where ORDER BY t.`$orderby` $order LIMIT %d OFFSET %d";
+		$sql = "SELECT t.* FROM `$table_tickets` t WHERE $where ORDER BY t.`" . esc_sql( sanitize_key( $orderby ) ) . "` $order LIMIT %d OFFSET %d";
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- all data already prepared and escaped.
 		$rows = $wpdb->get_results( $wpdb->prepare( $sql, $per_page, $offset ), ARRAY_A );
 
 		if ( is_array( $rows ) && ! empty( $rows ) ) {
@@ -1644,14 +1645,14 @@ class DCTC_Support_Ticket_Service {
 			FROM `$table_events` e 
 			LEFT JOIN `$table_tickets` t ON e.ticket_id = t.id 
 			ORDER BY e.created_at DESC LIMIT 6";
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.NotPrepared
 		$recent_events = $wpdb->get_results( $recent_sql, ARRAY_A );
 
 		// Detailed status breakdown
 		$count_new           = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'new'" );
 		$count_closed        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'closed'" );
 		$count_resolved_only = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `$table_tickets` WHERE status = 'resolved'" );
-		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.NotPrepared
 
 		$status_breakdown = array(
 			'new'      => $count_new,
