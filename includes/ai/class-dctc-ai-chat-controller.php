@@ -1686,7 +1686,6 @@ HIDDEN INTENT METADATA TAG:
 		$support_url = ! empty( $bot['support_url'] ) ? esc_url_raw( $bot['support_url'] ) : home_url();
 
 		// Common placeholder hosts that LLMs hallucinate (filter list)
-		// phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent -- Placeholder domain list for AI hallucination detection.
 		$dummy_hosts = array(
 			'example.com',
 			'example.org',
@@ -2392,68 +2391,6 @@ HIDDEN INTENT METADATA TAG:
 		} catch ( \Throwable $e ) {
 			return true;
 		}
-	}
-
-	/**
-	 * Build human handoff action buttons with contextual WhatsApp link.
-	 *
-	 * @param array  $bot
-	 * @param string $prompt
-	 * @param bool   $is_online
-	 * @return array
-	 */
-	public static function build_handoff_action_buttons( $bot, $prompt, $is_online = true ) {
-		$action_buttons  = array();
-		$parent_settings = get_option( 'dctc_settings', array() );
-
-		$wa_num     = ! empty( $bot['handoff_whatsapp_number'] ) ? $bot['handoff_whatsapp_number'] : ( ! empty( $parent_settings['whatsapp_value'] ) ? $parent_settings['whatsapp_value'] : '' );
-		$phone_num  = ! empty( $bot['handoff_phone_number'] ) ? $bot['handoff_phone_number'] : ( ! empty( $parent_settings['phone_value'] ) ? $parent_settings['phone_value'] : '' );
-		$email_addr = ! empty( $bot['handoff_email_address'] ) ? $bot['handoff_email_address'] : ( ! empty( $parent_settings['email_value'] ) ? $parent_settings['email_value'] : get_option( 'admin_email' ) );
-
-		$safe_prompt = substr( wp_strip_all_tags( $prompt ), 0, 150 );
-
-		if ( ! empty( $wa_num ) ) {
-			$clean_phone = preg_replace( '/[^0-9]/', '', $wa_num );
-			$template    = ! empty( $bot['handoff_template'] )
-				? $bot['handoff_template']
-				: 'Hi! I was chatting with your AI assistant on {page_url} regarding: "{summary}". My question: "{question}".';
-
-			$wa_msg = str_replace(
-				array( '{question}', '{summary}', '{page_url}', '{visitor_name}' ),
-				array( $safe_prompt, $safe_prompt, home_url(), 'Visitor' ),
-				$template
-			);
-
-			$action_buttons[] = array(
-				'id'     => 'btn_wa_handoff',
-				'label'  => __( '💬 Chat on WhatsApp', 'dragwyb-click-to-chat' ),
-				'url'    => 'https://wa.me/' . $clean_phone . '?text=' . rawurlencode( $wa_msg ),
-				'target' => '_blank',
-				'type'   => 'whatsapp',
-			);
-		}
-
-		if ( ! empty( $phone_num ) && $is_online ) {
-			$action_buttons[] = array(
-				'id'     => 'btn_phone_handoff',
-				'label'  => __( '📞 Call Human Agent', 'dragwyb-click-to-chat' ),
-				'url'    => 'tel:' . preg_replace( '/[^0-9+]/', '', $phone_num ),
-				'target' => '_self',
-				'type'   => 'phone',
-			);
-		}
-
-		if ( ! empty( $email_addr ) ) {
-			$action_buttons[] = array(
-				'id'     => 'btn_email_handoff',
-				'label'  => __( '✉️ Email Support Team', 'dragwyb-click-to-chat' ),
-				'url'    => 'mailto:' . antispambot( $email_addr ) . '?subject=' . rawurlencode( __( 'Customer Inquiry from AI Chat', 'dragwyb-click-to-chat' ) ) . '&body=' . rawurlencode( $safe_prompt ),
-				'target' => '_blank',
-				'type'   => 'email',
-			);
-		}
-
-		return $action_buttons;
 	}
 
 	/**
