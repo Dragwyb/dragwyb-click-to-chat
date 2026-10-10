@@ -292,7 +292,7 @@ class DCTC_AI_Chat_Controller {
 			if ( $is_short_email_response ) {
 				$history              = $this->get_recent_conversation( $session_id, 5 );
 				$is_sales_lead        = preg_match( '/\b(quote|pricing|demo|bulk|consultation|custom pricing|buy|purchase|interested|how to buy|order|cost|store)\b/i', $history );
-				$is_support_connected = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
+				$is_support_connected = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ! empty( $bot['enable_support_escalation'] );
 
 				if ( $is_sales_lead && ! empty( $bot['enable_lead_capture'] ) && class_exists( 'DCTC_AI_DB' ) ) {
 					DCTC_AI_DB::save_lead(
@@ -431,15 +431,22 @@ class DCTC_AI_Chat_Controller {
 				$user_email     = $logged_in_user && ! empty( $logged_in_user->user_email ) ? $logged_in_user->user_email : ( ! empty( $email ) ? $email : '' );
 				$user_name      = $logged_in_user && ! empty( $logged_in_user->display_name ) ? $logged_in_user->display_name : 'Guest Visitor';
 
+				$has_support_page_rag  = ! empty( $bot['support_url'] );
+				$support_url_rag       = $has_support_page_rag ? esc_url_raw( $bot['support_url'] ) : '';
+				$enable_support_ticket = false;
+				if ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) {
+					$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : false;
+				}
+
 				// Check if guest visitor just provided their email in this prompt
 				if ( empty( $user_email ) && preg_match( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $prompt, $matches_email ) ) {
 					$user_email = sanitize_email( $matches_email[0] );
 					$email      = $user_email;
 				}
 
-				if ( ! empty( $user_email ) ) {
-					// We have the user's email -> Automatically create a Support Ticket
-					if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ( ! empty( $bot['enable_support_escalation'] ) || class_exists( 'DCTC_Support_Manager' ) ) ) {
+				if ( ! empty( $user_email ) && $enable_support_ticket ) {
+					// We have the user's email AND support ticket is enabled -> Automatically create a Support Ticket
+					if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 						if ( ! $existing_ticket ) {
 							DCTC_Support_Ticket_Service::create_ticket(
@@ -472,9 +479,28 @@ class DCTC_AI_Chat_Controller {
 							esc_html( $user_email )
 						);
 					}
+				} elseif ( $enable_support_ticket ) {
+					// Guest user with NO email provided AND support ticket enabled -> Politely ask for their email
+					if ( $has_support_page_rag ) {
+						$missing_msg = sprintf(
+							/* translators: %s: Support URL */
+							__( 'I don\'t have the exact details for your question in our knowledge base right now. Please share your email address with us so our team can look into it and contact you, or submit a request on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+							$support_url_rag
+						);
+					} else {
+						$missing_msg = __( 'I don\'t have the exact details for your question in our knowledge base right now. Please share your email address with us so our team can look into it and contact you directly with the right details.', 'dragwyb-click-to-chat' );
+					}
 				} else {
-					// Guest user with NO email provided -> Politely ask for their email
-					$missing_msg = __( 'I don\'t have the exact details for your question in our knowledge base right now. Please share your email address with us so our team can look into it and contact you directly with the right details.', 'dragwyb-click-to-chat' );
+					// Support ticket is NOT enabled -> Do NOT ask for email!
+					if ( $has_support_page_rag ) {
+						$missing_msg = sprintf(
+							/* translators: %s: Support URL */
+							__( 'I don\'t have the exact details for this in our knowledge base right now. For further assistance from our team, please visit our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+							$support_url_rag
+						);
+					} else {
+						$missing_msg = __( 'I apologize, but I do not have the exact details for your question in our knowledge base right now. Please explore our official website for more details or check back later.', 'dragwyb-click-to-chat' );
+					}
 				}
 
 				return $this->save_and_respond(
@@ -617,22 +643,77 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 
-			$support_url_context = ! empty( $bot['support_url'] ) ? esc_url_raw( $bot['support_url'] ) : home_url();
+			$has_support_page_ctx  = ! empty( $bot['support_url'] );
+			$support_url_context   = $has_support_page_ctx ? esc_url_raw( $bot['support_url'] ) : '';
+			$enable_support_ticket = false;
+			if ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) {
+				$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : false;
+			}
+			$enable_lead_capture = ! empty( $bot['enable_lead_capture'] );
 
 			if ( ! empty( $known_user_email ) ) {
-				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is LOGGED IN or their EMAIL IS ALREADY KNOWN ({$known_user_email}).
-- Do NOT ask for their email address under any circumstances.
-- If the inquiry relates to product purchase, sales quotation, troubleshooting, or support: Let them know that we have received their request and our team will follow up directly at {$known_user_email}. You may also provide: [Contact Support]({$support_url_context}).\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is LOGGED IN or their EMAIL IS ALREADY KNOWN ({$known_user_email}).\n";
+				$system_message .= "- Do NOT ask for their email address under any circumstances.\n";
+				if ( $enable_support_ticket || $enable_lead_capture ) {
+					$system_message .= "- If the inquiry relates to product purchase, sales quotation, troubleshooting, or support: Let them know that we have received their request and our team will follow up directly at {$known_user_email}.";
+					if ( $has_support_page_ctx ) {
+						$system_message .= " You may also provide: [Contact Support]({$support_url_context}).\n";
+					} else {
+						$system_message .= "\n";
+					}
+				} else {
+					$system_message .= "- Provide a helpful, normal human reply based on the knowledge base.";
+					if ( $has_support_page_ctx ) {
+						$system_message .= " If they need human assistance, share [Contact Support]({$support_url_context}).\n";
+					} else {
+						$system_message .= "\n";
+					}
+				}
 			} elseif ( $email_already_requested ) {
-				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST and you have ALREADY asked for their email in this session.
-- Do NOT ask for their email again.
-- Direct them to [Contact Support]({$support_url_context}) if they need human assistance.\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST and you have ALREADY asked for their email in this session.\n";
+				$system_message .= "- Do NOT ask for their email again.\n";
+				if ( $has_support_page_ctx ) {
+					$system_message .= "- Direct them to [Contact Support]({$support_url_context}) if they need human assistance.\n";
+				} else {
+					$system_message .= "- Provide a normal helpful human reply based on available knowledge.\n";
+				}
 			} else {
-				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST (NON-LOGGED IN) and their EMAIL IS UNKNOWN.
-- NEVER claim that 'our team will follow up at your account email' because the user is NOT logged in!
-- HYBRID SUPPORT & LEAD RULE: When the user asks a product purchase/buying inquiry, quotation/pricing, or technical support/bug/troubleshooting issue, ALWAYS provide helpful answers and direct product links, and conclude by offering BOTH options:
-  'Please feel free to share your email address here so our team can directly contact you and assist you, or you can reach out to us directly through [Contact Support]({$support_url_context}).'
-- Never end with generic robotic filler like 'How can I help you today?'.\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST (NON-LOGGED IN) and their EMAIL IS UNKNOWN.\n";
+				$system_message .= "- NEVER claim that 'our team will follow up at your account email' because the user is NOT logged in!\n";
+
+				// Support queries rule
+				if ( $enable_support_ticket ) {
+					if ( $has_support_page_ctx ) {
+						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Provide helpful answers and invite them to share their email address here or visit [Contact Support]({$support_url_context}).\n";
+					} else {
+						$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Provide helpful answers and invite them to share their email address here so our team can follow up.\n";
+					}
+				} else {
+					$system_message .= "- For TECHNICAL SUPPORT / BUG / TROUBLESHOOTING inquiries: Support ticket feature is DISABLED. Do NOT ask for their email address under any circumstances.";
+					if ( $has_support_page_ctx ) {
+						$system_message .= " Provide helpful solutions based on knowledge, and direct them to [Contact Support]({$support_url_context}) if they need human assistance.\n";
+					} else {
+						$system_message .= " Provide a normal, helpful human reply based strictly on available knowledge without asking for email.\n";
+					}
+				}
+
+				// Lead / Sales queries rule
+				if ( $enable_lead_capture || $enable_support_ticket ) {
+					if ( $has_support_page_ctx ) {
+						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Provide product details and invite them to share their email address here or visit [Contact Support]({$support_url_context}).\n";
+					} else {
+						$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Provide product details and invite them to share their email address here so our sales team can assist.\n";
+					}
+				} else {
+					$system_message .= "- For PRODUCT / PURCHASE / SALES LEAD inquiries: Lead capture is DISABLED. Do NOT ask for their email address.";
+					if ( $has_support_page_ctx ) {
+						$system_message .= " Provide product details and share [Contact Support]({$support_url_context}) if they wish to contact our team.\n";
+					} else {
+						$system_message .= " Provide product details and a normal, helpful human reply based on available knowledge.\n";
+					}
+				}
+
+				$system_message .= "- Never end with generic robotic filler like 'How can I help you today?'.\n";
 			}
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI Session-Aware Email Check Error: ' . $e->getMessage() );
@@ -721,7 +802,7 @@ class DCTC_AI_Chat_Controller {
 
 			// Dynamic Integration: Auto-connect with Lead System only if explicitly requested or organically suggested
 			$should_show_lead_form = false;
-			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
+			$is_support_connected  = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ! empty( $bot['enable_support_escalation'] );
 
 			$rule_class  = self::classify_user_intent( $prompt );
 			$is_greeting = ( ! empty( $rule_class['category'] ) && 'greeting' === $rule_class['category'] );
@@ -841,38 +922,63 @@ class DCTC_AI_Chat_Controller {
 					}
 				} else {
 					// Non logged-in guest user without known email:
-					$support_url_escaped = ! empty( $bot['support_url'] ) ? esc_url( $bot['support_url'] ) : home_url();
+					$has_support_url_escaped = ! empty( $bot['support_url'] );
+					$support_url_escaped     = $has_support_url_escaped ? esc_url( $bot['support_url'] ) : '';
 
 					// Prevent hallucinated 'account email' mentions for non-logged in guest users
 					$ai_message = preg_replace( '/\bat your account email\b/i', 'directly', $ai_message );
 					$ai_message = preg_replace( '/\bat your registered email\b/i', 'directly', $ai_message );
 
+					$can_ask_email = ( 'LEAD_GENERATION' === $effective_ticket_type )
+						? ( ! empty( $bot['enable_lead_capture'] ) || $is_support_connected )
+						: $is_support_connected;
+
 					if ( ( $contains_support_referral || $is_actionable_connect ) && ! $existing_ticket ) {
 						$has_email_prompt = ( false !== stripos( $ai_message, 'email address' ) || false !== stripos( $ai_message, 'share your email' ) || false !== stripos( $ai_message, 'provide your email' ) );
-						$has_support_link = ( false !== stripos( $ai_message, 'contact support' ) || false !== stripos( $ai_message, untrailingslashit( $support_url_escaped ) ) );
+						$has_support_link = $has_support_url_escaped && ( false !== stripos( $ai_message, 'contact support' ) || false !== stripos( $ai_message, untrailingslashit( $support_url_escaped ) ) );
 
-						if ( ! $has_email_prompt && ! $has_support_link ) {
-							if ( 'LEAD_GENERATION' === $effective_ticket_type ) {
+						if ( $can_ask_email ) {
+							if ( ! $has_email_prompt && ! $has_support_link ) {
+								if ( 'LEAD_GENERATION' === $effective_ticket_type ) {
+									if ( $has_support_url_escaped ) {
+										$ai_message .= "\n\n" . sprintf(
+											/* translators: %s: Support URL */
+											__( 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support](%s).', 'dragwyb-click-to-chat' ),
+											$support_url_escaped
+										);
+									} else {
+										$ai_message .= "\n\n" . esc_html__( 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase.', 'dragwyb-click-to-chat' );
+									}
+								} else {
+									if ( $has_support_url_escaped ) {
+										$ai_message .= "\n\n" . sprintf(
+											/* translators: %s: Support URL */
+											__( 'Please feel free to share your email address here so our technical team can directly follow up and assist you, or submit a request directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+											$support_url_escaped
+										);
+									} else {
+										$ai_message .= "\n\n" . esc_html__( 'Please feel free to share your email address here so our technical team can directly follow up and assist you.', 'dragwyb-click-to-chat' );
+									}
+								}
+							} elseif ( ! $has_email_prompt ) {
+								$ai_message .= "\n\n" . esc_html__( 'Please feel free to share your email address here so our team can directly contact you and assist you further.', 'dragwyb-click-to-chat' );
+							} elseif ( ! $has_support_link && $has_support_url_escaped ) {
 								$ai_message .= "\n\n" . sprintf(
 									/* translators: %s: Support URL */
-									__( 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support](%s).', 'dragwyb-click-to-chat' ),
-									$support_url_escaped
-								);
-							} else {
-								$ai_message .= "\n\n" . sprintf(
-									/* translators: %s: Support URL */
-									__( 'Please feel free to share your email address here so our technical team can directly follow up and assist you, or submit a request directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+									__( 'You can also reach out to our specialists directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
 									$support_url_escaped
 								);
 							}
-						} elseif ( ! $has_email_prompt ) {
-							$ai_message .= "\n\n" . esc_html__( 'Please feel free to share your email address here so our team can directly contact you and assist you further.', 'dragwyb-click-to-chat' );
-						} elseif ( ! $has_support_link ) {
-							$ai_message .= "\n\n" . sprintf(
-								/* translators: %s: Support URL */
-								__( 'You can also reach out to our specialists directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
-								$support_url_escaped
-							);
+						} else {
+							// Email asking is DISABLED (support ticket / lead generation disabled)
+							// Do NOT append any email request. Only append support page link if configured and not yet present.
+							if ( ! $has_support_link && $has_support_url_escaped && $contains_support_referral ) {
+								$ai_message .= "\n\n" . sprintf(
+									/* translators: %s: Support URL */
+									__( 'You can reach out to our team directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+									$support_url_escaped
+								);
+							}
 						}
 					}
 				}
