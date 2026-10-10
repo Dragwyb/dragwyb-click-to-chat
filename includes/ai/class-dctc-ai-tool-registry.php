@@ -295,6 +295,7 @@ class DCTC_AI_Tool_Registry
 		if (!isset(self::$tools[$tool_name])) {
 			return [
 				'success' => false,
+				/* translators: %s: Tool name */
 				'error'   => sprintf(__('Tool "%s" is not registered or permitted.', 'dragwyb-click-to-chat'), esc_html($tool_name)),
 			];
 		}
@@ -361,6 +362,7 @@ class DCTC_AI_Tool_Registry
 			'count'    => count($products),
 			'products' => $products,
 			'message'  => count($products) > 0
+				/* translators: %d: Number of products */
 				? sprintf(__('Found %d matching products.', 'dragwyb-click-to-chat'), count($products))
 				: __('No products found matching that description.', 'dragwyb-click-to-chat'),
 		];
@@ -426,7 +428,8 @@ class DCTC_AI_Tool_Registry
 			'status'    => 'open',
 			'priority'  => $priority,
 			'subject'   => $subject,
-			'message'   => sprintf(__('Support ticket #%s has been created. Our support team will follow up at %s.', 'dragwyb-click-to-chat'), $ticket_id, $email ?: 'your email'),
+			/* translators: 1: Ticket ID, 2: Customer email address */
+			'message'   => sprintf(__('Support ticket #%1$s has been created. Our support team will follow up at %2$s.', 'dragwyb-click-to-chat'), $ticket_id, $email ?: 'your email'),
 		];
 	}
 
@@ -466,7 +469,8 @@ class DCTC_AI_Tool_Registry
 			'client_name'    => $name,
 			'preferred_date' => $date,
 			'preferred_time' => $time,
-			'message'        => sprintf(__('Your appointment request #%s for %s (%s) has been received! Our team will contact you to confirm.', 'dragwyb-click-to-chat'), $booking_id, $date, $time ?: 'anytime'),
+			/* translators: 1: Booking ID, 2: Preferred date, 3: Preferred time */
+			'message'        => sprintf(__('Your appointment request #%1$s for %2$s (%3$s) has been received! Our team will contact you to confirm.', 'dragwyb-click-to-chat'), $booking_id, $date, $time ?: 'anytime'),
 		];
 	}
 
@@ -643,6 +647,7 @@ class DCTC_AI_Tool_Registry
 				'User-Agent'   => 'WordPress/Dragwyb-AI-Workflows',
 			],
 			'body'      => wp_json_encode($payload),
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Using core WordPress filter https_local_ssl_verify.
 			'sslverify' => apply_filters('https_local_ssl_verify', false),
 		]);
 	}

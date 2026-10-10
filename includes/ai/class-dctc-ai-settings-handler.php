@@ -1762,7 +1762,8 @@ class DCTC_AI_Settings_Handler {
 			);
 		}
 
-		$file = $_FILES['file']; // phpcs:ignore WordPress.Security.NonceVerification.Missing
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Validated and processed via wp_handle_upload.
+		$file = $_FILES['file'];
 
 		// Check PHP upload error code
 		if ( isset( $file['error'] ) && $file['error'] !== UPLOAD_ERR_OK ) {
@@ -1971,7 +1972,7 @@ class DCTC_AI_Settings_Handler {
 
 		$url      = wp_get_attachment_url( $attachment_id );
 		$mime     = get_post_mime_type( $attachment_id ) ?: ( $wp_check['type'] ?: 'application/octet-stream' );
-		$is_image = str_starts_with( $mime, 'image/' );
+		$is_image = ( 0 === strpos( $mime, 'image/' ) );
 
 		// Tag temporary upload for scheduled retention cleanup
 		$settings   = self::dctc_ai_get_all_settings();

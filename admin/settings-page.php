@@ -41,9 +41,10 @@ if ( ! is_array( $dctc_uninstall_settings ) ) {
 }
 
 // Default active tab (from URL or default to 'general')
-// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$valid_tabs      = array( 'general', 'import-export', 'privacy', 'free-vs-pro' );
-$dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs, true ) ? sanitize_key( $_GET['tab'] ) : 'general';
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation parameter for settings tab display.
+$dctc_requested_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+$dctc_valid_tabs    = array( 'general', 'import-export', 'privacy', 'free-vs-pro' );
+$dctc_active_tab    = in_array( $dctc_requested_tab, $dctc_valid_tabs, true ) ? $dctc_requested_tab : 'general';
 ?>
 
 <div class="dctc-admin-wrap dctc-settings-wrap">

@@ -409,6 +409,7 @@ class DCTC_AI_WooCommerce {
 			$login_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
 			$login_msg = ! empty( $settings['chatbot']['order_tracking_login_msg'] )
 				? str_replace( '{login_url}', $login_url, $settings['chatbot']['order_tracking_login_msg'] )
+				/* translators: %s: My account login URL */
 				: sprintf( __( 'Please <a href="%s">log in to your account</a> to track your orders.', 'dragwyb-click-to-chat' ), esc_url( $login_url ) );
 			return $this->error_response( $login_msg, 401 );
 		}

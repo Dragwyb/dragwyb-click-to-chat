@@ -49,7 +49,10 @@ foreach ( $dctc_phase_one_channels as $dctc_slug ) {
 			</div>
 		</div>
 		<span class="dctc-ai-status-pill is-active" id="dctc-active-channels-badge">
-			<?php printf( esc_html__( '%d Channels Enabled', 'dragwyb-click-to-chat' ), $dctc_active_count ); ?>
+			<?php
+			/* translators: %d: Number of enabled channels. */
+			printf( esc_html__( '%d Channels Enabled', 'dragwyb-click-to-chat' ), absint( $dctc_active_count ) );
+			?>
 		</span>
 	</div>
 

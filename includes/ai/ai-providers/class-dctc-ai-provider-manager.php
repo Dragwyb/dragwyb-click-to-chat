@@ -188,6 +188,6 @@ class DCTC_AI_Provider_Manager {
 		}
 
 		// Re-throw primary exception if fallback is not available
-		throw new \Exception( $primary_error ? $primary_error->getMessage() : esc_html__( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
+		throw new \Exception( $primary_error ? $primary_error->getMessage() : __( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
 	}
 }

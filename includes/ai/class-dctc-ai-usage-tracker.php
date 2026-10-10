@@ -47,7 +47,7 @@ class DCTC_AI_Usage_Tracker {
 		$visitor_daily_limit = isset( $bot['visitor_daily_message_limit'] ) ? intval( $bot['visitor_daily_message_limit'] ) : 50;
 		if ( $visitor_daily_limit > 0 ) {
 			$ip            = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
-			$visitor_key   = 'dctc_ai_uv_' . md5( $session_id . '_' . $ip . '_' . date( 'Ymd' ) );
+			$visitor_key   = 'dctc_ai_uv_' . md5( $session_id . '_' . $ip . '_' . gmdate( 'Ymd' ) );
 			$visitor_count = (int) get_transient( $visitor_key );
 
 			if ( $visitor_count >= $visitor_daily_limit ) {
@@ -63,7 +63,7 @@ class DCTC_AI_Usage_Tracker {
 		// 2. Check Monthly Site Request Budget Ceiling
 		$monthly_budget = isset( $bot['monthly_request_budget'] ) ? intval( $bot['monthly_request_budget'] ) : 5000;
 		if ( $monthly_budget > 0 ) {
-			$month_key   = 'dctc_ai_site_reqs_' . date( 'Ym' );
+			$month_key   = 'dctc_ai_site_reqs_' . gmdate( 'Ym' );
 			$month_count = (int) get_option( $month_key, 0 );
 
 			if ( $month_count >= $monthly_budget ) {
@@ -98,22 +98,22 @@ class DCTC_AI_Usage_Tracker {
 		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : 'unknown';
 
 		// 1. Increment visitor daily counter (expires in 24h)
-		$visitor_key   = 'dctc_ai_uv_' . md5( $session_id . '_' . $ip . '_' . date( 'Ymd' ) );
+		$visitor_key   = 'dctc_ai_uv_' . md5( $session_id . '_' . $ip . '_' . gmdate( 'Ymd' ) );
 		$visitor_count = (int) get_transient( $visitor_key );
 		set_transient( $visitor_key, $visitor_count + 1, DAY_IN_SECONDS );
 
 		// 2. Increment site daily and monthly request counters
-		$day_key   = 'dctc_ai_site_reqs_' . date( 'Ymd' );
+		$day_key   = 'dctc_ai_site_reqs_' . gmdate( 'Ymd' );
 		$day_count = (int) get_option( $day_key, 0 );
 		update_option( $day_key, $day_count + 1, false );
 
-		$month_key   = 'dctc_ai_site_reqs_' . date( 'Ym' );
+		$month_key   = 'dctc_ai_site_reqs_' . gmdate( 'Ym' );
 		$month_count = (int) get_option( $month_key, 0 );
 		update_option( $month_key, $month_count + 1, false );
 
 		// 3. Record estimated tokens
 		if ( $est_tokens > 0 ) {
-			$month_tokens_key = 'dctc_ai_site_tokens_' . date( 'Ym' );
+			$month_tokens_key = 'dctc_ai_site_tokens_' . gmdate( 'Ym' );
 			$month_tokens     = (int) get_option( $month_tokens_key, 0 );
 			update_option( $month_tokens_key, $month_tokens + $est_tokens, false );
 		}
@@ -128,9 +128,9 @@ class DCTC_AI_Usage_Tracker {
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$bot      = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
 
-		$today_reqs     = (int) get_option( 'dctc_ai_site_reqs_' . date( 'Ymd' ), 0 );
-		$month_reqs     = (int) get_option( 'dctc_ai_site_reqs_' . date( 'Ym' ), 0 );
-		$month_tokens   = (int) get_option( 'dctc_ai_site_tokens_' . date( 'Ym' ), 0 );
+		$today_reqs     = (int) get_option( 'dctc_ai_site_reqs_' . gmdate( 'Ymd' ), 0 );
+		$month_reqs     = (int) get_option( 'dctc_ai_site_reqs_' . gmdate( 'Ym' ), 0 );
+		$month_tokens   = (int) get_option( 'dctc_ai_site_tokens_' . gmdate( 'Ym' ), 0 );
 		$monthly_budget = isset( $bot['monthly_request_budget'] ) ? intval( $bot['monthly_request_budget'] ) : 5000;
 
 		$percent = ( $monthly_budget > 0 ) ? min( 100, round( ( $month_reqs / $monthly_budget ) * 100, 1 ) ) : 0;
@@ -161,7 +161,7 @@ class DCTC_AI_Usage_Tracker {
 			return;
 		}
 
-		$flag_key = 'dctc_ai_budget_alert_' . date( 'Ym' ) . '_' . $threshold;
+		$flag_key = 'dctc_ai_budget_alert_' . gmdate( 'Ym' ) . '_' . $threshold;
 		if ( get_transient( $flag_key ) ) {
 			return; // Already sent alert this month for this threshold
 		}

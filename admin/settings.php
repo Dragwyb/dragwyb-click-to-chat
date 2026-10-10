@@ -138,6 +138,7 @@ function dctc_render_ai_assistant_page() {
  * @return void
  */
 function dctc_admin_scripts( $hook ) {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only page check for admin script enqueueing.
 	$page        = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_channels = class_exists( 'DCTC_Helper' ) && DCTC_Helper::is_channels_enabled() && ( ( 'dragwyb-click-to-chat-channels' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-channels' ) );
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page ) || false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );

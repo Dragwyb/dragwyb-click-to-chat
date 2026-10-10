@@ -719,6 +719,7 @@ class DCTC_AI_RAG_Controller
 				$clean_wa = preg_replace('/[^0-9]/', '', $wa_number);
 				$fallback_buttons[] = [
 					'label' => __('Chat on WhatsApp', 'dragwyb-click-to-chat'),
+					/* translators: %s: User question prompt snippet */
 					'url' => 'https://wa.me/' . $clean_wa . '?text=' . rawurlencode(sprintf(__('Hi, I had a question on your site: "%s"', 'dragwyb-click-to-chat'), mb_substr($prompt, 0, 80))),
 					'type' => 'whatsapp',
 					'target' => '_blank',

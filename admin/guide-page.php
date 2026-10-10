@@ -38,8 +38,10 @@ $dctc_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support
 // 1. AI Assistant (if active)
 // 2. Support Center (if active)
 // 3. Channels (if active)
-if ( isset( $_GET['tab'] ) && in_array( $_GET['tab'], array( 'channels', 'ai', 'support', 'setup' ), true ) ) {
-	$dctc_active_tab = sanitize_key( $_GET['tab'] );
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only tab parameter for display.
+$dctc_requested_tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : '';
+if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' ), true ) ) {
+	$dctc_active_tab = $dctc_requested_tab;
 } elseif ( $dctc_ai_enabled ) {
 	$dctc_active_tab = 'ai';
 } elseif ( $dctc_support_enabled ) {

@@ -277,10 +277,13 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			$portal_page_id   = get_option( 'dctc_support_portal_page_id' );
 			$portal_url       = $portal_page_id ? get_permalink( $portal_page_id ) : home_url( '/support-portal' );
-			$is_guide_page    = ( 'dragwyb-click-to-chat-guide' === $page );
-			$tab_param        = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
-			$open_param       = isset( $_GET['open'] ) ? sanitize_text_field( wp_unslash( $_GET['open'] ) ) : '';
-			$force_open       = isset( $_GET['dctc_open_onboarding'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_open_onboarding'] ) );
+			$is_guide_page = ( 'dragwyb-click-to-chat-guide' === $page );
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
+			$tab_param     = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
+			$open_param    = isset( $_GET['open'] ) ? sanitize_text_field( wp_unslash( $_GET['open'] ) ) : '';
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
+			$force_open    = isset( $_GET['dctc_open_onboarding'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_open_onboarding'] ) );
 
 			// Check tab === setup and open === 1 before auto-opening modal
 			$show_onboarding = ( $is_guide_page && 'setup' === $tab_param && '1' === $open_param ) || $force_open;
@@ -853,8 +856,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				$indexer = new DCTC_AI_Indexer();
 				$indexer->remove_document( 'post_' . absint( $post_id ) );
 			} catch ( Exception $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Dragwyb AI Auto-Sync Delete Error: ' . $e->getMessage() );
+				if ( class_exists( 'DCTC_Error_Logger' ) ) {
+					DCTC_Error_Logger::log( 'Auto-Sync Delete Error: ' . $e->getMessage(), array( 'post_id' => $post_id ) );
 				}
 			}
 		}
@@ -889,8 +892,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				$indexer->index_post( $post );
 				$this->dctc_ai_invalidate_mcp_cache();
 			} catch ( Exception $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Dragwyb AI Auto-Sync Async Index Error: ' . $e->getMessage() );
+				if ( class_exists( 'DCTC_Error_Logger' ) ) {
+					DCTC_Error_Logger::log( 'Auto-Sync Async Index Error: ' . $e->getMessage(), array( 'post_id' => $post_id ) );
 				}
 			}
 		}
@@ -908,8 +911,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				try {
 					DCTC_AI_DB::dctc_ai_clean_old_sessions( $chat_retention_days );
 				} catch ( Exception $e ) {
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( 'Dragwyb AI Daily Retention Cleanup Error: ' . $e->getMessage() );
+					if ( class_exists( 'DCTC_Error_Logger' ) ) {
+						DCTC_Error_Logger::log( 'Daily Retention Cleanup Error: ' . $e->getMessage() );
 					}
 				}
 			}
@@ -918,8 +921,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				try {
 					DCTC_Error_Logger::clean_old_logs();
 				} catch ( Exception $e ) {
-					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-						error_log( 'Dragwyb AI Daily Error Log Cleanup Error: ' . $e->getMessage() );
+					if ( class_exists( 'DCTC_Error_Logger' ) ) {
+						DCTC_Error_Logger::log( 'Daily Error Log Cleanup Error: ' . $e->getMessage() );
 					}
 				}
 			}
@@ -941,8 +944,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					}
 				}
 			} catch ( Exception $e ) {
-				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
-					error_log( 'Dragwyb AI Temp Attachment Cleanup Error: ' . $e->getMessage() );
+				if ( class_exists( 'DCTC_Error_Logger' ) ) {
+					DCTC_Error_Logger::log( 'Temp Attachment Cleanup Error: ' . $e->getMessage() );
 				}
 			}
 		}
