@@ -335,22 +335,39 @@ class DCTC_AI_Chat_Controller {
 					}
 				}
 
-				$support_url = ! empty( $bot['support_url'] ) ? esc_url( $bot['support_url'] ) : home_url();
+				$has_support_page = ! empty( $bot['support_url'] );
+				$support_url      = $has_support_page ? esc_url( $bot['support_url'] ) : '';
 
 				if ( $is_sales_lead ) {
-					$resp_msg = sprintf(
-						/* translators: 1: Email, 2: Support URL */
-						__( 'Thank you for providing your email! We have received your request and our team will follow up directly at %1$s. You can also reach out or check updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
-						esc_html( $provided_email ),
-						$support_url
-					);
+					if ( $has_support_page ) {
+						$resp_msg = sprintf(
+							/* translators: 1: Email, 2: Support URL */
+							__( 'Thank you for providing your email! We have received your request and our team will follow up directly at %1$s. You can also reach out or check updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
+							esc_html( $provided_email ),
+							$support_url
+						);
+					} else {
+						$resp_msg = sprintf(
+							/* translators: 1: Email */
+							__( 'Thank you for providing your email! We have received your request and our team will follow up directly at %1$s.', 'dragwyb-click-to-chat' ),
+							esc_html( $provided_email )
+						);
+					}
 				} else {
-					$resp_msg = sprintf(
-						/* translators: 1: Email, 2: Support URL */
-						__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon. You can also contact us or view updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
-						esc_html( $provided_email ),
-						$support_url
-					);
+					if ( $has_support_page ) {
+						$resp_msg = sprintf(
+							/* translators: 1: Email, 2: Support URL */
+							__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon. You can also contact us or view updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
+							esc_html( $provided_email ),
+							$support_url
+						);
+					} else {
+						$resp_msg = sprintf(
+							/* translators: 1: Email */
+							__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon.', 'dragwyb-click-to-chat' ),
+							esc_html( $provided_email )
+						);
+					}
 				}
 
 				return $this->save_and_respond(
@@ -1316,9 +1333,12 @@ class DCTC_AI_Chat_Controller {
 	 * Build comprehensive system prompt with strict domain grounding and custom support referral.
 	 */
 	private function build_system_prompt( $bot, $settings ) {
-		$site_name   = get_bloginfo( 'name' );
-		$support_url = ! empty( $bot['support_url'] ) ? esc_url_raw( $bot['support_url'] ) : home_url();
-		$bot_name    = ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant';
+		$site_name             = get_bloginfo( 'name' );
+		$has_support_url       = ! empty( $bot['support_url'] );
+		$support_url           = $has_support_url ? esc_url_raw( $bot['support_url'] ) : '';
+		$bot_name              = ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant';
+		$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : true;
+		$enable_lead_capture   = ! empty( $bot['enable_lead_capture'] );
 
 		$system_message = '';
 
@@ -1342,51 +1362,138 @@ OFF-TOPIC, UNRELATED, OR CUSTOMIZATION REQUESTS:
 - If a user asks a question that is outside the scope of {$site_name}'s official products, documentation, and knowledge base (such as generic CSS/design modifications, custom coding, external tutorials, or unrelated topics):
   1. Do NOT generate generic web tutorials or open-ended external code.
   2. Politely and professionally inform the user that you are the dedicated assistant for {$site_name} and specialize in our official products, features, and documentation.
-  3. If they need custom development, specialized CSS styling, or custom assistance, provide a helpful and warm response encouraging them to reach out directly to our human support team: [Contact Support]({$support_url}) or submit a request on our Support page so our specialists can assist them with custom requirements.
+";
 
-STRICT LINK & URL INTEGRITY RULES:
+		if ( $enable_support_ticket ) {
+			if ( $has_support_url ) {
+				$system_message .= "  3. If they need custom development, specialized CSS styling, or custom assistance, provide a helpful and warm response encouraging them to reach out directly to our human support team: [Contact Support]({$support_url}) or share their email address here so our specialists can assist them.\n\n";
+			} else {
+				$system_message .= "  3. If they need custom development, specialized CSS styling, or custom assistance, provide a helpful response inviting them to share their email address here so our specialists can follow up with them.\n\n";
+			}
+		} else {
+			if ( $has_support_url ) {
+				$system_message .= "  3. If they need custom development, specialized CSS styling, or custom assistance, encourage them to reach out directly to our human support team via [Contact Support]({$support_url}). Do NOT ask for their email address.\n\n";
+			} else {
+				$system_message .= "  3. Provide a warm, polite human reply explaining what you can assist with based on official documentation. Do NOT ask for their email address.\n\n";
+			}
+		}
+
+		$system_message .= "STRICT LINK & URL INTEGRITY RULES:
 - NEVER invent, fabricate, or guess URLs (such as /features, /pricing, /tickets, /support-desk, /contact-us, /docs, /help, /refund, example.com, yoursite.com, etc.).
-- ONLY generate markdown links if the exact URL is explicitly given in the retrieved context or if it is the official support link: [Contact Support]({$support_url}).
-- If you refer to a site page, section, or feature whose exact URL is not provided in context, mention its name in plain text WITHOUT markdown link syntax (e.g., write \"check our Returns & Refunds policy\" instead of \"[Returns & Refunds](/returns)\").
-- If the user asks how to get help or submit a ticket, direct them to [Contact Support]({$support_url}).
+";
+		if ( $has_support_url ) {
+			$system_message .= "- ONLY generate markdown links if the exact URL is explicitly given in the retrieved context or if it is the official support link: [Contact Support]({$support_url}).\n";
+			$system_message .= "- If the user asks how to get help or submit a ticket, direct them to [Contact Support]({$support_url}).\n";
+		} else {
+			$system_message .= "- ONLY generate markdown links if the exact URL is explicitly given in the retrieved context. Do NOT generate markdown links for support or contact pages.\n";
+		}
+		$system_message .= "- If you refer to a site page, section, or feature whose exact URL is not provided in context, mention its name in plain text WITHOUT markdown link syntax (e.g., write \"check our Returns & Refunds policy\" instead of \"[Returns & Refunds](/returns)\").\n\n";
 
-ACCURACY & KNOWLEDGE BASE GROUNDING:
+		$system_message .= "ACCURACY & KNOWLEDGE BASE GROUNDING:
 - Answer based strictly on the provided Knowledge Base, Products, and Page context.
 - Never invent facts, prices, policies, or technical claims.
-- If information is not in our data, acknowledge it honestly and direct the user to our support team.
+- If information is not in our data, acknowledge it honestly and direct the user appropriately without guessing.
 - Never say robotic phrases like 'Based on the context provided' or 'According to the knowledge base'—speak naturally as {$site_name}'s representative.
 
 LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-PRODUCT INQUIRIES, PURCHASING & SALES LEADS:
-- When a user asks about products, expresses interest in buying or purchasing (e.g., 'I want to buy this', 'how to buy', 'interested in purchasing', 'looking for product details'):
-  1. Provide the complete product details, features, price, and direct link on how to view or buy the product.
-  2. If the user is a guest (email NOT known), ALWAYS conclude your response using the HYBRID APPROACH: 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support]({$support_url}).'
-  3. If the user is already logged in or email is known: 'We have received your inquiry and our team will follow up directly at your registered email, or you can reach us via [Contact Support]({$support_url}).'
-  4. Set the intent tag to `lead_generation`. Never end with robotic filler like 'How can I help you today?'.
+";
 
-SUPPORT, BUG, TECHNICAL & TROUBLESHOOTING INQUIRIES:
-- If the user asks about a bug, technical problem, error, configuration issue, translation issue, or needs support:
-  1. Provide helpful troubleshooting steps or direct solutions based on available documentation.
-  2. If the user is a guest (email NOT known), ALWAYS conclude your response using the HYBRID APPROACH: 'If you would like our technical support team to investigate this directly, please share your email address here, or submit a request directly on our [Contact Support]({$support_url}) page.'
-  3. If the user is already logged in or email is known: 'A support request has been logged and our technical team will follow up with you directly at your registered email, or you can visit [Contact Support]({$support_url}) anytime.'
-  4. Set the intent tag to `support_ticket`.
+		// Product Inquiries / Purchasing / Sales Leads
+		$system_message .= "PRODUCT INQUIRIES, PURCHASING & SALES LEADS:\n";
+		$system_message .= "- When a user asks about products, expresses interest in buying or purchasing (e.g., 'I want to buy this', 'how to buy', 'interested in purchasing', 'looking for product details'):\n";
+		$system_message .= "  1. Provide the complete product details, features, price, and direct link on how to view or buy the product.\n";
 
-CONTACT SUPPORT & TEAM ESCALATION (HYBRID CONNECT):
-- Whenever you provide a [Contact Support]({$support_url}) link or suggest contacting support / reaching out to our team:
-  1. If the user is a guest (email NOT known): ALWAYS offer BOTH options—ask them to share their email address here so our team can directly follow up, and provide the [Contact Support]({$support_url}) link.
-  2. If the user is already logged in or email is known: Let them know that we have received their request and our team will follow up directly at their registered email, and provide the [Contact Support]({$support_url}) link.
-  3. Tag the intent accurately as `lead_generation` (for purchase/product/quote interest) or `support_ticket` (for technical help/issues/custom requests).
+		if ( $enable_lead_capture || $enable_support_ticket ) {
+			if ( $has_support_url ) {
+				$system_message .= "  2. If the user is a guest (email NOT known), conclude your response by inviting them: 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support]({$support_url}).'\n";
+				$system_message .= "  3. If the user is already logged in or email is known: 'We have received your inquiry and our team will follow up directly at your registered email, or you can reach us via [Contact Support]({$support_url}).'\n";
+			} else {
+				$system_message .= "  2. If the user is a guest (email NOT known), conclude your response by inviting them: 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase.'\n";
+				$system_message .= "  3. If the user is already logged in or email is known: 'We have received your inquiry and our team will follow up directly at your registered email.'\n";
+			}
+			$system_message .= "  4. Set the intent tag to `lead_generation`. Never end with robotic filler like 'How can I help you today?'.\n\n";
+		} else {
+			$system_message .= "  2. Do NOT ask for the user's email address under any circumstances.\n";
+			if ( $has_support_url ) {
+				$system_message .= "  3. If the user has additional questions or needs assistance from our team, you can share the link: [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  3. Provide a helpful, normal human reply based on the knowledge you have.\n";
+			}
+			$system_message .= "  4. Set the intent tag to `lead_generation`.\n\n";
+		}
 
-CONVERSATIONAL SALES & CUSTOM QUOTES:
-- When a user explicitly asks for a custom quote, bulk enterprise pricing, demo booking, or asks our sales team to contact them directly:
-  1. Warmly and helpfully provide product/pricing information from the knowledge base.
-  2. Politely offer to connect them with our sales team or invite them to fill out the inquiry form.
-  3. Set the intent tag to `lead_generation`.
+		// Support, Bug, Technical & Troubleshooting Inquiries
+		$system_message .= "SUPPORT, BUG, TECHNICAL & TROUBLESHOOTING INQUIRIES:\n";
+		$system_message .= "- If the user asks about a bug, technical problem, error, configuration issue, translation issue, or needs support:\n";
+		$system_message .= "  1. Provide helpful troubleshooting steps or direct solutions based on available documentation.\n";
 
-WOOCOMMERCE ORDER TRACKING:
+		if ( $enable_support_ticket ) {
+			if ( $has_support_url ) {
+				$system_message .= "  2. If the user is a guest (email NOT known), conclude your response with: 'If you would like our technical support team to investigate this directly, please share your email address here, or submit a request directly on our [Contact Support]({$support_url}) page.'\n";
+				$system_message .= "  3. If the user is already logged in or email is known: 'A support request has been logged and our technical team will follow up with you directly at your registered email, or you can visit [Contact Support]({$support_url}) anytime.'\n";
+			} else {
+				$system_message .= "  2. If the user is a guest (email NOT known), conclude your response with: 'If you would like our technical support team to investigate this directly, please share your email address here so we can create a support ticket and assist you.'\n";
+				$system_message .= "  3. If the user is already logged in or email is known: 'A support request has been logged and our technical team will follow up with you directly at your registered email.'\n";
+			}
+			$system_message .= "  4. Set the intent tag to `support_ticket`.\n\n";
+		} else {
+			$system_message .= "  2. Do NOT ask for the user's email address under any circumstances.\n";
+			if ( $has_support_url ) {
+				$system_message .= "  3. If troubleshooting does not resolve the issue or if the user needs human assistance, share the contact support page link: [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  3. Provide a helpful, normal human reply based strictly on the knowledge and documentation you have.\n";
+			}
+			$system_message .= "  4. Set the intent tag to `general_qa`.\n\n";
+		}
+
+		// Contact Support & Team Escalation
+		$system_message .= "CONTACT SUPPORT & TEAM ESCALATION:\n";
+		$system_message .= "- Whenever suggesting contacting support or reaching out to our team:\n";
+		if ( $enable_support_ticket ) {
+			if ( $has_support_url ) {
+				$system_message .= "  1. If the user is a guest (email NOT known): ALWAYS offer both options—invite them to share their email address here so our team can follow up, or visit [Contact Support]({$support_url}).\n";
+				$system_message .= "  2. If the user is already logged in or email is known: Let them know our team will follow up directly at their registered email, and share [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  1. If the user is a guest (email NOT known): Ask them to share their email address here so our team can create a ticket and follow up.\n";
+				$system_message .= "  2. If the user is already logged in or email is known: Let them know our team will follow up directly at their registered email.\n";
+			}
+			$system_message .= "  3. Tag the intent accurately as `lead_generation` (for purchase/sales) or `support_ticket` (for technical issues/help).\n\n";
+		} else {
+			$system_message .= "  1. Do NOT ask for user's email address.\n";
+			if ( $has_support_url ) {
+				$system_message .= "  2. Direct the user to our support page: [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  2. Provide a normal, helpful human reply based on the available knowledge.\n";
+			}
+			$system_message .= "  3. Tag the intent as `general_qa`.\n\n";
+		}
+
+		// Conversational Sales & Custom Quotes
+		$system_message .= "CONVERSATIONAL SALES & CUSTOM QUOTES:\n";
+		$system_message .= "- When a user explicitly asks for a custom quote, bulk enterprise pricing, demo booking, or asks our sales team to contact them directly:\n";
+		$system_message .= "  1. Warmly and helpfully provide product/pricing information from the knowledge base.\n";
+		if ( $enable_lead_capture || $enable_support_ticket ) {
+			if ( $has_support_url ) {
+				$system_message .= "  2. Politely offer to connect them with our sales team by asking for their email address or inviting them to visit [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  2. Politely offer to connect them with our sales team by asking for their email address.\n";
+			}
+			$system_message .= "  3. Set the intent tag to `lead_generation`.\n\n";
+		} else {
+			$system_message .= "  2. Do NOT ask for their email address.\n";
+			if ( $has_support_url ) {
+				$system_message .= "  3. If they need further assistance or custom pricing, direct them to [Contact Support]({$support_url}).\n";
+			} else {
+				$system_message .= "  3. Provide a normal, helpful human reply with the information available.\n";
+			}
+			$system_message .= "  4. Set the intent tag to `general_qa`.\n\n";
+		}
+
+		// WooCommerce order tracking & Hidden Intent
+		$system_message .= "WOOCOMMERCE ORDER TRACKING:
 - When a user asks to track their order status, package delivery, or mentions an order number (#1234):
   1. Assist them with tracking and checking order status.
   2. Set the intent tag to `order_tracking`.
