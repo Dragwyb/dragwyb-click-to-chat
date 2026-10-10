@@ -105,3 +105,12 @@ export function formatProviderLabel( provider ) {
 	const key = provider.toLowerCase();
 	return map[ key ] || provider.charAt( 0 ).toUpperCase() + provider.slice( 1 );
 }
+
+export function getProUrl( medium = 'admin', campaign = 'buy_pro' ) {
+	const params = new URLSearchParams({
+		utm_source: 'dctc',
+		utm_medium: medium,
+		utm_campaign: campaign,
+	});
+	return `https://dragwyb.com/product/ai-chatbot/?${params.toString()}`;
+}

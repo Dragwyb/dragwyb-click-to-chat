@@ -724,7 +724,7 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 					</p>
 				</div>
 				<div>
-					<a href="https://dragwyb.com/pro" target="_blank" rel="noopener noreferrer" class="dctc-pro-upgrade" style="display:inline-flex; align-items:center; gap:8px; background:#fbbf24; color:#1e1b4b; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:700; text-decoration:none; box-shadow:0 4px 12px rgba(251, 191, 36, 0.35);">
+					<a href="<?php echo esc_url( DCTC_Helper::get_pro_url( 'settings_free_vs_pro' ) ); ?>" target="_blank" rel="noopener noreferrer" class="dctc-pro-upgrade" style="display:inline-flex; align-items:center; gap:8px; background:#fbbf24; color:#1e1b4b; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:700; text-decoration:none; box-shadow:0 4px 12px rgba(251, 191, 36, 0.35);">
 						<span class="dashicons dashicons-star-filled"></span>
 						<?php esc_html_e( 'Explore Dragwyb Pro', 'dragwyb-click-to-chat' ); ?>
 					</a>

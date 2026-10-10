@@ -8,6 +8,7 @@
 import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import ProBadge from '../../../common/components/ProBadge';
+import { getProUrl } from '../utils/providers';
 
 const SAMPLE_CAPABILITIES = [
 	{
@@ -80,7 +81,7 @@ export default function AdminCopilot() {
 				</div>
 				<div>
 					<a
-						href="https://dragwyb.com/pro"
+						href={getProUrl('admin_copilot')}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="dctc-pro-upgrade-btn"
@@ -204,7 +205,7 @@ export default function AdminCopilot() {
 							{ __( 'Simulated output from Dragwyb Pro Copilot Intelligence Engine', 'dragwyb-click-to-chat' ) }
 						</span>
 						<a
-							href="https://dragwyb.com/pro"
+							href={getProUrl('admin_copilot_demo')}
 							target="_blank"
 							rel="noopener noreferrer"
 							style={{ fontSize: '12px', color: '#7c3aed', fontWeight: '600', textDecoration: 'none' }}

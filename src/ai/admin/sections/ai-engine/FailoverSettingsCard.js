@@ -1,5 +1,6 @@
 import { __ } from '@wordpress/i18n';
 import ProBadge from '../../../../common/components/ProBadge';
+import { getProUrl } from '../../utils/providers';
 
 export default function FailoverSettingsCard() {
 	return (
@@ -77,7 +78,7 @@ export default function FailoverSettingsCard() {
 						</span>
 					</div>
 					<a
-						href="https://dragwyb.com/pro"
+						href={getProUrl('ai_engine_failover')}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="dctc-pro-upgrade-btn"

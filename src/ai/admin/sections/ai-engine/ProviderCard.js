@@ -1,6 +1,7 @@
 import { __, sprintf } from '@wordpress/i18n';
 import Toggle from '../../components/Toggle';
 import ProBadge from '../../../../common/components/ProBadge';
+import { getProUrl } from '../../utils/providers';
 
 export default function ProviderCard({
 	id,
@@ -70,7 +71,7 @@ export default function ProviderCard({
 							{__('Unlock with Pro Add-on', 'dragwyb-click-to-chat')}
 						</span>
 						<a
-							href="https://dragwyb.com/pro"
+							href={getProUrl(`ai_engine_provider_${id}`)}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="dctc-pro-upgrade-btn"

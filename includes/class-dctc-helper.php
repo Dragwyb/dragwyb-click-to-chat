@@ -218,5 +218,22 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 			}
 			return ! empty( $support_settings['enabled'] );
 		}
+		/**
+		 * Generate a tracked Buy Pro URL with UTM parameters indicating the originating plugin page.
+		 *
+		 * @param string $medium Specific page, section, or feature context (e.g. 'settings_free_vs_pro', 'ai_engine').
+		 * @param string $campaign Optional campaign name, defaults to 'buy_pro'.
+		 * @return string Full tracked Pro URL.
+		 */
+		public static function get_pro_url( $medium = 'admin', $campaign = 'buy_pro' ) {
+			return add_query_arg(
+				array(
+					'utm_source'   => 'dctc',
+					'utm_medium'   => sanitize_key( $medium ),
+					'utm_campaign' => sanitize_key( $campaign ),
+				),
+				'https://dragwyb.com/product/ai-chatbot/'
+			);
+		}
 	}
 }
