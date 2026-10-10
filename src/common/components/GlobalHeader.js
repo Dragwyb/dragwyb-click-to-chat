@@ -6,7 +6,6 @@
  * - AI Assistant
  * - Channels & Settings
  */
-import { __ } from '@wordpress/i18n';
 
 export default function GlobalHeader({
 	icon = 'dashicons-format-chat',
@@ -45,8 +44,8 @@ export default function GlobalHeader({
 							item.active !== undefined
 								? item.active
 								: activeTab !== undefined
-								? activeTab === item.id
-								: false;
+									? activeTab === item.id
+									: false;
 
 						const handleClick = (e) => {
 							if (item.onClick) {

@@ -120,39 +120,6 @@ class DCTC_Support_Product_Service {
 	}
 
 	/**
-	 * Get product by ID.
-	 *
-	 * @param int $product_id Product ID.
-	 * @return array<string, mixed>|null
-	 */
-	public static function get_product( $product_id ) {
-		global $wpdb;
-		$table_terms = $wpdb->prefix . 'dctc_support_terms';
-		$product_id  = absint( $product_id );
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$row = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_terms` WHERE id = %d AND taxonomy_slug = 'product'", $product_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			ARRAY_A
-		);
-
-		if ( ! $row ) {
-			return null;
-		}
-
-		$meta = class_exists( 'DCTC_Support_Taxonomy_Service' )
-			? DCTC_Support_Taxonomy_Service::get_all_term_meta( $product_id )
-			: array();
-
-		$row['category_id']   = ! empty( $meta['category_id'] ) ? absint( $meta['category_id'] ) : 0;
-		$row['wc_product_id'] = ! empty( $meta['wc_product_id'] ) ? absint( $meta['wc_product_id'] ) : 0;
-		$row['sku']           = isset( $meta['sku'] ) ? (string) $meta['sku'] : '';
-		$row['price']         = isset( $meta['price'] ) ? floatval( $meta['price'] ) : 0.00;
-
-		return $row;
-	}
-
-	/**
 	 * Save / Add / Update a product term and metadata.
 	 *
 	 * @param array $data Product payload.

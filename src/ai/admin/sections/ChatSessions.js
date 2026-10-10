@@ -8,7 +8,7 @@ import {
 	useCallback,
 	useRef,
 } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
 import { formatProviderLabel } from '../utils/providers';

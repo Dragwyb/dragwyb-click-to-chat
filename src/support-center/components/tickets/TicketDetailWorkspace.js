@@ -1,26 +1,11 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useState, useRef, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import { StatusBadge, PriorityBadge } from '../SupportBadges';
 
 export default function TicketDetailWorkspace({
 	selectedTicket,
-	selectedTicketId,
-	totalTickets = 0,
-	filteredTickets = [],
 	userPermissions = {},
-	isLeftTicketsPanelExpanded,
-	setIsLeftTicketsPanelExpanded,
-	activeViewers = [],
-	starredTickets = {},
-	flaggedTickets = {},
-	toggleStar,
-	toggleFlag,
-	onOpenTicket,
 	onCloseTicket,
-	onNavigateTicket,
-	handleStatusChange,
-	handlePriorityChange,
 	handleToggleControl,
 	handleSendReply,
 	handleAddNote,

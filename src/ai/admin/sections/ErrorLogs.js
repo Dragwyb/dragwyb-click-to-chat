@@ -2,9 +2,9 @@
  * Error log table for plugin and AI REST errors.
  */
 import { useCallback, useEffect, useState } from '@wordpress/element';
-import { __, sprintf } from '@wordpress/i18n';
+import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
-import { Modal, EmptyState } from '../components';
+import { Modal } from '../components';
 
 function formatDate(value) {
 	if (!value) {

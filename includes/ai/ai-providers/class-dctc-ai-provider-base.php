@@ -8,14 +8,14 @@
  * @package Dragwyb_Click_To_Chat
  */
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 require_once __DIR__ . '/interface-dctc-ai-provider.php';
 
-abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
-{
+abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface {
+
 	/**
 	 * Default HTTP request timeout in seconds.
 	 */
@@ -26,27 +26,8 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 *
 	 * @return string
 	 */
-	public function get_api_key()
-	{
-		return DCTC_AI_Key_Store::get_provider_key($this->get_id());
-	}
-
-	/**
-	 * Convenience wrapper for chat completion returning array structure.
-	 *
-	 * @param string $prompt User prompt.
-	 * @param string $system_message System instruction.
-	 * @param string $model Model identifier.
-	 * @param array  $options Additional options.
-	 * @return array ['message' => string]
-	 * @throws \Exception On failure.
-	 */
-	public function chat_completion($prompt, $system_message = '', $model = '', array $options = [])
-	{
-		$response_text = $this->chat($prompt, $system_message, $model, $options);
-		return [
-			'message' => $response_text,
-		];
+	public function get_api_key() {
+		return DCTC_AI_Key_Store::get_provider_key( $this->get_id() );
 	}
 
 	/**
@@ -59,20 +40,22 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 * @return array Decoded response JSON array.
 	 * @throws \Exception On HTTP or API error.
 	 */
-	protected function http_post($url, array $body, array $headers = [], $timeout = self::HTTP_TIMEOUT)
-	{
-		$default_headers = [
+	protected function http_post( $url, array $body, array $headers = array(), $timeout = self::HTTP_TIMEOUT ) {
+		$default_headers = array(
 			'Content-Type' => 'application/json',
-			'User-Agent'   => 'WordPress/' . get_bloginfo('version') . '; DragwybAIChatbot/' . (defined('DCTC_VERSION') ? DCTC_VERSION : '1.0'),
-		];
+			'User-Agent'   => 'WordPress/' . get_bloginfo( 'version' ) . '; DragwybAIChatbot/' . ( defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0' ),
+		);
 
-		$response = wp_remote_post($url, [
-			'headers' => array_merge($default_headers, $headers),
-			'body'    => wp_json_encode($body),
-			'timeout' => $timeout,
-		]);
+		$response = wp_remote_post(
+			$url,
+			array(
+				'headers' => array_merge( $default_headers, $headers ),
+				'body'    => wp_json_encode( $body ),
+				'timeout' => $timeout,
+			)
+		);
 
-		return $this->handle_response($response, $url);
+		return $this->handle_response( $response, $url );
 	}
 
 	/**
@@ -84,18 +67,20 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 * @return array Decoded response JSON array.
 	 * @throws \Exception On HTTP or API error.
 	 */
-	protected function http_get($url, array $headers = [], $timeout = 30)
-	{
-		$default_headers = [
-			'User-Agent' => 'WordPress/' . get_bloginfo('version') . '; DragwybAIChatbot/' . (defined('DCTC_VERSION') ? DCTC_VERSION : '1.0'),
-		];
+	protected function http_get( $url, array $headers = array(), $timeout = 30 ) {
+		$default_headers = array(
+			'User-Agent' => 'WordPress/' . get_bloginfo( 'version' ) . '; DragwybAIChatbot/' . ( defined( 'DCTC_VERSION' ) ? DCTC_VERSION : '1.0' ),
+		);
 
-		$response = wp_remote_get($url, [
-			'headers' => array_merge($default_headers, $headers),
-			'timeout' => $timeout,
-		]);
+		$response = wp_remote_get(
+			$url,
+			array(
+				'headers' => array_merge( $default_headers, $headers ),
+				'timeout' => $timeout,
+			)
+		);
 
-		return $this->handle_response($response, $url);
+		return $this->handle_response( $response, $url );
 	}
 
 	/**
@@ -106,39 +91,45 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 * @return array
 	 * @throws \Exception On error.
 	 */
-	protected function handle_response($response, $url)
-	{
-		if (is_wp_error($response)) {
-			$error_msg = $this->sanitize_error($response->get_error_message());
-			throw new \Exception(sprintf(
+	protected function handle_response( $response, $url ) {
+		if ( is_wp_error( $response ) ) {
+			$error_msg = $this->sanitize_error( $response->get_error_message() );
+			throw new \Exception(
+				sprintf(
 				/* translators: 1: Provider name, 2: Error message */
-				esc_html__('%1$s Network Error: %2$s', 'dragwyb-click-to-chat'),
-				esc_html($this->get_name()),
-				esc_html($error_msg)
-			));
+					esc_html__( '%1$s Network Error: %2$s', 'dragwyb-click-to-chat' ),
+					esc_html( $this->get_name() ),
+					esc_html( $error_msg )
+				)
+			);
 		}
 
-		$status_code = wp_remote_retrieve_response_code($response);
-		$body_raw    = wp_remote_retrieve_body($response);
-		$data        = json_decode($body_raw, true);
+		$status_code = wp_remote_retrieve_response_code( $response );
+		$body_raw    = wp_remote_retrieve_body( $response );
+		$data        = json_decode( $body_raw, true );
 
-		if ($status_code < 200 || $status_code >= 300) {
-			$err_message = $this->extract_error_message($data, $status_code, $body_raw);
-			throw new \Exception(sprintf(
+		if ( $status_code < 200 || $status_code >= 300 ) {
+			$err_message = $this->extract_error_message( $data, $status_code, $body_raw );
+			throw new \Exception(
+				sprintf(
 				/* translators: 1: Provider name, 2: HTTP status code, 3: Error message */
-				esc_html__('%1$s API Error [%2$d]: %3$s', 'dragwyb-click-to-chat'),
-				esc_html($this->get_name()),
-				intval($status_code),
-				esc_html($this->sanitize_error($err_message))
-			), intval($status_code));
+					esc_html__( '%1$s API Error [%2$d]: %3$s', 'dragwyb-click-to-chat' ),
+					esc_html( $this->get_name() ),
+					intval( $status_code ),
+					esc_html( $this->sanitize_error( $err_message ) )
+				),
+				intval( $status_code )
+			);
 		}
 
-		if (!is_array($data)) {
-			throw new \Exception(sprintf(
+		if ( ! is_array( $data ) ) {
+			throw new \Exception(
+				sprintf(
 				/* translators: %s: Provider name */
-				esc_html__('%s returned an unparseable response.', 'dragwyb-click-to-chat'),
-				esc_html($this->get_name())
-			));
+					esc_html__( '%s returned an unparseable response.', 'dragwyb-click-to-chat' ),
+					esc_html( $this->get_name() )
+				)
+			);
 		}
 
 		return $data;
@@ -152,33 +143,32 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 * @param string     $raw Raw body string.
 	 * @return string
 	 */
-	protected function extract_error_message($data, $status, $raw)
-	{
-		if (is_array($data)) {
-			if (isset($data['error']['message']) && is_string($data['error']['message'])) {
+	protected function extract_error_message( $data, $status, $raw ) {
+		if ( is_array( $data ) ) {
+			if ( isset( $data['error']['message'] ) && is_string( $data['error']['message'] ) ) {
 				return $data['error']['message'];
 			}
-			if (isset($data['error']) && is_string($data['error'])) {
+			if ( isset( $data['error'] ) && is_string( $data['error'] ) ) {
 				return $data['error'];
 			}
-			if (isset($data['message']) && is_string($data['message'])) {
+			if ( isset( $data['message'] ) && is_string( $data['message'] ) ) {
 				return $data['message'];
 			}
 		}
 
-		if (401 === $status || 403 === $status) {
-			return __('Unauthorized or Invalid API key. Please check your credentials.', 'dragwyb-click-to-chat');
+		if ( 401 === $status || 403 === $status ) {
+			return __( 'Unauthorized or Invalid API key. Please check your credentials.', 'dragwyb-click-to-chat' );
 		}
 
-		if (429 === $status) {
-			return __('Rate limit reached or quota exceeded. Please check your provider account or try again later.', 'dragwyb-click-to-chat');
+		if ( 429 === $status ) {
+			return __( 'Rate limit reached or quota exceeded. Please check your provider account or try again later.', 'dragwyb-click-to-chat' );
 		}
 
-		if ($status >= 500) {
-			return __('Remote AI service is temporarily unavailable. Please try again later.', 'dragwyb-click-to-chat');
+		if ( $status >= 500 ) {
+			return __( 'Remote AI service is temporarily unavailable. Please try again later.', 'dragwyb-click-to-chat' );
 		}
 
-		return !empty($raw) ? substr(wp_strip_all_tags($raw), 0, 200) : __('Unknown API error.', 'dragwyb-click-to-chat');
+		return ! empty( $raw ) ? substr( wp_strip_all_tags( $raw ), 0, 200 ) : __( 'Unknown API error.', 'dragwyb-click-to-chat' );
 	}
 
 	/**
@@ -187,20 +177,19 @@ abstract class DCTC_AI_Provider_Base implements DCTC_AI_Provider_Interface
 	 * @param string $text
 	 * @return string
 	 */
-	protected function sanitize_error($text)
-	{
-		if (empty($text) || !is_string($text)) {
+	protected function sanitize_error( $text ) {
+		if ( empty( $text ) || ! is_string( $text ) ) {
 			return '';
 		}
 
 		$key = $this->get_api_key();
-		if (!empty($key) && strlen($key) >= 6) {
-			$text = str_replace($key, '[REDACTED_API_KEY]', $text);
+		if ( ! empty( $key ) && strlen( $key ) >= 6 ) {
+			$text = str_replace( $key, '[REDACTED_API_KEY]', $text );
 		}
 
 		// Strip common API key patterns (sk-..., AIzaSy..., ant-api-key...)
-		$text = preg_replace('/(sk-[a-zA-Z0-9_-]{10,})/i', '[REDACTED_KEY]', $text);
-		$text = preg_replace('/(AIzaSy[a-zA-Z0-9_-]{25,})/i', '[REDACTED_KEY]', $text);
+		$text = preg_replace( '/(sk-[a-zA-Z0-9_-]{10,})/i', '[REDACTED_KEY]', $text );
+		$text = preg_replace( '/(AIzaSy[a-zA-Z0-9_-]{25,})/i', '[REDACTED_KEY]', $text );
 
 		return $text;
 	}

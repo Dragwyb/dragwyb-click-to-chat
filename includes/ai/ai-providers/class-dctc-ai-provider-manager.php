@@ -101,22 +101,6 @@ class DCTC_AI_Provider_Manager {
 	}
 
 	/**
-	 * Get list of provider IDs that have a configured key.
-	 *
-	 * @return string[]
-	 */
-	public function get_configured_provider_ids() {
-		$configured = array();
-		foreach ( $this->providers as $id => $provider ) {
-			$key = DCTC_AI_Key_Store::get_provider_key( $id );
-			if ( ! empty( $key ) ) {
-				$configured[] = $id;
-			}
-		}
-		return $configured;
-	}
-
-	/**
 	 * Execute chat with automatic failover fallback.
 	 *
 	 * @param string $prompt User prompt.

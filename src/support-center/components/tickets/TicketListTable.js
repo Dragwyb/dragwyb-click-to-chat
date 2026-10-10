@@ -11,7 +11,6 @@ export default function TicketListTable({
 	setSortBy,
 	starredTickets = {},
 	flaggedTickets = {},
-	selectedTicketIds = [],
 	onOpenTicket,
 	onResetFilters,
 	currentPage = 1,
@@ -142,7 +141,6 @@ export default function TicketListTable({
 								const initials = getInitials(item.customer_name, item.customer_email || item.session_id);
 								const isStarred = starredTickets[item.id];
 								const isFlagged = flaggedTickets[item.id];
-								const isChecked = selectedTicketIds.includes(item.id);
 
 								return (
 									<div

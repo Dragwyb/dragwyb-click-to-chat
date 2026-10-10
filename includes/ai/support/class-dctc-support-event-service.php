@@ -77,44 +77,4 @@ class DCTC_Support_Event_Service {
 
 		return $inserted ? $wpdb->insert_id : false;
 	}
-
-	/**
-	 * Get activity events for a ticket.
-	 *
-	 * @param int    $ticket_id Support ticket ID.
-	 * @param string $order     'ASC' or 'DESC'.
-	 * @param int    $limit     Limit of events.
-	 * @return array<int, array<string, mixed>>
-	 */
-	public static function get_events( $ticket_id, $order = 'ASC', $limit = 100 ) {
-		global $wpdb;
-		$table_events = $wpdb->prefix . 'dctc_support_events';
-
-		$ticket_id   = absint( $ticket_id );
-		$order_clean = strtoupper( $order ) === 'DESC' ? 'DESC' : 'ASC';
-		$limit_val   = max( 1, min( 500, absint( $limit ) ) );
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT * FROM `$table_events` WHERE ticket_id = %d ORDER BY created_at {$order_clean} LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				$ticket_id,
-				$limit_val
-			),
-			ARRAY_A
-		);
-
-		if ( ! is_array( $rows ) ) {
-			return array();
-		}
-
-		foreach ( $rows as &$row ) {
-			if ( ! empty( $row['metadata'] ) ) {
-				$decoded         = json_decode( $row['metadata'], true );
-				$row['metadata'] = is_array( $decoded ) ? $decoded : $row['metadata'];
-			}
-		}
-
-		return $rows;
-	}
 }

@@ -43,27 +43,6 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 	}
 
 	/**
-	 * Static factory to instantiate a ticket object by session ID.
-	 *
-	 * @param string $session_id
-	 * @return self|null
-	 */
-	public static function get_by_session( $session_id ) {
-		if ( empty( $session_id ) ) {
-			return null;
-		}
-
-		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-			$ticket_data = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-			if ( $ticket_data ) {
-				return new self( $ticket_data );
-			}
-		}
-
-		return null;
-	}
-
-	/**
 	 * Load ticket data into object properties.
 	 *
 	 * @param int|string|array $identifier

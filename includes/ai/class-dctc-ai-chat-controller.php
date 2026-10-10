@@ -2337,17 +2337,6 @@ HIDDEN INTENT METADATA TAG:
 	}
 
 	/**
-	 * Detect if the message indicates a human handoff / escalation request.
-	 *
-	 * @param string $prompt
-	 * @return bool
-	 */
-	public static function detect_human_handoff_intent( $prompt ) {
-		$classification = self::classify_user_intent( $prompt );
-		return in_array( $classification['intent'], array( 'human_handoff', 'support_ticket' ), true );
-	}
-
-	/**
 	 * Check if current time falls within configured business hours.
 	 *
 	 * @param array $bot_settings

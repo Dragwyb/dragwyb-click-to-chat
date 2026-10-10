@@ -25,7 +25,7 @@ add_action( 'admin_notices', 'dctc_import_export_admin_notices' );
  */
 function dctc_import_export_scripts( $hook ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	$page        = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page )
 		|| false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
 
@@ -49,19 +49,6 @@ function dctc_import_export_scripts( $hook ) {
 		DCTC_VERSION,
 		true
 	);
-}
-
-/**
- * Render Settings (Import / Export) page.
- *
- * @return void
- */
-function dctc_import_export_page_html() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You do not have permission to access this page.', 'dragwyb-click-to-chat' ) );
-	}
-
-	include DCTC_PLUGIN_DIR . 'admin/views/import-export-page.php';
 }
 
 /**

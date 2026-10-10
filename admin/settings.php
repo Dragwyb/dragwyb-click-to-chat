@@ -98,18 +98,6 @@ function dctc_render_support_center_redirect() {
 	exit;
 }
 
-/**
- * Render Onboarding / Setup Wizard screen when clicked from Click to Chat > Setup.
- *
- * @return void
- */
-function dctc_render_onboarding_page() {
-	if ( class_exists( 'DCTC_AI_Module' ) ) {
-		DCTC_AI_Module::get_instance()->dctc_ai_render_admin_page();
-	} else {
-		require_once DCTC_PLUGIN_DIR . 'admin/ai/dctc-ai-dashboard.php';
-	}
-}
 
 /**
  * Render AI Assistant admin screen.

@@ -9,7 +9,7 @@ import { useState, useEffect } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
-import { PROVIDERS, formatProviderLabel } from '../utils/providers';
+import { PROVIDERS } from '../utils/providers';
 import {
 	ProviderCard,
 	FailoverSettingsCard,

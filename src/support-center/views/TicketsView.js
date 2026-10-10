@@ -2,7 +2,7 @@
  * Support Center - Modern, Compact & Clean Tickets Workspace View
  * Expandable/Collapsible Sidebar, Full-Width All-Tickets View, and Clean Ticket Detail Workspace
  */
-import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
+import { useState, useEffect, useMemo } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 
@@ -99,9 +99,6 @@ export default function TicketsView({
 
 	// New Ticket Modal state
 	const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
-
-	// Multi-select tickets state
-	const [selectedTicketIds, setSelectedTicketIds] = useState([]);
 
 	// Starred & Flagged local states
 	const [starredTickets, setStarredTickets] = useState({});
@@ -758,7 +755,6 @@ export default function TicketsView({
 						setSortBy={setSortBy}
 						starredTickets={starredTickets}
 						flaggedTickets={flaggedTickets}
-						selectedTicketIds={selectedTicketIds}
 						onOpenTicket={handleOpenTicket}
 						onResetFilters={handleResetFilters}
 						currentPage={currentPage}
@@ -940,22 +936,8 @@ export default function TicketsView({
 						) : (
 							<TicketDetailWorkspace
 								selectedTicket={selectedTicket}
-								selectedTicketId={selectedTicketId}
-								totalTickets={totalTickets}
-								filteredTickets={filteredTickets}
 								userPermissions={userPermissions}
-								isLeftTicketsPanelExpanded={isLeftTicketsPanelExpanded}
-								setIsLeftTicketsPanelExpanded={setIsLeftTicketsPanelExpanded}
-								activeViewers={activeViewers}
-								starredTickets={starredTickets}
-								flaggedTickets={flaggedTickets}
-								toggleStar={toggleStar}
-								toggleFlag={toggleFlag}
-								onOpenTicket={handleOpenTicket}
 								onCloseTicket={handleCloseTicket}
-								onNavigateTicket={handleNavigateTicket}
-								handleStatusChange={handleStatusChange}
-								handlePriorityChange={handlePriorityChange}
 								handleToggleControl={handleToggleControl}
 								handleSendReply={handleSendReply}
 								handleAddNote={handleAddNote}

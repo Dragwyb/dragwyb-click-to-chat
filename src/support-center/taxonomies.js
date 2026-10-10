@@ -3,13 +3,12 @@
  */
 import apiFetch from '@wordpress/api-fetch';
 import { useState, useEffect, useCallback, createRoot, render } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
 import SupportHeader from './components/SupportHeader';
 import TaxonomiesView from './views/TaxonomiesView';
 import './style.css';
 
-if ( ! window.wpApiSettings?.nonce && window.dctc_support_data?.nonce ) {
-	apiFetch.use( apiFetch.createNonceMiddleware( window.dctc_support_data.nonce ) );
+if (!window.wpApiSettings?.nonce && window.dctc_support_data?.nonce) {
+	apiFetch.use(apiFetch.createNonceMiddleware(window.dctc_support_data.nonce));
 }
 
 function TaxonomiesApp() {

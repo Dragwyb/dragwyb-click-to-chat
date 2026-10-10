@@ -76,7 +76,6 @@ function TicketsApp() {
 
 	// WooCommerce context
 	const [wcData, setWcData] = useState(null);
-	const [wcLoading, setWcLoading] = useState(false);
 
 	const showNotice = (message, type = 'success') => {
 		setNotice({ message, type });
@@ -364,7 +363,6 @@ function TicketsApp() {
 	// Fetch WooCommerce Context
 	const fetchWooCommerceContext = useCallback(async (ticketId) => {
 		if (!ticketId) return;
-		setWcLoading(true);
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${ticketId}/woocommerce`,
@@ -375,7 +373,6 @@ function TicketsApp() {
 		} catch (err) {
 			console.error('Error fetching WooCommerce context:', err);
 		} finally {
-			setWcLoading(false);
 		}
 	}, []);
 

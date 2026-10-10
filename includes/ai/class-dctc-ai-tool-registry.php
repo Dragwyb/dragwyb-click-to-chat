@@ -251,33 +251,6 @@ class DCTC_AI_Tool_Registry
 	}
 
 	/**
-	 * Format tools for LLM Function Calling APIs (OpenAI / Claude / Gemini / MCP).
-	 *
-	 * @return array
-	 */
-	public static function get_tools_for_ai()
-	{
-		$tools = self::get_all_tools();
-		$formatted = [];
-
-		foreach ($tools as $tool) {
-			if (empty($tool['enabled'])) {
-				continue;
-			}
-			$formatted[] = [
-				'type'     => 'function',
-				'function' => [
-					'name'        => $tool['name'],
-					'description' => $tool['description'],
-					'parameters'  => $tool['parameters'],
-				],
-			];
-		}
-
-		return $formatted;
-	}
-
-	/**
 	 * Execute a tool safely with schema validation and permission enforcement.
 	 *
 	 * @param string $tool_name
