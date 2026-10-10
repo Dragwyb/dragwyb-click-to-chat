@@ -105,7 +105,7 @@ function dctc_execute_uninstall_cleanup() {
 	}
 
 	foreach ( $tables_to_drop as $table ) {
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 	}
 
@@ -135,10 +135,11 @@ function dctc_execute_uninstall_cleanup() {
 // Support WordPress Multisite networks
 global $wpdb;
 if ( is_multisite() ) {
-	$blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}" );
-	if ( ! empty( $blog_ids ) ) {
-		foreach ( $blog_ids as $blog_id ) {
-			switch_to_blog( $blog_id );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$dctc_blog_ids = $wpdb->get_col( "SELECT blog_id FROM {$wpdb->blogs}" );
+	if ( ! empty( $dctc_blog_ids ) ) {
+		foreach ( $dctc_blog_ids as $dctc_blog_id ) {
+			switch_to_blog( $dctc_blog_id );
 			dctc_execute_uninstall_cleanup();
 			restore_current_blog();
 		}
