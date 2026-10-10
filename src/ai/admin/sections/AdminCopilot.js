@@ -1,363 +1,237 @@
 /**
- * Admin AI Copilot Component
+ * Admin AI Copilot Component — Pro Marketing Preview
  *
- * Provides site administrators with AI-powered operational insights,
- * conversation trend analytics, unanswered question discoveries, and
- * intelligent Knowledge Base gap recommendations.
+ * Showcases AI-powered business analytics, gap discovery, ticket summaries,
+ * and content advice in Dragwyb Pro.
  */
 
-import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
+import { useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
-import apiFetch from '@wordpress/api-fetch';
+import ProBadge from '../../../common/components/ProBadge';
 
-const QUICK_PROMPTS = [
+const SAMPLE_CAPABILITIES = [
 	{
-		id: 'frequent_questions',
-		icon: '🔍',
-		title: __( 'Top Visitor Questions', 'dragwyb-click-to-chat' ),
-		desc: __( 'Discover common topics and frequently asked questions.', 'dragwyb-click-to-chat' ),
-		prompt: 'What are our visitors asking about most frequently? Group their questions into clear categories with percentages or frequencies if available.',
+		icon: 'dashicons-chart-line',
+		title: __( 'Visitor Question Discovery', 'dragwyb-click-to-chat' ),
+		desc: __( 'Instantly see what topics and questions visitors ask most across your entire store.', 'dragwyb-click-to-chat' ),
 	},
 	{
-		id: 'unanswered_questions',
-		icon: '❓',
-		title: __( 'Unanswered Questions & Gaps', 'dragwyb-click-to-chat' ),
-		desc: __( 'Find questions where the bot had low confidence or fell back.', 'dragwyb-click-to-chat' ),
-		prompt: 'What visitor questions were unanswered, received fallback answers, or left users frustrated? List the exact customer inquiries.',
+		icon: 'dashicons-warning',
+		title: __( 'Unanswered Gaps & Fallback Alerts', 'dragwyb-click-to-chat' ),
+		desc: __( 'Identifies specific queries where the AI had low confidence so you can update FAQs immediately.', 'dragwyb-click-to-chat' ),
 	},
 	{
-		id: 'lead_performance',
-		icon: '📈',
-		title: __( 'Lead Generation Breakdown', 'dragwyb-click-to-chat' ),
-		desc: __( 'Which pages and topics drive the highest value leads?', 'dragwyb-click-to-chat' ),
-		prompt: 'Analyze our lead capture performance. Which pages generate the most leads, and what are high-scoring leads asking before converting?',
+		icon: 'dashicons-id',
+		title: __( 'Lead Conversion Intelligence', 'dragwyb-click-to-chat' ),
+		desc: __( 'Pinpoint high-intent visitor patterns and page drivers that generate your highest-value leads.', 'dragwyb-click-to-chat' ),
 	},
 	{
-		id: 'kb_recommendations',
-		icon: '💡',
-		title: __( 'Knowledge Base Gap Analysis', 'dragwyb-click-to-chat' ),
-		desc: __( 'Get concrete FAQ and documentation outlines to add.', 'dragwyb-click-to-chat' ),
-		prompt: 'Based on visitor questions and gaps in our Knowledge Base, suggest 3 to 5 new FAQ articles or Knowledge Base entries I should create today, with outline bullet points for each.',
-	},
-	{
-		id: 'executive_summary',
-		icon: '📊',
-		title: __( 'Executive Health Summary', 'dragwyb-click-to-chat' ),
-		desc: __( 'Comprehensive overview of bot performance & user sentiment.', 'dragwyb-click-to-chat' ),
-		prompt: 'Provide an executive summary of our AI chatbot performance, customer sentiment distribution, top conversion drivers, and 3 high-priority recommendations for this week.',
+		icon: 'dashicons-edit',
+		title: __( '1-Click Content & FAQ Generator', 'dragwyb-click-to-chat' ),
+		desc: __( 'Generate polished Knowledge Base articles with outline bullet points based on real questions.', 'dragwyb-click-to-chat' ),
 	},
 ];
 
-export default function AdminCopilot( { showNotice } ) {
-	const [ stats, setStats ] = useState( null );
-	const [ statsLoading, setStatsLoading ] = useState( true );
-	const [ messages, setMessages ] = useState( [
-		{
-			role: 'assistant',
-			content: __(
-				'Hello Admin! I am your AI Copilot. I analyze your live chatbot conversations, visitor sentiment, lead conversions, and Knowledge Base coverage to help you optimize your website.\n\nChoose a quick prompt below or ask me anything about your visitors and store performance!',
-				'dragwyb-click-to-chat'
-			),
-		},
-	] );
-	const [ input, setInput ] = useState( '' );
-	const [ isLoading, setIsLoading ] = useState( false );
-	const [ copiedIdx, setCopiedIdx ] = useState( null );
-	const chatEndRef = useRef( null );
+const PREVIEW_PROMPTS = [
+	{
+		title: '🔍 ' + __( 'Top Visitor Questions This Month', 'dragwyb-click-to-chat' ),
+		previewAnswer: __( '📊 Analysis of 420 visitor chats:\n• 42% Shipping & delivery times to EU/US\n• 28% Return policy & warranty on electronic items\n• 18% Bulk pricing discount inquiry\n• 12% General support questions', 'dragwyb-click-to-chat' ),
+	},
+	{
+		title: '❓ ' + __( 'Knowledge Base Gaps & Low-Confidence Queries', 'dragwyb-click-to-chat' ),
+		previewAnswer: __( '💡 3 Missing Topics Detected:\n1. "Do you offer cash on delivery in Canada?" (Asked 14 times)\n2. "How do I upgrade an existing subscription license?" (Asked 9 times)\n3. "Is there a student discount code?" (Asked 6 times)', 'dragwyb-click-to-chat' ),
+	},
+	{
+		title: '📈 ' + __( 'Lead Conversion & Sales Insights', 'dragwyb-click-to-chat' ),
+		previewAnswer: __( '🚀 74% of high-intent leads interacted with the chatbot on /pricing before submitting contact details. Recommended: Add a direct discount voucher trigger on the pricing page.', 'dragwyb-click-to-chat' ),
+	},
+];
 
-	const fetchStats = useCallback( async () => {
-		setStatsLoading( true );
-		try {
-			const res = await apiFetch( { path: '/dctc-ai/v1/copilot/stats' } );
-			if ( res && res.stats ) {
-				setStats( res.stats );
-			}
-		} catch ( err ) {
-			// Fail silently for stats
-		} finally {
-			setStatsLoading( false );
-		}
-	}, [] );
-
-	useEffect( () => {
-		fetchStats();
-	}, [ fetchStats ] );
-
-	useEffect( () => {
-		chatEndRef.current?.scrollIntoView( { behavior: 'smooth' } );
-	}, [ messages, isLoading ] );
-
-	const handleSend = async ( promptToSend ) => {
-		const text = typeof promptToSend === 'string' ? promptToSend : input;
-		if ( ! text.trim() || isLoading ) {
-			return;
-		}
-
-		const userMsg = { role: 'user', content: text.trim() };
-		setMessages( ( prev ) => [ ...prev, userMsg ] );
-		setInput( '' );
-		setIsLoading( true );
-
-		try {
-			const res = await apiFetch( {
-				path: '/dctc-ai/v1/copilot',
-				method: 'POST',
-				data: { prompt: text.trim() },
-			} );
-
-			if ( res.success ) {
-				const botMsg = {
-					role: 'assistant',
-					content: res.message,
-					provider: res.provider,
-					model: res.model,
-				};
-				setMessages( ( prev ) => [ ...prev, botMsg ] );
-				if ( res.stats ) {
-					setStats( res.stats );
-				}
-			} else {
-				setMessages( ( prev ) => [
-					...prev,
-					{
-						role: 'assistant',
-						content:
-							res.message ||
-							__(
-								'An error occurred while communicating with the AI Copilot.',
-								'dragwyb-click-to-chat'
-							),
-						isError: true,
-					},
-				] );
-			}
-		} catch ( err ) {
-			setMessages( ( prev ) => [
-				...prev,
-				{
-					role: 'assistant',
-					content:
-						err.message ||
-						__(
-							'Failed to connect to the AI Copilot endpoint.',
-							'dragwyb-click-to-chat'
-						),
-					isError: true,
-				},
-			] );
-		} finally {
-			setIsLoading( false );
-		}
-	};
-
-	const handleCopy = ( text, idx ) => {
-		navigator.clipboard.writeText( text );
-		setCopiedIdx( idx );
-		if ( showNotice ) {
-			showNotice( __( 'Copied to clipboard!', 'dragwyb-click-to-chat' ) );
-		}
-		setTimeout( () => setCopiedIdx( null ), 2000 );
-	};
-
-	const handleClearChat = () => {
-		setMessages( [
-			{
-				role: 'assistant',
-				content: __(
-					'Chat cleared. How can I assist you with your site intelligence today?',
-					'dragwyb-click-to-chat'
-				),
-			},
-		] );
-	};
+export default function AdminCopilot() {
+	const [ activePromptIdx, setActivePromptIdx ] = useState( 0 );
 
 	return (
-		<div className="dctc-ai-copilot-container">
-			{ /* Header Metric Cards */ }
-			<div className="dctc-ai-copilot-metrics">
-				<div className="dctc-ai-copilot-metric-card">
-					<div className="dctc-ai-copilot-metric-icon">💬</div>
-					<div className="dctc-ai-copilot-metric-data">
-						<span className="dctc-ai-copilot-metric-val">
-							{ statsLoading ? '...' : stats?.total_sessions ?? 0 }
-						</span>
-						<span className="dctc-ai-copilot-metric-lbl">
-							{ __( 'Conversations Analyzed', 'dragwyb-click-to-chat' ) }
-						</span>
+		<div className="dctc-pro dctc-ai-copilot-wrap" data-pro-feature="admin-copilot">
+			{/* Top Pro Feature Banner */}
+			<div style={{
+				background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%)',
+				color: '#fff',
+				borderRadius: '12px',
+				padding: '24px 28px',
+				marginBottom: '24px',
+				boxShadow: '0 4px 20px rgba(49, 46, 129, 0.15)',
+				display: 'flex',
+				justifyContent: 'space-between',
+				alignItems: 'center',
+				flexWrap: 'wrap',
+				gap: '16px',
+			}}>
+				<div style={{ maxWidth: '650px' }}>
+					<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+						<span style={{ fontSize: '24px' }}>🚀</span>
+						<h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '700' }}>
+							{ __( 'Admin AI Copilot & Business Intelligence', 'dragwyb-click-to-chat' ) }
+						</h2>
+						<ProBadge />
 					</div>
+					<p style={{ margin: 0, color: '#c7d2fe', fontSize: '14px', lineHeight: 1.5 }}>
+						{ __( 'Ask your conversational AI Copilot anything about visitor questions, Knowledge Base gaps, lead analytics, and content optimization recommendations.', 'dragwyb-click-to-chat' ) }
+					</p>
 				</div>
-
-				<div className="dctc-ai-copilot-metric-card">
-					<div className="dctc-ai-copilot-metric-icon">🎯</div>
-					<div className="dctc-ai-copilot-metric-data">
-						<span className="dctc-ai-copilot-metric-val">
-							{ statsLoading ? '...' : stats?.total_leads ?? 0 }
-						</span>
-						<span className="dctc-ai-copilot-metric-lbl">
-							{ __( 'AI Leads Captured', 'dragwyb-click-to-chat' ) }
-						</span>
-					</div>
-				</div>
-
-				<div className="dctc-ai-copilot-metric-card">
-					<div className="dctc-ai-copilot-metric-icon">❓</div>
-					<div className="dctc-ai-copilot-metric-data">
-						<span className="dctc-ai-copilot-metric-val">
-							{ statsLoading ? '...' : stats?.unanswered_questions?.length ?? 0 }
-						</span>
-						<span className="dctc-ai-copilot-metric-lbl">
-							{ __( 'Flagged Content Gaps', 'dragwyb-click-to-chat' ) }
-						</span>
-					</div>
-				</div>
-
-				<div className="dctc-ai-copilot-metric-card">
-					<div className="dctc-ai-copilot-metric-icon">📚</div>
-					<div className="dctc-ai-copilot-metric-data">
-						<span className="dctc-ai-copilot-metric-val">
-							{ statsLoading ? '...' : stats?.total_kb_docs ?? 0 }
-						</span>
-						<span className="dctc-ai-copilot-metric-lbl">
-							{ __( 'Indexed KB Documents', 'dragwyb-click-to-chat' ) }
-						</span>
-					</div>
+				<div>
+					<a
+						href="https://dragwyb.com/pro"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="dctc-pro-upgrade-btn"
+						style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							gap: '8px',
+							background: '#fbbf24',
+							color: '#1e1b4b',
+							padding: '10px 20px',
+							borderRadius: '8px',
+							fontSize: '14px',
+							fontWeight: '700',
+							textDecoration: 'none',
+							boxShadow: '0 4px 12px rgba(251, 191, 36, 0.3)',
+							transition: 'all 0.2s ease',
+						}}
+					>
+						<span className="dashicons dashicons-star-filled" style={{ fontSize: '16px', width: '16px', height: '16px' }} />
+						{ __( 'Upgrade to Dragwyb Pro', 'dragwyb-click-to-chat' ) }
+					</a>
 				</div>
 			</div>
 
-			{ /* Quick Prompt Selection Chips */ }
-			<div className="dctc-ai-copilot-quick-prompts">
-				<div className="dctc-ai-copilot-quick-title">
-					<span>⚡ { __( 'Quick Strategic Questions:', 'dragwyb-click-to-chat' ) }</span>
+			{/* 4 Feature Highlights Grid */}
+			<div style={{
+				display: 'grid',
+				gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+				gap: '16px',
+				marginBottom: '24px',
+			}}>
+				{ SAMPLE_CAPABILITIES.map( ( cap, idx ) => (
+					<div
+						key={ idx }
+						style={{
+							background: '#fff',
+							border: '1px solid #e5e7eb',
+							borderRadius: '10px',
+							padding: '16px',
+							display: 'flex',
+							flexDirection: 'column',
+							gap: '8px',
+						}}
+					>
+						<div style={{
+							width: '36px',
+							height: '36px',
+							borderRadius: '8px',
+							background: '#f5f3ff',
+							color: '#7c3aed',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+						}}>
+							<span className={ `dashicons ${ cap.icon }` } style={{ fontSize: '18px' }} />
+						</div>
+						<h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+							{ cap.title }
+						</h4>
+						<p style={{ margin: 0, fontSize: '12px', color: '#6b7280', lineHeight: 1.4 }}>
+							{ cap.desc }
+						</p>
+					</div>
+				) ) }
+			</div>
+
+			{/* Interactive Copilot Preview Box */}
+			<div style={{
+				background: '#fff',
+				border: '1px solid #e5e7eb',
+				borderRadius: '12px',
+				padding: '24px',
+				boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+			}}>
+				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+					<h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#1f2937' }}>
+						{ __( 'Interactive Copilot Demo Preview', 'dragwyb-click-to-chat' ) }
+					</h3>
+					<span style={{ fontSize: '12px', color: '#9ca3af' }}>
+						{ __( 'Click a sample question to see Copilot output', 'dragwyb-click-to-chat' ) }
+					</span>
 				</div>
-				<div className="dctc-ai-copilot-quick-grid">
-					{ QUICK_PROMPTS.map( ( qp ) => (
+
+				<div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+					{ PREVIEW_PROMPTS.map( ( p, idx ) => (
 						<button
-							key={ qp.id }
+							key={ idx }
 							type="button"
-							className="dctc-ai-copilot-chip"
-							onClick={ () => handleSend( qp.prompt ) }
-							disabled={ isLoading }
+							onClick={ () => setActivePromptIdx( idx ) }
+							style={{
+								padding: '8px 14px',
+								borderRadius: '8px',
+								border: activePromptIdx === idx ? '2px solid #7c3aed' : '1px solid #e5e7eb',
+								background: activePromptIdx === idx ? '#f5f3ff' : '#fff',
+								color: activePromptIdx === idx ? '#6d28d9' : '#374151',
+								fontWeight: activePromptIdx === idx ? '600' : '500',
+								fontSize: '13px',
+								cursor: 'pointer',
+							}}
 						>
-							<span className="dctc-ai-copilot-chip-icon">{ qp.icon }</span>
-							<div className="dctc-ai-copilot-chip-text">
-								<strong>{ qp.title }</strong>
-								<small>{ qp.desc }</small>
-							</div>
+							{ p.title }
 						</button>
 					) ) }
 				</div>
-			</div>
 
-			{ /* Copilot Interactive Conversation Stream */ }
-			<div className="dctc-ai-copilot-chat-card">
-				<div className="dctc-ai-copilot-chat-header">
-					<div className="dctc-ai-copilot-chat-title">
-						<span className="dctc-ai-copilot-badge">🤖 AI Copilot</span>
-						<span className="dctc-ai-copilot-status-dot"></span>
-						<span className="dctc-ai-copilot-status-text">
-							{ __( 'Connected to Site Database & AI Engine', 'dragwyb-click-to-chat' ) }
+				<div style={{
+					background: '#f9fafb',
+					border: '1px solid #e5e7eb',
+					borderRadius: '8px',
+					padding: '16px 20px',
+					whiteSpace: 'pre-line',
+					fontSize: '13px',
+					lineHeight: 1.6,
+					color: '#1f2937',
+					fontFamily: 'monospace, sans-serif',
+					position: 'relative',
+				}}>
+					{ PREVIEW_PROMPTS[ activePromptIdx ].previewAnswer }
+					<div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+						<span style={{ fontSize: '11px', color: '#9ca3af' }}>
+							{ __( 'Simulated output from Dragwyb Pro Copilot Intelligence Engine', 'dragwyb-click-to-chat' ) }
 						</span>
+						<a
+							href="https://dragwyb.com/pro"
+							target="_blank"
+							rel="noopener noreferrer"
+							style={{ fontSize: '12px', color: '#7c3aed', fontWeight: '600', textDecoration: 'none' }}
+						>
+							{ __( 'Unlock Full Copilot in Pro →', 'dragwyb-click-to-chat' ) }
+						</a>
 					</div>
+				</div>
+
+				{/* Disabled Input Bar */}
+				<div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
+					<input
+						type="text"
+						className="dctc-ai-bot-input dctc-pro-control"
+						placeholder={ __( 'Ask Copilot anything about your site, leads, questions, or tickets (Pro feature)...', 'dragwyb-click-to-chat' ) }
+						disabled={ true }
+						readOnly={ true }
+						style={{ flex: 1, background: '#f9fafb', cursor: 'not-allowed' }}
+					/>
 					<button
 						type="button"
-						className="dctc-ai-btn-secondary dctc-ai-btn--sm"
-						onClick={ handleClearChat }
-						disabled={ isLoading }
+						className="dctc-ai-btn"
+						disabled={ true }
+						style={{ opacity: 0.6, cursor: 'not-allowed' }}
 					>
-						{ __( 'Clear Chat', 'dragwyb-click-to-chat' ) }
+						<span className="dashicons dashicons-arrow-right-alt2" />
 					</button>
-				</div>
-
-				<div className="dctc-ai-copilot-chat-body">
-					{ messages.map( ( msg, idx ) => {
-						const isAssistant = msg.role === 'assistant';
-						return (
-							<div
-								key={ idx }
-								className={ `dctc-ai-copilot-msg ${
-									isAssistant
-										? 'dctc-ai-copilot-msg--assistant'
-										: 'dctc-ai-copilot-msg--user'
-								} ${ msg.isError ? 'is-error' : '' }` }
-							>
-								<div className="dctc-ai-copilot-msg-avatar">
-									{ isAssistant ? '🤖' : '👤' }
-								</div>
-								<div className="dctc-ai-copilot-msg-content">
-									<div className="dctc-ai-copilot-msg-text">
-										{ msg.content.split( '\n' ).map( ( line, lIdx ) => (
-											<p key={ lIdx } style={ { margin: '0 0 6px 0' } }>
-												{ line }
-											</p>
-										) ) }
-									</div>
-									{ isAssistant && (
-										<div className="dctc-ai-copilot-msg-actions">
-											<button
-												type="button"
-												className="dctc-ai-copilot-copy-btn"
-												onClick={ () => handleCopy( msg.content, idx ) }
-												title={ __( 'Copy response', 'dragwyb-click-to-chat' ) }
-											>
-												{ copiedIdx === idx ? '✓ Copied' : '📋 Copy' }
-											</button>
-											{ msg.model && (
-												<span className="dctc-ai-copilot-model-tag">
-													{ msg.provider } / { msg.model }
-												</span>
-											) }
-										</div>
-									) }
-								</div>
-							</div>
-						);
-					} ) }
-
-					{ isLoading && (
-						<div className="dctc-ai-copilot-msg dctc-ai-copilot-msg--assistant">
-							<div className="dctc-ai-copilot-msg-avatar">🤖</div>
-							<div className="dctc-ai-copilot-msg-content">
-								<div className="dctc-ai-copilot-typing">
-									<span></span>
-									<span></span>
-									<span></span>
-								</div>
-							</div>
-						</div>
-					) }
-					<div ref={ chatEndRef } />
-				</div>
-
-				{ /* Input Bar */ }
-				<div className="dctc-ai-copilot-chat-footer">
-					<div className="dctc-ai-copilot-input-box">
-						<textarea
-							value={ input }
-							onChange={ ( e ) => setInput( e.target.value ) }
-							onKeyDown={ ( e ) => {
-								if ( e.key === 'Enter' && ! e.shiftKey ) {
-									e.preventDefault();
-									handleSend();
-								}
-							} }
-							placeholder={ __(
-								'Ask Copilot about visitor trends, missed queries, high-converting pages, or KB advice...',
-								'dragwyb-click-to-chat'
-							) }
-							rows={ 2 }
-							disabled={ isLoading }
-						/>
-						<button
-							type="button"
-							className="dctc-ai-copilot-send-btn"
-							onClick={ () => handleSend() }
-							disabled={ ! input.trim() || isLoading }
-						>
-							{ isLoading
-								? __( 'Analyzing...', 'dragwyb-click-to-chat' )
-								: __( 'Ask Copilot ➔', 'dragwyb-click-to-chat' ) }
-						</button>
-					</div>
 				</div>
 			</div>
 		</div>

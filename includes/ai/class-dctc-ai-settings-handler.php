@@ -531,70 +531,6 @@ class DCTC_AI_Settings_Handler {
 			)
 		);
 
-		// Admin AI Copilot endpoints
-		register_rest_route(
-			'dctc-ai/v1',
-			'/copilot',
-			array(
-				'methods'             => \WP_REST_Server::CREATABLE,
-				'callback'            => function ( $request ) {
-					$params = $request->get_json_params();
-					$prompt = sanitize_textarea_field( $params['prompt'] ?? '' );
-					if ( empty( $prompt ) ) {
-						return new \WP_REST_Response(
-							array(
-								'success' => false,
-								'message' => esc_html__( 'Prompt cannot be empty.', 'dragwyb-click-to-chat' ),
-							),
-							400
-						);
-					}
-					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-admin-copilot.php';
-					try {
-						$res = DCTC_AI_Admin_Copilot::execute_copilot_chat( $prompt );
-						return new \WP_REST_Response(
-							array(
-								'success'  => true,
-								'message'  => $res['message'],
-								'provider' => $res['provider'],
-								'model'    => $res['model'],
-								'stats'    => $res['stats'],
-							),
-							200
-						);
-					} catch ( \Throwable $e ) {
-						return new \WP_REST_Response(
-							array(
-								'success' => false,
-								'message' => $e->getMessage(),
-							),
-							500
-						);
-					}
-				},
-				'permission_callback' => array( $this, 'dctc_ai_permission_only_admins' ),
-			)
-		);
-
-		register_rest_route(
-			'dctc-ai/v1',
-			'/copilot/stats',
-			array(
-				'methods'             => \WP_REST_Server::READABLE,
-				'callback'            => function () {
-					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-admin-copilot.php';
-					$stats = DCTC_AI_Admin_Copilot::get_analytics_summary();
-					return new \WP_REST_Response(
-						array(
-							'success' => true,
-							'stats'   => $stats,
-						),
-						200
-					);
-				},
-				'permission_callback' => array( $this, 'dctc_ai_permission_only_admins' ),
-			)
-		);
 
 		// Feature 15: WordPress Abilities & Developer API endpoints
 		register_rest_route(
@@ -734,7 +670,6 @@ class DCTC_AI_Settings_Handler {
 								'mcp_rpc'   => rest_url( 'dctc-ai/v1/mcp/rpc' ),
 								'mcp_tools' => rest_url( 'dctc-ai/v1/mcp/tools' ),
 								'leads'     => rest_url( 'dctc-ai/v1/leads' ),
-								'copilot'   => rest_url( 'dctc-ai/v1/copilot' ),
 							),
 						),
 						200

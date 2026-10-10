@@ -2,7 +2,8 @@
 /**
  * DCTC AI Provider Manager
  *
- * Central registry for AI providers and failover execution logic.
+ * Central registry for AI providers in Dragwyb Free with extension hooks
+ * for Dragwyb Pro add-on.
  *
  * @package Dragwyb_Click_To_Chat
  */
@@ -15,10 +16,6 @@ require_once __DIR__ . '/interface-dctc-ai-provider.php';
 require_once __DIR__ . '/class-dctc-ai-provider-base.php';
 require_once __DIR__ . '/class-dctc-ai-provider-openai.php';
 require_once __DIR__ . '/class-dctc-ai-provider-google.php';
-require_once __DIR__ . '/class-dctc-ai-provider-anthropic.php';
-require_once __DIR__ . '/class-dctc-ai-provider-openrouter.php';
-require_once __DIR__ . '/class-dctc-ai-provider-groq.php';
-require_once __DIR__ . '/class-dctc-ai-provider-deepseek.php';
 
 class DCTC_AI_Provider_Manager {
 
@@ -37,17 +34,13 @@ class DCTC_AI_Provider_Manager {
 	private $providers = array();
 
 	/**
-	 * Supported provider IDs.
+	 * Supported provider IDs in Free.
 	 *
 	 * @var string[]
 	 */
 	public static $supported_providers = array(
 		'openai',
 		'google',
-		'anthropic',
-		'openrouter',
-		'groq',
-		'deepseek',
 	);
 
 	/**
@@ -66,12 +59,12 @@ class DCTC_AI_Provider_Manager {
 	 * Constructor.
 	 */
 	private function __construct() {
+		// Register core Free AI providers
 		$this->register_provider( new DCTC_AI_Provider_OpenAI() );
 		$this->register_provider( new DCTC_AI_Provider_Google() );
-		$this->register_provider( new DCTC_AI_Provider_Anthropic() );
-		$this->register_provider( new DCTC_AI_Provider_OpenRouter() );
-		$this->register_provider( new DCTC_AI_Provider_Groq() );
-		$this->register_provider( new DCTC_AI_Provider_DeepSeek() );
+
+		// Allow Dragwyb Pro Add-on to register additional premium providers (Claude, Groq, DeepSeek, OpenRouter, Ollama)
+		do_action( 'dctc_ai_register_providers', $this );
 	}
 
 	/**
@@ -82,6 +75,9 @@ class DCTC_AI_Provider_Manager {
 	 */
 	public function register_provider( DCTC_AI_Provider_Interface $provider ) {
 		$this->providers[ $provider->get_id() ] = $provider;
+		if ( ! in_array( $provider->get_id(), self::$supported_providers, true ) ) {
+			self::$supported_providers[] = $provider->get_id();
+		}
 	}
 
 	/**
@@ -145,13 +141,18 @@ class DCTC_AI_Provider_Manager {
 		$primary_adapter = $this->get_provider( $primary_provider );
 
 		if ( ! $primary_adapter ) {
-			throw new \Exception(
-				sprintf(
-				/* translators: %s: Provider ID */
-					esc_html__( 'Unsupported primary AI provider: %s', 'dragwyb-click-to-chat' ),
-					esc_html( $primary_provider )
-				)
-			);
+			// Fallback to any registered provider (e.g. OpenAI or Google)
+			if ( ! empty( $this->providers ) ) {
+				$primary_adapter = reset( $this->providers );
+				$primary_provider = $primary_adapter->get_id();
+			} else {
+				throw new \Exception(
+					sprintf(
+						/* translators: %s: Provider ID */
+						esc_html__( 'No valid AI provider configured. Please check your API keys.', 'dragwyb-click-to-chat' )
+					)
+				);
+			}
 		}
 
 		$primary_error = null;
@@ -180,93 +181,13 @@ class DCTC_AI_Provider_Manager {
 					array(
 						'type'    => 'Primary Provider Failure',
 						'code'    => (string) $e->getCode(),
-						'context' => 'Chat Completion with Failover',
+						'context' => 'Chat Completion Handler',
 					)
 				);
 			}
 		}
 
-		// 2. Check if a valid fallback provider is available
-		$can_fallback = false;
-		if ( ! empty( $fallback_provider ) ) {
-			$fallback_key = DCTC_AI_Key_Store::get_provider_key( $fallback_provider );
-			if ( ! empty( $fallback_key ) ) {
-				$can_fallback = true;
-			}
-		}
-
-		// Auto-discover another configured provider if none explicitly set as fallback
-		if ( ! $can_fallback ) {
-			$configured = $this->get_configured_provider_ids();
-			foreach ( $configured as $c_id ) {
-				if ( $c_id !== $primary_provider ) {
-					$fallback_provider = $c_id;
-					$can_fallback      = true;
-					break;
-				}
-			}
-		}
-
-		if ( $can_fallback && ! empty( $fallback_provider ) ) {
-			$fallback_adapter = $this->get_provider( $fallback_provider );
-
-			if ( $fallback_adapter ) {
-				// Resolve fallback model default if empty
-				if ( empty( $fallback_model ) ) {
-					$models         = DCTC_AI_Key_Store::get_models( $fallback_provider );
-					$fallback_model = ! empty( $models ) ? array_key_first( $models ) : '';
-				}
-
-				try {
-					$fallback_text = $fallback_adapter->chat( $prompt, $system_message, $fallback_model, $options );
-
-					if ( ! empty( $fallback_text ) ) {
-						if ( class_exists( 'DCTC_Error_Logger' ) ) {
-							DCTC_Error_Logger::log_ai_error(
-								$primary_provider,
-								$primary_model,
-								$prompt,
-								sprintf(
-									'Primary provider (%1$s - %2$s) failed with error: "%3$s". Successfully failed over to secondary backup provider: %4$s (%5$s).',
-									$primary_provider,
-									$primary_model,
-									$primary_error ? $primary_error->getMessage() : 'Unknown error',
-									$fallback_provider,
-									$fallback_model
-								),
-								array(
-									'type'    => 'Failover Successful',
-									'context' => 'Automatic Failover Handler',
-								)
-							);
-						}
-
-						return array(
-							'message'     => $fallback_text,
-							'provider'    => $fallback_provider,
-							'model'       => $fallback_model,
-							'failed_over' => true,
-						);
-					}
-				} catch ( \Throwable $fe ) {
-					if ( class_exists( 'DCTC_Error_Logger' ) ) {
-						DCTC_Error_Logger::log_ai_error(
-							$fallback_provider,
-							$fallback_model,
-							$prompt,
-							$fe->getMessage(),
-							array(
-								'type'    => 'Fallback Provider Failure',
-								'code'    => (string) $fe->getCode(),
-								'context' => 'Failover Fallback Attempt',
-							)
-						);
-					}
-				}
-			}
-		}
-
-		// Re-throw primary exception if fallback was unavailable or also failed
+		// Re-throw primary exception if fallback is not available
 		throw new \Exception( $primary_error ? $primary_error->getMessage() : esc_html__( 'AI service is currently unavailable.', 'dragwyb-click-to-chat' ) );
 	}
 }

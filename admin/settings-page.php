@@ -42,7 +42,7 @@ if ( ! is_array( $dctc_uninstall_settings ) ) {
 
 // Default active tab (from URL or default to 'general')
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-$valid_tabs      = array( 'general', 'import-export', 'privacy' );
+$valid_tabs      = array( 'general', 'import-export', 'privacy', 'free-vs-pro' );
 $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs, true ) ? sanitize_key( $_GET['tab'] ) : 'general';
 ?>
 
@@ -86,6 +86,15 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 				data-tab="privacy">
 				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
 				<?php esc_html_e( '3. Privacy & Uninstall', 'dragwyb-click-to-chat' ); ?>
+			</button>
+
+			<button type="button"
+				role="tab"
+				class="dctc-sc-nav-link dctc-tab dctc-settings-tab-btn <?php echo 'free-vs-pro' === $dctc_active_tab ? 'active' : ''; ?>"
+				data-tab="free-vs-pro">
+				<span class="dashicons dashicons-star-filled" style="color:#f59e0b;" aria-hidden="true"></span>
+				<?php esc_html_e( '4. Free vs Pro', 'dragwyb-click-to-chat' ); ?>
+				<span class="dctc-pro-badge" style="font-size:10px; padding:2px 5px; margin-left:4px; background:#fef3c7; color:#b45309; border:1px solid #fde68a; border-radius:4px;">PRO</span>
 			</button>
 		</nav>
 
@@ -690,6 +699,146 @@ $dctc_active_tab = isset( $_GET['tab'] ) && in_array( $_GET['tab'], $valid_tabs,
 						</p>
 					</label>
 
+				</div>
+			</div>
+
+		</div>
+
+		<!-- ========================================================= -->
+		<!-- TAB 4: FREE VS PRO COMPARISON                             -->
+		<!-- ========================================================= -->
+		<div id="dctc-tab-free-vs-pro"
+			class="dctc-settings-tab-content dctc-pro <?php echo 'free-vs-pro' === $dctc_active_tab ? 'active' : ''; ?>"
+			style="<?php echo 'free-vs-pro' === $dctc_active_tab ? 'display:block;' : 'display:none;'; ?>"
+			data-pro-feature="free-vs-pro-comparison">
+
+			<!-- Hero Banner -->
+			<div style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); color:#fff; border-radius:12px; padding:28px 32px; margin-bottom:24px; box-shadow:0 4px 20px rgba(49, 46, 129, 0.15); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+				<div style="max-width:620px;">
+					<div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+						<span class="dashicons dashicons-awards" style="font-size:28px; width:28px; height:28px; color:#fbbf24;"></span>
+						<h2 style="margin:0; color:#fff; font-size:22px; font-weight:700;"><?php esc_html_e( 'Dragwyb Free vs Pro Edition', 'dragwyb-click-to-chat' ); ?></h2>
+					</div>
+					<p style="margin:0; color:#c7d2fe; font-size:14px; line-height:1.5;">
+						<?php esc_html_e( 'Free gives you a complete customer communication foundation with OpenAI, Gemini, Support Center, and WooCommerce product search. Pro unlocks advanced AI providers, automatic failover, AI staff assistants, and CRM automation.', 'dragwyb-click-to-chat' ); ?>
+					</p>
+				</div>
+				<div>
+					<a href="https://dragwyb.com/pro" target="_blank" rel="noopener noreferrer" class="dctc-pro-upgrade" style="display:inline-flex; align-items:center; gap:8px; background:#fbbf24; color:#1e1b4b; padding:12px 24px; border-radius:8px; font-size:14px; font-weight:700; text-decoration:none; box-shadow:0 4px 12px rgba(251, 191, 36, 0.35);">
+						<span class="dashicons dashicons-star-filled"></span>
+						<?php esc_html_e( 'Explore Dragwyb Pro', 'dragwyb-click-to-chat' ); ?>
+					</a>
+				</div>
+			</div>
+
+			<!-- Comparison Table Card -->
+			<div class="dctc-settings-section-card" style="padding:0; overflow:hidden; border:1px solid #e5e7eb; border-radius:12px; background:#fff;">
+				<div style="padding:20px 24px; border-bottom:1px solid #e5e7eb; background:#f9fafb; display:flex; justify-content:space-between; align-items:center;">
+					<h3 style="margin:0; font-size:16px; font-weight:600; color:#111827;"><?php esc_html_e( 'Detailed Feature Entitlement Matrix', 'dragwyb-click-to-chat' ); ?></h3>
+					<span style="font-size:12px; color:#6b7280;"><?php esc_html_e( 'Zero data migration required on Pro activation', 'dragwyb-click-to-chat' ); ?></span>
+				</div>
+
+				<div style="overflow-x:auto;">
+					<table style="width:100%; border-collapse:collapse; text-align:left; font-size:13px;">
+						<thead>
+							<tr style="background:#f3f4f6; color:#374151; font-weight:600; border-bottom:2px solid #e5e7eb;">
+								<th style="padding:14px 20px; width:40%;"><?php esc_html_e( 'Feature Capability', 'dragwyb-click-to-chat' ); ?></th>
+								<th style="padding:14px 20px; width:30%;"><?php esc_html_e( 'Free Edition (Included)', 'dragwyb-click-to-chat' ); ?></th>
+								<th style="padding:14px 20px; width:30%; background:#f5f3ff; color:#6d28d9;"><?php esc_html_e( 'Dragwyb Pro Add-on', 'dragwyb-click-to-chat' ); ?></th>
+							</tr>
+						</thead>
+						<tbody>
+							<!-- Group 1: AI Providers -->
+							<tr style="background:#fafafa; font-weight:600; color:#4b5563;">
+								<td colspan="3" style="padding:10px 20px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid #e5e7eb;">
+									<?php esc_html_e( '1. AI Engine & Provider Reliability', 'dragwyb-click-to-chat' ); ?>
+								</td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'OpenAI & Google Gemini', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'GPT-4o, GPT-4o Mini, Gemini 2.5 Flash, Gemini 3.5 Flash', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Anthropic Claude, Groq, DeepSeek, OpenRouter, Ollama', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Claude 3.5 Sonnet, ultra-fast Groq LPUs, DeepSeek reasoning, local LLMs', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Pro Preview', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'All 5+ Providers', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Automatic Multi-Tier Failover', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Guarantees 99.99% chatbot uptime on quota/rate-limit errors', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Standard error log', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Auto-Failover Chain', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+
+							<!-- Group 2: Knowledge Base -->
+							<tr style="background:#fafafa; font-weight:600; color:#4b5563;">
+								<td colspan="3" style="padding:10px 20px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid #e5e7eb;">
+									<?php esc_html_e( '2. Knowledge Base & Vector RAG', 'dragwyb-click-to-chat' ); ?>
+								</td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Pinecone Vector Database & Local RAG', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Index posts, pages, custom text, and sync on trash/delete', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Confidence Threshold Filtering & Handoff', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'min_confidence tuning and human handoff fallback buttons', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+
+							<!-- Group 3: Support Center -->
+							<tr style="background:#fafafa; font-weight:600; color:#4b5563;">
+								<td colspan="3" style="padding:10px 20px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid #e5e7eb;">
+									<?php esc_html_e( '3. Support Center & Helpdesk Ticketing', 'dragwyb-click-to-chat' ); ?>
+								</td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Core Ticket Lifecycle & Customer Portal', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Shortcodes, ticket threads, agent replies, notes, email notifications', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included (Unlimited)', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included (Unlimited)', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'AI Reply Suggestions & Ticket Summaries', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( '1-click smart draft responses and contextual conversation summaries', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Manual responses', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'AI Staff Copilot', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Round-Robin Assignment & Live Agent Presence', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Automatic workload balancing, agent capacity ceilings, real-time presence', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Manual assignment', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Auto-Balancing Engine', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+
+							<!-- Group 4: Lead Management -->
+							<tr style="background:#fafafa; font-weight:600; color:#4b5563;">
+								<td colspan="3" style="padding:10px 20px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid #e5e7eb;">
+									<?php esc_html_e( '4. Lead Capture & CRM Integration', 'dragwyb-click-to-chat' ); ?>
+								</td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Lead Capture, Scoring, Table & CSV Export', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Conversational lead forms, 0–100 intent scoring, transcript inspection', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included (Unlimited)', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#059669;"><span class="dashicons dashicons-yes-alt" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Included (Unlimited)', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'CRM Webhook Dispatcher (Zapier, Make, HubSpot)', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Instant webhook event dispatch with auto-retry and delivery logging', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'CSV Export', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Instant CRM Webhooks', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+
+							<!-- Group 5: Admin AI Copilot -->
+							<tr style="background:#fafafa; font-weight:600; color:#4b5563;">
+								<td colspan="3" style="padding:10px 20px; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid #e5e7eb;">
+									<?php esc_html_e( '5. Business Intelligence & AI Copilot', 'dragwyb-click-to-chat' ); ?>
+								</td>
+							</tr>
+							<tr style="border-bottom:1px solid #f3f4f6;">
+								<td style="padding:12px 20px;"><strong><?php esc_html_e( 'Admin AI Copilot & Gap Analysis', 'dragwyb-click-to-chat' ); ?></strong><br><span style="color:#6b7280; font-size:12px;"><?php esc_html_e( 'Natural language queries over customer conversations and FAQ gap discoveries', 'dragwyb-click-to-chat' ); ?></span></td>
+								<td style="padding:12px 20px; color:#9ca3af;"><span class="dashicons dashicons-minus" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Pro Preview', 'dragwyb-click-to-chat' ); ?></td>
+								<td style="padding:12px 20px; background:#faf5ff; color:#7c3aed; font-weight:600;"><span class="dashicons dashicons-star-filled" style="vertical-align:middle; margin-right:4px;"></span><?php esc_html_e( 'Full Copilot Access', 'dragwyb-click-to-chat' ); ?></td>
+							</tr>
+						</tbody>
+					</table>
 				</div>
 			</div>
 

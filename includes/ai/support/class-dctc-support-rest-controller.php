@@ -239,25 +239,6 @@ class DCTC_Support_REST_Controller {
 			)
 		);
 
-		register_rest_route(
-			self::REST_NAMESPACE,
-			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/ai-summary',
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'generate_ai_summary' ),
-				'permission_callback' => array( $this, 'permission_staff_view' ),
-			)
-		);
-
-		register_rest_route(
-			self::REST_NAMESPACE,
-			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/ai-suggest-reply',
-			array(
-				'methods'             => WP_REST_Server::CREATABLE,
-				'callback'            => array( $this, 'suggest_ai_reply' ),
-				'permission_callback' => array( $this, 'permission_staff_reply' ),
-			)
-		);
 
 		// Staff: Categories & Tags & Agents
 		register_rest_route(
@@ -1208,71 +1189,6 @@ class DCTC_Support_REST_Controller {
 		);
 	}
 
-	public function generate_ai_summary( $request ) {
-		$id     = $request->get_param( 'id' );
-		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
-		if ( ! $ticket ) {
-			return new WP_REST_Response(
-				array(
-					'success' => false,
-					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
-				),
-				404
-			);
-		}
-
-		$summary = DCTC_Support_AI_Assist_Service::generate_summary( $ticket['id'] );
-		if ( is_wp_error( $summary ) ) {
-			return new WP_REST_Response(
-				array(
-					'success' => false,
-					'message' => $summary->get_error_message(),
-				),
-				400
-			);
-		}
-
-		return new WP_REST_Response(
-			array(
-				'success'    => true,
-				'ai_summary' => $summary,
-			),
-			200
-		);
-	}
-
-	public function suggest_ai_reply( $request ) {
-		$id     = $request->get_param( 'id' );
-		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
-		if ( ! $ticket ) {
-			return new WP_REST_Response(
-				array(
-					'success' => false,
-					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
-				),
-				404
-			);
-		}
-
-		$suggested = DCTC_Support_AI_Assist_Service::suggest_reply( $ticket['id'] );
-		if ( is_wp_error( $suggested ) ) {
-			return new WP_REST_Response(
-				array(
-					'success' => false,
-					'message' => $suggested->get_error_message(),
-				),
-				400
-			);
-		}
-
-		return new WP_REST_Response(
-			array(
-				'success'         => true,
-				'suggested_reply' => $suggested,
-			),
-			200
-		);
-	}
 
 	public function update_viewing_presence( $request ) {
 		$id     = $request->get_param( 'id' );

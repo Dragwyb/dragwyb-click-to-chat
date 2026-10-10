@@ -10,6 +10,7 @@ export const PROVIDERS = {
 		icon: 'superhero-alt',
 		badge: __( 'Industry Standard', 'dragwyb-click-to-chat' ),
 		desc: __( 'GPT-4o, GPT-4o Mini, o3-mini & embeddings.', 'dragwyb-click-to-chat' ),
+		isPro: false,
 	},
 	google: {
 		name: __( 'Google Gemini', 'dragwyb-click-to-chat' ),
@@ -17,6 +18,7 @@ export const PROVIDERS = {
 		icon: 'star-filled',
 		badge: __( 'High Speed & Context', 'dragwyb-click-to-chat' ),
 		desc: __( 'Gemini 3.5 Flash Lite, Gemini 2.0 Flash, Gemini 2.5 Flash & embeddings.', 'dragwyb-click-to-chat' ),
+		isPro: false,
 	},
 	anthropic: {
 		name: __( 'Anthropic Claude', 'dragwyb-click-to-chat' ),
@@ -24,6 +26,7 @@ export const PROVIDERS = {
 		icon: 'awards',
 		badge: __( 'Top Intelligence', 'dragwyb-click-to-chat' ),
 		desc: __( 'Claude 3.5 Sonnet, Claude 3.5 Haiku, Claude 3 Opus.', 'dragwyb-click-to-chat' ),
+		isPro: true,
 	},
 	openrouter: {
 		name: __( 'OpenRouter', 'dragwyb-click-to-chat' ),
@@ -31,6 +34,7 @@ export const PROVIDERS = {
 		icon: 'networking',
 		badge: __( 'Multi-Model Router', 'dragwyb-click-to-chat' ),
 		desc: __( 'Access hundreds of models via a single unified API key.', 'dragwyb-click-to-chat' ),
+		isPro: true,
 	},
 	groq: {
 		name: __( 'Groq LPUs', 'dragwyb-click-to-chat' ),
@@ -38,6 +42,7 @@ export const PROVIDERS = {
 		icon: 'performance',
 		badge: __( 'Ultra-Low Latency', 'dragwyb-click-to-chat' ),
 		desc: __( 'Llama 3.3 70B & Mixtral running at lightning speed.', 'dragwyb-click-to-chat' ),
+		isPro: true,
 	},
 	deepseek: {
 		name: __( 'DeepSeek', 'dragwyb-click-to-chat' ),
@@ -45,6 +50,15 @@ export const PROVIDERS = {
 		icon: 'lightbulb',
 		badge: __( 'Advanced Reasoning', 'dragwyb-click-to-chat' ),
 		desc: __( 'DeepSeek V3 chat & DeepSeek R1 reasoning models.', 'dragwyb-click-to-chat' ),
+		isPro: true,
+	},
+	ollama: {
+		name: __( 'Local Ollama', 'dragwyb-click-to-chat' ),
+		link: 'https://ollama.ai',
+		icon: 'admin-site-alt3',
+		badge: __( 'Self-Hosted / Local', 'dragwyb-click-to-chat' ),
+		desc: __( 'Run local open-source LLMs privately on your own hardware.', 'dragwyb-click-to-chat' ),
+		isPro: true,
 	},
 };
 

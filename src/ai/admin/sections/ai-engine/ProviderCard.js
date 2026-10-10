@@ -1,5 +1,6 @@
 import { __, sprintf } from '@wordpress/i18n';
 import Toggle from '../../components/Toggle';
+import ProBadge from '../../../../common/components/ProBadge';
 
 export default function ProviderCard({
 	id,
@@ -16,6 +17,86 @@ export default function ProviderCard({
 	activeModel,
 	onModelChange,
 }) {
+	const isPro = !!meta?.isPro;
+
+	if (isPro) {
+		return (
+			<article
+				className="dctc-pro dctc-ai-provider-card dctc-pro-provider-card"
+				data-pro-feature={`provider-${id}`}
+			>
+				<header className="dctc-ai-provider-card__header">
+					<div className="dctc-ai-provider-card__header-left">
+						<div className="dctc-ai-provider-icon-box" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
+							<span className={`dashicons dashicons-${meta.icon || 'admin-generic'}`} />
+						</div>
+						<div>
+							<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+								<h3 className="dctc-ai-provider-card__title" style={{ margin: 0 }}>{meta.name}</h3>
+								<ProBadge />
+							</div>
+							<span className="dctc-ai-provider-status-badge" style={{ background: '#f5f3ff', color: '#6d28d9', borderColor: '#ddd6fe' }}>
+								<span className="dashicons dashicons-lock" style={{ fontSize: '12px', width: '12px', height: '12px', marginRight: '3px' }} />
+								{__('Dragwyb Pro Add-on', 'dragwyb-click-to-chat')}
+							</span>
+						</div>
+					</div>
+				</header>
+
+				<div className="dctc-ai-provider-card__body">
+					<p className="dctc-ai-bot-hint" style={{ marginTop: 0, marginBottom: '0.875rem' }}>
+						{meta.desc}
+					</p>
+
+					<div className="dctc-ai-bot-field">
+						<label htmlFor={`${id}_key`}>
+							{__('API Key', 'dragwyb-click-to-chat')}
+						</label>
+						<div className="dctc-ai-input-with-icon">
+							<span className="dashicons dashicons-lock" style={{ color: '#9ca3af' }} />
+							<input
+								type="text"
+								id={`${id}_key`}
+								className="dctc-ai-bot-input dctc-pro-control"
+								placeholder={__('Requires Dragwyb Pro Add-on', 'dragwyb-click-to-chat')}
+								disabled={true}
+								readOnly={true}
+							/>
+						</div>
+					</div>
+
+					<div className="dctc-pro-card-footer" style={{ marginTop: '1rem', paddingTop: '0.875rem', borderTop: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+						<span style={{ fontSize: '12px', color: '#6b7280' }}>
+							{__('Unlock with Pro Add-on', 'dragwyb-click-to-chat')}
+						</span>
+						<a
+							href="https://dragwyb.com/pro"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="dctc-pro-upgrade-btn"
+							style={{
+								display: 'inline-flex',
+								alignItems: 'center',
+								gap: '4px',
+								background: 'linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)',
+								color: '#fff',
+								padding: '5px 12px',
+								borderRadius: '6px',
+								fontSize: '12px',
+								fontWeight: '600',
+								textDecoration: 'none',
+								boxShadow: '0 1px 2px rgba(124, 58, 237, 0.2)',
+							}}
+						>
+							<span className="dashicons dashicons-star-filled" style={{ fontSize: '13px', width: '13px', height: '13px' }} />
+							{__('Upgrade to Pro', 'dragwyb-click-to-chat')}
+						</a>
+					</div>
+				</div>
+			</article>
+		);
+	}
+
 	return (
 		<article
 			className={`dctc-ai-provider-card ${isConnected ? 'is-connected' : ''} ${isActive ? 'is-active-provider' : ''}`}

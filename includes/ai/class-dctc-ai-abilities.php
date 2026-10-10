@@ -454,8 +454,13 @@ class DCTC_AI_Abilities
 				],
 			],
 			'execute_callback'    => function() {
-				require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-admin-copilot.php';
-				$stats = DCTC_AI_Admin_Copilot::get_analytics_summary();
+				$stats = [
+					'total_chats' => 0,
+					'total_leads' => 0,
+				];
+				if ( class_exists( 'DCTC_AI_Admin_Copilot' ) ) {
+					$stats = DCTC_AI_Admin_Copilot::get_analytics_summary();
+				}
 				return [
 					'success' => true,
 					'stats'   => $stats,

@@ -531,7 +531,7 @@ export default function TicketsView({
 		}
 	};
 
-	// Action: Suggest AI Reply
+	// Action: Suggest AI Reply (Pro Feature)
 	const handleSuggestAiReply = async () => {
 		if (!selectedTicketId) return;
 		setAiSuggestLoading(true);
@@ -542,11 +542,12 @@ export default function TicketsView({
 			});
 			if (data?.success && data.suggested_reply) {
 				setReplyText(data.suggested_reply);
-				onShowNotice(__('AI drafted a response based on context!', 'dragwyb-click-to-chat'), 'info');
+				onShowNotice(__('AI drafted a response based on ticket context!', 'dragwyb-click-to-chat'), 'info');
+			} else {
+				onShowNotice(__('AI Reply Suggestions requires the Dragwyb Pro add-on.', 'dragwyb-click-to-chat'), 'info');
 			}
 		} catch (err) {
-			console.error('Error generating AI reply:', err);
-			onShowNotice(__('Could not generate AI reply.', 'dragwyb-click-to-chat'), 'error');
+			onShowNotice(__('AI Reply Suggestions is a Dragwyb Pro feature. Upgrade to enable one-click smart replies.', 'dragwyb-click-to-chat'), 'info');
 		} finally {
 			setAiSuggestLoading(false);
 		}

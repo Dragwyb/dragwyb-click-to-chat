@@ -391,13 +391,15 @@ export default function TicketDetailWorkspace({
 														<div className="dctc-sc-wysiwyg-media-action">
 															<button
 																type="button"
-																className="dctc-sc-composer-ai-btn"
+																className="dctc-pro dctc-sc-composer-ai-btn"
 																onClick={handleAiSuggestClick}
 																disabled={aiSuggestLoading}
-																title={__('Suggest AI Reply', 'dragwyb-click-to-chat')}
+																title={__('Suggest AI Reply (Dragwyb Pro Feature)', 'dragwyb-click-to-chat')}
+																data-pro-feature="ai-reply-suggest"
 															>
 																<span className="dashicons dashicons-superhero"></span>
 																<span>{aiSuggestLoading ? __('Thinking...', 'dragwyb-click-to-chat') : __('AI Suggest', 'dragwyb-click-to-chat')}</span>
+																<span className="dctc-pro-badge" style={{ fontSize: '9px', padding: '1px 4px', marginLeft: '4px', background: 'rgba(255,255,255,0.25)' }}>PRO</span>
 															</button>
 
 															<button
