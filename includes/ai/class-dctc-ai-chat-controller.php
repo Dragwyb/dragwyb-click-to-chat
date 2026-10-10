@@ -188,7 +188,7 @@ class DCTC_AI_Chat_Controller {
 
 					if ( $lookup && ! is_wp_error( $lookup ) && ! empty( $lookup['success'] ) ) {
 						$msg = sprintf(
-							/* translators: 1: Order number, 2: Status label, 3: Order Total, 4: Date */
+						/* translators: 1: Order number, 2: Status label, 3: Order Total, 4: Date */
 							esc_html__( 'Here are the live details for Order #%1$s: Status is %2$s. Total: %3$s placed on %4$s.', 'dragwyb-click-to-chat' ),
 							$lookup['order_number'],
 							$lookup['status_label'],
@@ -209,8 +209,8 @@ class DCTC_AI_Chat_Controller {
 				}
 
 				$tracker_msg = ! empty( $bot['order_tracking_prompt_msg'] )
-					? $bot['order_tracking_prompt_msg']
-					: esc_html__( 'Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat' );
+				? $bot['order_tracking_prompt_msg']
+				: esc_html__( 'Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat' );
 
 				return new \WP_REST_Response(
 					array(
@@ -227,7 +227,7 @@ class DCTC_AI_Chat_Controller {
 					$not_logged_in_msg = str_replace( '{login_url}', esc_url( $login_url ), $bot['order_tracking_login_msg'] );
 				} else {
 					$not_logged_in_msg = sprintf(
-						/* translators: %s: Login URL */
+					/* translators: %s: Login URL */
 						esc_html__( 'To securely track your order status, please [log in to your account](%s) first.', 'dragwyb-click-to-chat' ),
 						esc_url( $login_url )
 					);
@@ -245,8 +245,8 @@ class DCTC_AI_Chat_Controller {
 			}
 		}
 
-		// Intelligent Support Escalation & Ticket Logging (Human Handoff / Bug Reports)
-		if ( ! empty( $prompt ) && ( ! isset( $bot['enable_support_escalation'] ) || (bool) $bot['enable_support_escalation'] ) && self::detect_human_handoff_intent( $prompt ) ) {
+		// Intelligent Support Escalation & Ticket Logging (Explicit Human Handoff ONLY)
+		if ( ! empty( $prompt ) && ( ! isset( $bot['enable_support_escalation'] ) || (bool) $bot['enable_support_escalation'] ) && self::detect_explicit_human_handoff( $prompt ) ) {
 			$classification = self::classify_user_intent( $prompt );
 			// Auto-create/link support ticket if Support Center is enabled
 			if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
@@ -256,7 +256,7 @@ class DCTC_AI_Chat_Controller {
 					if ( ! $existing_ticket ) {
 						DCTC_Support_Ticket_Service::create_ticket(
 							array(
-								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
+								'subject'          => '[Support Handoff] ' . wp_trim_words( $prompt, 8, '...' ),
 								'session_id'       => $session_id,
 								'customer_email'   => $email,
 								'origin_type'      => 'chatbot',
@@ -270,8 +270,8 @@ class DCTC_AI_Chat_Controller {
 			}
 
 			$escalation_text = ! empty( $bot['support_ticket_msg'] )
-				? $bot['support_ticket_msg']
-				: esc_html__( 'I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.', 'dragwyb-click-to-chat' );
+			? $bot['support_ticket_msg']
+			: esc_html__( 'I have connected your session with our live support team. A support specialist will assist you shortly.', 'dragwyb-click-to-chat' );
 
 			return $this->save_and_respond(
 				$escalation_text,
@@ -282,6 +282,87 @@ class DCTC_AI_Chat_Controller {
 				array(),
 				true
 			);
+		}
+
+		// Intelligent Follow-up Email Detection (When visitor replies with their email address)
+		if ( ! empty( $prompt ) && preg_match( '/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/', $prompt, $email_prov_matches ) ) {
+			$provided_email          = sanitize_email( $email_prov_matches[0] );
+			$is_short_email_response = ( mb_strlen( trim( $prompt ) ) < 90 ) || preg_match( '/^(?:my email is|here is my email|email:?|sure,? it\'s|it is)?\s*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\.?$/i', trim( $prompt ) );
+
+			if ( $is_short_email_response ) {
+				$history              = $this->get_recent_conversation( $session_id, 5 );
+				$is_sales_lead        = preg_match( '/\b(quote|pricing|demo|bulk|consultation|custom pricing|buy|purchase|interested|how to buy|order|cost|store)\b/i', $history );
+				$is_support_connected = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
+
+				if ( $is_sales_lead && ! empty( $bot['enable_lead_capture'] ) && class_exists( 'DCTC_AI_DB' ) ) {
+					DCTC_AI_DB::save_lead(
+						array(
+							'session_id'   => $session_id,
+							'name'         => is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor',
+							'email'        => $provided_email,
+							'requirement'  => ! empty( $history ) ? wp_trim_words( $history, 25, '...' ) : 'Sales Inquiry',
+							'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
+							'score'        => 90,
+							'intent_level' => 'high',
+							'status'       => 'new',
+						)
+					);
+				}
+
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
+					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+					if ( ! $existing_ticket ) {
+						DCTC_Support_Ticket_Service::create_ticket(
+							array(
+								'subject'             => ( $is_sales_lead ? '[Lead Inquiry] ' : '[Support Request] ' ) . ( ! empty( $history ) ? wp_trim_words( $history, 8, '...' ) : ( $is_sales_lead ? 'Customer Sales Inquiry' : 'Customer Technical Support' ) ),
+								'session_id'          => $session_id,
+								'customer_name'       => is_user_logged_in() ? wp_get_current_user()->display_name : 'Guest Customer',
+								'customer_email'      => $provided_email,
+								'customer_wp_user_id' => get_current_user_id(),
+								'origin_type'         => 'chatbot',
+								'reply_surface'       => 'chatbot_widget',
+								'interaction_type'    => $is_sales_lead ? 'LEAD_GENERATION' : 'HYBRID_SUPPORT',
+								'control_mode'        => 'ai',
+								'initial_message'     => $history ?: $prompt,
+							)
+						);
+					} else {
+						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( (int) $existing_ticket['id'] ) : null;
+						if ( $ticket_obj && $ticket_obj->is_valid() ) {
+							$ticket_obj->update_email( $provided_email );
+							$ticket_obj->update_meta( 'detected_intent', ( $is_sales_lead ? 'lead_generation' : 'support_ticket' ), 'auto' );
+						}
+					}
+				}
+
+				$support_url = ! empty( $bot['support_url'] ) ? esc_url( $bot['support_url'] ) : home_url();
+
+				if ( $is_sales_lead ) {
+					$resp_msg = sprintf(
+						/* translators: 1: Email, 2: Support URL */
+						__( 'Thank you for providing your email! We have received your request and our team will follow up directly at %1$s. You can also reach out or check updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
+						esc_html( $provided_email ),
+						$support_url
+					);
+				} else {
+					$resp_msg = sprintf(
+						/* translators: 1: Email, 2: Support URL */
+						__( 'Thank you! We have received your email (%1$s) and created a support ticket for your inquiry. Our technical team will follow up with you directly soon. You can also contact us or view updates anytime via [Contact Support](%2$s).', 'dragwyb-click-to-chat' ),
+						esc_html( $provided_email ),
+						$support_url
+					);
+				}
+
+				return $this->save_and_respond(
+					$resp_msg,
+					$session_id,
+					$bot,
+					$provided_email,
+					$prompt,
+					array(),
+					true
+				);
+			}
 		}
 
 		if ( empty( $bot ) || empty( $models ) ) {
@@ -307,7 +388,7 @@ class DCTC_AI_Chat_Controller {
 			if ( $is_admin ) {
 				$settings_url  = admin_url( 'admin.php?page=dragwyb-click-to-chat' );
 				$error_message = sprintf(
-					/* translators: %s: AI Assistant settings URL */
+				/* translators: %s: AI Assistant settings URL */
 					__( 'AI Provider API key is not configured. Please [configure your AI Provider API key](%s) in settings.', 'dragwyb-click-to-chat' ),
 					esc_url( $settings_url )
 				);
@@ -329,9 +410,60 @@ class DCTC_AI_Chat_Controller {
 		try {
 			$rag_data = $this->rag_controller->get_chat_context( $prompt, $session_id, $bot, $settings );
 
-			if ( $rag_data['require_data_missing'] ) {
+			if ( ! empty( $rag_data['require_data_missing'] ) ) {
+				$is_logged_in   = is_user_logged_in() || ( ! empty( $page_context['is_logged_in'] ) );
+				$logged_in_user = is_user_logged_in() ? wp_get_current_user() : null;
+				$user_email     = $logged_in_user && ! empty( $logged_in_user->user_email ) ? $logged_in_user->user_email : ( ! empty( $email ) ? $email : '' );
+				$user_name      = $logged_in_user && ! empty( $logged_in_user->display_name ) ? $logged_in_user->display_name : 'Guest Visitor';
+
+				// Check if guest visitor just provided their email in this prompt
+				if ( empty( $user_email ) && preg_match( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $prompt, $matches_email ) ) {
+					$user_email = sanitize_email( $matches_email[0] );
+					$email      = $user_email;
+				}
+
+				if ( ! empty( $user_email ) ) {
+					// We have the user's email -> Automatically create a Support Ticket
+					if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ( ! empty( $bot['enable_support_escalation'] ) || class_exists( 'DCTC_Support_Manager' ) ) ) {
+						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+						if ( ! $existing_ticket ) {
+							DCTC_Support_Ticket_Service::create_ticket(
+								array(
+									'subject'             => '[Support Inquiry] ' . wp_trim_words( $prompt, 8, '...' ),
+									'session_id'          => $session_id,
+									'customer_name'       => $user_name,
+									'customer_email'      => $user_email,
+									'customer_wp_user_id' => $logged_in_user ? $logged_in_user->ID : 0,
+									'origin_type'         => 'chatbot',
+									'reply_surface'       => 'chatbot_widget',
+									'interaction_type'    => 'HYBRID_SUPPORT',
+									'control_mode'        => 'ai',
+									'initial_message'     => $prompt,
+								)
+							);
+						}
+					}
+
+					if ( $is_logged_in ) {
+						$missing_msg = sprintf(
+						/* translators: %s: User email */
+							__( 'I don\'t have the exact details for this in our knowledge base right now, but I have created a support request for you. Our team will review your question and contact you at %s soon.', 'dragwyb-click-to-chat' ),
+							esc_html( $user_email )
+						);
+					} else {
+						$missing_msg = sprintf(
+						/* translators: %s: User email */
+							__( 'Thank you for providing your email! I don\'t have the exact details in our knowledge base, but I have logged your request with our team. Someone will review your inquiry and contact you at %s soon.', 'dragwyb-click-to-chat' ),
+							esc_html( $user_email )
+						);
+					}
+				} else {
+					// Guest user with NO email provided -> Politely ask for their email
+					$missing_msg = __( 'I don\'t have the exact details for your question in our knowledge base right now. Please share your email address with us so our team can look into it and contact you directly with the right details.', 'dragwyb-click-to-chat' );
+				}
+
 				return $this->save_and_respond(
-					$rag_data['message'],
+					$missing_msg,
 					$session_id,
 					$bot,
 					$email,
@@ -470,12 +602,22 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 
+			$support_url_context = ! empty( $bot['support_url'] ) ? esc_url_raw( $bot['support_url'] ) : home_url();
+
 			if ( ! empty( $known_user_email ) ) {
-				$system_message .= "\n\nCRITICAL EMAIL RULE: The user's email is ALREADY KNOWN ({$known_user_email}). Do NOT ask for their email address under any circumstances.\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is LOGGED IN or their EMAIL IS ALREADY KNOWN ({$known_user_email}).
+- Do NOT ask for their email address under any circumstances.
+- If the inquiry relates to product purchase, sales quotation, troubleshooting, or support: Let them know that we have received their request and our team will follow up directly at {$known_user_email}. You may also provide: [Contact Support]({$support_url_context}).\n";
 			} elseif ( $email_already_requested ) {
-				$system_message .= "\n\nCRITICAL EMAIL RULE: You have ALREADY politely asked for the user's email in a previous message in this session. Do NOT ask for their email again. Continue assisting them normally.\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST and you have ALREADY asked for their email in this session.
+- Do NOT ask for their email again.
+- Direct them to [Contact Support]({$support_url_context}) if they need human assistance.\n";
 			} else {
-				$system_message .= "\n\nPOLITE EMAIL GUIDANCE: If you detect support, quotation, pricing, or custom follow-up intent from the user, after answering their question, you may politely ask ONCE: 'If you are comfortable sharing your email address with us, please feel free to provide it so our team can follow up with you directly.' Ask for their email only ONCE in the conversation.\n";
+				$system_message .= "\n\nCRITICAL USER CONTEXT: The user is a GUEST (NON-LOGGED IN) and their EMAIL IS UNKNOWN.
+- NEVER claim that 'our team will follow up at your account email' because the user is NOT logged in!
+- HYBRID SUPPORT & LEAD RULE: When the user asks a product purchase/buying inquiry, quotation/pricing, or technical support/bug/troubleshooting issue, ALWAYS provide helpful answers and direct product links, and conclude by offering BOTH options:
+  'Please feel free to share your email address here so our team can directly contact you and assist you, or you can reach out to us directly through [Contact Support]({$support_url_context}).'
+- Never end with generic robotic filler like 'How can I help you today?'.\n";
 			}
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI Session-Aware Email Check Error: ' . $e->getMessage() );
@@ -562,136 +704,160 @@ class DCTC_AI_Chat_Controller {
 				);
 			}
 
-			// Dynamic Integration: Auto-connect with Lead System if AI response or prompt indicates lead_generation
+			// Dynamic Integration: Auto-connect with Lead System only if explicitly requested or organically suggested
 			$should_show_lead_form = false;
 			$is_support_connected  = ! empty( $bot['enable_support_escalation'] ) || ( class_exists( 'DCTC_Support_Manager' ) );
 
 			$rule_class  = self::classify_user_intent( $prompt );
 			$is_greeting = ( ! empty( $rule_class['category'] ) && 'greeting' === $rule_class['category'] );
 
-			// Strictly disallow greetings and support/order tracking from being classified as active lead intent
+			// Strictly disallow greetings, product discovery, and support/order tracking from forcing lead forms
 			$is_active_lead_intent = ! $is_greeting
-				&& ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) )
-				&& 'support_ticket' !== $detected_intent
-				&& 'order_tracking' !== $detected_intent
-				&& 'human_handoff' !== $detected_intent;
+			&& ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) )
+			&& 'support_ticket' !== $detected_intent
+			&& 'order_tracking' !== $detected_intent
+			&& 'human_handoff' !== $detected_intent;
 
-			if ( $is_active_lead_intent && ! empty( $bot['enable_lead_capture'] ) ) {
-				$should_show_lead_form = true;
-				$ai_message            = __( 'Please fill out the form below so our team will connect with you.', 'dragwyb-click-to-chat' );
-			}
-
-			// If AI message contains lead form prompt, enforce should_show_lead_form
-			if ( is_string( $ai_message ) && false !== stripos( $ai_message, 'form below' ) ) {
-				$should_show_lead_form = true;
-			}
-
-			// Automatically create / link support ticket with LEAD_GENERATION interaction type when lead form is shown
-			if ( $should_show_lead_form && class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
-				$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-				$cust_name       = is_user_logged_in() ? wp_get_current_user()->display_name : 'Guest Visitor';
-				$cust_email      = ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' );
-
-				if ( ! $existing_ticket ) {
-					DCTC_Support_Ticket_Service::create_ticket(
-						array(
-							'subject'          => '[Lead Inquiry] ' . ( ! empty( $cust_name ) && 'Guest Visitor' !== $cust_name ? $cust_name : wp_trim_words( $prompt, 8, '...' ) ),
-							'session_id'       => $session_id,
-							'customer_name'    => $cust_name,
-							'customer_email'   => $cust_email,
-							'origin_type'      => 'chatbot',
-							'reply_surface'    => 'chatbot_widget',
-							'interaction_type' => 'LEAD_GENERATION',
-							'control_mode'     => 'ai',
-							'initial_message'  => $prompt,
-						)
-					);
-				} else {
-					$ticket_id  = (int) $existing_ticket['id'];
-					$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
-					if ( $ticket_obj && $ticket_obj->is_valid() ) {
-						if ( ! empty( $cust_email ) ) {
-							$ticket_obj->update_email( $cust_email );
-						}
-						$ticket_obj->update_meta( 'interaction_type', 'LEAD_GENERATION', 'auto' );
-						$ticket_obj->update_meta( 'detected_intent', 'lead_generation', 'auto' );
-						$ticket_obj->update_meta( 'lead_prompt', $prompt, 'textarea' );
-					}
+			// Show lead form only if user explicitly requested sales contact/quote OR AI naturally suggested the form
+			if ( ! empty( $bot['enable_lead_capture'] ) ) {
+				if ( is_string( $ai_message ) && ( false !== stripos( $ai_message, 'form below' ) || false !== stripos( $ai_message, 'inquiry form' ) || false !== stripos( $ai_message, 'fill out the form' ) ) ) {
+					$should_show_lead_form = true;
+				} elseif ( $is_active_lead_intent ) {
+					$should_show_lead_form = true;
 				}
 			}
 
-			// Conversational lead capture only when user explicitly provided contact info in prompt AND had non-greeting lead intent
-			if ( ! $is_greeting && $is_active_lead_intent && ! empty( $detected_email ) && 'support_ticket' !== $detected_intent && 'order_tracking' !== $detected_intent && 'human_handoff' !== $detected_intent ) {
-				if ( class_exists( 'DCTC_AI_DB' ) ) {
-					$score = 75;
-					if ( ! empty( $detected_email ) ) {
-						$score += 15;
-					}
-					if ( ! empty( $detected_phone ) ) {
-						$score += 10;
-					}
+			$contains_support_referral = (
+				false !== stripos( $ai_message, 'contact support' ) ||
+				( ! empty( $bot['support_url'] ) && false !== stripos( $ai_message, untrailingslashit( $bot['support_url'] ) ) ) ||
+				false !== stripos( $ai_message, 'support team' ) ||
+				false !== stripos( $ai_message, 'technical team' ) ||
+				( false !== stripos( $ai_message, 'our team' ) && ( false !== stripos( $ai_message, 'reach out' ) || false !== stripos( $ai_message, 'contact' ) ) )
+			);
 
-					$lead_email = $detected_email;
-					$lead_name  = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : 'Chat Visitor' );
+			// Check if AI response has high confidence for Support Request / Lead Generation OR contains a Contact Support referral
+			$is_actionable_connect = ! $is_greeting && (
+				in_array( $detected_intent, array( 'lead_generation', 'support_ticket', 'human_handoff' ), true ) ||
+				$contains_support_referral
+			);
 
-					if ( ! empty( $lead_email ) && ! empty( $bot['enable_lead_capture'] ) ) {
-						$lead_id = DCTC_AI_DB::save_lead(
-							array(
-								'session_id'   => $session_id,
-								'name'         => $lead_name,
-								'email'        => $lead_email,
-								'phone'        => $detected_phone,
-								'requirement'  => $prompt,
-								'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
-								'score'        => min( 100, $score ),
-								'intent_level' => 'high',
-								'status'       => 'new',
-							)
-						);
+			$is_logged_in    = is_user_logged_in() || ( ! empty( $page_context['is_logged_in'] ) );
+			$logged_in_user  = is_user_logged_in() ? wp_get_current_user() : null;
+			$effective_email = $logged_in_user && ! empty( $logged_in_user->user_email ) ? $logged_in_user->user_email : ( ! empty( $email ) ? $email : ( ! empty( $detected_email ) ? $detected_email : '' ) );
+			$effective_name  = $logged_in_user && ! empty( $logged_in_user->display_name ) ? $logged_in_user->display_name : ( ! empty( $intent_data['name'] ) ? $intent_data['name'] : 'Guest Visitor' );
 
-						if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
-							$leads_controller = new DCTC_AI_Leads_Controller();
-							$leads_controller->maybe_send_lead_email(
-								array(
-									'id'          => $lead_id,
-									'name'        => $lead_name,
-									'email'       => $lead_email,
-									'phone'       => $detected_phone,
-									'requirement' => $prompt,
-									'score'       => min( 100, $score ),
-									'status'      => 'new',
-								)
-							);
-						}
-					}
-				}
-			} elseif ( ! $is_greeting && ( 'human_handoff' === $detected_intent || 'support_ticket' === $detected_intent ) ) {
-				// Auto-create/sync Support Ticket in Support Center only for explicit human handoff requests
-				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
-					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-					if ( ! $existing_ticket ) {
-						DCTC_Support_Ticket_Service::create_ticket(
-							array(
-								'subject'          => '[Support] ' . wp_trim_words( $prompt, 8, '...' ),
-								'session_id'       => $session_id,
-								'customer_email'   => $email,
-								'origin_type'      => 'chatbot',
-								'reply_surface'    => 'chatbot_widget',
-								'interaction_type' => 'HYBRID_SUPPORT',
-								'control_mode'     => 'ai',
-							)
-						);
-					} else {
-						$ticket_id  = (int) $existing_ticket['id'];
-						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
-						if ( $ticket_obj && $ticket_obj->is_valid() ) {
-							if ( ! empty( $email ) ) {
-								$ticket_obj->update_email( $email );
+			if ( $is_actionable_connect ) {
+				$effective_ticket_type    = ( 'lead_generation' === $detected_intent || self::detect_lead_intent( $prompt ) ) ? 'LEAD_GENERATION' : 'HYBRID_SUPPORT';
+				$effective_subject_prefix = ( 'LEAD_GENERATION' === $effective_ticket_type ) ? '[Lead Inquiry] ' : '[Support] ';
+
+				$existing_ticket = ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
+
+				if ( ! empty( $effective_email ) ) {
+					// 1. Lead Capture handling
+					if ( 'LEAD_GENERATION' === $effective_ticket_type && ! empty( $bot['enable_lead_capture'] ) ) {
+						if ( class_exists( 'DCTC_AI_DB' ) ) {
+							$score = 75;
+							if ( ! empty( $effective_email ) ) {
+								$score += 15;
 							}
 							if ( ! empty( $detected_phone ) ) {
-								$ticket_obj->update_phone( $detected_phone );
+								$score += 10;
 							}
-							$ticket_obj->update_meta( 'detected_intent', $detected_intent, 'auto' );
+
+							$lead_id = DCTC_AI_DB::save_lead(
+								array(
+									'session_id'   => $session_id,
+									'name'         => $effective_name,
+									'email'        => $effective_email,
+									'phone'        => $detected_phone,
+									'requirement'  => $prompt,
+									'source_url'   => ! empty( $page_context['url'] ) ? esc_url_raw( $page_context['url'] ) : home_url(),
+									'score'        => min( 100, $score ),
+									'intent_level' => 'high',
+									'status'       => 'new',
+								)
+							);
+
+							if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
+								$leads_controller = new DCTC_AI_Leads_Controller();
+								$leads_controller->maybe_send_lead_email(
+									array(
+										'id'          => $lead_id,
+										'name'        => $effective_name,
+										'email'       => $effective_email,
+										'phone'       => $detected_phone,
+										'requirement' => $prompt,
+										'score'       => min( 100, $score ),
+										'status'      => 'new',
+									)
+								);
+							}
+						}
+					}
+
+					// 2. Support Ticket creation / sync for logged-in user or known email
+					if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
+						if ( ! $existing_ticket ) {
+							DCTC_Support_Ticket_Service::create_ticket(
+								array(
+									'subject'             => $effective_subject_prefix . wp_trim_words( $prompt, 8, '...' ),
+									'session_id'          => $session_id,
+									'customer_name'       => $effective_name,
+									'customer_email'      => $effective_email,
+									'customer_wp_user_id' => $logged_in_user ? $logged_in_user->ID : 0,
+									'origin_type'         => 'chatbot',
+									'reply_surface'       => 'chatbot_widget',
+									'interaction_type'    => $effective_ticket_type,
+									'control_mode'        => 'ai',
+									'initial_message'     => $prompt,
+								)
+							);
+						} else {
+							$ticket_id  = (int) $existing_ticket['id'];
+							$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
+							if ( $ticket_obj && $ticket_obj->is_valid() ) {
+								$ticket_obj->update_email( $effective_email );
+								if ( ! empty( $detected_phone ) ) {
+									$ticket_obj->update_phone( $detected_phone );
+								}
+								$ticket_obj->update_meta( 'detected_intent', ( 'LEAD_GENERATION' === $effective_ticket_type ? 'lead_generation' : 'support_ticket' ), 'auto' );
+							}
+						}
+					}
+				} else {
+					// Non logged-in guest user without known email:
+					$support_url_escaped = ! empty( $bot['support_url'] ) ? esc_url( $bot['support_url'] ) : home_url();
+
+					// Prevent hallucinated 'account email' mentions for non-logged in guest users
+					$ai_message = preg_replace( '/\bat your account email\b/i', 'directly', $ai_message );
+					$ai_message = preg_replace( '/\bat your registered email\b/i', 'directly', $ai_message );
+
+					if ( ( $contains_support_referral || $is_actionable_connect ) && ! $existing_ticket ) {
+						$has_email_prompt = ( false !== stripos( $ai_message, 'email address' ) || false !== stripos( $ai_message, 'share your email' ) || false !== stripos( $ai_message, 'provide your email' ) );
+						$has_support_link = ( false !== stripos( $ai_message, 'contact support' ) || false !== stripos( $ai_message, untrailingslashit( $support_url_escaped ) ) );
+
+						if ( ! $has_email_prompt && ! $has_support_link ) {
+							if ( 'LEAD_GENERATION' === $effective_ticket_type ) {
+								$ai_message .= "\n\n" . sprintf(
+									/* translators: %s: Support URL */
+									__( 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support](%s).', 'dragwyb-click-to-chat' ),
+									$support_url_escaped
+								);
+							} else {
+								$ai_message .= "\n\n" . sprintf(
+									/* translators: %s: Support URL */
+									__( 'Please feel free to share your email address here so our technical team can directly follow up and assist you, or submit a request directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+									$support_url_escaped
+								);
+							}
+						} elseif ( ! $has_email_prompt ) {
+							$ai_message .= "\n\n" . esc_html__( 'Please feel free to share your email address here so our team can directly contact you and assist you further.', 'dragwyb-click-to-chat' );
+						} elseif ( ! $has_support_link ) {
+							$ai_message .= "\n\n" . sprintf(
+								/* translators: %s: Support URL */
+								__( 'You can also reach out to our specialists directly on our [Contact Support](%s) page.', 'dragwyb-click-to-chat' ),
+								$support_url_escaped
+							);
 						}
 					}
 				}
@@ -758,7 +924,7 @@ class DCTC_AI_Chat_Controller {
 
 		$wc_products                  = array();
 		$is_support_or_tracking_query = in_array( $detected_intent, array( 'support_ticket', 'human_handoff', 'order_tracking' ), true )
-			|| preg_match( '/\b(issue|problem|bug|glitch|error|broken|not working|conflict|defect|trouble|refund|damage|support|ticket|help me|how to fix|facing|face a)\b/i', $prompt );
+		|| preg_match( '/\b(issue|problem|bug|glitch|error|broken|not working|conflict|defect|trouble|refund|damage|support|ticket|help me|how to fix|facing|face a)\b/i', $prompt );
 
 		if ( ! $is_support_or_tracking_query && class_exists( 'DCTC_AI_WooCommerce' ) && DCTC_AI_WooCommerce::is_active() ) {
 			$is_explicit_catalog_query = preg_match( '/\b(popular products|best sellers|recommended products|recommend products|show products|store products|browse products|catalog)\b/i', $prompt );
@@ -1052,8 +1218,8 @@ class DCTC_AI_Chat_Controller {
 	 */
 	private function get_client_ip() {
 		return isset( $_SERVER['REMOTE_ADDR'] )
-			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
-			: '';
+		? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+		: '';
 	}
 
 	/**
@@ -1077,8 +1243,8 @@ class DCTC_AI_Chat_Controller {
 
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$limit    = isset( $settings['chatbot']['rate_limit_per_minute'] )
-			? intval( $settings['chatbot']['rate_limit_per_minute'] )
-			: 20;
+		? intval( $settings['chatbot']['rate_limit_per_minute'] )
+		: 20;
 
 		if ( $limit <= 0 ) {
 			return false;
@@ -1194,16 +1360,30 @@ LANGUAGE & TONE:
 - Always respond in the same language used by the user.
 - Keep responses professional, warm, concise, and beautifully formatted with clear headings or bullet points when appropriate.
 
-SUPPORT, BUG, FEATURE, PRODUCT ISSUE & CONFLICT INQUIRIES:
-- If the user asks about a bug, technical support, feature request, product issue, or plugin/theme conflict:
-  1. Provide helpful troubleshooting or technical guidance based on available documentation.
-  2. Politely ask the user: \"If you are comfortable, please provide your email address and the product name so our support team can assist you directly.\"
-  3. Set the intent tag to `support_ticket` (NEVER use `lead_generation` for support or bug issues).
+PRODUCT INQUIRIES, PURCHASING & SALES LEADS:
+- When a user asks about products, expresses interest in buying or purchasing (e.g., 'I want to buy this', 'how to buy', 'interested in purchasing', 'looking for product details'):
+  1. Provide the complete product details, features, price, and direct link on how to view or buy the product.
+  2. If the user is a guest (email NOT known), ALWAYS conclude your response using the HYBRID APPROACH: 'Please feel free to share your email address here so our team can directly contact you and assist with your purchase, or you can reach out via [Contact Support]({$support_url}).'
+  3. If the user is already logged in or email is known: 'We have received your inquiry and our team will follow up directly at your registered email, or you can reach us via [Contact Support]({$support_url}).'
+  4. Set the intent tag to `lead_generation`. Never end with robotic filler like 'How can I help you today?'.
 
-CONVERSATIONAL SALES & PURCHASE INQUIRIES:
-- When a user asks about buying, pricing plans, custom quotes, enterprise sales, demo booking, or asks sales/our team to contact them for purchase:
+SUPPORT, BUG, TECHNICAL & TROUBLESHOOTING INQUIRIES:
+- If the user asks about a bug, technical problem, error, configuration issue, translation issue, or needs support:
+  1. Provide helpful troubleshooting steps or direct solutions based on available documentation.
+  2. If the user is a guest (email NOT known), ALWAYS conclude your response using the HYBRID APPROACH: 'If you would like our technical support team to investigate this directly, please share your email address here, or submit a request directly on our [Contact Support]({$support_url}) page.'
+  3. If the user is already logged in or email is known: 'A support request has been logged and our technical team will follow up with you directly at your registered email, or you can visit [Contact Support]({$support_url}) anytime.'
+  4. Set the intent tag to `support_ticket`.
+
+CONTACT SUPPORT & TEAM ESCALATION (HYBRID CONNECT):
+- Whenever you provide a [Contact Support]({$support_url}) link or suggest contacting support / reaching out to our team:
+  1. If the user is a guest (email NOT known): ALWAYS offer BOTH options—ask them to share their email address here so our team can directly follow up, and provide the [Contact Support]({$support_url}) link.
+  2. If the user is already logged in or email is known: Let them know that we have received their request and our team will follow up directly at their registered email, and provide the [Contact Support]({$support_url}) link.
+  3. Tag the intent accurately as `lead_generation` (for purchase/product/quote interest) or `support_ticket` (for technical help/issues/custom requests).
+
+CONVERSATIONAL SALES & CUSTOM QUOTES:
+- When a user explicitly asks for a custom quote, bulk enterprise pricing, demo booking, or asks our sales team to contact them directly:
   1. Warmly and helpfully provide product/pricing information from the knowledge base.
-  2. Politely ask ONCE for their contact details or to connect them with our sales team.
+  2. Politely offer to connect them with our sales team or invite them to fill out the inquiry form.
   3. Set the intent tag to `lead_generation`.
 
 WOOCOMMERCE ORDER TRACKING:
@@ -1785,16 +1965,14 @@ CONVERSATION MEMORY:
 			}
 		}
 
-		// 4. High-confidence patterns for Sales, Purchase & Lead Inquiries
+		// 4. High-confidence patterns for Product Purchase, Buying, Sales Quotes & Custom Inquiries
 		$patterns_lead = array(
 			'/\b(want to buy|like to buy|ready to buy|wish to buy|looking to buy|interested in buying|interested to buy|plan to buy)\b/i',
 			'/\b(want to purchase|like to purchase|ready to purchase|looking to purchase|interested in purchasing|interested to purchase|plan to purchase)\b/i',
-			'/\b(buy your product|purchase your product|buy product|purchase product|buy this|purchase this|order this|place an order|want an order|buy now)\b/i',
-			'/\b(request a custom quote|get a price estimate|inquire about bulk pricing|enterprise plan inquiry|custom quote|get a quote)\b/i',
-			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project|schedule a demo|book a demo)\b/i',
-			'/\b(send me pricing details|need a custom price estimate|looking for enterprise pricing|pricing plans|pricing details|how much does.*cost|how much is)\b/i',
-			'/\b(how to buy|can i buy|how do i purchase|can i purchase|where to buy|interested in your product|interested in product)\b/i',
-			'/\b(contact me for purchase|reach out to me to buy|sales consultation)\b/i',
+			'/\b(how to buy|where to buy|how can i buy|can i buy|how do i purchase|can i purchase|buy this product|purchase this product|order this product)\b/i',
+			'/\b(request a custom quote|get a price estimate|inquire about bulk pricing|enterprise plan inquiry|custom quote|get a quote|need a quote)\b/i',
+			'/\b(schedule a demo call|book a consultation call|contact your sales team|hire your team for project|schedule a demo|book a demo|request a demo)\b/i',
+			'/\b(contact me for purchase|reach out to me to buy|sales consultation|have sales contact me|have a representative call me)\b/i',
 		);
 
 		foreach ( $patterns_lead as $pattern ) {
@@ -1826,7 +2004,7 @@ CONVERSATION MEMORY:
 	}
 
 	/**
-	 * Detect if the message indicates a lead capture / purchase intent.
+	 * Detect if the message indicates an explicit lead capture / quote inquiry intent.
 	 *
 	 * @param string $prompt
 	 * @return bool
@@ -1834,6 +2012,17 @@ CONVERSATION MEMORY:
 	public static function detect_lead_intent( $prompt ) {
 		$classification = self::classify_user_intent( $prompt );
 		return 'lead_generation' === $classification['intent'];
+	}
+
+	/**
+	 * Detect if the message indicates an explicit human handoff request.
+	 *
+	 * @param string $prompt
+	 * @return bool
+	 */
+	public static function detect_explicit_human_handoff( $prompt ) {
+		$classification = self::classify_user_intent( $prompt );
+		return 'human_handoff' === $classification['intent'];
 	}
 
 	/**
