@@ -499,7 +499,6 @@ export default function TicketDetailWorkspace({
 															disabled={submitting || !replyText.trim()}
 															className="dctc-sc-primary-send-btn"
 														>
-															<span className="dashicons dashicons-send"></span>
 															{submitting ? __('Sending...', 'dragwyb-click-to-chat') : __('Send Reply', 'dragwyb-click-to-chat')}
 														</button>
 													</div>

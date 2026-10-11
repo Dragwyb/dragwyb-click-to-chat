@@ -684,7 +684,6 @@ class DCTC_Support_Portal {
 					</div>
 					<div class="dctc-portal-reply-actions">
 						<button type="submit" class="dctc-portal-btn-primary dctc-portal-send-reply-btn">
-							<span class="dashicons dashicons-send" style="font-size:15px;line-height:1;margin-top:1px;"></span>
 							<?php echo esc_html( $settings['btn_send_reply_text'] ); ?>
 						</button>
 					</div>
@@ -1367,7 +1366,6 @@ class DCTC_Support_Portal {
 					</div>
 					<div class="dctc-portal-reply-actions">
 						<button type="submit" class="dctc-portal-btn-primary dctc-portal-send-reply-btn">
-							<span class="dashicons dashicons-send" style="font-size:15px;line-height:1;margin-top:1px;"></span>
 							<?php echo esc_html( $settings['btn_send_reply_text'] ); ?>
 						</button>
 					</div>

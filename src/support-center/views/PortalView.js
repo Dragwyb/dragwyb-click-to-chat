@@ -1893,7 +1893,6 @@ export default function PortalView({
 													type="button"
 													style={{ background: previewPrimary, color: previewPrimaryText, border: `1px solid ${previewPrimary}`, borderRadius: previewBtnRadius, padding: '6px 14px', fontSize: '12px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
 												>
-													<span className="dashicons dashicons-send" style={{ fontSize: '13px', width: '13px', height: '13px' }}></span>
 													{settings.btn_send_reply_text || 'Send Reply'}
 												</button>
 											</div>
