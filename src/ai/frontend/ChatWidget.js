@@ -1,4 +1,4 @@
-import { createElement, useState, useEffect, useRef, useCallback } from '@wordpress/element';
+import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import Markdown from 'react-markdown';
@@ -41,56 +41,52 @@ function linkifyContent(content) {
  */
 function renderLauncherIcon(preset, customUrl) {
 	if (customUrl) {
-		return createElement('img', {
-			className: 'dctc-ai-chat-launcher__icon',
-			src: customUrl,
-			alt: '',
-		});
+		return <img className="dctc-ai-chat-launcher__icon" src={customUrl} alt="" />;
 	}
 
 	switch (preset) {
 		case 'bot':
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('rect', { x: '3', y: '11', width: '18', height: '10', rx: '2' }),
-				createElement('circle', { cx: '12', cy: '5', r: '2' }),
-				createElement('path', { d: 'M12 7v4M8 16h.01M16 16h.01' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<rect x="3" y="11" width="18" height="10" rx="2" />
+					<circle cx="12" cy="5" r="2" />
+					<path d="M12 7v4M8 16h.01M16 16h.01" />
+				</svg>
 			);
 		case 'sparkle':
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'm12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z' }),
-				createElement('path', { d: 'M19 4v4M21 6h-4' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+					<path d="M19 4v4M21 6h-4" />
+				</svg>
 			);
 		case 'support':
 		case 'headset':
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M3 18v-6a9 9 0 0 1 18 0v6' }),
-				createElement('path', { d: 'M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+					<path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+				</svg>
 			);
 		case 'help':
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('circle', { cx: '12', cy: '12', r: '10' }),
-				createElement('path', { d: 'M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<circle cx="12" cy="12" r="10" />
+					<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+				</svg>
 			);
 		case 'whatsapp':
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'currentColor' },
-				createElement('path', { d: 'M17.472 14.382c-.301-.15-1.782-.879-2.057-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.677-1.633-.928-2.235-.244-.587-.493-.507-.677-.517-.175-.008-.376-.01-.577-.01-.201 0-.527.075-.803.376-.276.301-1.053 1.028-1.053 2.508 0 1.479 1.078 2.908 1.229 3.109.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.782-.728 2.033-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zm-5.467 7.518h-.005a10.84 10.84 0 0 1-5.526-1.509l-.396-.235-4.108 1.077 1.096-4.004-.258-.411a10.835 10.835 0 0 1-1.666-5.783c0-5.99 4.874-10.865 10.869-10.865a10.81 10.81 0 0 1 7.684 3.184 10.812 10.812 0 0 1 3.18 7.686c0 5.992-4.874 10.866-10.868 10.866z' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor">
+					<path d="M17.472 14.382c-.301-.15-1.782-.879-2.057-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.677-1.633-.928-2.235-.244-.587-.493-.507-.677-.517-.175-.008-.376-.01-.577-.01-.201 0-.527.075-.803.376-.276.301-1.053 1.028-1.053 2.508 0 1.479 1.078 2.908 1.229 3.109.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.782-.728 2.033-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zm-5.467 7.518h-.005a10.84 10.84 0 0 1-5.526-1.509l-.396-.235-4.108 1.077 1.096-4.004-.258-.411a10.835 10.835 0 0 1-1.666-5.783c0-5.99 4.874-10.865 10.869-10.865a10.81 10.81 0 0 1 7.684 3.184 10.812 10.812 0 0 1 3.18 7.686c0 5.992-4.874 10.866-10.868 10.866z" />
+				</svg>
 			);
 		case 'chat':
 		default:
-			return createElement(
-				'svg',
-				{ width: '26', height: '26', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' })
+			return (
+				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
 			);
 	}
 }
@@ -100,46 +96,43 @@ function renderLauncherIcon(preset, customUrl) {
  */
 function renderBotAvatar(preset, customUrl, botName) {
 	if (customUrl) {
-		return createElement('img', {
-			src: customUrl,
-			alt: botName || 'AI',
-		});
+		return <img src={customUrl} alt={botName || 'AI'} />;
 	}
 
 	if (preset === 'initial') {
 		const initial = (botName || 'B').charAt(0).toUpperCase();
-		return createElement('span', null, initial);
+		return <span>{initial}</span>;
 	}
 
 	switch (preset) {
 		case 'sparkle':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'm12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z' }),
-				createElement('path', { d: 'M19 4v4M21 6h-4' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+					<path d="M19 4v4M21 6h-4" />
+				</svg>
 			);
 		case 'support':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M3 18v-6a9 9 0 0 1 18 0v6' }),
-				createElement('path', { d: 'M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+					<path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+				</svg>
 			);
 		case 'chat':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
 			);
 		case 'bot':
 		default:
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('rect', { x: '3', y: '11', width: '18', height: '10', rx: '2' }),
-				createElement('circle', { cx: '12', cy: '5', r: '2' }),
-				createElement('path', { d: 'M12 7v4M8 16h.01M16 16h.01' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<rect x="3" y="11" width="18" height="10" rx="2" />
+					<circle cx="12" cy="5" r="2" />
+					<path d="M12 7v4M8 16h.01M16 16h.01" />
+				</svg>
 			);
 	}
 }
@@ -214,50 +207,42 @@ function EmojiPicker({ onSelect, onClose }) {
 		};
 	}, [onClose]);
 
-	return createElement(
-		'div',
-		{
-			ref: pickerRef,
-			id: 'dctc-ai-emoji-picker',
-			className: 'dctc-ai-emoji-picker',
-			role: 'dialog',
-			'aria-label': __('Emoji Picker', 'dragwyb-click-to-chat'),
-		},
-		createElement(
-			'div',
-			{ className: 'dctc-ai-emoji-tabs' },
-			EMOJI_CATEGORIES.map((cat, idx) =>
-				createElement(
-					'button',
-					{
-						key: cat.id,
-						type: 'button',
-						className: `dctc-ai-emoji-tab ${idx === activeTab ? 'active' : ''}`,
-						onClick: () => setActiveTab(idx),
-						title: cat.label,
-						'aria-label': cat.label,
-					},
-					cat.icon
-				)
-			)
-		),
-		createElement(
-			'div',
-			{ className: 'dctc-ai-emoji-grid' },
-			EMOJI_CATEGORIES[activeTab].emojis.map((emoji, idx) =>
-				createElement(
-					'button',
-					{
-						key: idx,
-						type: 'button',
-						className: 'dctc-ai-emoji-btn',
-						onClick: () => onSelect(emoji),
-						'aria-label': `Emoji ${emoji}`,
-					},
-					emoji
-				)
-			)
-		)
+	return (
+		<div
+			ref={pickerRef}
+			id="dctc-ai-emoji-picker"
+			className="dctc-ai-emoji-picker"
+			role="dialog"
+			aria-label={__('Emoji Picker', 'dragwyb-click-to-chat')}
+		>
+			<div className="dctc-ai-emoji-tabs">
+				{EMOJI_CATEGORIES.map((cat, idx) => (
+					<button
+						key={cat.id}
+						type="button"
+						className={`dctc-ai-emoji-tab ${idx === activeTab ? 'active' : ''}`}
+						onClick={() => setActiveTab(idx)}
+						title={cat.label}
+						aria-label={cat.label}
+					>
+						{cat.icon}
+					</button>
+				))}
+			</div>
+			<div className="dctc-ai-emoji-grid">
+				{EMOJI_CATEGORIES[activeTab].emojis.map((emoji, idx) => (
+					<button
+						key={idx}
+						type="button"
+						className="dctc-ai-emoji-btn"
+						onClick={() => onSelect(emoji)}
+						aria-label={`Emoji ${emoji}`}
+					>
+						{emoji}
+					</button>
+				))}
+			</div>
+		</div>
 	);
 }
 
@@ -266,49 +251,46 @@ function EmojiPicker({ onSelect, onClose }) {
  */
 function renderUserAvatar(preset, customUrl) {
 	if (customUrl) {
-		return createElement('img', {
-			src: customUrl,
-			alt: 'User',
-		});
+		return <img src={customUrl} alt="User" />;
 	}
 
 	switch (preset) {
 		case 'user-circle':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('circle', { cx: '12', cy: '12', r: '10' }),
-				createElement('circle', { cx: '12', cy: '10', r: '3' }),
-				createElement('path', { d: 'M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<circle cx="12" cy="12" r="10" />
+					<circle cx="12" cy="10" r="3" />
+					<path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
+				</svg>
 			);
 		case 'business':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }),
-				createElement('circle', { cx: '9', cy: '7', r: '4' }),
-				createElement('path', { d: 'M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+					<circle cx="9" cy="7" r="4" />
+					<path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+				</svg>
 			);
 		case 'smile':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('circle', { cx: '12', cy: '12', r: '10' }),
-				createElement('path', { d: 'M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<circle cx="12" cy="12" r="10" />
+					<path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" />
+				</svg>
 			);
 		case 'star':
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('polygon', { points: '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+				</svg>
 			);
 		case 'user':
 		default:
-			return createElement(
-				'svg',
-				{ width: '18', height: '18', viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: '2', strokeLinecap: 'round', strokeLinejoin: 'round' },
-				createElement('path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2' }),
-				createElement('circle', { cx: '12', cy: '7', r: '4' })
+			return (
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+					<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+					<circle cx="12" cy="7" r="4" />
+				</svg>
 			);
 	}
 }
@@ -621,60 +603,49 @@ export default function ChatWidget({ settings, inline }) {
 	};
 
 	const renderOrderTrackerCard = (message, msgIndex) => {
-		return createElement(
-			'div',
-			{
-				key: `order_tracker_${msgIndex}`,
-				className: 'dctc-ai-order-tracker-card',
-				style: {
+		return (
+			<div
+				key={`order_tracker_${msgIndex}`}
+				className="dctc-ai-order-tracker-card"
+				style={{
 					background: '#ffffff',
 					border: '1px solid #e2e8f0',
 					borderRadius: '12px',
 					padding: '1.25rem',
 					margin: '0.75rem 0 0.25rem 0',
 					boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.07)',
-				},
-			},
-			createElement(
-				'div',
-				{
-					style: {
+				}}
+			>
+				<div
+					style={{
 						display: 'flex',
 						justifyContent: 'space-between',
 						alignItems: 'flex-start',
 						marginBottom: '0.75rem',
-					},
-				},
-				createElement(
-					'div',
-					null,
-					createElement(
-						'strong',
-						{
-							style: {
+					}}
+				>
+					<div>
+						<strong
+							style={{
 								display: 'block',
 								fontSize: '0.95rem',
 								color: '#0f172a',
-							},
-						},
-						__('📦 Track Your Order Status', 'dragwyb-click-to-chat')
-					),
-					createElement(
-						'span',
-						{
-							style: {
+							}}
+						>
+							{__('📦 Track Your Order Status', 'dragwyb-click-to-chat')}
+						</strong>
+						<span
+							style={{
 								fontSize: '0.8rem',
 								color: '#64748b',
-							},
-						},
-						__('Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat')
-					)
-				),
-				createElement(
-					'button',
-					{
-						type: 'button',
-						onClick: () => {
+							}}
+						>
+							{__('Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat')}
+						</span>
+					</div>
+					<button
+						type="button"
+						onClick={() => {
 							setMessages((prev) =>
 								prev.map((m, i) =>
 									i === msgIndex ? { ...m, show_order_tracker: false } : m
@@ -682,72 +653,67 @@ export default function ChatWidget({ settings, inline }) {
 							);
 							setOrderLookupResult(null);
 							setOrderLookupError('');
-						},
-						style: {
+						}}
+						style={{
 							background: 'none',
 							border: 'none',
 							cursor: 'pointer',
 							color: '#94a3b8',
 							fontSize: '1rem',
 							padding: '2px 6px',
-						},
-						title: __('Close', 'dragwyb-click-to-chat'),
-					},
-					'✕'
-				)
-			),
-			createElement(
-				'form',
-				{
-					onSubmit: handleOrderLookup,
-					style: {
+						}}
+						title={__('Close', 'dragwyb-click-to-chat')}
+					>
+						✕
+					</button>
+				</div>
+				<form
+					onSubmit={handleOrderLookup}
+					style={{
 						display: 'flex',
 						flexDirection: 'column',
 						gap: '0.6rem',
-					},
-				},
-				createElement('input', {
-					type: 'number',
-					placeholder: __('Order ID (e.g. 1042)', 'dragwyb-click-to-chat'),
-					value: orderLookupId,
-					onChange: (e) => setOrderLookupId(e.target.value),
-					required: true,
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				createElement('input', {
-					type: 'email',
-					placeholder: __('Billing Email Address', 'dragwyb-click-to-chat'),
-					value: orderLookupEmail,
-					onChange: (e) => setOrderLookupEmail(e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				orderLookupError &&
-				createElement(
-					'span',
-					{
-						style: {
-							color: '#ef4444',
-							fontSize: '0.8rem',
-						},
-					},
-					orderLookupError
-				),
-				createElement(
-					'button',
-					{
-						type: 'submit',
-						disabled: orderLookupLoading,
-						style: {
+					}}
+				>
+					<input
+						type="number"
+						placeholder={__('Order ID (e.g. 1042)', 'dragwyb-click-to-chat')}
+						value={orderLookupId}
+						onChange={(e) => setOrderLookupId(e.target.value)}
+						required
+						style={{
+							padding: '0.45rem 0.75rem',
+							borderRadius: '6px',
+							border: '1px solid #cbd5e1',
+							fontSize: '0.85rem',
+						}}
+					/>
+					<input
+						type="email"
+						placeholder={__('Billing Email Address', 'dragwyb-click-to-chat')}
+						value={orderLookupEmail}
+						onChange={(e) => setOrderLookupEmail(e.target.value)}
+						style={{
+							padding: '0.45rem 0.75rem',
+							borderRadius: '6px',
+							border: '1px solid #cbd5e1',
+							fontSize: '0.85rem',
+						}}
+					/>
+					{orderLookupError && (
+						<span
+							style={{
+								color: '#ef4444',
+								fontSize: '0.8rem',
+							}}
+						>
+							{orderLookupError}
+						</span>
+					)}
+					<button
+						type="submit"
+						disabled={orderLookupLoading}
+						style={{
 							padding: '0.45rem 0.9rem',
 							borderRadius: '6px',
 							border: 'none',
@@ -757,93 +723,82 @@ export default function ChatWidget({ settings, inline }) {
 							fontWeight: 600,
 							cursor: orderLookupLoading ? 'not-allowed' : 'pointer',
 							opacity: orderLookupLoading ? 0.7 : 1,
-						},
-					},
-					orderLookupLoading
-						? __('Verifying Order...', 'dragwyb-click-to-chat')
-						: __('Look Up Order Status', 'dragwyb-click-to-chat')
-				)
-			),
-			// Order Lookup Result Card
-			orderLookupResult &&
-			createElement(
-				'div',
-				{
-					style: {
-						marginTop: '0.85rem',
-						padding: '0.85rem',
-						background: '#f8fafc',
-						borderRadius: '8px',
-						border: '1px solid #e2e8f0',
-					},
-				},
-				createElement(
-					'div',
-					{
-						style: {
-							display: 'flex',
-							justifyContent: 'space-between',
-							alignItems: 'center',
-							marginBottom: '0.5rem',
-						},
-					},
-					createElement(
-						'strong',
-						{ style: { color: '#0f172a', fontSize: '0.9rem' } },
-						`Order #${orderLookupResult.order_number}`
-					),
-					createElement(
-						'span',
-						{
-							style: {
-								padding: '2px 8px',
-								borderRadius: '999px',
-								fontSize: '0.75rem',
-								fontWeight: 600,
-								textTransform: 'uppercase',
-								background:
-									orderLookupResult.status === 'completed'
-										? '#dcfce7'
-										: orderLookupResult.status === 'processing'
-											? '#e0f2fe'
-											: '#fef3c7',
-								color:
-									orderLookupResult.status === 'completed'
-										? '#15803d'
-										: orderLookupResult.status === 'processing'
-											? '#0369a1'
-											: '#b45309',
-							},
-						},
-						orderLookupResult.status_label || orderLookupResult.status
-					)
-				),
-				createElement(
-					'div',
-					{ style: { fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' } },
-					`📅 ${orderLookupResult.date_created} • 💰 ${orderLookupResult.formatted_total}`
-				),
-				orderLookupResult.items &&
-				orderLookupResult.items.length > 0 &&
-				createElement(
-					'ul',
-					{
-						style: {
-							margin: '0.4rem 0 0 0',
-							paddingLeft: '1.1rem',
-							fontSize: '0.8rem',
-							color: '#334155',
-						},
-					},
-					orderLookupResult.items.map((it, itIdx) =>
-						createElement(
-							'li',
-							{ key: itIdx },
-							`${it.name} × ${it.quantity} (${it.subtotal})`
-						)
-					)
-				)
-			)
+						}}
+					>
+						{orderLookupLoading
+							? __('Verifying Order...', 'dragwyb-click-to-chat')
+							: __('Look Up Order Status', 'dragwyb-click-to-chat')}
+					</button>
+				</form>
+
+				{/* Order Lookup Result Card */}
+				{orderLookupResult && (
+					<div
+						style={{
+							marginTop: '0.85rem',
+							padding: '0.85rem',
+							background: '#f8fafc',
+							borderRadius: '8px',
+							border: '1px solid #e2e8f0',
+						}}
+					>
+						<div
+							style={{
+								display: 'flex',
+								justifyContent: 'space-between',
+								alignItems: 'center',
+								marginBottom: '0.5rem',
+							}}
+						>
+							<strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>
+								{`Order #${orderLookupResult.order_number}`}
+							</strong>
+							<span
+								style={{
+									padding: '2px 8px',
+									borderRadius: '999px',
+									fontSize: '0.75rem',
+									fontWeight: 600,
+									textTransform: 'uppercase',
+									background:
+										orderLookupResult.status === 'completed'
+											? '#dcfce7'
+											: orderLookupResult.status === 'processing'
+												? '#e0f2fe'
+												: '#fef3c7',
+									color:
+										orderLookupResult.status === 'completed'
+											? '#15803d'
+											: orderLookupResult.status === 'processing'
+												? '#0369a1'
+												: '#b45309',
+								}}
+							>
+								{orderLookupResult.status_label || orderLookupResult.status}
+							</span>
+						</div>
+						<div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' }}>
+							{`📅 ${orderLookupResult.date_created} • 💰 ${orderLookupResult.formatted_total}`}
+						</div>
+						{orderLookupResult.items && orderLookupResult.items.length > 0 && (
+							<ul
+								style={{
+									margin: '0.4rem 0 0 0',
+									paddingLeft: '1.1rem',
+									fontSize: '0.8rem',
+									color: '#334155',
+								}}
+							>
+								{orderLookupResult.items.map((it, itIdx) => (
+									<li key={itIdx}>
+										{`${it.name} × ${it.quantity} (${it.subtotal})`}
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				)}
+			</div>
 		);
 	};
 
@@ -855,12 +810,11 @@ export default function ChatWidget({ settings, inline }) {
 		const formData = getFormDataForMessage(message, msgIndex);
 		const cardPrimaryColor = chatbot.primary_color || '#6366f1';
 
-		return createElement(
-			'div',
-			{
-				key: `lead_form_${getFormKey(message, msgIndex)}`,
-				className: 'dctc-ai-lead-card',
-				style: {
+		return (
+			<div
+				key={`lead_form_${getFormKey(message, msgIndex)}`}
+				className="dctc-ai-lead-card"
+				style={{
 					background: '#ffffff',
 					border: '1px solid #e2e8f0',
 					borderRadius: '12px',
@@ -869,368 +823,320 @@ export default function ChatWidget({ settings, inline }) {
 					boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.07)',
 					width: '100%',
 					boxSizing: 'border-box',
-				},
-			},
-			createElement(
-				'div',
-				{
-					style: {
+				}}
+			>
+				<div
+					style={{
 						display: 'flex',
 						justifyContent: 'space-between',
 						alignItems: 'flex-start',
 						marginBottom: '0.75rem',
-					},
-				},
-				createElement(
-					'div',
-					null,
-					createElement(
-						'strong',
-						{
-							style: {
+					}}
+				>
+					<div>
+						<strong
+							style={{
 								display: 'block',
 								fontSize: '0.95rem',
 								color: '#0f172a',
-							},
-						},
-						chatbot.lead_form_title ||
-						__('Contact Our Team', 'dragwyb-click-to-chat')
-					),
-					createElement(
-						'span',
-						{
-							style: {
+							}}
+						>
+							{chatbot.lead_form_title ||
+								__('Contact Our Team', 'dragwyb-click-to-chat')}
+						</strong>
+						<span
+							style={{
 								fontSize: '0.8rem',
 								color: '#64748b',
-							},
-						},
-						chatbot.lead_form_subtitle ||
-						__(
-							'Leave your details and our team will get back to you shortly.',
-							'dragwyb-click-to-chat'
-						)
-					)
-				),
-				createElement(
-					'button',
-					{
-						type: 'button',
-						onClick: () => {
+							}}
+						>
+							{chatbot.lead_form_subtitle ||
+								__(
+									'Leave your details and our team will get back to you shortly.',
+									'dragwyb-click-to-chat'
+								)}
+						</span>
+					</div>
+					<button
+						type="button"
+						onClick={() => {
 							setClosedFormIndexes((prev) => ({ ...prev, [msgIndex]: true }));
-						},
-						style: {
+						}}
+						style={{
 							background: 'none',
 							border: 'none',
 							cursor: 'pointer',
 							color: '#94a3b8',
 							fontSize: '1rem',
 							padding: '2px 6px',
-						},
-						title: __('Close', 'dragwyb-click-to-chat'),
-					},
-					'✕'
-				)
-			),
-			createElement(
-				'form',
-				{
-					onSubmit: (e) => handleLeadSubmit(e, message, msgIndex),
-					style: {
+						}}
+						title={__('Close', 'dragwyb-click-to-chat')}
+					>
+						✕
+					</button>
+				</div>
+				<form
+					onSubmit={(e) => handleLeadSubmit(e, message, msgIndex)}
+					style={{
 						display: 'flex',
 						flexDirection: 'column',
 						gap: '0.6rem',
-					},
-				},
-				(!chatbot.lead_fields || chatbot.lead_fields.name !== false) &&
-				createElement('input', {
-					type: 'text',
-					placeholder: __('Your Name', 'dragwyb-click-to-chat'),
-					value: formData.name,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'name', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				(!chatbot.lead_fields || chatbot.lead_fields.email !== false) &&
-				createElement('input', {
-					type: 'email',
-					placeholder: __(
-						'Your Email Address',
-						'dragwyb-click-to-chat'
-					),
-					value: formData.email,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'email', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				(!chatbot.lead_fields || chatbot.lead_fields.phone !== false) &&
-				createElement('input', {
-					type: 'tel',
-					placeholder: __(
-						'Your Phone / WhatsApp',
-						'dragwyb-click-to-chat'
-					),
-					value: formData.phone,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'phone', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				chatbot.lead_fields &&
-				chatbot.lead_fields.company &&
-				createElement('input', {
-					type: 'text',
-					placeholder: __(
-						'Company / Organization',
-						'dragwyb-click-to-chat'
-					),
-					value: formData.company,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'company', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				chatbot.lead_fields &&
-				chatbot.lead_fields.company_size &&
-				createElement(
-					'select',
-					{
-						value: formData.company_size,
-						onChange: (e) =>
-							updateFormDataForMessage(message, msgIndex, 'company_size', e.target.value),
-						style: {
-							padding: '0.45rem 0.75rem',
-							borderRadius: '6px',
-							border: '1px solid #cbd5e1',
-							fontSize: '0.85rem',
-							background: '#ffffff',
-						},
-					},
-					createElement(
-						'option',
-						{ value: '' },
-						__(
-							'-- Select Company Size --',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '1-10' },
-						__(
-							'1 - 10 employees',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '11-50' },
-						__(
-							'11 - 50 employees',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '51-200' },
-						__(
-							'51 - 200 employees',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '200+' },
-						__(
-							'200+ Enterprise',
-							'dragwyb-click-to-chat'
-						)
-					)
-				),
-				chatbot.lead_fields &&
-				chatbot.lead_fields.budget &&
-				createElement(
-					'select',
-					{
-						value: formData.budget,
-						onChange: (e) =>
-							updateFormDataForMessage(message, msgIndex, 'budget', e.target.value),
-						style: {
-							padding: '0.45rem 0.75rem',
-							borderRadius: '6px',
-							border: '1px solid #cbd5e1',
-							fontSize: '0.85rem',
-							background: '#ffffff',
-						},
-					},
-					createElement(
-						'option',
-						{ value: '' },
-						__(
-							'-- Select Budget Range --',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '< $1,000' },
-						'< $1,000'
-					),
-					createElement(
-						'option',
-						{ value: '$1,000 - $5,000' },
-						'$1,000 - $5,000'
-					),
-					createElement(
-						'option',
-						{ value: '$5,000 - $20,000' },
-						'$5,000 - $20,000'
-					),
-					createElement(
-						'option',
-						{ value: '$20,000+' },
-						'$20,000+'
-					)
-				),
-				chatbot.lead_fields &&
-				chatbot.lead_fields.timeline &&
-				createElement(
-					'select',
-					{
-						value: formData.timeline,
-						onChange: (e) =>
-							updateFormDataForMessage(message, msgIndex, 'timeline', e.target.value),
-						style: {
-							padding: '0.45rem 0.75rem',
-							borderRadius: '6px',
-							border: '1px solid #cbd5e1',
-							fontSize: '0.85rem',
-							background: '#ffffff',
-						},
-					},
-					createElement(
-						'option',
-						{ value: '' },
-						__(
-							'-- Purchase Timeline --',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: 'Immediate / ASAP' },
-						__(
-							'Immediate / ASAP',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: 'Within 1 Month' },
-						__(
-							'Within 1 Month',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: '1 - 3 Months' },
-						__(
-							'1 - 3 Months',
-							'dragwyb-click-to-chat'
-						)
-					),
-					createElement(
-						'option',
-						{ value: 'Just Exploring' },
-						__(
-							'Just Exploring',
-							'dragwyb-click-to-chat'
-						)
-					)
-				),
-				chatbot.lead_fields &&
-				chatbot.lead_fields.interest &&
-				createElement('input', {
-					type: 'text',
-					placeholder: __(
-						'Product / Service Interest',
-						'dragwyb-click-to-chat'
-					),
-					value: formData.interest,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'interest', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-					},
-				}),
-				(!chatbot.lead_fields || chatbot.lead_fields.requirement !== false) &&
-				createElement('textarea', {
-					rows: 2,
-					placeholder: __(
-						'Specific Requirements or Questions',
-						'dragwyb-click-to-chat'
-					),
-					value: formData.requirement,
-					onChange: (e) =>
-						updateFormDataForMessage(message, msgIndex, 'requirement', e.target.value),
-					style: {
-						padding: '0.45rem 0.75rem',
-						borderRadius: '6px',
-						border: '1px solid #cbd5e1',
-						fontSize: '0.85rem',
-						resize: 'vertical',
-					},
-				}),
-				leadFormError &&
-				createElement(
-					'span',
-					{
-						style: {
-							color: '#ef4444',
-							fontSize: '0.8rem',
-						},
-					},
-					leadFormError
-				),
-				createElement(
-					'div',
-					{
-						style: {
+					}}
+				>
+					{(!chatbot.lead_fields || chatbot.lead_fields.name !== false) && (
+						<input
+							type="text"
+							placeholder={__('Your Name', 'dragwyb-click-to-chat')}
+							value={formData.name}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'name', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+							}}
+						/>
+					)}
+					{(!chatbot.lead_fields || chatbot.lead_fields.email !== false) && (
+						<input
+							type="email"
+							placeholder={__(
+								'Your Email Address',
+								'dragwyb-click-to-chat'
+							)}
+							value={formData.email}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'email', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+							}}
+						/>
+					)}
+					{(!chatbot.lead_fields || chatbot.lead_fields.phone !== false) && (
+						<input
+							type="tel"
+							placeholder={__(
+								'Your Phone / WhatsApp',
+								'dragwyb-click-to-chat'
+							)}
+							value={formData.phone}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'phone', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+							}}
+						/>
+					)}
+					{chatbot.lead_fields && chatbot.lead_fields.company && (
+						<input
+							type="text"
+							placeholder={__(
+								'Company / Organization',
+								'dragwyb-click-to-chat'
+							)}
+							value={formData.company}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'company', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+							}}
+						/>
+					)}
+					{chatbot.lead_fields && chatbot.lead_fields.company_size && (
+						<select
+							value={formData.company_size}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'company_size', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+								background: '#ffffff',
+							}}
+						>
+							<option value="">
+								{__(
+									'-- Select Company Size --',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="1-10">
+								{__(
+									'1 - 10 employees',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="11-50">
+								{__(
+									'11 - 50 employees',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="51-200">
+								{__(
+									'51 - 200 employees',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="200+">
+								{__(
+									'200+ Enterprise',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+						</select>
+					)}
+					{chatbot.lead_fields && chatbot.lead_fields.budget && (
+						<select
+							value={formData.budget}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'budget', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+								background: '#ffffff',
+							}}
+						>
+							<option value="">
+								{__(
+									'-- Project Budget --',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="< $1,000">&lt; $1,000</option>
+							<option value="$1,000 - $5,000">$1,000 - $5,000</option>
+							<option value="$5,000 - $20,000">$5,000 - $20,000</option>
+							<option value="$20,000+">$20,000+</option>
+						</select>
+					)}
+					{chatbot.lead_fields && chatbot.lead_fields.timeline && (
+						<select
+							value={formData.timeline}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'timeline', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+								background: '#ffffff',
+							}}
+						>
+							<option value="">
+								{__(
+									'-- Purchase Timeline --',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="Immediate / ASAP">
+								{__(
+									'Immediate / ASAP',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="Within 1 Month">
+								{__(
+									'Within 1 Month',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="1 - 3 Months">
+								{__(
+									'1 - 3 Months',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+							<option value="Just Exploring">
+								{__(
+									'Just Exploring',
+									'dragwyb-click-to-chat'
+								)}
+							</option>
+						</select>
+					)}
+					{chatbot.lead_fields && chatbot.lead_fields.interest && (
+						<input
+							type="text"
+							placeholder={__(
+								'Product / Service Interest',
+								'dragwyb-click-to-chat'
+							)}
+							value={formData.interest}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'interest', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+							}}
+						/>
+					)}
+					{(!chatbot.lead_fields || chatbot.lead_fields.requirement !== false) && (
+						<textarea
+							rows={2}
+							placeholder={__(
+								'Specific Requirements or Questions',
+								'dragwyb-click-to-chat'
+							)}
+							value={formData.requirement}
+							onChange={(e) =>
+								updateFormDataForMessage(message, msgIndex, 'requirement', e.target.value)
+							}
+							style={{
+								padding: '0.45rem 0.75rem',
+								borderRadius: '6px',
+								border: '1px solid #cbd5e1',
+								fontSize: '0.85rem',
+								resize: 'vertical',
+							}}
+						/>
+					)}
+					{leadFormError && (
+						<span
+							style={{
+								color: '#ef4444',
+								fontSize: '0.8rem',
+							}}
+						>
+							{leadFormError}
+						</span>
+					)}
+					<div
+						style={{
 							display: 'flex',
 							justifyContent: 'flex-end',
 							gap: '0.5rem',
 							marginTop: '0.3rem',
-						},
-					},
-					createElement(
-						'button',
-						{
-							type: 'button',
-							onClick: () => {
+						}}
+					>
+						<button
+							type="button"
+							onClick={() => {
 								setClosedFormIndexes((prev) => ({ ...prev, [msgIndex]: true }));
-							},
-							style: {
+							}}
+							style={{
 								padding: '0.4rem 0.8rem',
 								borderRadius: '6px',
 								border: '1px solid #cbd5e1',
@@ -1238,16 +1144,14 @@ export default function ChatWidget({ settings, inline }) {
 								color: '#475569',
 								fontSize: '0.85rem',
 								cursor: 'pointer',
-							},
-						},
-						__('Cancel', 'dragwyb-click-to-chat')
-					),
-					createElement(
-						'button',
-						{
-							type: 'submit',
-							disabled: leadFormSubmitting,
-							style: {
+							}}
+						>
+							{__('Cancel', 'dragwyb-click-to-chat')}
+						</button>
+						<button
+							type="submit"
+							disabled={leadFormSubmitting}
+							style={{
 								padding: '0.5rem 1rem',
 								borderRadius: '6px',
 								border: 'none',
@@ -1259,15 +1163,16 @@ export default function ChatWidget({ settings, inline }) {
 									? 'not-allowed'
 									: 'pointer',
 								opacity: leadFormSubmitting ? 0.7 : 1,
-							},
-						},
-						leadFormSubmitting
-							? __('Submitting...', 'dragwyb-click-to-chat')
-							: chatbot.lead_submit_button_text ||
-							__('Submit Request', 'dragwyb-click-to-chat')
-					)
-				)
-			)
+							}}
+						>
+							{leadFormSubmitting
+								? __('Submitting...', 'dragwyb-click-to-chat')
+								: chatbot.lead_submit_button_text ||
+								__('Submit Request', 'dragwyb-click-to-chat')}
+						</button>
+					</div>
+				</form>
+			</div>
 		);
 	};
 
@@ -2600,1273 +2505,986 @@ export default function ChatWidget({ settings, inline }) {
 	}
 
 	const markdownComponents = {
-		a: ({ node, ...props }) =>
-			createElement('a', {
-				...props,
-				target: '_blank',
-				rel: 'noopener noreferrer',
-			}),
-		p: ({ node, ...props }) => createElement('p', props),
-		h3: ({ node, ...props }) => createElement('h3', props),
-		strong: ({ node, ...props }) => createElement('strong', props),
-		em: ({ node, ...props }) => createElement('em', props),
-		ul: ({ node, ...props }) => createElement('ul', props),
-		li: ({ node, ...props }) => createElement('li', props),
-		hr: ({ node, ...props }) => createElement('hr', props),
+		a: ({ node, ...props }) => (
+			<a
+				{...props}
+				target="_blank"
+				rel="noopener noreferrer"
+			/>
+		),
+		p: ({ node, ...props }) => <p {...props} />,
+		h3: ({ node, ...props }) => <h3 {...props} />,
+		strong: ({ node, ...props }) => <strong {...props} />,
+		em: ({ node, ...props }) => <em {...props} />,
+		ul: ({ node, ...props }) => <ul {...props} />,
+		li: ({ node, ...props }) => <li {...props} />,
+		hr: ({ node, ...props }) => <hr {...props} />,
 	};
 
-	return createElement(
-		'div',
-		{
-			ref: wrapperRef,
-			className: 'dctc-ai-chat-wrapper ' + floatingClass,
-			style: wrapperStyle,
-		},
-		showWindow &&
-		createElement(
-			'div',
-			{
-				id: 'dctc-ai-chat-window',
-				className: `dctc-ai-chat-window ${bubbleClass}`,
-				style: { display: 'flex' },
-			},
-			// Header
-			createElement(
-				'div',
-				{ className: 'dctc-ai-chat-header' },
-				createElement(
-					'div',
-					{ className: 'dctc-ai-chat-avatar' },
-					renderBotAvatar(botPreset, botAvatar, botName)
-				),
-				createElement(
-					'div',
-					{ className: 'dctc-ai-chat-info' },
-					createElement(
-						'strong',
-						null,
-						botName
-					),
-					createElement(
-						'span',
-						{ className: 'dctc-ai-status-indicator' },
-						createElement('span', {
-							className: 'dctc-ai-status-dot',
-							style: activeControlMode === 'human' ? { background: '#10B981' } : {},
-						}),
-						activeControlMode === 'human'
-							? (assignedAgentName ? `${assignedAgentName} (Live)` : __('Live Agent', 'dragwyb-click-to-chat'))
-							: __('Online', 'dragwyb-click-to-chat')
-					)
-				),
-				clearAllowed &&
-				messages.length > 0 &&
-				createElement(
-					'button',
-					{
-						className: 'dctc-ai-chat-clear',
-						onClick: handleClear,
-						title: __('Clear Conversation', 'dragwyb-click-to-chat'),
-						'aria-label': __('Clear Conversation', 'dragwyb-click-to-chat'),
-					},
-					createElement('span', {
-						className: 'dashicons dashicons-trash',
-						'aria-hidden': 'true',
-					})
-				),
-				!inline &&
-				createElement(
-					'button',
-					{
-						className: 'dctc-ai-chat-close',
-						onClick: toggleOpen,
-						title: __('Close', 'dragwyb-click-to-chat'),
-						'aria-label': __('Close chat window', 'dragwyb-click-to-chat'),
-					},
-					createElement('span', {
-						className: 'dashicons dashicons-no-alt',
-						'aria-hidden': 'true',
-					})
-				)
-			),
+	return (
+		<div
+			ref={wrapperRef}
+			className={'dctc-ai-chat-wrapper ' + floatingClass}
+			style={wrapperStyle}
+		>
+			{showWindow && (
+				<div
+					id="dctc-ai-chat-window"
+					className={`dctc-ai-chat-window ${bubbleClass}`}
+					style={{ display: 'flex' }}
+				>
+					{/* Header */}
+					<div className="dctc-ai-chat-header">
+						<div className="dctc-ai-chat-avatar">
+							{renderBotAvatar(botPreset, botAvatar, botName)}
+						</div>
+						<div className="dctc-ai-chat-info">
+							<strong>{botName}</strong>
+							<span className="dctc-ai-status-indicator">
+								<span
+									className="dctc-ai-status-dot"
+									style={activeControlMode === 'human' ? { background: '#10B981' } : {}}
+								/>
+								{activeControlMode === 'human'
+									? (assignedAgentName ? `${assignedAgentName} (Live)` : __('Live Agent', 'dragwyb-click-to-chat'))
+									: __('Online', 'dragwyb-click-to-chat')}
+							</span>
+						</div>
+						{clearAllowed && messages.length > 0 && (
+							<button
+								className="dctc-ai-chat-clear"
+								onClick={handleClear}
+								title={__('Clear Conversation', 'dragwyb-click-to-chat')}
+								aria-label={__('Clear Conversation', 'dragwyb-click-to-chat')}
+							>
+								<span
+									className="dashicons dashicons-trash"
+									aria-hidden="true"
+								/>
+							</button>
+						)}
+						{!inline && (
+							<button
+								className="dctc-ai-chat-close"
+								onClick={toggleOpen}
+								title={__('Close', 'dragwyb-click-to-chat')}
+								aria-label={__('Close chat window', 'dragwyb-click-to-chat')}
+							>
+								<span
+									className="dashicons dashicons-no-alt"
+									aria-hidden="true"
+								/>
+							</button>
+						)}
+					</div>
 
-			// Messages Body
-			createElement(
-				'div',
-				{
-					className: 'dctc-ai-chat-messages',
-					id: 'dctc-ai-messages',
-				},
-				// Default Greeting
-				chatbot.greeting_msg &&
-				messages.length === 0 &&
-				suggestedQuestions.length === 0 &&
-				createElement(
-					'div',
-					{
-						className: 'dctc-ai-message-row dctc-ai-message-row--bot',
-					},
-					showBotAvatarInChat &&
-					createElement(
-						'div',
-						{ className: 'dctc-ai-msg-avatar dctc-ai-msg-avatar--bot' },
-						renderBotAvatar(botPreset, botAvatar, botName)
-					),
-					createElement(
-						'div',
-						{ className: 'dctc-ai-message dctc-ai-message-bot' },
-						createElement(
-							'div',
-							{ className: 'dctc-ai-message-content' },
-							createElement(
-								Markdown,
-								{ components: markdownComponents },
-								!hasApiKey && isAdmin
-									? `👋 ${chatbot.greeting_msg}\n\n⚠️ **Action Required**: Please [configure your AI Provider API key](${settingsUrl}) in AI Assistant settings to enable responses.`
-									: linkifyContent(chatbot.greeting_msg)
-							)
-						)
-					)
-				),
+					{/* Messages Body */}
+					<div
+						className="dctc-ai-chat-messages"
+						id="dctc-ai-messages"
+					>
+						{/* Default Greeting */}
+						{chatbot.greeting_msg &&
+							messages.length === 0 &&
+							suggestedQuestions.length === 0 && (
+								<div className="dctc-ai-message-row dctc-ai-message-row--bot">
+									{showBotAvatarInChat && (
+										<div className="dctc-ai-msg-avatar dctc-ai-msg-avatar--bot">
+											{renderBotAvatar(botPreset, botAvatar, botName)}
+										</div>
+									)}
+									<div className="dctc-ai-message dctc-ai-message-bot">
+										<div className="dctc-ai-message-content">
+											<Markdown components={markdownComponents}>
+												{!hasApiKey && isAdmin
+													? `👋 ${chatbot.greeting_msg}\n\n⚠️ **Action Required**: Please [configure your AI Provider API key](${settingsUrl}) in AI Assistant settings to enable responses.`
+													: linkifyContent(chatbot.greeting_msg)}
+											</Markdown>
+										</div>
+									</div>
+								</div>
+							)}
 
-				// Suggested Questions
-				messages.length === 0 &&
-				suggestedQuestions.length > 0 &&
-				createElement(
-					'div',
-					{ className: 'dctc-ai-suggested-questions' },
-					suggestedQuestions.map((question, index) =>
-						createElement(
-							'button',
-							{
-								key: index,
-								type: 'button',
-								className: `dctc-ai-suggested-question-btn dctc-ai-suggested-question-btn--${chatbot.pre_questions_border_radius || 'rounded'
-									}`,
-								style: {
-									backgroundColor: chatbot.pre_questions_bg_color || '#ffffff',
-									color: chatbot.pre_questions_text_color || '#475569',
-									borderColor: chatbot.pre_questions_border_color || '#e2e8f0',
-								},
-								onClick: (e) => handleSend(e, question),
-							},
-							question
-						)
-					)
-				),
+						{/* Suggested Questions */}
+						{messages.length === 0 &&
+							suggestedQuestions.length > 0 && (
+								<div className="dctc-ai-suggested-questions">
+									{suggestedQuestions.map((question, index) => (
+										<button
+											key={index}
+											type="button"
+											className={`dctc-ai-suggested-question-btn dctc-ai-suggested-question-btn--${chatbot.pre_questions_border_radius || 'rounded'}`}
+											style={{
+												backgroundColor: chatbot.pre_questions_bg_color || '#ffffff',
+												color: chatbot.pre_questions_text_color || '#475569',
+												borderColor: chatbot.pre_questions_border_color || '#e2e8f0',
+											}}
+											onClick={(e) => handleSend(e, question)}
+										>
+											{question}
+										</button>
+									))}
+								</div>
+							)}
 
-				// Custom Quick Action Buttons (Contact Us, Products, Custom Links)
-				actionButtons.length > 0 &&
-				createElement(
-					'div',
-					{ className: 'dctc-ai-action-buttons-bar' },
-					actionButtons.map((btn, index) =>
-						createElement(
-							'a',
-							{
-								key: btn.id || index,
-								href: btn.url || '#',
-								target: btn.target || '_blank',
-								rel: 'noopener noreferrer',
-								className: 'dctc-ai-action-btn',
-								style: {
-									borderColor: primaryColor + '40',
-								},
-							},
-							btn.label
-						)
-					)
-				),
+						{/* Custom Quick Action Buttons (Contact Us, Products, Custom Links) */}
+						{actionButtons.length > 0 && (
+							<div className="dctc-ai-action-buttons-bar">
+								{actionButtons.map((btn, index) => (
+									<a
+										key={btn.id || index}
+										href={btn.url || '#'}
+										target={btn.target || '_blank'}
+										rel="noopener noreferrer"
+										className="dctc-ai-action-btn"
+										style={{
+											borderColor: primaryColor + '40',
+										}}
+									>
+										{btn.label}
+									</a>
+								))}
+							</div>
+						)}
 
-				// Message Stream
-				messages.map((message, index) => {
-					const isBot = message.role === 'bot' || message.role === 'error';
-					const roleClass =
-						message.role === 'bot'
-							? 'dctc-ai-message-bot'
-							: message.role === 'error'
-								? 'dctc-ai-message-error'
-								: 'dctc-ai-message-user';
+						{/* Message Stream */}
+						{messages.map((message, index) => {
+							const isBot = message.role === 'bot' || message.role === 'error';
+							const roleClass =
+								message.role === 'bot'
+									? 'dctc-ai-message-bot'
+									: message.role === 'error'
+										? 'dctc-ai-message-error'
+										: 'dctc-ai-message-user';
 
-					return createElement(
-						'div',
-						{
-							key: index,
-							className: `dctc-ai-message-row ${isBot ? 'dctc-ai-message-row--bot' : 'dctc-ai-message-row--user'}`,
-						},
-						isBot && showBotAvatarInChat &&
-						createElement(
-							'div',
-							{ className: 'dctc-ai-msg-avatar dctc-ai-msg-avatar--bot' },
-							renderBotAvatar(botPreset, botAvatar, botName)
-						),
-						createElement(
-							'div',
-							{
-								className: `dctc-ai-message-body ${isBot
-									? 'dctc-ai-message-body--bot'
-									: 'dctc-ai-message-body--user'
-									}`,
-							},
-							message.is_agent &&
-							createElement(
-								'div',
-								{
-									className: 'dctc-ai-agent-sender-tag',
-									style: {
-										fontSize: '11px',
-										fontWeight: 600,
-										color: '#4F46E5',
-										marginBottom: '4px',
-										display: 'flex',
-										alignItems: 'center',
-										gap: '4px',
-									},
-								},
-								`👤 ${message.sender_name || assignedAgentName || __('Support Agent', 'dragwyb-click-to-chat')}`
-							),
-							// 1. Attachments rendered as clean standalone cards above text
-							message.attachments &&
-							message.attachments.length > 0 &&
-							createElement(
-								'div',
-								{ className: 'dctc-ai-msg-attachments' },
-								message.attachments.map((att, attIdx) =>
-									att.type === 'image'
-										? createElement(
-											'a',
-											{
-												key: att.id || attIdx,
-												href: att.url || '#',
-												target: '_blank',
-												rel: 'noopener noreferrer',
-												className: 'dctc-ai-msg-att-img-link',
-												title: att.name,
-											},
-											createElement('img', {
-												src: att.url,
-												alt:
-													att.name ||
-													__(
-														'Attachment',
+							return (
+								<div
+									key={index}
+									className={`dctc-ai-message-row ${isBot ? 'dctc-ai-message-row--bot' : 'dctc-ai-message-row--user'}`}
+								>
+									{isBot && showBotAvatarInChat && (
+										<div className="dctc-ai-msg-avatar dctc-ai-msg-avatar--bot">
+											{renderBotAvatar(botPreset, botAvatar, botName)}
+										</div>
+									)}
+									<div
+										className={`dctc-ai-message-body ${isBot
+											? 'dctc-ai-message-body--bot'
+											: 'dctc-ai-message-body--user'
+											}`}
+									>
+										{message.is_agent && (
+											<div
+												className="dctc-ai-agent-sender-tag"
+												style={{
+													fontSize: '11px',
+													fontWeight: 600,
+													color: '#4F46E5',
+													marginBottom: '4px',
+													display: 'flex',
+													alignItems: 'center',
+													gap: '4px',
+												}}
+											>
+												{`👤 ${message.sender_name || assignedAgentName || __('Support Agent', 'dragwyb-click-to-chat')}`}
+											</div>
+										)}
+										{/* 1. Attachments rendered as clean standalone cards above text */}
+										{message.attachments &&
+											message.attachments.length > 0 && (
+												<div className="dctc-ai-msg-attachments">
+													{message.attachments.map((att, attIdx) =>
+														att.type === 'image' ? (
+															<a
+																key={att.id || attIdx}
+																href={att.url || '#'}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="dctc-ai-msg-att-img-link"
+																title={att.name}
+															>
+																<img
+																	src={att.url}
+																	alt={
+																		att.name ||
+																		__(
+																			'Attachment',
+																			'dragwyb-click-to-chat'
+																		)
+																	}
+																	className="dctc-ai-msg-att-img"
+																	loading="lazy"
+																/>
+															</a>
+														) : (
+															<a
+																key={att.id || attIdx}
+																href={att.url || '#'}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="dctc-ai-msg-att-file"
+																title={att.name}
+															>
+																<span className="dctc-ai-msg-att-file-icon">
+																	📄
+																</span>
+																<div className="dctc-ai-msg-att-file-meta">
+																	<span className="dctc-ai-msg-att-file-name">
+																		{att.name}
+																	</span>
+																	{att.size > 0 && (
+																		<span className="dctc-ai-msg-att-file-size">
+																			{formatFileSize(att.size)}
+																		</span>
+																	)}
+																</div>
+																<span
+																	className="dashicons dashicons-download"
+																	aria-hidden="true"
+																/>
+															</a>
+														)
+													)}
+												</div>
+											)}
+										{/* 2. Text message bubble rendered directly below the attachments */}
+										{isBot ? (
+											<div className={'dctc-ai-message ' + roleClass}>
+												<div className="dctc-ai-message-content">
+													<Markdown components={markdownComponents}>
+														{linkifyContent(message.content)}
+													</Markdown>
+												</div>
+												{showSources &&
+													message.sources &&
+													message.sources.length > 0 && (
+														<div className="dctc-ai-sources">
+															<span className="dctc-ai-sources__label">
+																{__('Sources:', 'dragwyb-click-to-chat')}
+															</span>
+															<div className="dctc-ai-sources__list">
+																{message.sources.slice(0, 3).map((src, srcIdx) => (
+																	<a
+																		key={srcIdx}
+																		href={src.url || '#'}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="dctc-ai-source-chip"
+																		title={src.title}
+																	>
+																		<svg
+																			width="12"
+																			height="12"
+																			viewBox="0 0 24 24"
+																			fill="none"
+																			stroke="currentColor"
+																			strokeWidth="2"
+																			strokeLinecap="round"
+																			strokeLinejoin="round"
+																			className="dctc-ai-source-chip__icon"
+																			aria-hidden="true"
+																		>
+																			<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+																			<polyline points="15 3 21 3 21 9" />
+																			<line x1="10" y1="14" x2="21" y2="3" />
+																		</svg>
+																		<span className="dctc-ai-source-chip__title">
+																			{src.title || src.url}
+																		</span>
+																	</a>
+																))}
+															</div>
+														</div>
+													)}
+												<div className="dctc-ai-msg-footer">
+													{typeof window !== 'undefined' && !!window.speechSynthesis && (
+														<button
+															type="button"
+															className={`dctc-ai-msg-tts-btn ${speakingIndex === index
+																? 'is-speaking'
+																: ''
+																}`}
+															onClick={() =>
+																toggleSpeakMessage(
+																	message.content,
+																	index
+																)
+															}
+															title={
+																speakingIndex === index
+																	? __(
+																		'Stop reading',
+																		'dragwyb-click-to-chat'
+																	)
+																	: __(
+																		'Read aloud',
+																		'dragwyb-click-to-chat'
+																	)
+															}
+															aria-label={
+																speakingIndex === index
+																	? __(
+																		'Stop reading',
+																		'dragwyb-click-to-chat'
+																	)
+																	: __(
+																		'Read aloud',
+																		'dragwyb-click-to-chat'
+																	)
+															}
+														>
+															{speakingIndex === index ? '⏹️' : '🔊'}
+														</button>
+													)}
+												</div>
+												{message.action_buttons &&
+													message.action_buttons.length > 0 && (
+														<div className="dctc-ai-msg-actions">
+															{message.action_buttons.map((btn, bIdx) => (
+																<a
+																	key={bIdx}
+																	href={btn.url}
+																	target={btn.target || '_blank'}
+																	rel="noopener noreferrer"
+																	className={
+																		'dctc-ai-msg-action-btn' +
+																		(btn.type === 'whatsapp'
+																			? ' is-whatsapp'
+																			: '')
+																	}
+																>
+																	{btn.type === 'whatsapp' && (
+																		<svg
+																			width="13"
+																			height="13"
+																			viewBox="0 0 24 24"
+																			fill="currentColor"
+																			style={{ marginRight: '4px' }}
+																		>
+																			<path d="M17.472 14.382c-.301-.15-1.782-.879-2.057-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.677-1.633-.928-2.235-.244-.587-.493-.507-.677-.517-.175-.008-.376-.01-.577-.01-.201 0-.527.075-.803.376-.276.301-1.053 1.028-1.053 2.508 0 1.479 1.078 2.908 1.229 3.109.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.782-.728 2.033-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zm-5.467 7.518h-.005a10.84 10.84 0 0 1-5.526-1.509l-.396-.235-4.108 1.077 1.096-4.004-.258-.411a10.835 10.835 0 0 1-1.666-5.783c0-5.99 4.874-10.865 10.869-10.865a10.81 10.81 0 0 1 7.684 3.184 10.812 10.812 0 0 1 3.18 7.686c0 5.992-4.874 10.866-10.868 10.866z" />
+																		</svg>
+																	)}
+																	<span>{btn.label}</span>
+																</a>
+															))}
+														</div>
+													)}
+												{message.products &&
+													message.products.length > 0 && (
+														<div className="dctc-ai-products-grid">
+															{message.products.map((prod, pIdx) => (
+																<div
+																	key={prod.id || pIdx}
+																	className="dctc-ai-product-card"
+																>
+																	{prod.image && (
+																		<div className="dctc-ai-product-thumb-wrap">
+																			<img
+																				src={prod.image}
+																				alt={prod.title}
+																				className="dctc-ai-product-thumb"
+																				loading="lazy"
+																			/>
+																			{prod.is_on_sale && (
+																				<span className="dctc-ai-product-badge">
+																					{__('SALE', 'dragwyb-click-to-chat')}
+																				</span>
+																			)}
+																		</div>
+																	)}
+																	<div className="dctc-ai-product-info">
+																		<strong
+																			className="dctc-ai-product-title"
+																			title={prod.title}
+																		>
+																			{prod.title}
+																		</strong>
+																		<div className="dctc-ai-product-meta-row">
+																			<span className="dctc-ai-product-price">
+																				{prod.formatted_price}
+																			</span>
+																			<span
+																				className={`dctc-ai-stock-pill ${prod.in_stock ? 'is-in-stock' : 'is-out-of-stock'}`}
+																			>
+																				{prod.in_stock
+																					? __('In Stock', 'dragwyb-click-to-chat')
+																					: __('Out of Stock', 'dragwyb-click-to-chat')}
+																			</span>
+																		</div>
+																		{prod.rating > 0 && (
+																			<div className="dctc-ai-product-rating">
+																				{'★'.repeat(Math.round(prod.rating))}
+																				<span className="dctc-ai-rating-num">
+																					{` (${prod.rating.toFixed(1)})`}
+																				</span>
+																			</div>
+																		)}
+																		<div className="dctc-ai-product-buttons">
+																			<a
+																				href={prod.permalink}
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				className="dctc-ai-product-btn dctc-ai-product-btn--view"
+																			>
+																				{__('View', 'dragwyb-click-to-chat')}
+																			</a>
+																			{prod.in_stock && (
+																				<a
+																					href={prod.add_to_cart_url}
+																					target="_blank"
+																					rel="noopener noreferrer"
+																					className="dctc-ai-product-btn dctc-ai-product-btn--cart"
+																					style={{ background: primaryColor }}
+																				>
+																					{'🛒 ' + __('Add', 'dragwyb-click-to-chat')}
+																				</a>
+																			)}
+																		</div>
+																	</div>
+																</div>
+															))}
+														</div>
+													)}
+											</div>
+										) : message.content &&
+											message.content.trim() ? (
+											<div className={'dctc-ai-message ' + roleClass}>
+												<div className="dctc-ai-message-text">
+													{message.content}
+												</div>
+											</div>
+										) : null}
+										{message.show_order_tracker &&
+											renderOrderTrackerCard(message, index)}
+										{message.show_form &&
+											message.show_form.show === true &&
+											message.show_form.form_type === 'lead_generate' &&
+											!message.show_form.form_filled &&
+											!leadFormSubmitted &&
+											renderLeadCard(message, index)}
+									</div>
+									{!isBot && showUserAvatarInChat && (
+										<div className="dctc-ai-msg-avatar dctc-ai-msg-avatar--user">
+											{renderUserAvatar(userPreset, userAvatar)}
+										</div>
+									)}
+								</div>
+							);
+						})}
+
+						{/* Typing Indicator */}
+						{isLoading && (
+							<div className="dctc-ai-message-row dctc-ai-message-row--bot">
+								{showBotAvatarInChat && (
+									<div className="dctc-ai-msg-avatar dctc-ai-msg-avatar--bot">
+										{renderBotAvatar(botPreset, botAvatar, botName)}
+									</div>
+								)}
+								<div className="dctc-ai-message dctc-ai-message-bot dctc-ai-message-typing-wrap">
+									{waitingAgentStatusText && (
+										<div
+											className="dctc-ai-waiting-status-text"
+											style={{
+												fontSize: '0.8rem',
+												color: '#64748b',
+												marginBottom: '6px',
+												fontStyle: 'italic',
+											}}
+										>
+											{waitingAgentStatusText}
+										</div>
+									)}
+									<div className="dctc-ai-typing">
+										<span />
+										<span />
+										<span />
+									</div>
+								</div>
+							</div>
+						)}
+						<div ref={messagesEndRef} />
+					</div>
+
+					{/* Email Capture Gate OR Input Bar */}
+					{showEmailGate ? (
+						<div className="dctc-ai-email-capture-container">
+							<form
+								className="dctc-ai-email-capture-form"
+								onSubmit={handleEmailSubmit}
+							>
+								<h3>{__('One last step!', 'dragwyb-click-to-chat')}</h3>
+								<p>
+									{__(
+										'Please enter your email to get your response and continue.',
+										'dragwyb-click-to-chat'
+									)}
+								</p>
+								<div className="dctc-ai-email-input-group">
+									<input
+										type="email"
+										className="dctc-ai-email-input"
+										placeholder={__(
+											'your.email@example.com',
+											'dragwyb-click-to-chat'
+										)}
+										value={emailDraft}
+										onChange={(e) => {
+											setEmailDraft(e.target.value);
+											setEmailError('');
+										}}
+										required
+									/>
+									{emailError && (
+										<span className="dctc-ai-email-error">
+											{emailError}
+										</span>
+									)}
+								</div>
+								<button
+									type="submit"
+									className="dctc-ai-email-submit"
+									style={{ background: primaryColor }}
+								>
+									{__('Get Response', 'dragwyb-click-to-chat')}
+								</button>
+							</form>
+						</div>
+					) : (
+						<div className="dctc-ai-chat-input-wrapper">
+							{/* Upload Error Notice (if any) */}
+							{uploadError && (
+								<div className="dctc-ai-upload-error-notice">
+									<span>{uploadError}</span>
+									<button
+										type="button"
+										className="dctc-ai-upload-error-close"
+										onClick={() => setUploadError('')}
+										aria-label={__('Dismiss', 'dragwyb-click-to-chat')}
+									>
+										✕
+									</button>
+								</div>
+							)}
+
+							{/* Unified Modern Composer Container */}
+							<div className="dctc-ai-composer">
+								{/* Hidden file inputs */}
+								{enableUploads && (
+									<input
+										ref={fileInputRef}
+										type="file"
+										multiple={maxFilesPerMsg > 1}
+										style={{ display: 'none' }}
+										onChange={handleFilesSelected}
+										accept={
+											allowedExts
+												.map((ext) => '.' + ext)
+												.join(',') || undefined
+										}
+									/>
+								)}
+								{enableUploads && (
+									<input
+										ref={imageFileInputRef}
+										type="file"
+										multiple={maxFilesPerMsg > 1}
+										style={{ display: 'none' }}
+										onChange={handleFilesSelected}
+										accept="image/png,image/jpeg,image/webp,image/gif,image/*"
+									/>
+								)}
+
+								{/* Attachments tray inside composer (rendered above the input row) */}
+								{attachments.length > 0 && (
+									<div className="dctc-ai-composer-attachments">
+										{attachments.map((att) => (
+											<div
+												key={att.id}
+												className={`dctc-ai-composer-att-card ${att.type === 'image'
+													? 'dctc-ai-composer-att-card--image'
+													: 'dctc-ai-composer-att-card--file'
+													}`}
+											>
+												{att.type === 'image' ? (
+													<div className="dctc-ai-composer-att-img-box">
+														<img
+															src={att.previewUrl || att.url}
+															alt={att.name}
+															className="dctc-ai-composer-att-thumb"
+														/>
+														<div className="dctc-ai-composer-att-img-overlay">
+															<span className="dctc-ai-composer-att-img-icon">
+																🖼️
+															</span>
+															<span
+																className="dctc-ai-composer-att-img-name"
+																title={att.name}
+															>
+																{att.name}
+															</span>
+														</div>
+													</div>
+												) : (
+													<div className="dctc-ai-composer-att-file-box">
+														<span className="dctc-ai-composer-att-file-icon">
+															📄
+														</span>
+														<div className="dctc-ai-composer-att-file-info">
+															<span
+																className="dctc-ai-composer-att-file-name"
+																title={att.name}
+															>
+																{att.name}
+															</span>
+															{att.size > 0 && (
+																<span className="dctc-ai-composer-att-file-size">
+																	{formatFileSize(att.size)}
+																</span>
+															)}
+														</div>
+													</div>
+												)}
+												{att.status === 'uploading' && (
+													<div className="dctc-ai-composer-att-loading-mask">
+														<span className="dctc-ai-composer-att-spinner" />
+													</div>
+												)}
+												<button
+													type="button"
+													className="dctc-ai-composer-att-remove"
+													onClick={() => removeAttachment(att.id)}
+													title={__(
+														'Remove attachment',
 														'dragwyb-click-to-chat'
-													),
-												className: 'dctc-ai-msg-att-img',
-												loading: 'lazy',
-											})
-										)
-										: createElement(
-											'a',
-											{
-												key: att.id || attIdx,
-												href: att.url || '#',
-												target: '_blank',
-												rel: 'noopener noreferrer',
-												className: 'dctc-ai-msg-att-file',
-												title: att.name,
-											},
-											createElement(
-												'span',
-												{
-													className:
-														'dctc-ai-msg-att-file-icon',
-												},
-												'📄'
-											),
-											createElement(
-												'div',
-												{
-													className:
-														'dctc-ai-msg-att-file-meta',
-												},
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-msg-att-file-name',
-													},
-													att.name
-												),
-												att.size > 0 &&
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-msg-att-file-size',
-													},
-													formatFileSize(
-														att.size
-													)
-												)
-											),
-											createElement('span', {
-												className:
-													'dashicons dashicons-download',
-												'aria-hidden': 'true',
-											})
-										)
-								)
-							),
-							// 2. Text message bubble rendered directly below the attachments
-							isBot
-								? createElement(
-									'div',
-									{
-										className:
-											'dctc-ai-message ' +
-											roleClass,
-									},
-									createElement(
-										'div',
-										{
-											className:
-												'dctc-ai-message-content',
-										},
-										createElement(
-											Markdown,
-											{
-												components:
-													markdownComponents,
-											},
-											linkifyContent(
-												message.content
-											)
-										)
-									),
-									showSources &&
-									message.sources &&
-									message.sources.length > 0 &&
-									createElement(
-										'div',
-										{ className: 'dctc-ai-sources' },
-										createElement(
-											'span',
-											{ className: 'dctc-ai-sources__label' },
-											__('Sources:', 'dragwyb-click-to-chat')
-										),
-										createElement(
-											'div',
-											{ className: 'dctc-ai-sources__list' },
-											message.sources.slice(0, 3).map((src, srcIdx) =>
-												createElement(
-													'a',
-													{
-														key: srcIdx,
-														href: src.url || '#',
-														target: '_blank',
-														rel: 'noopener noreferrer',
-														className: 'dctc-ai-source-chip',
-														title: src.title,
-													},
-													createElement(
-														'svg',
-														{
-															width: '12',
-															height: '12',
-															viewBox: '0 0 24 24',
-															fill: 'none',
-															stroke: 'currentColor',
-															strokeWidth: '2',
-															strokeLinecap: 'round',
-															strokeLinejoin: 'round',
-															className: 'dctc-ai-source-chip__icon',
-															'aria-hidden': 'true',
-														},
-														createElement('path', {
-															d: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6',
-														}),
-														createElement('polyline', {
-															points: '15 3 21 3 21 9',
-														}),
-														createElement('line', {
-															x1: '10',
-															y1: '14',
-															x2: '21',
-															y2: '3',
-														})
-													),
-													createElement(
-														'span',
-														{ className: 'dctc-ai-source-chip__title' },
-														src.title || src.url
-													)
-												)
-											)
-										)
-									),
-									createElement(
-										'div',
-										{ className: 'dctc-ai-msg-footer' },
-										(typeof window !== 'undefined' && !!window.speechSynthesis) &&
-										createElement(
-											'button',
-											{
-												type: 'button',
-												className: `dctc-ai-msg-tts-btn ${speakingIndex === index
-													? 'is-speaking'
+													)}
+													aria-label={sprintf(
+														__(
+															'Remove %s',
+															'dragwyb-click-to-chat'
+														),
+														att.name
+													)}
+												>
+													×
+												</button>
+											</div>
+										))}
+									</div>
+								)}
+
+								{/* Composer Row: [ + Menu ] [ Textarea ] [ 😊 Emoji ] [ ➤ Send ] */}
+								<div className="dctc-ai-composer-row">
+									{/* Plus (+) Button with Popup Menu (on left inside input/composer) */}
+									{enableUploads && (
+										<div
+											ref={attachMenuRef}
+											className="dctc-ai-composer-plus-wrap"
+										>
+											<button
+												type="button"
+												className={`dctc-ai-composer-plus-btn ${isAttachMenuOpen
+													? 'is-active'
 													: ''
-													}`,
-												onClick: () =>
-													toggleSpeakMessage(
-														message.content,
-														index
-													),
-												title:
-													speakingIndex === index
-														? __(
-															'Stop reading',
-															'dragwyb-click-to-chat'
-														)
-														: __(
-															'Read aloud',
-															'dragwyb-click-to-chat'
-														),
-												'aria-label':
-													speakingIndex === index
-														? __(
-															'Stop reading',
-															'dragwyb-click-to-chat'
-														)
-														: __(
-															'Read aloud',
-															'dragwyb-click-to-chat'
-														),
-											},
-											speakingIndex === index ? '⏹️' : '🔊'
-										)
-									),
-									message.action_buttons &&
-									message.action_buttons.length > 0 &&
-									createElement(
-										'div',
-										{ className: 'dctc-ai-msg-actions' },
-										message.action_buttons.map((btn, bIdx) =>
-											createElement(
-												'a',
-												{
-													key: bIdx,
-													href: btn.url,
-													target: btn.target || '_blank',
-													rel: 'noopener noreferrer',
-													className:
-														'dctc-ai-msg-action-btn' +
-														(btn.type === 'whatsapp'
-															? ' is-whatsapp'
-															: ''),
-												},
-												btn.type === 'whatsapp' &&
-												createElement(
-													'svg',
-													{
-														width: '13',
-														height: '13',
-														viewBox: '0 0 24 24',
-														fill: 'currentColor',
-														style: { marginRight: '4px' },
-													},
-													createElement('path', {
-														d: 'M17.472 14.382c-.301-.15-1.782-.879-2.057-.98-.276-.1-.476-.15-.677.15-.2.301-.777.98-.953 1.18-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.136-.135.301-.351.451-.527.15-.175.2-.301.301-.501.1-.2.05-.376-.025-.526-.075-.15-.677-1.633-.928-2.235-.244-.587-.493-.507-.677-.517-.175-.008-.376-.01-.577-.01-.201 0-.527.075-.803.376-.276.301-1.053 1.028-1.053 2.508 0 1.479 1.078 2.908 1.229 3.109.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.379.197 1.898.12.578-.087 1.782-.728 2.033-1.431.25-.703.25-1.305.175-1.431-.075-.126-.276-.201-.577-.351zm-5.467 7.518h-.005a10.84 10.84 0 0 1-5.526-1.509l-.396-.235-4.108 1.077 1.096-4.004-.258-.411a10.835 10.835 0 0 1-1.666-5.783c0-5.99 4.874-10.865 10.869-10.865a10.81 10.81 0 0 1 7.684 3.184 10.812 10.812 0 0 1 3.18 7.686c0 5.992-4.874 10.866-10.868 10.866z',
-													})
-												),
-												createElement('span', null, btn.label)
-											)
-										)
-									),
-									message.products &&
-									message.products.length > 0 &&
-									createElement(
-										'div',
-										{ className: 'dctc-ai-products-grid' },
-										message.products.map((prod, pIdx) =>
-											createElement(
-												'div',
-												{ key: prod.id || pIdx, className: 'dctc-ai-product-card' },
-												prod.image &&
-												createElement(
-													'div',
-													{ className: 'dctc-ai-product-thumb-wrap' },
-													createElement('img', {
-														src: prod.image,
-														alt: prod.title,
-														className: 'dctc-ai-product-thumb',
-														loading: 'lazy',
-													}),
-													prod.is_on_sale &&
-													createElement(
-														'span',
-														{ className: 'dctc-ai-product-badge' },
-														__('SALE', 'dragwyb-click-to-chat')
+													}`}
+												onClick={() =>
+													setIsAttachMenuOpen(
+														(prev) => !prev
 													)
-												),
-												createElement(
-													'div',
-													{ className: 'dctc-ai-product-info' },
-													createElement(
-														'strong',
-														{ className: 'dctc-ai-product-title', title: prod.title },
-														prod.title
-													),
-													createElement(
-														'div',
-														{ className: 'dctc-ai-product-meta-row' },
-														createElement(
-															'span',
-															{ className: 'dctc-ai-product-price' },
-															prod.formatted_price
-														),
-														createElement(
-															'span',
-															{
-																className: `dctc-ai-stock-pill ${prod.in_stock ? 'is-in-stock' : 'is-out-of-stock'
-																	}`,
-															},
-															prod.in_stock
-																? __('In Stock', 'dragwyb-click-to-chat')
-																: __('Out of Stock', 'dragwyb-click-to-chat')
-														)
-													),
-													prod.rating > 0 &&
-													createElement(
-														'div',
-														{ className: 'dctc-ai-product-rating' },
-														'★'.repeat(Math.round(prod.rating)),
-														createElement(
-															'span',
-															{ className: 'dctc-ai-rating-num' },
-															` (${prod.rating.toFixed(1)})`
-														)
-													),
-													createElement(
-														'div',
-														{ className: 'dctc-ai-product-buttons' },
-														createElement(
-															'a',
-															{
-																href: prod.permalink,
-																target: '_blank',
-																rel: 'noopener noreferrer',
-																className: 'dctc-ai-product-btn dctc-ai-product-btn--view',
-															},
-															__('View', 'dragwyb-click-to-chat')
-														),
-														prod.in_stock &&
-														createElement(
-															'a',
-															{
-																href: prod.add_to_cart_url,
-																target: '_blank',
-																rel: 'noopener noreferrer',
-																className: 'dctc-ai-product-btn dctc-ai-product-btn--cart',
-																style: { background: primaryColor },
-															},
-															'🛒 ' + __('Add', 'dragwyb-click-to-chat')
-														)
-													)
-												)
-											)
-										)
-									)
-								)
-								: message.content &&
-									message.content.trim()
-									? createElement(
-										'div',
-										{
-											className:
-												'dctc-ai-message ' +
-												roleClass,
-										},
-										createElement(
-											'div',
-											{
-												className:
-													'dctc-ai-message-text',
-											},
-											message.content
-										)
-									)
-									: null,
-							message.show_order_tracker &&
-							renderOrderTrackerCard(message, index),
-							message.show_form &&
-							message.show_form.show === true &&
-							message.show_form.form_type === 'lead_generate' &&
-							!message.show_form.form_filled &&
-							!leadFormSubmitted &&
-							renderLeadCard(message, index)
-						),
-						!isBot && showUserAvatarInChat &&
-						createElement(
-							'div',
-							{ className: 'dctc-ai-msg-avatar dctc-ai-msg-avatar--user' },
-							renderUserAvatar(userPreset, userAvatar)
-						)
-					);
-				}),
-
-				// Typing Indicator
-				isLoading &&
-				createElement(
-					'div',
-					{ className: 'dctc-ai-message-row dctc-ai-message-row--bot' },
-					showBotAvatarInChat &&
-					createElement(
-						'div',
-						{ className: 'dctc-ai-msg-avatar dctc-ai-msg-avatar--bot' },
-						renderBotAvatar(botPreset, botAvatar, botName)
-					),
-					createElement(
-						'div',
-						{
-							className: 'dctc-ai-message dctc-ai-message-bot dctc-ai-message-typing-wrap',
-						},
-						waitingAgentStatusText &&
-						createElement(
-							'div',
-							{
-								className: 'dctc-ai-waiting-status-text',
-								style: {
-									fontSize: '0.8rem',
-									color: '#64748b',
-									marginBottom: '6px',
-									fontStyle: 'italic',
-								},
-							},
-							waitingAgentStatusText
-						),
-						createElement(
-							'div',
-							{ className: 'dctc-ai-typing' },
-							createElement('span', null),
-							createElement('span', null),
-							createElement('span', null)
-						)
-					)
-				),
-				createElement('div', { ref: messagesEndRef })
-			),
-
-			// Email Capture Gate OR Input Bar
-			showEmailGate
-				? createElement(
-					'div',
-					{
-						className: 'dctc-ai-email-capture-container',
-					},
-					createElement(
-						'form',
-						{
-							className: 'dctc-ai-email-capture-form',
-							onSubmit: handleEmailSubmit,
-						},
-						createElement(
-							'h3',
-							null,
-							__('One last step!', 'dragwyb-click-to-chat')
-						),
-						createElement(
-							'p',
-							null,
-							__(
-								'Please enter your email to get your response and continue.',
-								'dragwyb-click-to-chat'
-							)
-						),
-						createElement(
-							'div',
-							{
-								className: 'dctc-ai-email-input-group',
-							},
-							createElement('input', {
-								type: 'email',
-								className: 'dctc-ai-email-input',
-								placeholder: __(
-									'your.email@example.com',
-									'dragwyb-click-to-chat'
-								),
-								value: emailDraft,
-								onChange: (e) => {
-									setEmailDraft(e.target.value);
-									setEmailError('');
-								},
-								required: true,
-							}),
-							emailError &&
-							createElement(
-								'span',
-								{
-									className: 'dctc-ai-email-error',
-								},
-								emailError
-							)
-						),
-						createElement(
-							'button',
-							{
-								type: 'submit',
-								className: 'dctc-ai-email-submit',
-								style: { background: primaryColor },
-							},
-							__('Get Response', 'dragwyb-click-to-chat')
-						)
-					)
-				)
-				: createElement(
-					'div',
-					{ className: 'dctc-ai-chat-input-wrapper' },
-
-					// Upload Error Notice (if any)
-					uploadError &&
-					createElement(
-						'div',
-						{ className: 'dctc-ai-upload-error-notice' },
-						createElement('span', null, uploadError),
-						createElement(
-							'button',
-							{
-								type: 'button',
-								className: 'dctc-ai-upload-error-close',
-								onClick: () => setUploadError(''),
-								'aria-label': __('Dismiss', 'dragwyb-click-to-chat'),
-							},
-							'✕'
-						)
-					),
-
-					// Unified Modern Composer Container
-					createElement(
-						'div',
-						{ className: 'dctc-ai-composer' },
-
-						// Hidden file inputs
-						enableUploads &&
-						createElement('input', {
-							ref: fileInputRef,
-							type: 'file',
-							multiple: maxFilesPerMsg > 1,
-							style: { display: 'none' },
-							onChange: handleFilesSelected,
-							accept:
-								allowedExts
-									.map((ext) => '.' + ext)
-									.join(',') || undefined,
-						}),
-						enableUploads &&
-						createElement('input', {
-							ref: imageFileInputRef,
-							type: 'file',
-							multiple: maxFilesPerMsg > 1,
-							style: { display: 'none' },
-							onChange: handleFilesSelected,
-							accept: 'image/png,image/jpeg,image/webp,image/gif,image/*',
-						}),
-
-						// Attachments tray inside composer (rendered above the input row)
-						attachments.length > 0 &&
-						createElement(
-							'div',
-							{ className: 'dctc-ai-composer-attachments' },
-							attachments.map((att) =>
-								createElement(
-									'div',
-									{
-										key: att.id,
-										className: `dctc-ai-composer-att-card ${att.type === 'image'
-											? 'dctc-ai-composer-att-card--image'
-											: 'dctc-ai-composer-att-card--file'
-											}`,
-									},
-									att.type === 'image'
-										? createElement(
-											'div',
-											{
-												className:
-													'dctc-ai-composer-att-img-box',
-											},
-											createElement('img', {
-												src:
-													att.previewUrl ||
-													att.url,
-												alt: att.name,
-												className:
-													'dctc-ai-composer-att-thumb',
-											}),
-											createElement(
-												'div',
-												{
-													className:
-														'dctc-ai-composer-att-img-overlay',
-												},
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-composer-att-img-icon',
-													},
-													'🖼️'
-												),
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-composer-att-img-name',
-														title: att.name,
-													},
-													att.name
-												)
-											)
-										)
-										: createElement(
-											'div',
-											{
-												className:
-													'dctc-ai-composer-att-file-box',
-											},
-											createElement(
-												'span',
-												{
-													className:
-														'dctc-ai-composer-att-file-icon',
-												},
-												'📄'
-											),
-											createElement(
-												'div',
-												{
-													className:
-														'dctc-ai-composer-att-file-info',
-												},
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-composer-att-file-name',
-														title: att.name,
-													},
-													att.name
-												),
-												createElement(
-													'span',
-													{
-														className:
-															'dctc-ai-composer-att-file-size',
-													},
-													formatFileSize(
-														att.size
-													)
-												)
-											)
-										),
-									att.status === 'uploading' &&
-									createElement(
-										'div',
-										{
-											className:
-												'dctc-ai-composer-att-loading-mask',
-										},
-										createElement('span', {
-											className:
-												'dctc-ai-composer-att-spinner',
-										})
-									),
-									createElement(
-										'button',
-										{
-											type: 'button',
-											className:
-												'dctc-ai-composer-att-remove',
-											onClick: () =>
-												removeAttachment(att.id),
-											title: __(
-												'Remove attachment',
-												'dragwyb-click-to-chat'
-											),
-											'aria-label': sprintf(
-												__(
-													'Remove %s',
+												}
+												title={__(
+													'Add attachment',
 													'dragwyb-click-to-chat'
-												),
-												att.name
-											),
-										},
-										'×'
-									)
-								)
-							)
-						),
-
-						// Composer Row: [ + Menu ] [ Textarea ] [ 😊 Emoji ] [ ➤ Send ]
-						createElement(
-							'div',
-							{ className: 'dctc-ai-composer-row' },
-
-							// Plus (+) Button with Popup Menu (on left inside input/composer)
-							enableUploads &&
-							createElement(
-								'div',
-								{
-									ref: attachMenuRef,
-									className:
-										'dctc-ai-composer-plus-wrap',
-								},
-								createElement(
-									'button',
-									{
-										type: 'button',
-										className: `dctc-ai-composer-plus-btn ${isAttachMenuOpen
-											? 'is-active'
-											: ''
-											}`,
-										onClick: () =>
-											setIsAttachMenuOpen(
-												(prev) => !prev
-											),
-										title: __(
-											'Add attachment',
-											'dragwyb-click-to-chat'
-										),
-										'aria-label': __(
-											'Add attachment',
-											'dragwyb-click-to-chat'
-										),
-										'aria-expanded':
-											isAttachMenuOpen,
-										'aria-haspopup': 'true',
-										disabled:
-											isLoading || isAnyUploading,
-									},
-									'＋'
-								),
-								isAttachMenuOpen &&
-								createElement(
-									'div',
-									{
-										className:
-											'dctc-ai-attach-menu',
-									},
-									createElement(
-										'button',
-										{
-											type: 'button',
-											className:
-												'dctc-ai-attach-menu-item',
-											onClick: () => {
-												setIsAttachMenuOpen(
-													false
-												);
-												if (
-													fileInputRef.current
-												) {
-													fileInputRef.current.click();
+												)}
+												aria-label={__(
+													'Add attachment',
+													'dragwyb-click-to-chat'
+												)}
+												aria-expanded={isAttachMenuOpen}
+												aria-haspopup="true"
+												disabled={
+													isLoading || isAnyUploading
 												}
-											},
-										},
-										createElement(
-											'span',
-											{
-												className:
-													'dctc-ai-attach-menu-icon',
-											},
-											'📎'
-										),
-										createElement(
-											'span',
-											{
-												className:
-													'dctc-ai-attach-menu-label',
-											},
-											__(
-												'Attach File',
-												'dragwyb-click-to-chat'
-											)
-										)
-									),
-									createElement(
-										'button',
-										{
-											type: 'button',
-											className:
-												'dctc-ai-attach-menu-item',
-											onClick: () => {
-												setIsAttachMenuOpen(
-													false
-												);
-												if (
-													imageFileInputRef.current
-												) {
-													imageFileInputRef.current.click();
-												}
-											},
-										},
-										createElement(
-											'span',
-											{
-												className:
-													'dctc-ai-attach-menu-icon',
-											},
-											'🖼️'
-										),
-										createElement(
-											'span',
-											{
-												className:
-													'dctc-ai-attach-menu-label',
-											},
-											__(
-												'Upload Image',
-												'dragwyb-click-to-chat'
-											)
-										)
-									)
-								)
-							),
+											>
+												＋
+											</button>
+											{isAttachMenuOpen && (
+												<div className="dctc-ai-attach-menu">
+													<button
+														type="button"
+														className="dctc-ai-attach-menu-item"
+														onClick={() => {
+															setIsAttachMenuOpen(
+																false
+															);
+															if (fileInputRef.current) {
+																fileInputRef.current.click();
+															}
+														}}
+													>
+														<span className="dctc-ai-attach-menu-icon">
+															📎
+														</span>
+														<span className="dctc-ai-attach-menu-label">
+															{__(
+																'Attach File',
+																'dragwyb-click-to-chat'
+															)}
+														</span>
+													</button>
+													<button
+														type="button"
+														className="dctc-ai-attach-menu-item"
+														onClick={() => {
+															setIsAttachMenuOpen(
+																false
+															);
+															if (imageFileInputRef.current) {
+																imageFileInputRef.current.click();
+															}
+														}}
+													>
+														<span className="dctc-ai-attach-menu-icon">
+															🖼️
+														</span>
+														<span className="dctc-ai-attach-menu-label">
+															{__(
+																'Upload Image',
+																'dragwyb-click-to-chat'
+															)}
+														</span>
+													</button>
+												</div>
+											)}
+										</div>
+									)}
 
-							// Textarea in the middle
-							createElement('textarea', {
-								ref: inputRef,
-								className: 'dctc-ai-composer-textarea',
-								value: input,
-								onChange: (e) => {
-									setInput(e.target.value);
-									e.target.style.height = 'auto';
-									e.target.style.height =
-										Math.min(e.target.scrollHeight, 140) +
-										'px';
-								},
-								onKeyDown: (e) => {
-									if (e.key === 'Enter' && !e.shiftKey) {
-										e.preventDefault();
-										handleSend(e);
+									{/* Textarea in the middle */}
+									<textarea
+										ref={inputRef}
+										className="dctc-ai-composer-textarea"
+										value={input}
+										onChange={(e) => {
+											setInput(e.target.value);
+											e.target.style.height = 'auto';
+											e.target.style.height =
+												Math.min(e.target.scrollHeight, 140) +
+												'px';
+										}}
+										onKeyDown={(e) => {
+											if (e.key === 'Enter' && !e.shiftKey) {
+												e.preventDefault();
+												handleSend(e);
+											}
+										}}
+										placeholder={__(
+											'Type your message...',
+											'dragwyb-click-to-chat'
+										)}
+										rows={1}
+										disabled={isLoading}
+									/>
+
+									{/* Voice Speech-to-Text Button */}
+									{chatbot?.enable_voice_input !== false && (
+										<button
+											type="button"
+											className={`dctc-ai-composer-voice-btn ${isListening ? 'is-listening' : ''}`}
+											onClick={toggleVoiceRecognition}
+											title={
+												isListening
+													? __(
+														'Listening... Click to stop',
+														'dragwyb-click-to-chat'
+													)
+													: __(
+														'Voice input',
+														'dragwyb-click-to-chat'
+													)
+											}
+											aria-label={
+												isListening
+													? __(
+														'Stop voice input',
+														'dragwyb-click-to-chat'
+													)
+													: __(
+														'Voice input',
+														'dragwyb-click-to-chat'
+													)
+											}
+										>
+											{isListening ? (
+												<span className="dctc-ai-voice-active-indicator" />
+											) : (
+												'🎙️'
+											)}
+										</button>
+									)}
+
+									{/* Emoji Button on right of input (before Send) */}
+									<div
+										ref={emojiWrapRef}
+										className="dctc-ai-composer-emoji-wrap"
+									>
+										<button
+											type="button"
+											className={`dctc-ai-composer-emoji-btn ${isEmojiOpen ? 'is-active' : ''}`}
+											onClick={() =>
+												setIsEmojiOpen(
+													(prev) => !prev
+												)
+											}
+											title={__(
+												'Insert emoji',
+												'dragwyb-click-to-chat'
+											)}
+											aria-label={__(
+												'Insert emoji',
+												'dragwyb-click-to-chat'
+											)}
+											aria-expanded={isEmojiOpen}
+											aria-controls="dctc-ai-emoji-picker"
+										>
+											😊
+										</button>
+										{isEmojiOpen && (
+											<EmojiPicker
+												onSelect={handleSelectEmoji}
+												onClose={() =>
+													setIsEmojiOpen(false)
+												}
+											/>
+										)}
+									</div>
+
+									{/* Send Button on far right */}
+									<button
+										type="button"
+										className="dctc-ai-composer-send-btn"
+										onClick={handleSend}
+										disabled={
+											isLoading ||
+											isAnyUploading ||
+											(!input.trim() &&
+												attachments.length === 0)
+										}
+										style={{ background: primaryColor }}
+										title={__(
+											'Send message',
+											'dragwyb-click-to-chat'
+										)}
+										aria-label={__(
+											'Send message',
+											'dragwyb-click-to-chat'
+										)}
+									>
+										{isAnyUploading ? (
+											<span className="dctc-ai-spinner" />
+										) : (
+											<svg
+												width="16"
+												height="16"
+												viewBox="0 0 24 24"
+												fill="none"
+												aria-hidden="true"
+											>
+												<path
+													d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+													stroke="currentColor"
+													strokeWidth="2.2"
+													strokeLinecap="round"
+													strokeLinejoin="round"
+												/>
+											</svg>
+										)}
+									</button>
+								</div>
+							</div>
+						</div>
+					)}
+				</div>
+			)}
+
+			{/* Proactive Teaser Bubble (Behavioral Triggers) */}
+			{!inline &&
+				!isOpen &&
+				display.enable_proactive_bubble &&
+				proactiveBubbleOpen &&
+				launcherVisible && (
+					<div
+						id="dctc-ai-proactive-bubble"
+						className="dctc-ai-proactive-bubble"
+						role="dialog"
+						aria-label={__('AI Assistant Greeting', 'dragwyb-click-to-chat')}
+					>
+						<button
+							type="button"
+							className="dctc-ai-proactive-bubble-close"
+							onClick={(e) => {
+								e.stopPropagation();
+								setProactiveBubbleOpen(false);
+								try {
+									if (window.sessionStorage) {
+										window.sessionStorage.setItem('dctc_ai_bubble_dismissed', '1');
 									}
-								},
-								placeholder: __(
-									'Type your message...',
-									'dragwyb-click-to-chat'
-								),
-								rows: 1,
-								disabled: isLoading,
-							}),
+								} catch (err) { }
+							}}
+							title={__('Dismiss', 'dragwyb-click-to-chat')}
+							aria-label={__('Dismiss greeting', 'dragwyb-click-to-chat')}
+						>
+							×
+						</button>
+						<div
+							className="dctc-ai-proactive-bubble-inner"
+							onClick={() => {
+								setProactiveBubbleOpen(false);
+								setIsOpen(true);
+							}}
+						>
+							<div className="dctc-ai-proactive-bubble-avatar">
+								{renderBotAvatar(botPreset, botAvatar, botName)}
+							</div>
+							<div className="dctc-ai-proactive-bubble-content">
+								<p className="dctc-ai-proactive-bubble-text">
+									{display.proactive_bubble_message ||
+										__('👋 Hi there! Have a question about this page? Let me know!', 'dragwyb-click-to-chat')}
+								</p>
+								<span
+									className="dctc-ai-proactive-bubble-cta"
+									style={{ color: primaryColor }}
+								>
+									{__('Chat with us →', 'dragwyb-click-to-chat')}
+								</span>
+							</div>
+						</div>
+					</div>
+				)}
 
-							// Voice Speech-to-Text Button
-							(chatbot?.enable_voice_input !== false) &&
-							createElement(
-								'button',
-								{
-									type: 'button',
-									className: `dctc-ai-composer-voice-btn ${isListening ? 'is-listening' : ''
-										}`,
-									onClick: toggleVoiceRecognition,
-									title: isListening
-										? __(
-											'Listening... Click to stop',
-											'dragwyb-click-to-chat'
-										)
-										: __(
-											'Voice input',
-											'dragwyb-click-to-chat'
-										),
-									'aria-label': isListening
-										? __(
-											'Stop voice input',
-											'dragwyb-click-to-chat'
-										)
-										: __(
-											'Voice input',
-											'dragwyb-click-to-chat'
-										),
-								},
-								isListening
-									? createElement('span', {
-										className:
-											'dctc-ai-voice-active-indicator',
-									})
-									: '🎙️'
-							),
-
-							// Emoji Button on right of input (before Send)
-							createElement(
-								'div',
-								{
-									ref: emojiWrapRef,
-									className:
-										'dctc-ai-composer-emoji-wrap',
-								},
-								createElement(
-									'button',
-									{
-										type: 'button',
-										className: `dctc-ai-composer-emoji-btn ${isEmojiOpen ? 'is-active' : ''
-											}`,
-										onClick: () =>
-											setIsEmojiOpen(
-												(prev) => !prev
-											),
-										title: __(
-											'Insert emoji',
-											'dragwyb-click-to-chat'
-										),
-										'aria-label': __(
-											'Insert emoji',
-											'dragwyb-click-to-chat'
-										),
-										'aria-expanded': isEmojiOpen,
-										'aria-controls':
-											'dctc-ai-emoji-picker',
-									},
-									'😊'
-								),
-								isEmojiOpen &&
-								createElement(EmojiPicker, {
-									onSelect: handleSelectEmoji,
-									onClose: () =>
-										setIsEmojiOpen(false),
-								})
-							),
-
-							// Send Button on far right
-							createElement(
-								'button',
-								{
-									type: 'button',
-									className: 'dctc-ai-composer-send-btn',
-									onClick: handleSend,
-									disabled:
-										isLoading ||
-										isAnyUploading ||
-										(!input.trim() &&
-											attachments.length === 0),
-									style: { background: primaryColor },
-									title: __(
-										'Send message',
-										'dragwyb-click-to-chat'
-									),
-									'aria-label': __(
-										'Send message',
-										'dragwyb-click-to-chat'
-									),
-								},
-								isAnyUploading
-									? createElement('span', {
-										className: 'dctc-ai-spinner',
-									})
-									: createElement(
-										'svg',
-										{
-											width: '16',
-											height: '16',
-											viewBox: '0 0 24 24',
-											fill: 'none',
-											'aria-hidden': 'true',
-										},
-										createElement('path', {
-											d: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z',
-											stroke: 'currentColor',
-											strokeWidth: '2.2',
-											strokeLinecap: 'round',
-											strokeLinejoin: 'round',
-										})
-									)
-							)
-						)
-					)
-				)
-		),
-
-		// Proactive Teaser Bubble (Behavioral Triggers)
-		!inline &&
-		!isOpen &&
-		display.enable_proactive_bubble &&
-		proactiveBubbleOpen &&
-		launcherVisible &&
-		createElement(
-			'div',
-			{
-				id: 'dctc-ai-proactive-bubble',
-				className: 'dctc-ai-proactive-bubble',
-				role: 'dialog',
-				'aria-label': __('AI Assistant Greeting', 'dragwyb-click-to-chat'),
-			},
-			createElement(
-				'button',
-				{
-					type: 'button',
-					className: 'dctc-ai-proactive-bubble-close',
-					onClick: (e) => {
-						e.stopPropagation();
-						setProactiveBubbleOpen(false);
-						try {
-							if (window.sessionStorage) {
-								window.sessionStorage.setItem('dctc_ai_bubble_dismissed', '1');
-							}
-						} catch (err) { }
-					},
-					title: __('Dismiss', 'dragwyb-click-to-chat'),
-					'aria-label': __('Dismiss greeting', 'dragwyb-click-to-chat'),
-				},
-				'×'
-			),
-			createElement(
-				'div',
-				{
-					className: 'dctc-ai-proactive-bubble-inner',
-					onClick: () => {
-						setProactiveBubbleOpen(false);
-						setIsOpen(true);
-					},
-				},
-				createElement(
-					'div',
-					{ className: 'dctc-ai-proactive-bubble-avatar' },
-					renderBotAvatar(botPreset, botAvatar, botName)
-				),
-				createElement(
-					'div',
-					{ className: 'dctc-ai-proactive-bubble-content' },
-					createElement(
-						'p',
-						{ className: 'dctc-ai-proactive-bubble-text' },
-						display.proactive_bubble_message ||
-						__('👋 Hi there! Have a question about this page? Let me know!', 'dragwyb-click-to-chat')
-					),
-					createElement(
-						'span',
-						{
-							className: 'dctc-ai-proactive-bubble-cta',
-							style: { color: primaryColor },
-						},
-						__('Chat with us →', 'dragwyb-click-to-chat')
-					)
-				)
-			)
-		),
-
-		// Launcher Button
-		!inline &&
-		!isOpen &&
-		createElement(
-			'div',
-			{
-				id: 'dctc-ai-launcher',
-				className:
-					'dctc-ai-chat-launcher' +
-					(assistantIcon ? ' dctc-ai-chat-launcher--custom-icon' : '') +
-					(launcherVisible ? '' : ' dctc-ai-chat-launcher--hidden'),
-				onClick: toggleOpen,
-				style: { background: primaryColor },
-				'aria-hidden': launcherVisible ? undefined : 'true',
-			},
-			display.enable_launcher_text &&
-			display.launcher_text &&
-			createElement(
-				'span',
-				{ className: 'dctc-ai-launcher-text' },
-				display.launcher_text
-			),
-			createElement(
-				'div',
-				{ className: 'dctc-ai-launcher-icon-inner' },
-				renderLauncherIcon(launcherPreset, assistantIcon)
-			)
-		)
+			{/* Launcher Button */}
+			{!inline &&
+				!isOpen && (
+					<div
+						id="dctc-ai-launcher"
+						className={
+							'dctc-ai-chat-launcher' +
+							(assistantIcon ? ' dctc-ai-chat-launcher--custom-icon' : '') +
+							(launcherVisible ? '' : ' dctc-ai-chat-launcher--hidden')
+						}
+						onClick={toggleOpen}
+						style={{ background: primaryColor }}
+						aria-hidden={launcherVisible ? undefined : 'true'}
+					>
+						{display.enable_launcher_text &&
+							display.launcher_text && (
+								<span className="dctc-ai-launcher-text">
+									{display.launcher_text}
+								</span>
+							)}
+						<div className="dctc-ai-launcher-icon-inner">
+							{renderLauncherIcon(launcherPreset, assistantIcon)}
+						</div>
+					</div>
+				)}
+		</div>
 	);
 }

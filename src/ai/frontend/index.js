@@ -1,5 +1,5 @@
 import apiFetch from '@wordpress/api-fetch';
-import { createElement, createRoot } from '@wordpress/element';
+import { createRoot } from '@wordpress/element';
 import ChatWidget from './ChatWidget';
 import './style.css';
 
@@ -17,10 +17,10 @@ function mount() {
 	const inline = root.getAttribute( 'data-inline' ) === 'true';
 
 	createRoot( root ).render(
-		createElement( ChatWidget, {
-			settings: window.dctc_ai_frontend_data?.settings,
-			inline,
-		} )
+		<ChatWidget
+			settings={ window.dctc_ai_frontend_data?.settings }
+			inline={ inline }
+		/>
 	);
 }
 
