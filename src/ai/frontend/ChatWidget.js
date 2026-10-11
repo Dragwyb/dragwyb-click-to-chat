@@ -527,16 +527,18 @@ export default function ChatWidget({ settings, inline }) {
 
 	const getFormDataForMessage = (msg, index) => {
 		const key = getFormKey(msg, index);
-		return formsDataByKey[key] || {
-			name: loggedInUserName,
-			email: loggedInUserEmail,
-			phone: '',
-			company: '',
-			company_size: '',
-			budget: '',
-			timeline: '',
-			interest: pageProductOrTitle,
-			requirement: '',
+		const existingData = formsDataByKey[key];
+
+		return {
+			name: existingData?.name || loggedInUserName,
+			email: existingData?.email || loggedInUserEmail,
+			phone: existingData?.phone || '',
+			company: existingData?.company || '',
+			company_size: existingData?.company_size || '',
+			budget: existingData?.budget || '',
+			timeline: existingData?.timeline || '',
+			interest: existingData?.interest || '',
+			requirement: existingData?.requirement || '',
 		};
 	};
 
@@ -2243,7 +2245,7 @@ export default function ChatWidget({ settings, inline }) {
 				);
 
 				const botCreatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
-				const botSenderName = botName || 'AI Assistant';
+				const botSenderName = 'AI Assistant';
 
 				if (response.lead_data && isLeadPrompt) {
 					const formKey = `${botCreatedAt}_${botSenderName}`;
