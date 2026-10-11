@@ -935,7 +935,7 @@ export default function TicketsView({
 							)}
 						</div>
 						{ticketLoading && (!selectedTicket || String(selectedTicket?.id) !== String(selectedTicketId)) ? (
-							<div className="dctc-sc-workspace-inner dctc-sc-workspace-skeleton-wrap" style={{ flex: 1, display: 'flex' }}>
+							<div className="dctc-sc-col-main">
 								<TicketWorkspaceSkeleton />
 							</div>
 						) : (

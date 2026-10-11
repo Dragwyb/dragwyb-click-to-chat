@@ -1366,7 +1366,7 @@ export default function PortalView({
 				</div>
 
 				{ /* Right Column: Real-Time Live Interactive Preview */}
-				<div style={{ position: 'sticky', top: '40px' }}>
+				<div style={{ position: 'sticky', top: '105px' }}>
 					<div className="dctc-sc-panel-box" style={{ overflow: 'hidden' }}>
 						<div className="dctc-sc-panel-header" style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
 							<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

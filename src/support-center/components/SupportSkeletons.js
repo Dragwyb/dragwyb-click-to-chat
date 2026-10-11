@@ -10,59 +10,83 @@ export function TicketWorkspaceSkeleton() {
 			aria-busy="true"
 			aria-label={__('Loading ticket', 'dragwyb-click-to-chat')}
 		>
-			<div className="dctc-sc-ws-header dctc-sk-header">
-				<div className="dctc-sc-ws-header-left">
-					<button
-						type="button"
-						className="dctc-sc-back-to-list-btn"
-						disabled
-					>
-						<span className="dashicons dashicons-arrow-left-alt" />
-						<span>{__('Back', 'dragwyb-click-to-chat')}</span>
-					</button>
-					<span className="dctc-sk dctc-sk-ticket-id" />
-					<span className="dctc-sk dctc-sk-status" />
-					<span className="dctc-sk dctc-sk-priority" />
-					<button type="button" className="dctc-sc-ws-icon-btn" disabled>
-						<span className="dashicons dashicons-flag" />
-					</button>
-					<button type="button" className="dctc-sc-ws-icon-btn" disabled>
-						<span className="dashicons dashicons-star-empty" />
-					</button>
+
+			<div className="dctc-sc-ws-header">
+				<div className="dctc-sc-ws-header-title-wrap">
+					<h2 className="dctc-sc-ws-subject">
+						<div className="dctc-sk dctc-sk-ticket-title" />
+						<span className="dctc-sk dctc-sk-ticket-id" />
+					</h2>
 				</div>
-				<div className="dctc-sc-ws-header-right">
-					<button type="button" className="dctc-sc-ws-icon-btn" disabled>
-						<span className="dashicons dashicons-arrow-left-alt2" />
-					</button>
-					<button type="button" className="dctc-sc-ws-icon-btn" disabled>
-						<span className="dashicons dashicons-arrow-right-alt2" />
-					</button>
-					<button type="button" className="dctc-sc-ws-close-btn" disabled>
+
+				<div className="dctc-sc-ws-header-actions">
+					<button type="button" className="dctc-sc-close-view-btn" disabled>
 						<span className="dashicons dashicons-no-alt" />
 					</button>
 				</div>
 			</div>
 
-			<div className="dctc-sc-ws-ticket-info" style={{ padding: "14px 22px 12px" }}>
-				<div className="dctc-sk dctc-sk-ticket-title" />
+			{/* WORKSPACE SUBTABS & TOP ACTIONS BAR */}
+			<div className="dctc-sc-workspace-tabs-bar">
+				<div className="dctc-sc-workspace-tabs dctc-sk-tabs">
+					<button type="button" className="dctc-sc-ws-tab-btn active" disabled>
+						<span className="dashicons dashicons-format-chat" />
+						{__('Conversation', 'dragwyb-click-to-chat')}
+					</button>
+					<button type="button" className="dctc-sc-ws-tab-btn" disabled>
+						<span className="dashicons dashicons-lock" />
+						{__('Internal Notes', 'dragwyb-click-to-chat')}
+					</button>
+				</div>
+
+				<div className="dctc-sc-ws-tab-actions">
+					<button
+						type="button"
+						className={"dctc-sc-header-action-btn reply-btn"}
+					>
+						<span className="dashicons dashicons-undo"></span>
+						<span>{__('Add Reply', 'dragwyb-click-to-chat')}</span>
+					</button>
+					<button
+						type="button"
+						className={"dctc-sc-header-action-btn note-btn"}
+					>
+						<span className="dashicons dashicons-lock"></span>
+						<span>{__('Add Note', 'dragwyb-click-to-chat')}</span>
+					</button>
+				</div>
 			</div>
 
-			<div className="dctc-sc-workspace-tabs dctc-sk-tabs">
-				<button type="button" className="dctc-sc-ws-tab-btn active" disabled>
-					<span className="dashicons dashicons-format-chat" />
-					{__('Conversation', 'dragwyb-click-to-chat')}
-				</button>
-				<button type="button" className="dctc-sc-ws-tab-btn" disabled>
-					<span className="dashicons dashicons-lock" />
-					{__('Internal Notes', 'dragwyb-click-to-chat')}
-				</button>
-				<button type="button" className="dctc-sc-ws-tab-btn" disabled>
-					<span className="dashicons dashicons-backup" />
-					{__('Activity Logs', 'dragwyb-click-to-chat')}
-				</button>
-			</div>
+			<div className="dctc-sc-conversation-scroll">
+				<div className="dctc-sk-message dctc-sk-message-customer">
+					<div className="dctc-sk dctc-sk-avatar" />
+					<div className="dctc-sk-message-body">
+						<div className="dctc-sk-message-meta">
+							<span className="dctc-sk dctc-sk-author" />
+							<span className="dctc-sk dctc-sk-time" />
+						</div>
+						<div className="dctc-sk-bubble dctc-sk-bubble-large">
+							<span className="dctc-sk dctc-sk-line line-95" />
+							<span className="dctc-sk dctc-sk-line line-90" />
+							<span className="dctc-sk dctc-sk-line line-68" />
+						</div>
+					</div>
+				</div>
 
-			<div className="dctc-sc-skeleton-conversation">
+				<div className="dctc-sk-message dctc-sk-message-agent">
+					<div className="dctc-sk-message-body">
+						<div className="dctc-sk-message-meta dctc-sk-message-meta-right">
+							<span className="dctc-sk dctc-sk-author-small" />
+							<span className="dctc-sk dctc-sk-time" />
+						</div>
+						<div className="dctc-sk-bubble dctc-sk-bubble-agent">
+							<span className="dctc-sk dctc-sk-line line-88" />
+							<span className="dctc-sk dctc-sk-line line-58" />
+						</div>
+					</div>
+					<div className="dctc-sk dctc-sk-avatar" />
+				</div>
+
 				<div className="dctc-sk-message dctc-sk-message-customer">
 					<div className="dctc-sk dctc-sk-avatar" />
 					<div className="dctc-sk-message-body">
@@ -92,27 +116,6 @@ export function TicketWorkspaceSkeleton() {
 					<div className="dctc-sk dctc-sk-avatar" />
 				</div>
 			</div>
-
-			<div className="dctc-sc-skeleton-composer">
-				<div className="dctc-sk-composer-header">
-					<div className="dctc-sk-composer-tabs">
-						<span className="dctc-sk dctc-sk-composer-tab active" />
-						<span className="dctc-sk dctc-sk-composer-tab" />
-					</div>
-					<span className="dctc-sk dctc-sk-ai-button" />
-				</div>
-				<div className="dctc-sk-composer-input">
-					<span className="dctc-sk dctc-sk-input-line" />
-					<span className="dctc-sk dctc-sk-input-line input-medium" />
-				</div>
-				<div className="dctc-sk-composer-footer">
-					<div className="dctc-sk-composer-footer-left">
-						<span className="dctc-sk dctc-sk-footer-control" />
-						<span className="dctc-sk dctc-sk-footer-control footer-small" />
-					</div>
-					<span className="dctc-sk dctc-sk-send-button" />
-				</div>
-			</div>
 		</div>
 	);
 }
@@ -124,60 +127,115 @@ export function TicketDetailsSidebarSkeleton() {
 			aria-busy="true"
 			aria-label={__('Loading ticket details', 'dragwyb-click-to-chat')}
 		>
-			<div className="dctc-sk-sidebar-card">
-				<div className="dctc-sk-sidebar-header">
-					<div className="dctc-sk-sidebar-heading">
-						<span className="dctc-sk dctc-sk-sidebar-icon" />
-						<span className="dctc-sk dctc-sk-customer-heading" />
-					</div>
-					<span className="dctc-sk dctc-sk-collapse-icon" />
-				</div>
-				<div className="dctc-sk-customer">
-					<div className="dctc-sk dctc-sk-customer-avatar" />
-					<div className="dctc-sk-customer-info">
-						<span className="dctc-sk dctc-sk-customer-name" />
-						<span className="dctc-sk dctc-sk-guest-badge" />
-					</div>
-				</div>
-				<div className="dctc-sk-email-row">
-					<span className="dctc-sk dctc-sk-email-icon" />
-					<span className="dctc-sk dctc-sk-email" />
-				</div>
-				<div className="dctc-sk-sidebar-expand">
-					<div className="dctc-sk-sidebar-expand-left">
-						<span className="dctc-sk dctc-sk-expand-icon" />
-						<span className="dctc-sk dctc-sk-expand-title" />
-					</div>
-					<span className="dctc-sk dctc-sk-expand-arrow" />
+			{/* TOP ACTIONS BAR: Back, Flag, Star */}
+			<div className="dctc-sc-sidebar-top-bar">
+				<button
+					type="button"
+					className="dctc-sc-sidebar-back-btn"
+					title={__('Back to all tickets', 'dragwyb-click-to-chat')}
+				>
+					<span className="dashicons dashicons-arrow-left-alt"></span>
+					<span>{__('Back', 'dragwyb-click-to-chat')}</span>
+				</button>
+
+				<div className="dctc-sc-sidebar-top-actions">
+					<>
+						<button
+							type="button"
+							className={`dctc-sc-sidebar-icon-btn`}
+							title={__('Flag Ticket', 'dragwyb-click-to-chat')}
+							disabled
+						>
+							<span className="dashicons dashicons-flag"></span>
+						</button>
+
+						<button
+							type="button"
+							className={`dctc-sc-sidebar-icon-btn`}
+							title={__('Star Ticket', 'dragwyb-click-to-chat')}
+							disabled
+						>
+							<span className={`dashicons dashicons-star-empty`}></span>
+						</button>
+					</>
 				</div>
 			</div>
-
-			<div className="dctc-sk-sidebar-card dctc-sk-properties-card">
-				<div className="dctc-sk-sidebar-header">
-					<div className="dctc-sk-sidebar-heading">
+			<div className="dctc-sc-details-card">
+				<button
+					type="button"
+					className="dctc-sc-card-head dctc-sc-card-head-toggle"
+				>
+					<div className="dctc-sc-card-head-title">
 						<span className="dctc-sk dctc-sk-sidebar-icon" />
 						<span className="dctc-sk dctc-sk-properties-heading" />
 					</div>
 					<span className="dctc-sk dctc-sk-collapse-icon" />
-				</div>
-				<div className="dctc-sk-property">
-					<span className="dctc-sk dctc-sk-property-label" />
-					<div className="dctc-sk dctc-sk-property-select" />
-				</div>
-				<div className="dctc-sk-property">
-					<span className="dctc-sk dctc-sk-property-label property-medium" />
-					<div className="dctc-sk dctc-sk-property-select" />
-				</div>
-				<div className="dctc-sk-property">
-					<span className="dctc-sk dctc-sk-property-label property-large" />
-					<div className="dctc-sk dctc-sk-property-select" />
-				</div>
-				<div className="dctc-sk-sidebar-expand">
-					<div className="dctc-sk-sidebar-expand-left">
-						<span className="dctc-sk dctc-sk-folder-icon" />
-						<span className="dctc-sk dctc-sk-more-properties" />
+				</button>
+				<div className='dctc-sc-card-body'>
+					<div className="dctc-sk-customer">
+						<div className="dctc-sk dctc-sk-customer-avatar" />
+						<div className="dctc-sk-customer-info">
+							<span className="dctc-sk dctc-sk-customer-name" />
+							<span className="dctc-sk dctc-sk-guest-badge" />
+						</div>
 					</div>
-					<span className="dctc-sk dctc-sk-expand-arrow" />
+					<div className="dctc-sk-email-row">
+						<span className="dctc-sk dctc-sk-email-icon" />
+						<span className="dctc-sk dctc-sk-email" />
+					</div>
+					<div className="dctc-sk-sidebar-expand">
+						<div className="dctc-sk-sidebar-expand-left">
+							<span className="dctc-sk dctc-sk-expand-icon" />
+							<span className="dctc-sk dctc-sk-expand-title" />
+						</div>
+						<span className="dctc-sk dctc-sk-expand-arrow" />
+					</div>
+				</div>
+			</div>
+
+			<div className="dctc-sc-details-card">
+				<button
+					type="button"
+					className="dctc-sc-card-head dctc-sc-card-head-toggle"
+				>
+					<div className="dctc-sc-card-head-title">
+						<span className="dctc-sk dctc-sk-sidebar-icon" />
+						<span className="dctc-sk dctc-sk-properties-heading" />
+					</div>
+					<span className="dctc-sk dctc-sk-collapse-icon" />
+				</button>
+			</div>
+
+			<div className="dctc-sc-details-card">
+				<button
+					type="button"
+					className="dctc-sc-card-head dctc-sc-card-head-toggle"
+				>
+					<div className="dctc-sc-card-head-title">
+						<span className="dctc-sk dctc-sk-sidebar-icon" />
+						<span className="dctc-sk dctc-sk-properties-heading" />
+					</div>
+					<span className="dctc-sk dctc-sk-collapse-icon" />
+				</button>
+			</div>
+
+			{/* VIEWERS CARD (RIGHT SIDE BOTTOM) */}
+			<div className="dctc-sc-details-card dctc-sc-viewers-card">
+				<div className="dctc-sc-card-head" style={{ cursor: 'default' }}>
+					<div className="dctc-sc-card-head-title">
+						<span className="dashicons dashicons-visibility" style={{ color: '#0f172a' }}></span>
+						<h4>{__('Viewers', 'dragwyb-click-to-chat')} (1)</h4>
+					</div>
+				</div>
+				<div className="dctc-sc-card-body" style={{ paddingTop: '10px', paddingBottom: '14px' }}>
+					<div className="dctc-sc-sidebar-viewers-stack">
+						<div
+							className="dctc-sc-sidebar-viewer-avatar"
+						>
+							<span className="dctc-sk dctc-sk-avatar" style={{ width: '32px', height: '32px' }} />
+							<span className="dctc-sc-viewer-online-dot"></span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</aside>
