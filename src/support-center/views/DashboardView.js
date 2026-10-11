@@ -61,6 +61,29 @@ export default function DashboardView( {
 		return `${ start.toLocaleDateString( 'en-US', opt ) } – ${ end.toLocaleDateString( 'en-US', opt ) }`;
 	}, [ timeRange ] );
 
+	// Relative time helper with robust UTC parsing
+	const formatRelativeTime = ( dateStr ) => {
+		if ( ! dateStr ) return '';
+		try {
+			let normalized = String( dateStr ).trim();
+			if ( /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test( normalized ) ) {
+				normalized = normalized.replace( ' ', 'T' ) + 'Z';
+			} else if ( /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test( normalized ) ) {
+				normalized = normalized + 'Z';
+			}
+			const date = new Date( normalized );
+			if ( isNaN( date.getTime() ) ) return dateStr;
+			const diffSecs = Math.floor( ( new Date() - date ) / 1000 );
+			if ( diffSecs < 60 ) return __( 'Just now', 'dragwyb-click-to-chat' );
+			if ( diffSecs < 3600 ) return `${ Math.floor( diffSecs / 60 ) }m ago`;
+			if ( diffSecs < 86400 ) return `${ Math.floor( diffSecs / 3600 ) }h ago`;
+			if ( diffSecs < 604800 ) return `${ Math.floor( diffSecs / 86400 ) }d ago`;
+			return date.toLocaleDateString( undefined, { month: 'short', day: 'numeric' } );
+		} catch ( e ) {
+			return dateStr;
+		}
+	};
+
 	// KPI Stats
 	const totalTickets = dashboardStats?.total_tickets ?? 1;
 	const totalOpen = dashboardStats?.total_open ?? 0;
@@ -947,7 +970,7 @@ export default function DashboardView( {
 
 										<div className="dctc-sc-activity-row-right">
 											<span className="dctc-sc-activity-time">
-												{ item.created_at || '2026-10-06 18:03:04' }
+												{ formatRelativeTime( item.created_at ) || __( 'Just now', 'dragwyb-click-to-chat' ) }
 											</span>
 											<span className="dctc-sc-activity-chevron">&rsaquo;</span>
 										</div>

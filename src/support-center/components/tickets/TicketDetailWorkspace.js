@@ -52,6 +52,30 @@ export default function TicketDetailWorkspace({
 		return () => document.removeEventListener('click', handleClickOutside);
 	}, []);
 
+	const parseDate = (dStr) => {
+		if (!dStr) return null;
+		if (dStr instanceof Date) return dStr;
+		let str = String(dStr).trim();
+		if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(str)) {
+			str = str.replace(' ', 'T') + 'Z';
+		} else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(str)) {
+			str = str + 'Z';
+		}
+		const d = new Date(str);
+		return isNaN(d.getTime()) ? null : d;
+	};
+
+	const formatMessageTime = (dateStr) => {
+		if (!dateStr) return '';
+		try {
+			const d = parseDate(dateStr);
+			if (!d) return dateStr;
+			return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) + ', ' + d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+		} catch (e) {
+			return dateStr;
+		}
+	};
+
 	const handleOpenComposer = (mode) => {
 		setComposerMode(mode);
 		setIsComposerOpen(true);
@@ -584,7 +608,7 @@ export default function TicketDetailWorkspace({
 											msg.is_read ||
 											msg.read ||
 											msg.seen ||
-											(selectedTicket?.customer_last_seen_at && msg.created_at && (new Date(selectedTicket.customer_last_seen_at).getTime() >= new Date(msg.created_at).getTime()))
+											(selectedTicket?.customer_last_seen_at && msg.created_at && ((parseDate(selectedTicket.customer_last_seen_at)?.getTime() || 0) >= (parseDate(msg.created_at)?.getTime() || 0)))
 										);
 
 										return (
@@ -605,7 +629,7 @@ export default function TicketDetailWorkspace({
 															{senderName}
 														</span>
 														<span className="dctc-sc-msg-timestamp">
-															{msg.created_at || ''}
+															{formatMessageTime(msg.created_at)}
 															{msg.is_edited && <span className="dctc-sc-msg-edited-badge">({__('edited', 'dragwyb-click-to-chat')})</span>}
 														</span>
 
@@ -762,7 +786,7 @@ export default function TicketDetailWorkspace({
 											<div key={n.id} className={`dctc-sc-note-card ${n.is_pinned ? 'is-pinned' : ''}`}>
 												<div className="dctc-sc-note-card-header">
 													<strong>{n.author_name}</strong>
-													<span>{n.created_at}</span>
+													<span>{formatMessageTime(n.created_at)}</span>
 												</div>
 												<div className="dctc-sc-note-card-body">{n.note}</div>
 											</div>

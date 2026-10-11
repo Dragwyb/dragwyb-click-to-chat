@@ -329,11 +329,20 @@ export default function TicketsView({
 		return target.substring(0, 2).toUpperCase();
 	};
 
-	// Relative time helper
+	// Relative time helper with robust UTC / ISO / local parsing
 	const formatRelativeTime = (dateStr) => {
 		if (!dateStr) return '';
 		try {
-			const date = new Date(dateStr);
+			let normalized = String(dateStr).trim();
+			// Handle MySQL datetime "YYYY-MM-DD HH:mm:ss" without timezone.
+			// Database stores UTC timestamps (CURRENT_TIMESTAMP / GMT).
+			// Appending 'Z' tells JavaScript it is UTC so it accurately converts to the browser's local timezone.
+			if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+				normalized = normalized.replace(' ', 'T') + 'Z';
+			} else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+				normalized = normalized + 'Z';
+			}
+			const date = new Date(normalized);
 			if (isNaN(date.getTime())) return dateStr;
 			const diffSecs = Math.floor((new Date() - date) / 1000);
 			if (diffSecs < 60) return 'Just now';

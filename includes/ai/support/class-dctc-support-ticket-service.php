@@ -294,11 +294,11 @@ class DCTC_Support_Ticket_Service {
 			'subject'                       => $subject,
 			'status'                        => $status,
 			'priority'                      => $priority,
-			'customer_last_seen_at'         => current_time( 'mysql' ),
+			'customer_last_seen_at'         => current_time( 'mysql', true ),
 			'customer_last_read_message_id' => '',
 			'agent_last_read_message_id'    => '',
-			'created_at'                    => current_time( 'mysql' ),
-			'updated_at'                    => current_time( 'mysql' ),
+			'created_at'                    => current_time( 'mysql', true ),
+			'updated_at'                    => current_time( 'mysql', true ),
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -387,7 +387,7 @@ class DCTC_Support_Ticket_Service {
 					'sender_type' => 'customer',
 					'sender_name' => $name ? $name : 'Customer',
 					'content'     => wp_kses_post( $data['initial_message'] ),
-					'created_at'  => current_time( 'mysql' ),
+					'created_at'  => current_time( 'mysql', true ),
 				);
 
 				// Security (SEC-11): Validate and bound attachments
@@ -428,8 +428,8 @@ class DCTC_Support_Ticket_Service {
 					'control_mode'      => $control,
 					'reply_surface'     => $surface,
 					'support_ticket_id' => $ticket_id,
-					'created_at'        => current_time( 'mysql' ),
-					'updated_at'        => current_time( 'mysql' ),
+					'created_at'        => current_time( 'mysql', true ),
+					'updated_at'        => current_time( 'mysql', true ),
 					'status'            => 'active',
 				),
 				array( '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s' )
@@ -1471,7 +1471,7 @@ class DCTC_Support_Ticket_Service {
 			'sender_type' => $sender_type,
 			'sender_name' => $display_name,
 			'content'     => $message,
-			'created_at'  => current_time( 'mysql' ),
+			'created_at'  => current_time( 'mysql', true ),
 		);
 
 		$messages[] = $new_msg;

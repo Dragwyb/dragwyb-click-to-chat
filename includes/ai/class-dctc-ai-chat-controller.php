@@ -2150,8 +2150,8 @@ class DCTC_AI_Chat_Controller {
 				$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 
 				$ticket_updates = array(
-					'customer_last_seen_at' => current_time( 'mysql' ),
-					'updated_at'            => current_time( 'mysql' ),
+					'customer_last_seen_at' => current_time( 'mysql', true ),
+					'updated_at'            => current_time( 'mysql', true ),
 				);
 				if ( ! empty( $email ) && empty( $ticket['customer_email'] ) ) {
 					$ticket_updates['customer_email'] = sanitize_email( $email );
@@ -2630,7 +2630,7 @@ class DCTC_AI_Chat_Controller {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_tickets,
-				array( 'customer_last_seen_at' => current_time( 'mysql' ) ),
+				array( 'customer_last_seen_at' => current_time( 'mysql', true ) ),
 				array( 'id' => (int) $ticket_info['id'] )
 			);
 		}
@@ -2691,7 +2691,7 @@ class DCTC_AI_Chat_Controller {
 				'ticket'              => $ticket_info,
 				'ai_response_waiting' => $ai_waiting,
 				'ai_response'         => $ai_waiting,
-				'updated_at'          => $session['updated_at'] ?? current_time( 'mysql' ),
+				'updated_at'          => $session['updated_at'] ?? current_time( 'mysql', true ),
 			),
 			200
 		);

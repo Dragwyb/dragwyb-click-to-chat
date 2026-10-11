@@ -32,6 +32,23 @@ export default function TicketSidebar({
 	const [showCustomerSession, setShowCustomerSession] = useState(false);
 	const [showAdvancedProps, setShowAdvancedProps] = useState(false);
 
+	const formatDateTime = (dateStr) => {
+		if (!dateStr) return '';
+		try {
+			let normalized = String(dateStr).trim();
+			if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+				normalized = normalized.replace(' ', 'T') + 'Z';
+			} else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(normalized)) {
+				normalized = normalized + 'Z';
+			}
+			const date = new Date(normalized);
+			if (isNaN(date.getTime())) return dateStr;
+			return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) + ' ' + date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+		} catch (e) {
+			return dateStr;
+		}
+	};
+
 	if (!selectedTicket) return null;
 
 	const displayViewers = activeViewers || [];
@@ -205,7 +222,7 @@ export default function TicketSidebar({
 							<div className="dctc-sc-expanded-section">
 								<div className="dctc-sc-stat-item">
 									<span className="stat-name">{__('First Seen', 'dragwyb-click-to-chat')}</span>
-									<span className="stat-data">{selectedTicket?.created_at || 'Oct 04, 2026'}</span>
+									<span className="stat-data">{formatDateTime(selectedTicket?.created_at) || 'Oct 04, 2026'}</span>
 								</div>
 								<div className="dctc-sc-stat-item">
 									<span className="stat-name">{__('Total Chats', 'dragwyb-click-to-chat')}</span>
