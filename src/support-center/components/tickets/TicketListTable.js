@@ -192,7 +192,7 @@ export default function TicketListTable({
 												</span>
 												<span className="dctc-sc-pill-badge agent">
 													<span className="dashicons dashicons-admin-users"></span>
-													{item.agent_name || __('Aniket Dogra', 'dragwyb-click-to-chat')}
+													{item.agent_name || __('Dragwyb', 'dragwyb-click-to-chat')}
 												</span>
 												<span className="dctc-sc-pill-badge chats">
 													<span className="dashicons dashicons-format-chat"></span>

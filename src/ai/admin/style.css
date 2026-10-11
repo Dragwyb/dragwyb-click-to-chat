@@ -1986,7 +1986,6 @@ body.folded .dctc-ai-toast {
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
 }
 .dctc-ai-api-field__label-row {
   display: flex;

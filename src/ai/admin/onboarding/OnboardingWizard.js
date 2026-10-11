@@ -160,7 +160,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 
 	// Module Enable States (Step 2)
 	const [features, setFeatures] = useState({
-		socialChat: true,
+		socialChat: false,
 		aiAssistant: true,
 		supportCenter: true,
 	});
@@ -602,7 +602,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 												{Icons.socialChat}
 											</div>
 											<div className="dctc-custom-checkbox">
-												{Icons.check}
+												{features.socialChat && Icons.check}
 											</div>
 										</div>
 
@@ -643,7 +643,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 												{Icons.aiAssistant}
 											</div>
 											<div className="dctc-custom-checkbox">
-												{Icons.check}
+												{features.aiAssistant && Icons.check}
 											</div>
 										</div>
 
@@ -684,7 +684,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 												{Icons.supportCenter}
 											</div>
 											<div className="dctc-custom-checkbox">
-												{Icons.check}
+												{features.supportCenter && Icons.check}
 											</div>
 										</div>
 

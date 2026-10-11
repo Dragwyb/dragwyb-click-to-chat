@@ -1012,9 +1012,9 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 							</div>
 							<div class="dctc-mockup-body">
 								<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
-									<div style="width:28px; height:28px; border-radius:50%; background:#4f46e5; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">AD</div>
+									<div style="width:28px; height:28px; border-radius:50%; background:#4f46e5; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;">D</div>
 									<div>
-										<strong style="font-size:12px; color:#1e293b;">Aniket Dogra (Support Agent)</strong><br />
+										<strong style="font-size:12px; color:#1e293b;">Dragwyb (Support Agent)</strong><br />
 										<small style="font-size:10px; color:#10b981;">● Connected Live</small>
 									</div>
 								</div>
