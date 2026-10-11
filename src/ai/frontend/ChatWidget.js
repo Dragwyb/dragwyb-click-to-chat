@@ -2796,47 +2796,49 @@ export default function ChatWidget({ settings, inline }) {
 															</div>
 														</div>
 													)}
-												<div className="dctc-ai-msg-footer">
-													{typeof window !== 'undefined' && !!window.speechSynthesis && (
-														<button
-															type="button"
-															className={`dctc-ai-msg-tts-btn ${speakingIndex === index
-																? 'is-speaking'
-																: ''
-																}`}
-															onClick={() =>
-																toggleSpeakMessage(
-																	message.content,
-																	index
-																)
-															}
-															title={
-																speakingIndex === index
-																	? __(
-																		'Stop reading',
-																		'dragwyb-click-to-chat'
+												{chatbot?.enable_voice_output !== false &&
+													<div className="dctc-ai-msg-footer">
+														{typeof window !== 'undefined' && !!window.speechSynthesis && (
+															<button
+																type="button"
+																className={`dctc-ai-msg-tts-btn ${speakingIndex === index
+																	? 'is-speaking'
+																	: ''
+																	}`}
+																onClick={() =>
+																	toggleSpeakMessage(
+																		message.content,
+																		index
 																	)
-																	: __(
-																		'Read aloud',
-																		'dragwyb-click-to-chat'
-																	)
-															}
-															aria-label={
-																speakingIndex === index
-																	? __(
-																		'Stop reading',
-																		'dragwyb-click-to-chat'
-																	)
-																	: __(
-																		'Read aloud',
-																		'dragwyb-click-to-chat'
-																	)
-															}
-														>
-															{speakingIndex === index ? '⏹️' : '🔊'}
-														</button>
-													)}
-												</div>
+																}
+																title={
+																	speakingIndex === index
+																		? __(
+																			'Stop reading',
+																			'dragwyb-click-to-chat'
+																		)
+																		: __(
+																			'Read aloud',
+																			'dragwyb-click-to-chat'
+																		)
+																}
+																aria-label={
+																	speakingIndex === index
+																		? __(
+																			'Stop reading',
+																			'dragwyb-click-to-chat'
+																		)
+																		: __(
+																			'Read aloud',
+																			'dragwyb-click-to-chat'
+																		)
+																}
+															>
+																{speakingIndex === index ? '⏹️' : '🔊'}
+															</button>
+														)}
+													</div>
+												}
 												{message.action_buttons &&
 													message.action_buttons.length > 0 && (
 														<div className="dctc-ai-msg-actions">
