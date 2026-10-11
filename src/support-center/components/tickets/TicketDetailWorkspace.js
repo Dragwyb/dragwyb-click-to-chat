@@ -577,7 +577,7 @@ export default function TicketDetailWorkspace({
 											: (isAI ? __('AI Assistant', 'dragwyb-click-to-chat') : (msg.sender_name || userPermissions.agent_name || 'Staff Member'));
 
 										const msgIdentifier = msg.id || msg.uuid || (msg.created_at ? msg.created_at : String(rawMessages.length - 1 - idx));
-										const msgKey = `msg-${msgIdentifier}`;
+										const msgKey = `msg-${msg.sender_type}-${msgIdentifier}`;
 										const isEditingThisMsg = editingMessageKey === msgIdentifier;
 
 										const isCustomerSeen = Boolean(
