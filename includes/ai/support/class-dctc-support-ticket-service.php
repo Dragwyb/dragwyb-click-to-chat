@@ -26,7 +26,7 @@ class DCTC_Support_Ticket_Service {
 	const ALLOWED_ORIGIN_TYPES       = array( 'chatbot', 'support_portal', 'admin', 'email', 'api' );
 	const ALLOWED_REPLY_SURFACES     = array( 'chatbot_widget', 'support_portal', 'admin_workspace', 'email', 'api' );
 	const ALLOWED_SENDER_TYPES       = array( 'customer', 'agent', 'ai', 'system' );
-	const ALLOWED_ASSIGNMENT_METHODS = array( 'manual', 'round_robin', 'least_loaded', 'skill_match', 'escalation', 'fallback', 'auto' );
+	const ALLOWED_ASSIGNMENT_METHODS = array( 'manual', 'skill_match', 'escalation', 'fallback', 'auto' );
 
 	/**
 	 * Protected metadata keys that cannot be overridden by untrusted caller meta input.
@@ -1273,7 +1273,7 @@ class DCTC_Support_Ticket_Service {
 	 * @param int    $ticket_id   Ticket ID.
 	 * @param int    $agent_id    Support Agent ID.
 	 * @param int    $team_id     Team ID.
-	 * @param string $method      'manual', 'round_robin', 'least_loaded', 'skill_match', 'escalation', 'fallback'.
+	 * @param string $method      'manual', 'skill_match', 'escalation', 'fallback'.
 	 * @param string $reason      Assignment reason.
 	 * @param int    $assigned_by WP User ID of assigner (0 = system).
 	 * @return bool

@@ -27,6 +27,14 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   width: calc(100% + 20px);
 }
 
+#dctc-support-admin-root button.button-primary{
+  min-height: unset;
+  line-height: 1;
+} 
+#dctc-support-admin-root button.button-primary .dashicons{
+  color: inherit;
+} 
+
 .dctc-sc-app-wrapper,
 .dctc-sc-app-wrap {
   background: var(--dctc-bg);
@@ -3024,6 +3032,52 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.dctc-ai-bot-setting-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: #f8fafc;
+  border: 1px solid var(--dctc-ai-border);
+  border-radius: 6px;
+  min-height: 40px;
+  box-sizing: border-box;
+  transition: var(--dctc-ai-transition);
+}
+.dctc-ai-bot-setting-card:hover {
+  border-color: var(--dctc-ai-border-hover);
+  background: #ffffff;
+}
+.dctc-ai-bot-setting-card.is-active {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+.dctc-ai-bot-setting-card__main {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  min-width: 0;
+}
+.dctc-ai-bot-setting-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+.dctc-ai-bot-setting-card__title-row strong {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--dctc-ai-text);
+}
+.dctc-ai-bot-setting-card__desc,
+.dctc-ai-bot-setting-card__text span {
+  font-size: 0.74rem;
+  color: var(--dctc-ai-text-muted);
+  line-height: 1.35;
 }
 
 .dctc-sc-setting-field-toggle {

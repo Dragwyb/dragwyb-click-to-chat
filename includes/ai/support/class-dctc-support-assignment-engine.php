@@ -35,7 +35,7 @@ class DCTC_Support_Assignment_Engine {
 			return false;
 		}
 
-		$algorithm            = ! empty( $settings['assignment_algorithm'] ) ? $settings['assignment_algorithm'] : 'least_loaded';
+		$algorithm            = ! empty( $settings['assignment_algorithm'] ) ? $settings['assignment_algorithm'] : 'skill_match';
 		$respect_availability = ! isset( $settings['respect_availability'] ) || (bool) $settings['respect_availability'];
 		$respect_workload     = ! isset( $settings['respect_workload'] ) || (bool) $settings['respect_workload'];
 		$fallback_agent_id    = ! empty( $settings['fallback_agent_id'] ) ? absint( $settings['fallback_agent_id'] ) : 0;
@@ -91,13 +91,13 @@ class DCTC_Support_Assignment_Engine {
 			$score = 100;
 
 			// Skill Matching (+30 points per matching skill)
-			$agent_skills = is_array( $agent['skills'] ) ? $agent['skills'] : array();
+			$agent_skills   = is_array( $agent['skills'] ) ? $agent['skills'] : array();
 			$matched_skills = 0;
 			if ( ! empty( $required_skills ) ) {
 				foreach ( $required_skills as $req_skill ) {
 					if ( in_array( $req_skill, $agent_skills, true ) ) {
 						$score += 30;
-						$matched_skills++;
+						++$matched_skills;
 					}
 				}
 				// If skills are required but agent has 0 matches, penalize
@@ -122,31 +122,28 @@ class DCTC_Support_Assignment_Engine {
 
 		// 5. Select Winning Agent based on Configured Algorithm
 		$selected_agent = null;
-
-		if ( 'round_robin' === $algorithm ) {
-			// Sort by last_assigned_at ASC (oldest assignment wins)
-			usort( $scored_agents, function( $a, $b ) {
-				$time_a = ! empty( $a['last_assigned_at'] ) ? strtotime( $a['last_assigned_at'] ) : 0;
-				$time_b = ! empty( $b['last_assigned_at'] ) ? strtotime( $b['last_assigned_at'] ) : 0;
-				return $time_a <=> $time_b;
-			} );
-			$selected_agent = $scored_agents[0];
-		} elseif ( 'skill_match' === $algorithm ) {
+		if ( 'skill_match' === $algorithm ) {
 			// Sort by calculated_score DESC
-			usort( $scored_agents, function( $a, $b ) {
-				return $b['calculated_score'] <=> $a['calculated_score'];
-			} );
+			usort(
+				$scored_agents,
+				function ( $a, $b ) {
+					return $b['calculated_score'] <=> $a['calculated_score'];
+				}
+			);
 			$selected_agent = $scored_agents[0];
 		} else {
-			// Default: least_loaded with round-robin tiebreaker
-			usort( $scored_agents, function( $a, $b ) {
-				if ( (int) $a['current_active_tickets'] === (int) $b['current_active_tickets'] ) {
-					$time_a = ! empty( $a['last_assigned_at'] ) ? strtotime( $a['last_assigned_at'] ) : 0;
-					$time_b = ! empty( $b['last_assigned_at'] ) ? strtotime( $b['last_assigned_at'] ) : 0;
-					return $time_a <=> $time_b;
+			// Default: skill_match with round-robin tiebreaker
+			usort(
+				$scored_agents,
+				function ( $a, $b ) {
+					if ( (int) $a['current_active_tickets'] === (int) $b['current_active_tickets'] ) {
+						$time_a = ! empty( $a['last_assigned_at'] ) ? strtotime( $a['last_assigned_at'] ) : 0;
+						$time_b = ! empty( $b['last_assigned_at'] ) ? strtotime( $b['last_assigned_at'] ) : 0;
+						return $time_a <=> $time_b;
+					}
+					return (int) $a['current_active_tickets'] <=> (int) $b['current_active_tickets'];
 				}
-				return (int) $a['current_active_tickets'] <=> (int) $b['current_active_tickets'];
-			} );
+			);
 			$selected_agent = $scored_agents[0];
 		}
 

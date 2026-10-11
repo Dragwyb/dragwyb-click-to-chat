@@ -328,11 +328,9 @@ export default function SettingsView({
 						>
 							<select
 								id="dctc-sc-algorithm"
-								value={supportSettings.assignment_algorithm || 'least_loaded'}
+								value={supportSettings.assignment_algorithm || 'skill_match'}
 								onChange={(e) => setSupportSettings((prev) => ({ ...prev, assignment_algorithm: e.target.value }))}
 							>
-								<option value="least_loaded">{__('Least Loaded Agent (Workload Balanced)', 'dragwyb-click-to-chat')}</option>
-								<option value="round_robin">{__('Round Robin (Equally Distributed)', 'dragwyb-click-to-chat')}</option>
 								<option value="skill_match">{__('Skill & Category Matching Only', 'dragwyb-click-to-chat')}</option>
 								<option value="manual">{__('Manual Assignment Only (No Auto-Assign)', 'dragwyb-click-to-chat')}</option>
 							</select>

@@ -493,7 +493,7 @@ class DCTC_Support_DB {
 			'default_status'        => 'open',
 			'default_priority'      => 'normal',
 			'auto_assign'           => true,
-			'assignment_algorithm'  => 'least_loaded', // 'round_robin', 'least_loaded', 'skill_match'
+			'assignment_algorithm'  => 'skill_match', // 'skill_match'
 			'respect_availability'  => true,
 			'respect_workload'      => true,
 			'human_request_trigger' => true,

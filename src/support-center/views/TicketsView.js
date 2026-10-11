@@ -8,7 +8,6 @@ import apiFetch from '@wordpress/api-fetch';
 
 import { TicketWorkspaceSkeleton, TicketDetailsSidebarSkeleton } from '../components/SupportSkeletons';
 import {
-	NewTicketModal,
 	TicketFilterBar,
 	TicketFoldersSidebar,
 	TicketListTable,
@@ -96,9 +95,6 @@ export default function TicketsView({
 	const [submitting, setSubmitting] = useState(false);
 	const [aiSuggestLoading, setAiSuggestLoading] = useState(false);
 	const [replyEditorMode, setReplyEditorMode] = useState('visual');
-
-	// New Ticket Modal state
-	const [isNewTicketModalOpen, setIsNewTicketModalOpen] = useState(false);
 
 	// Starred & Flagged local states
 	const [starredTickets, setStarredTickets] = useState({});
@@ -1001,18 +997,6 @@ export default function TicketsView({
 					</>
 				)}
 			</div>
-
-			{/* CREATE NEW TICKET MODAL */}
-			<NewTicketModal
-				isOpen={isNewTicketModalOpen}
-				onClose={() => setIsNewTicketModalOpen(false)}
-				categories={categories}
-				onTicketCreated={(newId) => {
-					onRefreshTickets();
-					if (newId) handleOpenTicket(newId);
-				}}
-				onShowNotice={onShowNotice}
-			/>
 		</div>
 	);
 }
