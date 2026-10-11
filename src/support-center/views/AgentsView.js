@@ -80,7 +80,7 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 							onClick={handleOpenAddModal}
 							style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '7px', fontWeight: 600 }}
 						>
-							<span className="dashicons dashicons-plus-alt2" style={{ fontSize: '16px', lineHeight: '1.2' }}></span>
+							<span className="dashicons dashicons-plus-alt2"></span>
 							{__('Add Staff Agent', 'dragwyb-click-to-chat')}
 						</button>
 					)}

@@ -33,6 +33,7 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
 } 
 #dctc-support-admin-root button.button-primary .dashicons{
   color: inherit;
+  line-height: 1;
 } 
 
 .dctc-sc-app-wrapper,
