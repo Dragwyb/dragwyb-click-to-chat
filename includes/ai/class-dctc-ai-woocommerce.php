@@ -184,33 +184,39 @@ class DCTC_AI_WooCommerce {
 					'name'       => $product->get_name(),
 					'quantity'   => $cart_item['quantity'],
 					'price'      => $product->get_price(),
-					'subtotal'   => wp_strip_all_tags( wc_price( $cart_item['line_total'] ) ),
+					'subtotal'   => html_entity_decode( wp_strip_all_tags( wc_price( $cart_item['line_total'] ) ), ENT_QUOTES, 'UTF-8' ),
 				);
 			}
 		}
+
+		$formatted_cart_total = html_entity_decode( wp_strip_all_tags( $cart->get_cart_total() ), ENT_QUOTES, 'UTF-8' );
 
 		return array(
 			'has_cart'        => count( $items ) > 0,
 			'item_count'      => $cart->get_cart_contents_count(),
 			'items'           => $items,
 			'total'           => $cart->get_cart_contents_total(),
-			'formatted_total' => wp_strip_all_tags( $cart->get_cart_total() ),
+			'formatted_total' => $formatted_cart_total,
+			'formated_total'  => $formatted_cart_total,
 			'checkout_url'    => wc_get_checkout_url(),
 			'cart_url'        => wc_get_cart_url(),
 		);
 	}
 
 	/**
-	 * Secure Customer Order Status Lookup.
+	 * Look up WooCommerce order status and details by Order ID.
 	 *
-	 * Enforces strict ownership checks so customers can only access their own orders.
+	 * Strictly enforces ownership verification:
+	 * - Visitor MUST be logged in.
+	 * - Only allows access if the logged-in user is an administrator / shop manager,
+	 *   or if the order's user ID matches the logged-in user ID,
+	 *   or if the order's billing email strictly matches the logged-in user's account email.
 	 *
-	 * @param int|string $order_id
-	 * @param string     $billing_email
-	 * @param int        $user_id
+	 * @param int $order_id
+	 * @param int $user_id
 	 * @return array|\WP_Error
 	 */
-	public static function lookup_order_status( $order_id, $billing_email = '', $user_id = 0 ) {
+	public static function lookup_order_status( $order_id, $user_id = 0 ) {
 		if ( ! self::is_active() || ! function_exists( 'wc_get_order' ) ) {
 			return new \WP_Error( 'wc_inactive', __( 'WooCommerce is not active.', 'dragwyb-click-to-chat' ), array( 'status' => 400 ) );
 		}
@@ -221,51 +227,53 @@ class DCTC_AI_WooCommerce {
 		}
 
 		$order = wc_get_order( $order_id );
-		if ( ! $order || ! ( $order instanceof WC_Order ) ) {
+		if ( ! $order || ! ( $order instanceof \WC_Order ) ) {
 			return new \WP_Error( 'order_not_found', __( 'Order not found. Please verify your Order ID.', 'dragwyb-click-to-chat' ), array( 'status' => 404 ) );
 		}
 
-		// Non-logged-in visitors cannot access order status
-		if ( $user_id <= 0 && ! is_user_logged_in() ) {
-			$settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : array();
-			$login_msg = ! empty( $settings['chatbot']['order_tracking_login_msg'] )
-				? $settings['chatbot']['order_tracking_login_msg']
-				: __( 'You must be logged in to your account to view or track orders.', 'dragwyb-click-to-chat' );
-			return new \WP_Error( 'login_required', $login_msg, array( 'status' => 401 ) );
-		}
-
+		// Security: Non-logged-in visitors cannot access order status
 		if ( $user_id <= 0 ) {
 			$user_id = get_current_user_id();
 		}
 
-		// Security Ownership Verification:
-		// 1. If administrator/shop manager -> allow access.
-		// 2. If order belongs to this user ID -> allow access.
-		// 3. If order billing email matches user's registered account email or verified provided email -> allow access.
-		$is_verified         = false;
+		if ( $user_id <= 0 || ! is_user_logged_in() ) {
+			$settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : array();
+			$login_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url();
+			$login_msg = ! empty( $settings['chatbot']['order_tracking_login_msg'] )
+				? str_replace( '{login_url}', esc_url( $login_url ), $settings['chatbot']['order_tracking_login_msg'] )
+				: sprintf(
+					/* translators: %s: Login URL */
+					__( 'You must be logged in to your account to view or track orders. Please <a href="%s">log in</a> first.', 'dragwyb-click-to-chat' ),
+					esc_url( $login_url )
+				);
+			return new \WP_Error( 'login_required', $login_msg, array( 'status' => 401 ) );
+		}
+
+		$current_user = get_userdata( $user_id );
+		if ( ! $current_user || ! $current_user->exists() ) {
+			return new \WP_Error( 'login_required', __( 'Please log in to your account to track orders.', 'dragwyb-click-to-chat' ), array( 'status' => 401 ) );
+		}
+
+		$current_user_email  = strtolower( trim( $current_user->user_email ) );
 		$order_user_id       = (int) $order->get_user_id();
 		$order_billing_email = strtolower( trim( $order->get_billing_email() ) );
 
-		$current_user_data  = $user_id > 0 ? get_userdata( $user_id ) : null;
-		$current_user_email = $current_user_data ? strtolower( trim( $current_user_data->user_email ) ) : '';
+		// Security Ownership Verification:
+		// 1. If administrator / shop manager -> allow access.
+		// 2. If order belongs to this logged-in user account ID -> allow access.
+		// 3. If order billing email strictly matches this logged-in user's email -> allow access.
+		$is_verified = false;
 
-		if ( $user_id > 0 && ( current_user_can( 'manage_woocommerce' ) || current_user_can( 'manage_options' ) ) ) {
+		if ( user_can( $current_user, 'manage_woocommerce' ) || user_can( $current_user, 'manage_options' ) ) {
 			$is_verified = true;
 		}
 
-		if ( ! $is_verified && $user_id > 0 && $order_user_id > 0 && $order_user_id === $user_id ) {
+		if ( ! $is_verified && $order_user_id > 0 && $order_user_id === (int) $current_user->ID ) {
 			$is_verified = true;
 		}
 
-		if ( ! $is_verified && ! empty( $current_user_email ) && hash_equals( $order_billing_email, $current_user_email ) ) {
+		if ( ! $is_verified && ! empty( $current_user_email ) && ! empty( $order_billing_email ) && hash_equals( $order_billing_email, $current_user_email ) ) {
 			$is_verified = true;
-		}
-
-		if ( ! $is_verified && ! empty( $billing_email ) ) {
-			$provided_email = strtolower( trim( $billing_email ) );
-			if ( ! empty( $provided_email ) && hash_equals( $order_billing_email, $provided_email ) ) {
-				$is_verified = true;
-			}
 		}
 
 		if ( ! $is_verified ) {
@@ -283,15 +291,21 @@ class DCTC_AI_WooCommerce {
 
 		$items_summary = array();
 		foreach ( $order->get_items() as $item_id => $item ) {
+			$subtotal_raw   = function_exists( 'wc_price' )
+				? wc_price( $item->get_subtotal(), array( 'currency' => $order->get_currency() ) )
+				: $item->get_subtotal();
+			$subtotal_clean = html_entity_decode( wp_strip_all_tags( $subtotal_raw ), ENT_QUOTES, 'UTF-8' );
+
 			$items_summary[] = array(
 				'name'     => $item->get_name(),
 				'quantity' => $item->get_quantity(),
-				'subtotal' => wp_strip_all_tags( wc_price( $item->get_subtotal() ) ),
+				'subtotal' => $subtotal_clean,
 			);
 		}
 
-		$status      = $order->get_status();
-		$status_name = function_exists( 'wc_get_order_status_name' ) ? wc_get_order_status_name( $status ) : ucfirst( $status );
+		$status          = $order->get_status();
+		$status_name     = function_exists( 'wc_get_order_status_name' ) ? wc_get_order_status_name( $status ) : ucfirst( $status );
+		$formatted_total = html_entity_decode( wp_strip_all_tags( $order->get_formatted_order_total() ), ENT_QUOTES, 'UTF-8' );
 
 		return array(
 			'success'          => true,
@@ -300,7 +314,8 @@ class DCTC_AI_WooCommerce {
 			'status'           => $status,
 			'status_label'     => $status_name,
 			'date_created'     => $order->get_date_created() ? $order->get_date_created()->date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) ) : '',
-			'formatted_total'  => wp_strip_all_tags( $order->get_formatted_order_total() ),
+			'formatted_total'  => $formatted_total,
+			'formated_total'   => $formatted_total,
 			'payment_method'   => $order->get_payment_method_title(),
 			'item_count'       => $order->get_item_count(),
 			'items'            => $items_summary,
@@ -416,10 +431,9 @@ class DCTC_AI_WooCommerce {
 
 		$params   = $request->get_json_params();
 		$order_id = absint( $params['order_id'] ?? $request->get_param( 'order_id' ) );
-		$email    = sanitize_email( $params['email'] ?? $request->get_param( 'email' ) );
 		$user_id  = get_current_user_id();
 
-		$result = self::lookup_order_status( $order_id, $email, $user_id );
+		$result = self::lookup_order_status( $order_id, $user_id );
 
 		if ( is_wp_error( $result ) ) {
 			return $this->error_response( $result->get_error_message(), $result->get_error_data()['status'] ?? 400 );

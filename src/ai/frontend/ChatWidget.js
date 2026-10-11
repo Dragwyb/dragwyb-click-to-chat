@@ -4,6 +4,28 @@ import apiFetch from '@wordpress/api-fetch';
 import Markdown from 'react-markdown';
 
 /**
+ * Safely decode HTML entities (e.g. &#8377; -> ₹) in strings for UI rendering.
+ *
+ * @param {string} str Raw text containing possible HTML entities.
+ * @return {string} Decoded string.
+ */
+function decodeHtmlEntities(str) {
+	if (!str || typeof str !== 'string') {
+		return str || '';
+	}
+	if (!str.includes('&')) {
+		return str;
+	}
+	try {
+		const txt = document.createElement('textarea');
+		txt.innerHTML = str;
+		return txt.value;
+	} catch (e) {
+		return str;
+	}
+}
+
+/**
  * Auto-linkify bare URLs in markdown, leaving existing links/tags alone.
  *
  * @param {string} content Message content.
@@ -14,7 +36,9 @@ function linkifyContent(content) {
 		return '';
 	}
 
-	return content
+	const decoded = decodeHtmlEntities(content);
+
+	return decoded
 		.split(/(\[[^\]]+\]\([^)]+\)|<[^>]+>)/g)
 		.map((part) => {
 			if (/^\[.+\]\(.+\)$/.test(part) || /^<.+>$/.test(part)) {
@@ -456,16 +480,37 @@ export default function ChatWidget({ settings, inline }) {
 					const isLeadPrompt = Boolean(
 						typeof botMessage === 'string' && (botMessage.toLowerCase().includes('form below') || botMessage.toLowerCase().includes('fill out the form'))
 					);
+					const isOrderTrackerPrompt = Boolean(
+						response.show_order_tracker || (response.show_form?.form_type === 'order_track' && response.show_form?.show !== false)
+					);
 					setMessages((prev) => [
-						...prev,
+						...prev.map((m) => {
+							let updated = m;
+							if (isLeadPrompt && updated.show_form && updated.show_form.show && !updated.show_form.form_filled) {
+								updated = {
+									...updated,
+									show_form: { ...updated.show_form, show: false },
+								};
+							}
+							if (isOrderTrackerPrompt && (updated.show_order_tracker || (updated.show_form && updated.show_form.form_type === 'order_track' && updated.show_form.show))) {
+								updated = {
+									...updated,
+									show_order_tracker: false,
+									show_form: updated.show_form ? { ...updated.show_form, show: false } : { form_type: 'order_track', show: false, form_filled: false },
+								};
+							}
+							return updated;
+						}),
 						{
 							role: 'bot',
 							content: botMessage,
 							sources: Array.isArray(response.sources) ? response.sources : [],
 							action_buttons: Array.isArray(response.action_buttons) ? response.action_buttons : [],
 							products: Array.isArray(response.products) ? response.products : [],
-							show_order_tracker: !!response.show_order_tracker,
-							show_form: isLeadPrompt ? { form_type: 'lead_generate', show: true } : (response.show_form || null),
+							show_order_tracker: isOrderTrackerPrompt,
+							show_form: isOrderTrackerPrompt
+								? { form_type: 'order_track', show: true, form_filled: false }
+								: (isLeadPrompt ? { form_type: 'lead_generate', show: true } : (response.show_form || null)),
 							form_type: isLeadPrompt,
 							form_filled: false,
 						},
@@ -537,7 +582,6 @@ export default function ChatWidget({ settings, inline }) {
 
 	// Feature 11: WooCommerce Sales & Order Tracker State
 	const [orderLookupId, setOrderLookupId] = useState('');
-	const [orderLookupEmail, setOrderLookupEmail] = useState('');
 	const [orderLookupResult, setOrderLookupResult] = useState(null);
 	const [orderLookupLoading, setOrderLookupLoading] = useState(false);
 	const [orderLookupError, setOrderLookupError] = useState('');
@@ -586,7 +630,6 @@ export default function ChatWidget({ settings, inline }) {
 				method: 'POST',
 				data: {
 					order_id: orderNum,
-					email: orderLookupEmail.trim(),
 				},
 			});
 
@@ -596,7 +639,7 @@ export default function ChatWidget({ settings, inline }) {
 				setOrderLookupError(res?.message || __('Order not found. Please verify details.', 'dragwyb-click-to-chat'));
 			}
 		} catch (err) {
-			setOrderLookupError(err?.message || __('Could not find order. Please verify your order number and billing email.', 'dragwyb-click-to-chat'));
+			setOrderLookupError(err?.message || __('Could not find order. Please verify your order number.', 'dragwyb-click-to-chat'));
 		} finally {
 			setOrderLookupLoading(false);
 		}
@@ -640,7 +683,7 @@ export default function ChatWidget({ settings, inline }) {
 								color: '#64748b',
 							}}
 						>
-							{__('Enter your Order ID and billing email for instant live updates.', 'dragwyb-click-to-chat')}
+							{__('Enter your Order ID for instant live updates.', 'dragwyb-click-to-chat')}
 						</span>
 					</div>
 					<button
@@ -648,7 +691,13 @@ export default function ChatWidget({ settings, inline }) {
 						onClick={() => {
 							setMessages((prev) =>
 								prev.map((m, i) =>
-									i === msgIndex ? { ...m, show_order_tracker: false } : m
+									i === msgIndex
+										? {
+											...m,
+											show_order_tracker: false,
+											show_form: m.show_form ? { ...m.show_form, show: false } : { form_type: 'order_track', show: false, form_filled: false },
+										}
+										: m
 								)
 							);
 							setOrderLookupResult(null);
@@ -681,18 +730,6 @@ export default function ChatWidget({ settings, inline }) {
 						value={orderLookupId}
 						onChange={(e) => setOrderLookupId(e.target.value)}
 						required
-						style={{
-							padding: '0.45rem 0.75rem',
-							borderRadius: '6px',
-							border: '1px solid #cbd5e1',
-							fontSize: '0.85rem',
-						}}
-					/>
-					<input
-						type="email"
-						placeholder={__('Billing Email Address', 'dragwyb-click-to-chat')}
-						value={orderLookupEmail}
-						onChange={(e) => setOrderLookupEmail(e.target.value)}
 						style={{
 							padding: '0.45rem 0.75rem',
 							borderRadius: '6px',
@@ -778,7 +815,7 @@ export default function ChatWidget({ settings, inline }) {
 							</span>
 						</div>
 						<div style={{ fontSize: '0.8rem', color: '#475569', marginBottom: '0.4rem' }}>
-							{`📅 ${orderLookupResult.date_created} • 💰 ${orderLookupResult.formatted_total}`}
+							{`📅 ${orderLookupResult.date_created} • 💰 ${decodeHtmlEntities(orderLookupResult.formatted_total || orderLookupResult.formated_total || '')}`}
 						</div>
 						{orderLookupResult.items && orderLookupResult.items.length > 0 && (
 							<ul
@@ -791,7 +828,7 @@ export default function ChatWidget({ settings, inline }) {
 							>
 								{orderLookupResult.items.map((it, itIdx) => (
 									<li key={itIdx}>
-										{`${it.name} × ${it.quantity} (${it.subtotal})`}
+										{`${it.name} × ${it.quantity} (${decodeHtmlEntities(it.subtotal || '')})`}
 									</li>
 								))}
 							</ul>
@@ -1317,14 +1354,31 @@ export default function ChatWidget({ settings, inline }) {
 							}
 
 							const formattedMsgs = validServerMsgs.map((m, idx) => {
-								const rawShowForm = m.show_form || (m.form_type ? { form_type: 'lead_generate', show: !m.form_filled } : null);
+								const rawShowForm = m.show_form || (m.form_type ? { form_type: (typeof m.form_type === 'string' ? m.form_type : 'lead_generate'), show: !m.form_filled } : null);
 								const isLeadPromptText = typeof m.content === 'string' && (m.content.toLowerCase().includes('form below') || m.content.toLowerCase().includes('fill out the form'));
-								const showFormObj = rawShowForm
-									? {
+								const isOrderTrackPromptText = typeof m.content === 'string' && (
+									m.content.toLowerCase().includes('track your order') ||
+									m.content.toLowerCase().includes('order id below') ||
+									m.content.toLowerCase().includes('live details for order')
+								);
+
+								let showFormObj = null;
+								if (rawShowForm) {
+									showFormObj = {
 										form_type: rawShowForm.form_type || 'lead_generate',
 										show: rawShowForm.show === true || rawShowForm.show === 'true' || rawShowForm.show === 1,
-									}
-									: (isLeadPromptText && !m.form_filled ? { form_type: 'lead_generate', show: true } : null);
+										form_filled: Boolean(rawShowForm.form_filled),
+									};
+								} else if (isLeadPromptText && !m.form_filled) {
+									showFormObj = { form_type: 'lead_generate', show: true, form_filled: false };
+								} else if (isOrderTrackPromptText && !m.form_filled) {
+									showFormObj = { form_type: 'order_track', show: true, form_filled: false };
+								}
+
+								const isOrderTracker = Boolean(
+									m.show_order_tracker ||
+									(showFormObj && showFormObj.form_type === 'order_track' && showFormObj.show)
+								);
 
 								return {
 									id: m.id || `srv_${idx}_${m.created_at || idx}`,
@@ -1336,10 +1390,30 @@ export default function ChatWidget({ settings, inline }) {
 									created_at: m.created_at || '',
 									sources: m.sources || [],
 									show_form: showFormObj,
+									show_order_tracker: isOrderTracker,
 									form_type: Boolean(showFormObj && showFormObj.show),
 									form_filled: Boolean(m.form_filled || (showFormObj && !showFormObj.show)),
 								};
 							});
+
+							// Identify index of latest active order tracker so previous messages set show to false
+							let latestOrderTrackerIdx = -1;
+							for (let i = 0; i < formattedMsgs.length; i++) {
+								if (formattedMsgs[i].show_order_tracker || (formattedMsgs[i].show_form && formattedMsgs[i].show_form.form_type === 'order_track' && formattedMsgs[i].show_form.show)) {
+									latestOrderTrackerIdx = i;
+								}
+							}
+
+							if (latestOrderTrackerIdx >= 0) {
+								for (let i = 0; i < latestOrderTrackerIdx; i++) {
+									if (formattedMsgs[i].show_order_tracker || (formattedMsgs[i].show_form && formattedMsgs[i].show_form.form_type === 'order_track')) {
+										formattedMsgs[i].show_order_tracker = false;
+										if (formattedMsgs[i].show_form) {
+											formattedMsgs[i].show_form = { ...formattedMsgs[i].show_form, show: false };
+										}
+									}
+								}
+							}
 
 							let mergedMsgs = [...formattedMsgs];
 
@@ -1359,17 +1433,38 @@ export default function ChatWidget({ settings, inline }) {
 								}
 
 								// Preserve rich UI metadata (sources, action_buttons, products, attachments, show_order_tracker, show_form)
-								mergedMsgs = mergedMsgs.map((m) => {
+								mergedMsgs = mergedMsgs.map((m, mIdx) => {
 									const matchingPrev = prev.find(p => p.content === m.content && p.role === m.role);
 									if (matchingPrev) {
+										const prevHasOrderTracker = Boolean(
+											matchingPrev.show_order_tracker ||
+											(matchingPrev.show_form && matchingPrev.show_form.form_type === 'order_track' && matchingPrev.show_form.show !== false)
+										);
+										const isLaterTrackerPresent = latestOrderTrackerIdx > mIdx;
+										const effectiveShowOrderTracker = isLaterTrackerPresent
+											? false
+											: (m.show_order_tracker !== undefined && m.show_order_tracker !== false
+												? m.show_order_tracker
+												: prevHasOrderTracker);
+
+										let effectiveShowForm = m.show_form;
+										if (!effectiveShowForm && matchingPrev.show_form) {
+											effectiveShowForm = matchingPrev.show_form;
+										} else if (!effectiveShowForm && prevHasOrderTracker) {
+											effectiveShowForm = { form_type: 'order_track', show: !isLaterTrackerPresent, form_filled: false };
+										}
+										if (isLaterTrackerPresent && effectiveShowForm && effectiveShowForm.form_type === 'order_track') {
+											effectiveShowForm = { ...effectiveShowForm, show: false };
+										}
+
 										return {
 											...m,
 											sources: m.sources && m.sources.length > 0 ? m.sources : (matchingPrev.sources || []),
 											action_buttons: matchingPrev.action_buttons || [],
 											products: matchingPrev.products || [],
 											attachments: matchingPrev.attachments || [],
-											show_order_tracker: matchingPrev.show_order_tracker || false,
-											show_form: m.show_form !== undefined ? m.show_form : (matchingPrev.show_form || null),
+											show_order_tracker: effectiveShowOrderTracker,
+											show_form: effectiveShowForm,
 											form_type: m.form_type !== undefined ? m.form_type : (matchingPrev.form_type || false),
 											form_filled: m.form_filled !== undefined ? m.form_filled : (matchingPrev.form_filled || false),
 										};
@@ -2207,15 +2302,27 @@ export default function ChatWidget({ settings, inline }) {
 					}));
 				}
 
+				const isOrderTrackerPrompt = Boolean(
+					response.show_order_tracker || (response.show_form?.form_type === 'order_track' && response.show_form?.show !== false)
+				);
+
 				setMessages((prev) => [
 					...prev.map((m) => {
-						if (isLeadPrompt && m.show_form && m.show_form.show && !m.show_form.form_filled) {
-							return {
-								...m,
-								show_form: { ...m.show_form, show: false },
+						let updated = m;
+						if (isLeadPrompt && updated.show_form && updated.show_form.show && !updated.show_form.form_filled) {
+							updated = {
+								...updated,
+								show_form: { ...updated.show_form, show: false },
 							};
 						}
-						return m;
+						if (isOrderTrackerPrompt && (updated.show_order_tracker || (updated.show_form && updated.show_form.form_type === 'order_track' && updated.show_form.show))) {
+							updated = {
+								...updated,
+								show_order_tracker: false,
+								show_form: updated.show_form ? { ...updated.show_form, show: false } : { form_type: 'order_track', show: false, form_filled: false },
+							};
+						}
+						return updated;
 					}),
 					{
 						role: 'bot',
@@ -2226,8 +2333,10 @@ export default function ChatWidget({ settings, inline }) {
 						sources: responseSources,
 						action_buttons: responseActionButtons,
 						products: responseProducts,
-						show_order_tracker: !!response.show_order_tracker,
-						show_form: isLeadPrompt ? { form_type: 'lead_generate', show: true, form_filled: false } : (response.show_form || null),
+						show_order_tracker: isOrderTrackerPrompt,
+						show_form: isOrderTrackerPrompt
+							? { form_type: 'order_track', show: true, form_filled: false }
+							: (isLeadPrompt ? { form_type: 'lead_generate', show: true, form_filled: false } : (response.show_form || null)),
 					},
 				]);
 
@@ -2242,10 +2351,6 @@ export default function ChatWidget({ settings, inline }) {
 				}
 
 				if (response.show_order_tracker) {
-					const loggedInEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
-					if (loggedInEmail && !orderLookupEmail) {
-						setOrderLookupEmail(loggedInEmail);
-					}
 					if (response.order_lookup_data) {
 						setOrderLookupResult(response.order_lookup_data);
 						if (response.order_lookup_data.order_id) {
@@ -2903,7 +3008,7 @@ export default function ChatWidget({ settings, inline }) {
 																		</strong>
 																		<div className="dctc-ai-product-meta-row">
 																			<span className="dctc-ai-product-price">
-																				{prod.formatted_price}
+																				{decodeHtmlEntities(prod.formatted_price)}
 																			</span>
 																			<span
 																				className={`dctc-ai-stock-pill ${prod.in_stock ? 'is-in-stock' : 'is-out-of-stock'}`}
@@ -2956,7 +3061,7 @@ export default function ChatWidget({ settings, inline }) {
 												</div>
 											</div>
 										) : null}
-										{message.show_order_tracker &&
+										{(message.show_order_tracker || (message.show_form && message.show_form.form_type === 'order_track' && message.show_form.show !== false) || (message.show_form && message.show_form.form_type === 'order_track' && message.show_form.form_filled)) &&
 											renderOrderTrackerCard(message, index)}
 										{message.show_form &&
 											message.show_form.show === true &&

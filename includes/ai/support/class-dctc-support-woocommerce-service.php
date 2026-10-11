@@ -90,7 +90,7 @@ class DCTC_Support_WooCommerce_Service {
 				'number'        => $order->get_order_number(),
 				'status'        => $order->get_status(),
 				'status_name'   => wc_get_order_status_name( $order->get_status() ),
-				'total'         => $order->get_formatted_order_total(),
+				'total'         => html_entity_decode( wp_strip_all_tags( $order->get_formatted_order_total() ), ENT_QUOTES, 'UTF-8' ),
 				'date'          => $order->get_date_created() ? $order->get_date_created()->date( 'Y-m-d H:i' ) : '',
 				'view_url'      => admin_url( 'post.php?post=' . $order->get_id() . '&action=edit' ),
 				'items_summary' => implode( ', ', array_slice( $items_names, 0, 3 ) ),
@@ -100,7 +100,7 @@ class DCTC_Support_WooCommerce_Service {
 		return array(
 			'is_active'      => true,
 			'order_count'    => $order_count,
-			'total_spent'    => wc_price( $total_spent ),
+			'total_spent'    => html_entity_decode( wp_strip_all_tags( wc_price( $total_spent ) ), ENT_QUOTES, 'UTF-8' ),
 			'recent_orders'  => $recent_orders,
 		);
 	}

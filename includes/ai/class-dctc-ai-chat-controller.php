@@ -173,7 +173,7 @@ class DCTC_AI_Chat_Controller {
 
 		// Intelligent WooCommerce Order Tracker Intent
 		if ( ! empty( $prompt ) && class_exists( 'WooCommerce' ) && self::detect_order_tracking_intent( $prompt ) ) {
-			$is_logged_in = is_user_logged_in() || ( ! empty( $page_context ) && ! empty( $page_context['is_logged_in'] ) );
+			$is_logged_in = is_user_logged_in();
 			if ( $is_logged_in ) {
 				// Check if user provided an order number directly
 				$order_id = 0;
@@ -182,25 +182,69 @@ class DCTC_AI_Chat_Controller {
 				}
 
 				if ( $order_id > 0 ) {
-					$user_id       = get_current_user_id();
-					$billing_email = $email ?: ( ! empty( $page_context['user_email'] ) ? $page_context['user_email'] : '' );
-					$lookup        = class_exists( 'DCTC_AI_WooCommerce' ) ? DCTC_AI_WooCommerce::lookup_order_status( $order_id, $billing_email, $user_id ) : null;
+					$user_id = get_current_user_id();
+					$lookup  = class_exists( 'DCTC_AI_WooCommerce' ) ? DCTC_AI_WooCommerce::lookup_order_status( $order_id, $user_id ) : null;
 
 					if ( $lookup && ! is_wp_error( $lookup ) && ! empty( $lookup['success'] ) ) {
+						$formatted_total_clean = html_entity_decode( $lookup['formatted_total'] ?? ( $lookup['formated_total'] ?? '' ), ENT_QUOTES, 'UTF-8' );
 						$msg = sprintf(
 						/* translators: 1: Order number, 2: Status label, 3: Order Total, 4: Date */
 							esc_html__( 'Here are the live details for Order #%1$s: Status is %2$s. Total: %3$s placed on %4$s.', 'dragwyb-click-to-chat' ),
 							$lookup['order_number'],
 							$lookup['status_label'],
-							$lookup['formatted_total'],
+							$formatted_total_clean,
 							$lookup['date_created']
 						);
+
+						$show_form = array(
+							'form_type'   => 'order_track',
+							'show'        => true,
+							'form_filled' => false,
+						);
+
+						if ( class_exists( 'DCTC_AI_DB' ) ) {
+							$db    = new DCTC_AI_DB();
+							$extra = array(
+								'show_order_tracker' => true,
+								'show_form'          => $show_form,
+							);
+							$db->dctc_ai_save_message( $prompt, $msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+						}
+
 						return new \WP_REST_Response(
 							array(
 								'success'            => true,
 								'message'            => $msg,
 								'show_order_tracker' => true,
+								'show_form'          => $show_form,
 								'order_lookup_data'  => $lookup,
+								'session_id'         => $session_id,
+							),
+							200
+						);
+					} elseif ( is_wp_error( $lookup ) ) {
+						$err_msg   = $lookup->get_error_message();
+						$show_form = array(
+							'form_type'   => 'order_track',
+							'show'        => true,
+							'form_filled' => false,
+						);
+
+						if ( class_exists( 'DCTC_AI_DB' ) ) {
+							$db    = new DCTC_AI_DB();
+							$extra = array(
+								'show_order_tracker' => true,
+								'show_form'          => $show_form,
+							);
+							$db->dctc_ai_save_message( $prompt, $err_msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+						}
+
+						return new \WP_REST_Response(
+							array(
+								'success'            => true,
+								'message'            => $err_msg,
+								'show_order_tracker' => true,
+								'show_form'          => $show_form,
 								'session_id'         => $session_id,
 							),
 							200
@@ -210,13 +254,29 @@ class DCTC_AI_Chat_Controller {
 
 				$tracker_msg = ! empty( $bot['order_tracking_prompt_msg'] )
 				? $bot['order_tracking_prompt_msg']
-				: esc_html__( 'Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat' );
+				: esc_html__( 'Please enter your Order ID below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat' );
+
+				$show_form = array(
+					'form_type'   => 'order_track',
+					'show'        => true,
+					'form_filled' => false,
+				);
+
+				if ( class_exists( 'DCTC_AI_DB' ) ) {
+					$db    = new DCTC_AI_DB();
+					$extra = array(
+						'show_order_tracker' => true,
+						'show_form'          => $show_form,
+					);
+					$db->dctc_ai_save_message( $prompt, $tracker_msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+				}
 
 				return new \WP_REST_Response(
 					array(
 						'success'            => true,
 						'message'            => $tracker_msg,
 						'show_order_tracker' => true,
+						'show_form'          => $show_form,
 						'session_id'         => $session_id,
 					),
 					200
@@ -2215,13 +2275,14 @@ class DCTC_AI_Chat_Controller {
 								);
 							}
 							$formatted_messages[] = array(
-								'role'        => ( $msg['role'] === 'assistant' ) ? 'bot' : 'user',
-								'sender_type' => isset( $msg['sender_type'] ) ? $msg['sender_type'] : ( $msg['role'] === 'assistant' ? 'ai_agent' : 'customer' ),
-								'sender_name' => isset( $msg['sender_name'] ) ? $msg['sender_name'] : ( $msg['role'] === 'assistant' ? 'AI Assistant' : 'Customer' ),
-								'created_at'  => isset( $msg['created_at'] ) ? $msg['created_at'] : '',
-								'content'     => $msg['content'],
-								'sources'     => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
-								'show_form'   => $show_form,
+								'role'               => ( $msg['role'] === 'assistant' ) ? 'bot' : 'user',
+								'sender_type'        => isset( $msg['sender_type'] ) ? $msg['sender_type'] : ( $msg['role'] === 'assistant' ? 'ai_agent' : 'customer' ),
+								'sender_name'        => isset( $msg['sender_name'] ) ? $msg['sender_name'] : ( $msg['role'] === 'assistant' ? 'AI Assistant' : 'Customer' ),
+								'created_at'         => isset( $msg['created_at'] ) ? $msg['created_at'] : '',
+								'content'            => $msg['content'],
+								'sources'            => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
+								'show_form'          => $show_form,
+								'show_order_tracker' => ! empty( $msg['show_order_tracker'] ) || ( ! empty( $show_form['form_type'] ) && 'order_track' === $show_form['form_type'] && ! empty( $show_form['show'] ) ),
 							);
 						}
 					}

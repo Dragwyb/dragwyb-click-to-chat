@@ -373,10 +373,14 @@ class DCTC_AI_DB {
 			);
 		} elseif ( ! empty( $extra['form_type'] ) ) {
 			$assistant_entry['show_form'] = array(
-				'form_type'   => 'lead_generate',
+				'form_type'   => sanitize_text_field( $extra['form_type'] ),
 				'show'        => true,
 				'form_filled' => false,
 			);
+		}
+
+		if ( ! empty( $extra['show_order_tracker'] ) || ( isset( $assistant_entry['show_form']['form_type'] ) && 'order_track' === $assistant_entry['show_form']['form_type'] ) ) {
+			$assistant_entry['show_order_tracker'] = true;
 		}
 
 		if ( ! empty( $sources ) && is_array( $sources ) ) {
@@ -414,11 +418,20 @@ class DCTC_AI_DB {
 			$messages = is_array( $messages ) ? $messages : array();
 
 			// If new message displays a form, hide previous unsubmitted forms in conversation history
-			if ( ! empty( $assistant_entry['show_form']['show'] ) ) {
+			if ( ! empty( $assistant_entry['show_form']['show'] ) || ! empty( $assistant_entry['show_order_tracker'] ) ) {
+				$is_new_order_track = ! empty( $assistant_entry['show_order_tracker'] ) || ( isset( $assistant_entry['show_form']['form_type'] ) && 'order_track' === $assistant_entry['show_form']['form_type'] );
 				foreach ( $messages as &$prev_msg ) {
 					if ( is_array( $prev_msg ) && isset( $prev_msg['show_form'] ) && is_array( $prev_msg['show_form'] ) ) {
 						if ( ! empty( $prev_msg['show_form']['show'] ) && empty( $prev_msg['show_form']['form_filled'] ) ) {
 							$prev_msg['show_form']['show'] = false;
+						}
+					}
+					if ( is_array( $prev_msg ) && $is_new_order_track ) {
+						if ( ! empty( $prev_msg['show_order_tracker'] ) || ( isset( $prev_msg['show_form']['form_type'] ) && 'order_track' === $prev_msg['show_form']['form_type'] ) ) {
+							$prev_msg['show_order_tracker'] = false;
+							if ( isset( $prev_msg['show_form'] ) && is_array( $prev_msg['show_form'] ) ) {
+								$prev_msg['show_form']['show'] = false;
+							}
 						}
 					}
 				}

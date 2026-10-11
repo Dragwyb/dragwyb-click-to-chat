@@ -385,7 +385,7 @@ export default function MessagesSubtab({
 									rows="2"
 									value={form.order_tracking_prompt_msg}
 									onChange={(e) => setField('order_tracking_prompt_msg', e.target.value)}
-									placeholder={__('Please enter your Order ID and billing email below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat')}
+									placeholder={__('Please enter your Order ID below to view your real-time order and shipment tracking details.', 'dragwyb-click-to-chat')}
 								/>
 								<p className="dctc-ai-bot-hint">
 									{__('Displayed in chat when a logged-in user asks about tracking their order status.', 'dragwyb-click-to-chat')}

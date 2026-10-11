@@ -353,10 +353,9 @@ class DCTC_AI_Tool_Registry
 		}
 
 		$order_id = absint($args['order_id'] ?? 0);
-		$email = sanitize_email($args['billing_email'] ?? ($context['email'] ?? ''));
 		$user_id = get_current_user_id();
 
-		$res = DCTC_AI_WooCommerce::lookup_order_status($order_id, $email, $user_id);
+		$res = DCTC_AI_WooCommerce::lookup_order_status($order_id, $user_id);
 
 		if (is_wp_error($res)) {
 			return [
