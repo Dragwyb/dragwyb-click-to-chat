@@ -68,7 +68,7 @@ export default function AdvancedSubtab({
 									<span className="dctc-ai-input-unit-label">{__('seconds', 'dragwyb-click-to-chat')}</span>
 								</div>
 								<p className="dctc-ai-bot-hint">
-									{__('Seconds to wait after page load before opening chat modal.', 'dragwyb-click-to-chat')}
+									{__('Seconds to wait after page load before auto-opening the chat panel window.', 'dragwyb-click-to-chat')}
 								</p>
 							</div>
 						)}
@@ -686,6 +686,12 @@ export default function AdvancedSubtab({
 						<p className="dctc-ai-bot-hint">
 							{__('Choose how the widget responds when a behavioral trigger condition is met.', 'dragwyb-click-to-chat')}
 						</p>
+						{!form.enable_proactive_bubble && form.trigger_action === 'show_bubble' && (
+							<p className="dctc-ai-bot-hint" style={{ color: '#d97706', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+								<span className="dashicons dashicons-info" style={{ fontSize: '14px', width: '14px', height: '14px' }} />
+								{__('Note: Proactive Teaser Bubble is currently disabled under the Messages tab. Turn it on there to display the bubble.', 'dragwyb-click-to-chat')}
+							</p>
+						)}
 					</div>
 
 					<div className="dctc-ai-bot-field">

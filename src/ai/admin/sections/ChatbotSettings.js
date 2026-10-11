@@ -74,6 +74,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		entire_site: !!display.entire_site,
 		show_on_mobile: display.show_on_mobile !== false,
 		exclude_pages: display.exclude_pages || '',
+		enable_launcher_text: !!display.enable_launcher_text,
 		launcher_text: display.launcher_text || '',
 
 		// Advance / Triggers & Timing
@@ -186,6 +187,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		trigger_exit_intent: !!display.trigger_exit_intent,
 		trigger_inactivity: display.trigger_inactivity ?? 30,
 		trigger_action: display.trigger_action || 'show_bubble',
+		enable_proactive_bubble: !!display.enable_proactive_bubble,
 		proactive_bubble_message: display.proactive_bubble_message || '👋 Hi there! Have a question about this page? Let me know if I can help!',
 		target_devices: display.target_devices || 'all',
 		target_users: display.target_users || 'all',
@@ -680,6 +682,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			custom_side: form.custom_side,
 			custom_horizontal: form.custom_horizontal,
 			custom_horizontal_unit: form.custom_horizontal_unit,
+			enable_launcher_text: form.enable_launcher_text,
 			launcher_text: form.launcher_text,
 			assistant_icon: form.assistant_icon,
 			launcher_icon_preset: form.launcher_icon_preset,
@@ -691,6 +694,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			trigger_exit_intent: form.trigger_exit_intent,
 			trigger_inactivity: form.trigger_inactivity,
 			trigger_action: form.trigger_action,
+			enable_proactive_bubble: form.enable_proactive_bubble,
 			proactive_bubble_message: form.proactive_bubble_message,
 			target_devices: form.target_devices,
 			target_users: form.target_users,

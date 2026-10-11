@@ -1091,7 +1091,7 @@
 }
 
 /* Message Avatar Badges */
-.dctc-ai-msg-avatar {
+.dctc-ai-msg-avatar, .dctc-ai-proactive-bubble-avatar {
   align-items: center;
   border-radius: 50%;
   display: flex;
@@ -1103,14 +1103,14 @@
   position: relative;
   width: 32px;
 }
-.dctc-ai-msg-avatar--bot {
+.dctc-ai-msg-avatar--bot, .dctc-ai-proactive-bubble-avatar {
   background: linear-gradient(135deg, var(--dctc-ai-primary), #4f46e5);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.25);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
 }
-.dctc-ai-msg-avatar--bot img {
+:is(.dctc-ai-msg-avatar--bot, .dctc-ai-proactive-bubble-avatar) img {
   height: 100%;
   object-fit: cover;
   width: 100%;

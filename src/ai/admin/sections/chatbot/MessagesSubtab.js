@@ -15,7 +15,7 @@ export default function MessagesSubtab({
 }) {
 	return (
 		<div className="dctc-ai-tab-panel-section">
-			{/* 1. Welcome Greeting & Proactive Teaser */}
+			{/* 1. Welcome Greeting Message */}
 			<section className="dctc-ai-card">
 				<header className="dctc-ai-card__header">
 					<div className="dctc-ai-card__header-left">
@@ -24,10 +24,10 @@ export default function MessagesSubtab({
 						</div>
 						<div>
 							<h2 className="dctc-ai-card__title">
-								{__('Conversational Greetings & Proactive Prompts', 'dragwyb-click-to-chat')}
+								{__('Initial Welcome Greeting Message', 'dragwyb-click-to-chat')}
 							</h2>
 							<p className="dctc-ai-card__desc">
-								{__('Customize the welcome message and floating proactive bubble teaser.', 'dragwyb-click-to-chat')}
+								{__('Sent automatically to greet visitors when they open the chat widget.', 'dragwyb-click-to-chat')}
 							</p>
 						</div>
 					</div>
@@ -37,7 +37,7 @@ export default function MessagesSubtab({
 					<div className="dctc-ai-form-stack">
 						<div className="dctc-ai-bot-field">
 							<label htmlFor="greeting_msg">
-								{__('Initial Welcome Greeting Message', 'dragwyb-click-to-chat')}
+								{__('Welcome Greeting Content', 'dragwyb-click-to-chat')}
 							</label>
 							<textarea
 								id="greeting_msg"
@@ -51,26 +51,72 @@ export default function MessagesSubtab({
 								{__('Sent automatically to greet visitors when they open the chat widget.', 'dragwyb-click-to-chat')}
 							</p>
 						</div>
-
-						<div className="dctc-ai-bot-field">
-							<label htmlFor="proactive_bubble_message">
-								{__('Proactive Teaser Bubble Message', 'dragwyb-click-to-chat')}
-							</label>
-							<input
-								type="text"
-								id="proactive_bubble_message"
-								className="dctc-ai-bot-input"
-								value={form.proactive_bubble_message}
-								onChange={(e) => setField('proactive_bubble_message', e.target.value)}
-								placeholder="👋 Hi there! Have a question about this page? Let me know if I can help!"
-							/>
-							<p className="dctc-ai-bot-hint">
-								{__('Displayed inside the floating popup preview bubble above the launcher button.', 'dragwyb-click-to-chat')}
-							</p>
-						</div>
 					</div>
 				</div>
 			</section>
+
+			{/* 2. Button Call-to-Action Text Badge (Optional) */}
+			<SwitcherCard
+				id="enable_launcher_text"
+				title={__('Button Call-to-Action Text Badge (Optional)', 'dragwyb-click-to-chat')}
+				desc={__('Small text pill badge displayed adjacent to the circular floating launcher button.', 'dragwyb-click-to-chat')}
+				icon="dashicons-testimonial"
+				checked={form.enable_launcher_text}
+				onChange={(v) => setField('enable_launcher_text', v)}
+				disabledNotice={__('Turn on to display an attention-grabbing call-to-action text badge next to the floating button.', 'dragwyb-click-to-chat')}
+			>
+				<div className="dctc-ai-form-stack">
+					<div className="dctc-ai-bot-field">
+						<label htmlFor="launcher_text">
+							{__('Badge Text', 'dragwyb-click-to-chat')}
+						</label>
+						<div className="dctc-ai-input-with-icon">
+							<span className="dashicons dashicons-testimonial" />
+							<input
+								type="text"
+								id="launcher_text"
+								className="dctc-ai-bot-input"
+								value={form.launcher_text}
+								onChange={(e) => setField('launcher_text', e.target.value)}
+								placeholder={__('e.g. Chat with us, How can we help?', 'dragwyb-click-to-chat')}
+							/>
+						</div>
+						<p className="dctc-ai-bot-hint">
+							{__('Small text pill displayed adjacent to the circular floating button.', 'dragwyb-click-to-chat')}
+						</p>
+					</div>
+				</div>
+			</SwitcherCard>
+
+			{/* 3. Proactive Teaser Bubble Message */}
+			<SwitcherCard
+				id="enable_proactive_bubble"
+				title={__('Proactive Teaser Bubble Message', 'dragwyb-click-to-chat')}
+				desc={__('Floating preview speech bubble displayed above the launcher button to proactively engage visitors before they click.', 'dragwyb-click-to-chat')}
+				icon="dashicons-format-status"
+				checked={form.enable_proactive_bubble}
+				onChange={(v) => setField('enable_proactive_bubble', v)}
+				disabledNotice={__('Turn on to display a floating preview teaser bubble above the launcher button.', 'dragwyb-click-to-chat')}
+			>
+				<div className="dctc-ai-form-stack">
+					<div className="dctc-ai-bot-field">
+						<label htmlFor="proactive_bubble_message">
+							{__('Teaser Bubble Message Content', 'dragwyb-click-to-chat')}
+						</label>
+						<input
+							type="text"
+							id="proactive_bubble_message"
+							className="dctc-ai-bot-input"
+							value={form.proactive_bubble_message}
+							onChange={(e) => setField('proactive_bubble_message', e.target.value)}
+							placeholder="👋 Hi there! Have a question about this page? Let me know if I can help!"
+						/>
+						<p className="dctc-ai-bot-hint">
+							{__('Displayed inside the floating popup preview bubble above the launcher button.', 'dragwyb-click-to-chat')}
+						</p>
+					</div>
+				</div>
+			</SwitcherCard>
 
 			{/* 2. Suggested Starter Questions */}
 			<SwitcherCard

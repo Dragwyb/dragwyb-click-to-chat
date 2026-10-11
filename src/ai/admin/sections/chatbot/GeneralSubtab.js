@@ -91,26 +91,6 @@ export default function GeneralSubtab({
 				}
 			>
 				<div className="dctc-ai-form-stack">
-					<div className="dctc-ai-bot-field">
-						<label htmlFor="launcher_text">
-							{__('Button Call-to-Action Text Badge (Optional)', 'dragwyb-click-to-chat')}
-						</label>
-						<div className="dctc-ai-input-with-icon">
-							<span className="dashicons dashicons-testimonial" />
-							<input
-								type="text"
-								id="launcher_text"
-								className="dctc-ai-bot-input"
-								value={form.launcher_text}
-								onChange={(e) => setField('launcher_text', e.target.value)}
-								placeholder={__('e.g. Chat with us, How can we help?', 'dragwyb-click-to-chat')}
-							/>
-						</div>
-						<p className="dctc-ai-bot-hint">
-							{__('Small text pill displayed adjacent to the circular floating button.', 'dragwyb-click-to-chat')}
-						</p>
-					</div>
-
 					<SettingCard
 						id="show_on_mobile"
 						title={__('Enable on Mobile Devices', 'dragwyb-click-to-chat')}

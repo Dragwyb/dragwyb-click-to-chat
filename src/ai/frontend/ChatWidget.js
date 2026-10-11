@@ -1702,30 +1702,67 @@ export default function ChatWidget({ settings, inline }) {
 
 		if (display.trigger_action === 'open_chat') {
 			setIsOpen(true);
-		} else {
+		} else if (display.enable_proactive_bubble) {
 			setProactiveBubbleOpen(true);
 		}
 	};
 
-	// Auto-open or trigger bubble after delay when configured for sitewide floating widget.
+	// Auto-open full chat panel window after page load delay when configured
 	useEffect(() => {
-		if (
-			(display.trigger_type === 'delay' || display.enable_smart_triggers) &&
-			!inline &&
-			!isOpen &&
-			!proactiveBubbleOpen
-		) {
+		if (display.trigger_type === 'delay' && !inline && !isOpen) {
+			try {
+				if (window.sessionStorage && window.sessionStorage.getItem('dctc_ai_auto_opened')) {
+					return;
+				}
+			} catch (e) {
+				// ignore
+			}
+
 			const ms = 1000 * (parseInt(display.trigger_delay, 10) || 5);
 			const timer = setTimeout(() => {
-				fireProactiveTrigger();
+				try {
+					if (window.sessionStorage) {
+						window.sessionStorage.setItem('dctc_ai_auto_opened', '1');
+					}
+				} catch (e) {
+					// ignore
+				}
+				setIsOpen(true);
 			}, ms);
 			return () => clearTimeout(timer);
 		}
 	}, [
 		display.trigger_type,
-		display.enable_smart_triggers,
 		display.trigger_delay,
-		display.trigger_action,
+		inline,
+		isOpen,
+	]);
+
+	// Show Proactive Teaser Bubble on page load if enabled (and chat window is not configured to auto-open)
+	useEffect(() => {
+		if (
+			display.enable_proactive_bubble &&
+			display.trigger_type !== 'delay' &&
+			!inline &&
+			!isOpen &&
+			!proactiveBubbleOpen
+		) {
+			try {
+				if (window.sessionStorage && window.sessionStorage.getItem('dctc_ai_bubble_dismissed')) {
+					return;
+				}
+			} catch (e) {
+				// ignore
+			}
+
+			const timer = setTimeout(() => {
+				setProactiveBubbleOpen(true);
+			}, 3000);
+			return () => clearTimeout(timer);
+		}
+	}, [
+		display.enable_proactive_bubble,
+		display.trigger_type,
 		inline,
 		isOpen,
 		proactiveBubbleOpen,
@@ -3738,6 +3775,7 @@ export default function ChatWidget({ settings, inline }) {
 		// Proactive Teaser Bubble (Behavioral Triggers)
 		!inline &&
 		!isOpen &&
+		display.enable_proactive_bubble &&
 		proactiveBubbleOpen &&
 		launcherVisible &&
 		createElement(
@@ -3756,6 +3794,11 @@ export default function ChatWidget({ settings, inline }) {
 					onClick: (e) => {
 						e.stopPropagation();
 						setProactiveBubbleOpen(false);
+						try {
+							if (window.sessionStorage) {
+								window.sessionStorage.setItem('dctc_ai_bubble_dismissed', '1');
+							}
+						} catch (err) { }
 					},
 					title: __('Dismiss', 'dragwyb-click-to-chat'),
 					'aria-label': __('Dismiss greeting', 'dragwyb-click-to-chat'),
@@ -3774,7 +3817,7 @@ export default function ChatWidget({ settings, inline }) {
 				createElement(
 					'div',
 					{ className: 'dctc-ai-proactive-bubble-avatar' },
-					renderBotAvatar(botAvatar, botIconPreset, primaryColor)
+					renderBotAvatar(botPreset, botAvatar, botName)
 				),
 				createElement(
 					'div',
@@ -3791,7 +3834,7 @@ export default function ChatWidget({ settings, inline }) {
 							className: 'dctc-ai-proactive-bubble-cta',
 							style: { color: primaryColor },
 						},
-						__('Chat with AI →', 'dragwyb-click-to-chat')
+						__('Chat with us →', 'dragwyb-click-to-chat')
 					)
 				)
 			)
@@ -3812,6 +3855,7 @@ export default function ChatWidget({ settings, inline }) {
 				style: { background: primaryColor },
 				'aria-hidden': launcherVisible ? undefined : 'true',
 			},
+			display.enable_launcher_text &&
 			display.launcher_text &&
 			createElement(
 				'span',

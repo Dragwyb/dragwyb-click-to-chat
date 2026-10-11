@@ -854,7 +854,7 @@ export default function StyleSubtab({
 
 								{/* Floating Launcher Button Simulation */}
 								<div className="dctc-ai-preview-launcher-row">
-									{form.launcher_text && (
+									{form.enable_launcher_text && form.launcher_text && (
 										<div className="dctc-ai-launcher-sim-callout">
 											{form.launcher_text}
 										</div>

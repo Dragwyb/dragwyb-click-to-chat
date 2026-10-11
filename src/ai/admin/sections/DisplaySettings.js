@@ -59,6 +59,7 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 		custom_side: display.custom_side || 'right',
 		custom_horizontal: display.custom_horizontal ?? 24,
 		custom_horizontal_unit: display.custom_horizontal_unit || 'px',
+		enable_launcher_text: !!display.enable_launcher_text,
 		launcher_text: display.launcher_text || '',
 		assistant_icon: display.assistant_icon || '',
 		launcher_icon_preset: display.launcher_icon_preset || 'chat',
@@ -644,7 +645,7 @@ export default function DisplaySettings({ settings, onSave, showNotice }) {
 								</div>
 								<div className="dctc-ai-launcher-preview-wrapper">
 									<div className="dctc-ai-launcher-sim-badge">
-										{form.launcher_text && (
+										{form.enable_launcher_text && form.launcher_text && (
 											<div className="dctc-ai-launcher-sim-callout">
 												{form.launcher_text}
 											</div>
