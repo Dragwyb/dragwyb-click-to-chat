@@ -106,9 +106,13 @@ class DCTC_AI_Leads_Controller {
 			)
 		);
 
-		$settings  = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		$bot       = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
-		$threshold = isset( $bot['lead_qualification_threshold'] ) ? intval( $bot['lead_qualification_threshold'] ) : 70;
+		$settings              = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$bot                   = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+		$threshold             = isset( $bot['lead_qualification_threshold'] ) ? intval( $bot['lead_qualification_threshold'] ) : 70;
+		$enable_support_ticket = false;
+		if ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) {
+			$enable_support_ticket = isset( $bot['enable_support_escalation'] ) ? (bool) $bot['enable_support_escalation'] : false;
+		}
 
 		$initial_status = ( $scoring['score'] >= $threshold ) ? 'qualified' : 'new';
 
@@ -155,7 +159,7 @@ class DCTC_AI_Leads_Controller {
 		}
 
 		// 2. Connect with Support Center if Support Center is enabled
-		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+		if ( $enable_support_ticket && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			if ( ! empty( $support_settings['enabled'] ) ) {
 				$summary_parts = array();
