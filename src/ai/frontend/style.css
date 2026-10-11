@@ -1773,7 +1773,7 @@
   box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
   bottom: calc(100% + 8px);
   cursor: pointer;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   max-width: 310px;
   min-width: 240px;
   padding: 14px 16px;
@@ -1791,7 +1791,7 @@
   align-items: center;
   background: #f1f5f9;
   border: none;
-  border-radius: 50%;
+  border-radius: 0px 15px 0px 8px;
   color: #64748b;
   cursor: pointer;
   display: flex;
@@ -1802,9 +1802,9 @@
   line-height: 1;
   padding: 0;
   position: absolute;
-  right: 8px;
-  top: 8px;
-  transition: all 0.15s ease;
+  right: 0px;
+  top: 0px;
+  transition: all .15s ease;
   width: 22px;
   z-index: 2;
 }
@@ -1832,14 +1832,14 @@
 .dctc-ai-proactive-bubble-content {
   flex: 1;
   min-width: 0;
-  padding-right: 12px;
+  padding-right: 10px;
 }
 .dctc-ai-proactive-bubble-text {
   color: #1e293b;
   font-size: 13.5px;
   font-weight: 500;
   line-height: 1.45;
-  margin: 0 0 6px 0 !important;
+  margin: 0 !important;
 }
 .dctc-ai-proactive-bubble-cta {
   display: inline-block;

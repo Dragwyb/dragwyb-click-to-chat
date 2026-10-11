@@ -109,7 +109,7 @@ export default function MessagesSubtab({
 							className="dctc-ai-bot-input"
 							value={form.proactive_bubble_message}
 							onChange={(e) => setField('proactive_bubble_message', e.target.value)}
-							placeholder="👋 Hi there! Have a question about this page? Let me know if I can help!"
+							placeholder="👋 Hi there! How can we help you today?"
 						/>
 						<p className="dctc-ai-bot-hint">
 							{__('Displayed inside the floating popup preview bubble above the launcher button.', 'dragwyb-click-to-chat')}

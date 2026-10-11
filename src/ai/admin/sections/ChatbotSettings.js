@@ -188,7 +188,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		trigger_inactivity: display.trigger_inactivity ?? 30,
 		trigger_action: display.trigger_action || 'show_bubble',
 		enable_proactive_bubble: !!display.enable_proactive_bubble,
-		proactive_bubble_message: display.proactive_bubble_message || '👋 Hi there! Have a question about this page? Let me know if I can help!',
+		proactive_bubble_message: display.proactive_bubble_message || '👋 Hi there! How can we help you today?',
 		target_devices: display.target_devices || 'all',
 		target_users: display.target_users || 'all',
 		url_rules: display.url_rules || '',

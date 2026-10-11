@@ -531,7 +531,6 @@ class DCTC_AI_Settings_Handler {
 			)
 		);
 
-
 		// Feature 15: WordPress Abilities & Developer API endpoints
 		register_rest_route(
 			'dctc-ai/v1',
@@ -987,7 +986,7 @@ class DCTC_AI_Settings_Handler {
 				'trigger_inactivity'       => 30,
 				'trigger_action'           => 'show_bubble',
 				'enable_proactive_bubble'  => false,
-				'proactive_bubble_message' => '👋 Hi there! Have a question about this page? Let me know if I can help!',
+				'proactive_bubble_message' => '👋 Hi there! How can we help you today?',
 				'target_devices'           => 'all',
 				'target_users'             => 'all',
 				'url_rules'                => '',
@@ -1488,7 +1487,7 @@ class DCTC_AI_Settings_Handler {
 			'trigger_inactivity'       => isset( $params['trigger_inactivity'] ) ? max( 5, min( 300, intval( $params['trigger_inactivity'] ) ) ) : 30,
 			'trigger_action'           => $trigger_action,
 			'enable_proactive_bubble'  => isset( $params['enable_proactive_bubble'] ) ? (bool) $params['enable_proactive_bubble'] : false,
-			'proactive_bubble_message' => isset( $params['proactive_bubble_message'] ) ? sanitize_text_field( $params['proactive_bubble_message'] ) : '👋 Hi there! Have a question about this page? Let me know if I can help!',
+			'proactive_bubble_message' => isset( $params['proactive_bubble_message'] ) ? sanitize_text_field( $params['proactive_bubble_message'] ) : '👋 Hi there! How can we help you today?',
 			'target_devices'           => $target_devices,
 			'target_users'             => $target_users,
 			'url_rules'                => isset( $params['url_rules'] ) ? sanitize_textarea_field( $params['url_rules'] ) : '',
