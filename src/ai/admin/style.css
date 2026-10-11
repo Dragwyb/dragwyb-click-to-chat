@@ -133,7 +133,7 @@ body.dragwyb-click-to-chat_page_dragwyb-click-to-chat-ai #dctc-ai-admin-root {
   flex-direction: column;
   gap: 1.1rem;
   overflow-y: auto;
-  padding: 0 0.75rem 1.5rem;
+  padding: 1rem 1rem 1.5rem;
 }
 .dctc-ai-nav-group {
   display: flex;
@@ -2122,7 +2122,7 @@ body.folded .dctc-ai-toast {
     gap: 0.375rem;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 0.25rem 1rem 0.75rem;
+    padding: 1rem 1rem 0.75rem;
   }
   .dctc-ai-nav-group {
     display: contents;
