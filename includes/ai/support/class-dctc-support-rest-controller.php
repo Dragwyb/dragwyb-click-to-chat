@@ -1114,6 +1114,17 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
+		// Security (SEC-009): Enforce object-level ticket authorization before adding notes
+		if ( ! DCTC_Support_Permission_Service::can_agent_access_ticket( $ticket ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'You do not have permission to add notes to this ticket.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
+		}
+
 		$note_id = DCTC_Support_Note_Service::add_note( $ticket['id'], $content, $is_pinned, get_current_user_id() );
 		if ( ! $note_id ) {
 			return new WP_REST_Response(
@@ -1136,7 +1147,20 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function delete_note( $request ) {
+		$id      = $request->get_param( 'id' );
 		$note_id = $request->get_param( 'note_id' );
+
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
+		if ( ! $ticket || ! DCTC_Support_Permission_Service::can_agent_access_ticket( $ticket ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'You do not have permission to delete notes on this ticket.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
+		}
+
 		$deleted = DCTC_Support_Note_Service::delete_note( $note_id );
 		return new WP_REST_Response( array( 'success' => $deleted ), $deleted ? 200 : 400 );
 	}

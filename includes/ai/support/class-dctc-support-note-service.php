@@ -43,6 +43,11 @@ class DCTC_Support_Note_Service {
 			return false;
 		}
 
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		if ( ! $ticket || ! DCTC_Support_Permission_Service::can_agent_access_ticket( $ticket, $user_id ) ) {
+			return false;
+		}
+
 		$user       = get_userdata( $user_id );
 		$agent_name = $user ? $user->display_name : 'Staff Agent';
 

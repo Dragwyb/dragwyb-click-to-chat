@@ -372,6 +372,20 @@ class DCTC_AI_Tool_Registry
 	 */
 	public static function tool_create_support_ticket($args, $context = [])
 	{
+		// Rate limit check: Maximum 5 tickets per 10 minutes per IP
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( ! empty( $ip ) ) {
+			$rl_key = 'dctc_tool_tkt_rl_' . md5( $ip );
+			$count  = (int) get_transient( $rl_key );
+			if ( $count >= 5 ) {
+				return [
+					'success' => false,
+					'message' => __( 'Too many ticket requests. Please wait a few minutes before submitting again.', 'dragwyb-click-to-chat' ),
+				];
+			}
+			set_transient( $rl_key, $count + 1, 600 );
+		}
+
 		$ticket_id = 'TKT-' . strtoupper(wp_generate_password(6, false, false));
 		$name = sanitize_text_field($args['name'] ?? 'Visitor');
 		$email = sanitize_email($args['email'] ?? '');
@@ -410,6 +424,20 @@ class DCTC_AI_Tool_Registry
 	 */
 	public static function tool_book_appointment($args, $context = [])
 	{
+		// Rate limit check: Maximum 5 appointment requests per 10 minutes per IP
+		$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+		if ( ! empty( $ip ) ) {
+			$rl_key = 'dctc_tool_bk_rl_' . md5( $ip );
+			$count  = (int) get_transient( $rl_key );
+			if ( $count >= 5 ) {
+				return [
+					'success' => false,
+					'message' => __( 'Too many appointment requests. Please wait a few minutes before submitting again.', 'dragwyb-click-to-chat' ),
+				];
+			}
+			set_transient( $rl_key, $count + 1, 600 );
+		}
+
 		$booking_id = 'BK-' . strtoupper(wp_generate_password(6, false, false));
 		$name = sanitize_text_field($args['name'] ?? 'Client');
 		$email = sanitize_email($args['email'] ?? '');
@@ -600,6 +628,15 @@ class DCTC_AI_Tool_Registry
 			return;
 		}
 
+		// Security (SEC-012): Block loopback and private internal network addresses (SSRF prevention)
+		$parsed_host = wp_parse_url($webhook_url, PHP_URL_HOST);
+		if (!empty($parsed_host)) {
+			$resolved_ip = filter_var($parsed_host, FILTER_VALIDATE_IP) ? $parsed_host : gethostbyname($parsed_host);
+			if ($resolved_ip && !filter_var($resolved_ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+				return;
+			}
+		}
+
 		$payload = [
 			'event'        => 'tool_executed',
 			'tool'         => $tool_name,
@@ -619,8 +656,8 @@ class DCTC_AI_Tool_Registry
 				'User-Agent'   => 'WordPress/Dragwyb-AI-Workflows',
 			],
 			'body'      => wp_json_encode($payload),
-			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Using core WordPress filter https_local_ssl_verify.
-			'sslverify' => apply_filters('https_local_ssl_verify', false),
+			// Security (SEC-006): Enforce SSL certificate verification for outbound webhooks
+			'sslverify' => apply_filters('dctc_webhook_ssl_verify', true),
 		]);
 	}
 }

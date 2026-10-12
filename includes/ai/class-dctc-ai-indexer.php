@@ -111,6 +111,12 @@ class DCTC_AI_Indexer {
 			return false;
 		}
 
+		// Security (SEC-008): Skip and purge password-protected posts from RAG index
+		if ( ! empty( $post->post_password ) ) {
+			$this->remove_document( 'post_' . $post->ID );
+			return false;
+		}
+
 		global $wpdb;
 		$chunks_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 
@@ -1024,6 +1030,7 @@ class DCTC_AI_Indexer {
 				array(
 					'post_type'        => sanitize_text_field( $post_type ),
 					'post_status'      => 'publish',
+					'has_password'     => false,
 					'posts_per_page'   => -1,
 					'orderby'          => 'ID',
 					'order'            => 'ASC',

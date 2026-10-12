@@ -829,6 +829,15 @@ class DCTC_AI_Leads_Controller {
 			return;
 		}
 
+		// Security (SEC-012): Block loopback and private internal network addresses (SSRF prevention)
+		$parsed_host = wp_parse_url( $webhook_url, PHP_URL_HOST );
+		if ( ! empty( $parsed_host ) ) {
+			$resolved_ip = filter_var( $parsed_host, FILTER_VALIDATE_IP ) ? $parsed_host : gethostbyname( $parsed_host );
+			if ( $resolved_ip && ! filter_var( $resolved_ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+				return;
+			}
+		}
+
 		$payload = array(
 			'event'     => 'ai_lead_captured',
 			'site_url'  => home_url(),
@@ -844,8 +853,8 @@ class DCTC_AI_Leads_Controller {
 				'body'      => wp_json_encode( $payload ),
 				'timeout'   => 10,
 				'blocking'  => false, // Non-blocking asynchronous dispatch
-				// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Using core WordPress filter https_local_ssl_verify.
-				'sslverify' => apply_filters( 'https_local_ssl_verify', false ),
+				// Security (SEC-006): Enforce SSL certificate verification for outbound webhooks
+				'sslverify' => apply_filters( 'dctc_webhook_ssl_verify', true ),
 			)
 		);
 	}

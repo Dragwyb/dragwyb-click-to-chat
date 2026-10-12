@@ -307,14 +307,41 @@ class DCTC_Support_Permission_Service {
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$agent = $wpdb->get_row(
-			$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$wpdb->prepare( "SELECT id, allowed_categories FROM `$table_agents` WHERE wp_user_id = %d AND active = 1", $user_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
-		if ( $agent && ! empty( $ticket_array['assigned_agent_id'] ) ) {
-			return (int) $ticket_array['assigned_agent_id'] === (int) $agent['id'];
+		if ( $agent ) {
+			if ( ! empty( $ticket_array['assigned_agent_id'] ) && (int) $ticket_array['assigned_agent_id'] === (int) $agent['id'] ) {
+				return true;
+			}
+
+			// If agent has restricted categories, verify ticket matches an allowed category
+			if ( ! empty( $agent['allowed_categories'] ) ) {
+				$allowed_cats = json_decode( $agent['allowed_categories'], true );
+				if ( is_array( $allowed_cats ) && ! empty( $allowed_cats ) ) {
+					$ticket_cat = ! empty( $ticket_array['category_id'] ) ? (int) $ticket_array['category_id'] : 0;
+					if ( in_array( $ticket_cat, array_map( 'intval', $allowed_cats ), true ) ) {
+						return true;
+					}
+					return false;
+				}
+			}
+
+			return empty( $ticket_array['assigned_agent_id'] );
 		}
 
 		return false;
+	}
+
+	/**
+	 * Check if an agent can access a specific ticket (scoped by assignment or category).
+	 *
+	 * @param array|object $ticket  The ticket object or array.
+	 * @param int|null     $user_id Optional agent user ID.
+	 * @return bool
+	 */
+	public static function can_agent_access_ticket( $ticket, $user_id = null ) {
+		return self::can_access_ticket( $ticket, $user_id );
 	}
 }

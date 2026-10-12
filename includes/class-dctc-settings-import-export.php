@@ -627,7 +627,7 @@ class DCTC_Settings_Import_Export {
 			foreach ( $matches as $match ) {
 				$name           = $match[1];
 				$value          = self::dctc_sql_unescape_string( $match[2] );
-				$found[ $name ] = maybe_unserialize( $value );
+				$found[ $name ] = self::dctc_safe_unserialize( $value );
 			}
 		}
 
@@ -640,7 +640,7 @@ class DCTC_Settings_Import_Export {
 			foreach ( $umatches as $match ) {
 				$value          = self::dctc_sql_unescape_string( $match[1] );
 				$name           = $match[2];
-				$found[ $name ] = maybe_unserialize( $value );
+				$found[ $name ] = self::dctc_safe_unserialize( $value );
 			}
 		}
 
@@ -681,6 +681,22 @@ class DCTC_Settings_Import_Export {
 			array( "'", '"', '\\', "\n", "\r", "\0", "\x1a" ),
 			$value
 		);
+	}
+
+	/**
+	 * Safely unserialize data preventing PHP Object Injection (POP gadget chains).
+	 *
+	 * @param string $value Serialized or plain string.
+	 * @return mixed
+	 */
+	private static function dctc_safe_unserialize( $value ) {
+		if ( ! is_serialized( $value ) ) {
+			return $value;
+		}
+
+		// Strictly forbid object instantiation during deserialization.
+		$unserialized = @unserialize( $value, array( 'allowed_classes' => false ) );
+		return false !== $unserialized || 'b:0;' === $value ? $unserialized : $value;
 	}
 
 	/**

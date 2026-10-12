@@ -643,7 +643,16 @@ class DCTC_AI_Settings_Handler {
 			array(
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->mcp_controller, 'handle_jsonrpc' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => function ( $request ) {
+					if ( current_user_can( 'read' ) ) {
+						return true;
+					}
+					$nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
+					if ( ! empty( $nonce ) && wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+						return true;
+					}
+					return false;
+				},
 			)
 		);
 
@@ -1747,6 +1756,27 @@ class DCTC_AI_Settings_Handler {
 	 * @return \WP_REST_Response Uploaded attachment metadata.
 	 */
 	public function dctc_ai_upload_file( $request ) {
+		// Rate limit uploads for non-administrators (SEC-007)
+		if ( ! current_user_can( 'manage_options' ) ) {
+			$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+			if ( ! empty( $ip ) ) {
+				$rate_key     = 'dctc_ai_upl_rl_' . md5( $ip );
+				$upload_count = (int) get_transient( $rate_key );
+				$max_uploads  = (int) apply_filters( 'dctc_ai_max_uploads_per_hour', 10 );
+				if ( $upload_count >= $max_uploads ) {
+					return new \WP_REST_Response(
+						array(
+							'success' => false,
+							'code'    => 'RATE_LIMIT_EXCEEDED',
+							'message' => esc_html__( 'Upload limit reached. Please wait before uploading more files.', 'dragwyb-click-to-chat' ),
+						),
+						429
+					);
+				}
+				set_transient( $rate_key, $upload_count + 1, HOUR_IN_SECONDS );
+			}
+		}
+
 		if ( ! function_exists( 'media_handle_upload' ) ) {
 			require_once ABSPATH . 'wp-admin/includes/image.php';
 			require_once ABSPATH . 'wp-admin/includes/file.php';

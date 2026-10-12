@@ -223,7 +223,10 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			$file = isset( $context['file'] ) ? self::relative_plugin_path( (string) $context['file'] ) : '';
 			$line = isset( $context['line'] ) ? absint( $context['line'] ) : 0;
 			$code = isset( $context['code'] ) ? sanitize_text_field( (string) $context['code'] ) : '';
-			$ctx  = isset( $context['context'] ) ? sanitize_text_field( (string) $context['context'] ) : '';
+
+			// Sanitize and limit context and user-agent string (SEC-014)
+			$raw_ctx = isset( $context['context'] ) ? (string) $context['context'] : ( isset( $context['user_agent'] ) ? (string) $context['user_agent'] : ( isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$ctx     = sanitize_text_field( substr( $raw_ctx, 0, 255 ) );
 
 			$data = array(
 				'error_type'   => sanitize_text_field( (string) $type ),
@@ -319,23 +322,23 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 				return array();
 			}
 
-			// Format rows for frontend compatibility.
+			// Format rows for frontend compatibility with strict output escaping.
 			return array_map(
 				static function ( $row ) {
 					return array(
 						'id'           => absint( $row['id'] ),
-						'type'         => $row['error_type'],
-						'error_type'   => $row['error_type'],
-						'provider'     => $row['provider'],
-						'model'        => $row['model'],
-						'user_message' => $row['user_message'] ? $row['user_message'] : '',
-						'model_error'  => $row['model_error'],
-						'message'      => $row['model_error'], // Backward compatibility alias.
-						'file'         => $row['file'],
+						'type'         => esc_html( $row['error_type'] ),
+						'error_type'   => esc_html( $row['error_type'] ),
+						'provider'     => esc_html( $row['provider'] ),
+						'model'        => esc_html( $row['model'] ),
+						'user_message' => $row['user_message'] ? esc_html( $row['user_message'] ) : '',
+						'model_error'  => esc_html( $row['model_error'] ),
+						'message'      => esc_html( $row['model_error'] ), // Backward compatibility alias.
+						'file'         => esc_html( $row['file'] ),
 						'line'         => absint( $row['line'] ),
-						'code'         => $row['code'],
-						'context'      => $row['context'] ? $row['context'] : '',
-						'created_at'   => $row['created_at'],
+						'code'         => esc_html( $row['code'] ),
+						'context'      => $row['context'] ? esc_html( $row['context'] ) : '',
+						'created_at'   => esc_html( $row['created_at'] ),
 					);
 				},
 				$rows

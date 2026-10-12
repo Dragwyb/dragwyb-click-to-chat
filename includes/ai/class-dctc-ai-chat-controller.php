@@ -227,7 +227,7 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		if ( empty( $session_id ) || ! preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $session_id ) ) {
-			$session_id = 'sess_' . wp_generate_password( 9, false );
+			$session_id = 'sess_' . wp_generate_uuid4();
 		}
 
 		if ( ! headers_sent() ) {
@@ -1504,7 +1504,7 @@ class DCTC_AI_Chat_Controller {
 	 * @return \WP_REST_Response
 	 */
 	public function clear_session( $request ) {
-		$new_session_id = 'sess_' . wp_generate_password( 9, false );
+		$new_session_id = 'sess_' . wp_generate_uuid4();
 
 		setcookie( 'dctc_ai_session_id', $new_session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 		setcookie( 'dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
@@ -3065,6 +3065,51 @@ class DCTC_AI_Chat_Controller {
 
 		$ticket_info = $this->get_session_ticket_info( $session_id );
 		$has_ticket  = ! empty( $ticket_info );
+
+		// Security (SEC-004): Enforce strict session and ticket ownership to prevent IDOR
+		$user_id        = get_current_user_id();
+		$cookie_session = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
+		$guest_token    = $request->get_header( 'X-Guest-Token' ) ?: $request->get_param( 'guest_token' );
+		$is_authorized  = false;
+
+		// 1. Administrators and privileged support staff
+		if ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets', $user_id ) ) ) {
+			$is_authorized = true;
+		}
+
+		// 2. Guest/Visitor matching session cookie
+		if ( ! $is_authorized && ! empty( $cookie_session ) && hash_equals( (string) $cookie_session, (string) $session_id ) ) {
+			$is_authorized = true;
+		}
+
+		// 3. Ticket ownership verification for logged-in users and verified guest tokens
+		if ( ! $is_authorized && $has_ticket && ! empty( $ticket_info['id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			$full_ticket = DCTC_Support_Ticket_Service::get_ticket( (int) $ticket_info['id'] );
+			if ( $full_ticket ) {
+				if ( $user_id && ! empty( $full_ticket['customer_wp_user_id'] ) && (int) $full_ticket['customer_wp_user_id'] === $user_id ) {
+					$is_authorized = true;
+				} elseif ( $user_id && ! empty( $full_ticket['customer_email'] ) ) {
+					$user_obj = get_userdata( $user_id );
+					if ( $user_obj && ! empty( $user_obj->user_email ) && strtolower( trim( $user_obj->user_email ) ) === strtolower( trim( $full_ticket['customer_email'] ) ) ) {
+						$is_authorized = true;
+					}
+				} elseif ( ! empty( $full_ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $full_ticket['guest_access_token'], (string) $guest_token ) ) {
+					$is_authorized = true;
+				}
+			}
+		}
+
+		if ( ! $is_authorized ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => false,
+					'code'    => 'REST_FORBIDDEN',
+					'message' => __( 'Unauthorized access to session data.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
+		}
+
 		$ai_waiting  = ! empty( $ticket_info['ai_response_waiting'] );
 		$messages    = array();
 		$updated_at  = current_time( 'mysql', true );

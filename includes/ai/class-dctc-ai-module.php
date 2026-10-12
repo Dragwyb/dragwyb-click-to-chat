@@ -320,7 +320,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 * @return void
 		 */
 		public function dctc_ai_ajax_dismiss_setup_notice() {
-			check_ajax_referer( 'dctc_ai_dismiss_notice_nonce' );
+			if ( ! check_ajax_referer( 'dctc_ai_dismiss_notice_nonce', 'nonce', false ) && ! check_ajax_referer( 'dctc_ai_dismiss_notice_nonce', '_ajax_nonce', false ) ) {
+				wp_send_json_error( esc_html__( 'Security check failed.', 'dragwyb-click-to-chat' ), 403 );
+			}
 
 			if ( ! current_user_can( 'manage_options' ) ) {
 				wp_send_json_error(
@@ -328,6 +330,8 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					403
 				);
 			}
+
+			update_option( 'dctc_ai_setup_notice_dismissed', true );
 
 			wp_send_json_success();
 		}
@@ -400,7 +404,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 
 			$session_id = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
 			if ( empty( $session_id ) ) {
-				$session_id = 'sess_' . wp_generate_password( 9, false );
+				$session_id = 'sess_' . wp_generate_uuid4();
 				if ( ! headers_sent() ) {
 					setcookie( 'dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 					setcookie( 'dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
@@ -468,7 +472,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$session_id = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
 
 			if ( empty( $session_id ) ) {
-				$session_id = 'sess_' . wp_generate_password( 9, false );
+				$session_id = 'sess_' . wp_generate_uuid4();
 
 				setcookie( 'dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 				setcookie( 'dctc_ai_clear_allowed', 'true', time() + 1800, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
