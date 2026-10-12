@@ -281,30 +281,28 @@ class DCTC_Support_Ticket_Service {
 			}
 		}
 
-		$uuid          = wp_generate_uuid4();
-		$ticket_number = DCTC_Support_DB::get_next_ticket_number();
-		$guest_token   = ! $user_id ? wp_generate_password( 32, false ) : '';
+		$uuid        = wp_generate_uuid4();
+		$guest_token = ! $user_id ? wp_generate_password( 32, false ) : '';
 
-		// Insert only clean core columns into dctc_support_tickets table
+		// Insert only clean core columns into dctc_support_tickets table (id is auto-increment)
 		$core_fields = array(
-			'ticket_number'              => $ticket_number,
-			'uuid'                       => $uuid,
-			'customer_wp_user_id'        => $user_id,
-			'customer_email'             => $email,
-			'customer_name'              => $name,
-			'subject'                    => $subject,
-			'status'                     => $status,
-			'priority'                   => $priority,
-			'customer_last_seen_at'      => current_time( 'mysql', true ),
-			'created_at'                 => current_time( 'mysql', true ),
-			'updated_at'                 => current_time( 'mysql', true ),
+			'uuid'                  => $uuid,
+			'customer_wp_user_id'   => $user_id,
+			'customer_email'        => $email,
+			'customer_name'         => $name,
+			'subject'               => $subject,
+			'status'                => $status,
+			'priority'              => $priority,
+			'customer_last_seen_at' => current_time( 'mysql', true ),
+			'created_at'            => current_time( 'mysql', true ),
+			'updated_at'            => current_time( 'mysql', true ),
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$inserted = $wpdb->insert(
 			$table_tickets,
 			$core_fields,
-			array( '%d', '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
+			array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 		);
 
 		if ( ! $inserted ) {
@@ -454,7 +452,7 @@ class DCTC_Support_Ticket_Service {
 			null,
 			$status,
 			array(
-				'ticket_number' => $ticket_number,
+				'ticket_id'     => $ticket_id,
 				'origin_type'   => $origin,
 				'reply_surface' => $surface,
 			)
@@ -661,7 +659,7 @@ class DCTC_Support_Ticket_Service {
 		if ( ! empty( $args['search'] ) ) {
 			$search = '%' . $wpdb->esc_like( sanitize_text_field( $args['search'] ) ) . '%';
 			$where .= $wpdb->prepare(
-				' AND (t.subject LIKE %s OR t.customer_name LIKE %s OR t.customer_email LIKE %s OR t.ticket_number LIKE %s)',
+				' AND (t.subject LIKE %s OR t.customer_name LIKE %s OR t.customer_email LIKE %s OR t.id LIKE %s)',
 				$search,
 				$search,
 				$search,
@@ -670,7 +668,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// Order
-		$orderby_allowed = array( 'created_at', 'updated_at', 'ticket_number', 'priority', 'status' );
+		$orderby_allowed = array( 'created_at', 'updated_at', 'id', 'priority', 'status' );
 		$orderby         = ( ! empty( $args['orderby'] ) && in_array( $args['orderby'], $orderby_allowed, true ) ) ? $args['orderby'] : 'created_at';
 		$order           = ( ! empty( $args['order'] ) && 'ASC' === strtoupper( $args['order'] ) ) ? 'ASC' : 'DESC';
 
@@ -1644,7 +1642,7 @@ class DCTC_Support_Ticket_Service {
 		);
 
 		// Recent events
-		$recent_sql = "SELECT e.*, t.ticket_number, t.subject as ticket_subject 
+		$recent_sql = "SELECT e.*, t.id as ticket_id_display, t.subject as ticket_subject 
 			FROM `$table_events` e 
 			LEFT JOIN `$table_tickets` t ON e.ticket_id = t.id 
 			ORDER BY e.created_at DESC LIMIT 6";

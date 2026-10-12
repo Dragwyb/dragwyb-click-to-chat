@@ -521,7 +521,7 @@ export default function ChatWidget({ settings, inline }) {
 					setActiveControlMode(response.control_mode);
 				}
 
-				if (response.ticket && response.ticket.ticket_number) {
+				if (response.ticket && response.ticket.id) {
 					setHasActiveTicket(true);
 					if (response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);
@@ -1264,8 +1264,8 @@ export default function ChatWidget({ settings, inline }) {
 					return;
 				}
 
-				// Check whether a valid support ticket with ticket_number exists
-				const ticketExists = Boolean(res.ticket && res.ticket.ticket_number);
+				// Check whether a valid support ticket exists
+				const ticketExists = Boolean(res.ticket && res.ticket.id);
 				setHasActiveTicket(ticketExists);
 
 				if (ticketExists && res.ticket) {
@@ -2242,7 +2242,7 @@ export default function ChatWidget({ settings, inline }) {
 						}
 					}, Math.max(10, maxWaitSec) * 1000);
 
-					if (response.ticket && response.ticket.ticket_number) {
+					if (response.ticket && response.ticket.id) {
 						setHasActiveTicket(true);
 						if (response.ticket.agent_name) {
 							setAssignedAgentName(response.ticket.agent_name);
@@ -2340,7 +2340,7 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
-				if (response.ticket && response.ticket.ticket_number) {
+				if (response.ticket && response.ticket.id) {
 					setHasActiveTicket(true);
 					if (response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);

@@ -298,7 +298,7 @@ export default function TicketDetailWorkspace({
 							<div className="dctc-sc-ws-header-title-wrap">
 								<h2 className="dctc-sc-ws-subject">
 									<span className="dctc-sc-ws-subject-text">{selectedTicket?.subject || __('Untitled Ticket', 'dragwyb-click-to-chat')}</span>
-									<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
+									<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.id}</span>
 									<span
 										className={`dctc-sc-panel-badge-agent dctc-sc-ws-assigned-badge ${!isAssigned ? 'unassigned' : ''}`}
 										title={isAssigned ? sprintf(__('Assigned to %s', 'dragwyb-click-to-chat'), assignedName) : __('Unassigned Ticket', 'dragwyb-click-to-chat')}

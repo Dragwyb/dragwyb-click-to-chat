@@ -2665,7 +2665,7 @@ class DCTC_AI_Chat_Controller {
 
 		return array(
 			'id'                  => (int) $ticket['id'],
-			'ticket_number'       => (int) $ticket['ticket_number'],
+			'ticket_id'           => (int) $ticket['id'],
 			'status'              => $ticket['status'],
 			'control_mode'        => ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : 'ai',
 			'agent_name'          => $agent_name,

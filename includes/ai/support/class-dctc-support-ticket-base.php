@@ -31,13 +31,6 @@ abstract class DCTC_Support_Ticket_Base {
 	protected $uuid = '';
 
 	/**
-	 * Sequential Ticket Number.
-	 *
-	 * @var int
-	 */
-	protected $ticket_number = 0;
-
-	/**
 	 * Associated Chatbot Session ID.
 	 *
 	 * @var string
@@ -169,14 +162,6 @@ abstract class DCTC_Support_Ticket_Base {
 		return (string) $this->uuid;
 	}
 
-	/**
-	 * Get Ticket Number.
-	 *
-	 * @return int
-	 */
-	public function get_ticket_number() {
-		return (int) $this->ticket_number;
-	}
 
 	/**
 	 * Get Associated Session ID.

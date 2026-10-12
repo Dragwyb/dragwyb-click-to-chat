@@ -301,7 +301,7 @@ export default function TicketsView({
 
 			if (leftPanelSearch.trim()) {
 				const q = leftPanelSearch.toLowerCase().trim();
-				const idMatch = String(t.id).includes(q) || String(t.ticket_number || '').toLowerCase().includes(q);
+				const idMatch = String(t.id).includes(q);
 				const subjectMatch = (t.subject || '').toLowerCase().includes(q);
 				const customerMatch = (t.customer_name || '').toLowerCase().includes(q) || (t.customer_email || '').toLowerCase().includes(q);
 				const excerptMatch = (t.excerpt || t.last_message || '').toLowerCase().includes(q);
@@ -879,7 +879,7 @@ export default function TicketsView({
 													>
 														<div className="dctc-sc-left-panel-item-header">
 															<div className="dctc-sc-left-panel-item-meta">
-																<span className="dctc-sc-left-panel-id">#{t.ticket_number || t.id}</span>
+																<span className="dctc-sc-left-panel-id">#{t.id}</span>
 																<span className={`dctc-sc-left-status-dot-badge status-${statusKey}`}>
 																	<span className="dctc-sc-dot"></span>
 																	<span>{statusLabel}</span>

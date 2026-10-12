@@ -48,10 +48,11 @@ class DCTC_Support_Notification_Service {
 
 		$site_name = get_bloginfo( 'name' );
 		$admin_url = admin_url( 'admin.php?page=dragwyb-support-tickets' );
-		$subject   = sprintf( '[%s] New Support Ticket Assigned: #%d - %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
+		$ticket_no = ! empty( $ticket['id'] ) ? $ticket['id'] : 0;
+		$subject   = sprintf( '[%s] New Support Ticket Assigned: #%d - %s', $site_name, $ticket_no, $ticket['subject'] );
 
 		$content  = '<h2>' . esc_html__( 'A new support ticket has been assigned to you', 'dragwyb-click-to-chat' ) . '</h2>';
-		$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket['ticket_number'] ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
+		$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket_no ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Priority:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( $ticket['priority'] ) ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Origin:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['origin_type'] ) . '</p>';
@@ -168,12 +169,13 @@ class DCTC_Support_Notification_Service {
 					return false;
 				}
 
-				$subject  = sprintf( '[%s] New Customer Reply on Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
-				$content  = '<h2>' . esc_html__( 'Customer has sent a new reply', 'dragwyb-click-to-chat' ) . '</h2>';
-				$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket['ticket_number'] ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
-				$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
-				$content .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
-				$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
+				$ticket_no = ! empty( $ticket['id'] ) ? $ticket['id'] : 0;
+				$subject   = sprintf( '[%s] New Customer Reply on Ticket #%d: %s', $site_name, $ticket_no, $ticket['subject'] );
+				$content   = '<h2>' . esc_html__( 'Customer has sent a new reply', 'dragwyb-click-to-chat' ) . '</h2>';
+				$content  .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket_no ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
+				$content  .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
+				$content  .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
+				$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
 
 				return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'customer_reply' );
 			}
@@ -189,13 +191,14 @@ class DCTC_Support_Notification_Service {
 			return false;
 		}
 
-		$subject  = sprintf( '[%s] [Unassigned] New Customer Message on Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
-		$content  = '<h2>' . esc_html__( 'New Customer Message on Unassigned Ticket', 'dragwyb-click-to-chat' ) . '</h2>';
-		$content .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket['ticket_number'] ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
-		$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
-		$content .= '<p><strong>' . esc_html__( 'Status:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( str_replace( '_', ' ', $ticket['status'] ) ) ) . ' (' . esc_html__( 'Unassigned', 'dragwyb-click-to-chat' ) . ')</p>';
-		$content .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
-		$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Assign & Reply in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
+		$ticket_no = ! empty( $ticket['id'] ) ? $ticket['id'] : 0;
+		$subject   = sprintf( '[%s] [Unassigned] New Customer Message on Ticket #%d: %s', $site_name, $ticket_no, $ticket['subject'] );
+		$content   = '<h2>' . esc_html__( 'New Customer Message on Unassigned Ticket', 'dragwyb-click-to-chat' ) . '</h2>';
+		$content  .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket_no ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
+		$content  .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
+		$content  .= '<p><strong>' . esc_html__( 'Status:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( str_replace( '_', ' ', $ticket['status'] ) ) ) . ' (' . esc_html__( 'Unassigned', 'dragwyb-click-to-chat' ) . ')</p>';
+		$content  .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
+		$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Assign & Reply in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
 
 		return self::send_email( $admin_email, $subject, $content, $ticket['id'], 'admin', 0, 'customer_reply_unassigned' );
 	}
@@ -273,13 +276,14 @@ class DCTC_Support_Notification_Service {
 		}
 
 		$site_name = get_bloginfo( 'name' );
-		$subject   = sprintf( '[%s] Support Agent Replied to Ticket #%d: %s', $site_name, $ticket['ticket_number'], $ticket['subject'] );
+		$ticket_no = ! empty( $ticket['id'] ) ? $ticket['id'] : 0;
+		$subject   = sprintf( '[%s] Support Agent Replied to Ticket #%d: %s', $site_name, $ticket_no, $ticket['subject'] );
 
 		$content = '<h2>' . esc_html__( 'We have an update on your support request', 'dragwyb-click-to-chat' ) . '</h2>';
 		/* translators: %s: Customer name */
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : 'there' ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
-		$content .= '<p>' . sprintf( esc_html__( 'Our support agent has responded to your ticket #%1$d (%2$s):', 'dragwyb-click-to-chat' ), esc_html( $ticket['ticket_number'] ), esc_html( $ticket['subject'] ) ) . '</p>';
+		$content .= '<p>' . sprintf( esc_html__( 'Our support agent has responded to your ticket #%1$d (%2$s):', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket['subject'] ) ) . '</p>';
 		$content .= '<div style="background:#EEF2FF;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
 		$content .= '<p>' . esc_html__( 'You can reply to this message directly in our support portal or website chatbot widget.', 'dragwyb-click-to-chat' ) . '</p>';
 
@@ -303,13 +307,14 @@ class DCTC_Support_Notification_Service {
 		}
 
 		$site_name = get_bloginfo( 'name' );
-		$subject   = sprintf( '[%s] Your Support Ticket #%d Has Been Resolved', $site_name, $ticket['ticket_number'] );
+		$ticket_no = ! empty( $ticket['id'] ) ? $ticket['id'] : 0;
+		$subject   = sprintf( '[%s] Your Support Ticket #%d Has Been Resolved', $site_name, $ticket_no );
 
 		$content = '<h2>' . esc_html__( 'Your support request is marked as Resolved', 'dragwyb-click-to-chat' ) . '</h2>';
 		/* translators: %s: Customer name */
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : 'there' ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
-		$content .= '<p>' . sprintf( esc_html__( 'Your ticket #%1$d (%2$s) has been marked as resolved by our team.', 'dragwyb-click-to-chat' ), esc_html( $ticket['ticket_number'] ), esc_html( $ticket['subject'] ) ) . '</p>';
+		$content .= '<p>' . sprintf( esc_html__( 'Your ticket #%1$d (%2$s) has been marked as resolved by our team.', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket['subject'] ) ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If you still need help or have further questions, simply send another reply and the ticket will automatically reopen.', 'dragwyb-click-to-chat' ) . '</p>';
 
 		return self::send_email( $ticket['customer_email'], $subject, $content, $ticket['id'], 'customer', $ticket['customer_wp_user_id'], 'ticket_resolved' );

@@ -895,7 +895,7 @@ export default function DashboardView({
 											</div>
 
 											<span className="dctc-sc-ticket-id-pill">
-												#{item.ticket_number || item.ticket_id || (10002 - idx)}
+												#{item.ticket_id || item.id || (10002 - idx)}
 											</span>
 
 											<div className="dctc-sc-activity-text-group">

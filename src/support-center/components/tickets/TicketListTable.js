@@ -151,7 +151,7 @@ export default function TicketListTable({
 										<div className="dctc-sc-card-main-info">
 											<div className="dctc-sc-card-top">
 												<div className="dctc-sc-card-top-left">
-													<span className="dctc-sc-card-id">#{item.ticket_number || item.id}</span>
+													<span className="dctc-sc-card-id">#{item.id}</span>
 													<StatusBadge status={item.status} />
 													<PriorityBadge priority={item.priority} />
 												</div>

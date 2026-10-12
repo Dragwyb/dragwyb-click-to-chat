@@ -67,7 +67,6 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		$this->id                  = (int) $data['id'];
 		$this->uuid                = ! empty( $data['uuid'] ) ? (string) $data['uuid'] : '';
-		$this->ticket_number       = ! empty( $data['ticket_number'] ) ? (int) $data['ticket_number'] : $this->id;
 		$this->session_id          = ! empty( $data['session_id'] ) ? (string) $data['session_id'] : '';
 		$this->customer_wp_user_id = ! empty( $data['customer_wp_user_id'] ) ? (int) $data['customer_wp_user_id'] : 0;
 		$this->customer_name       = ! empty( $data['customer_name'] ) ? (string) $data['customer_name'] : '';

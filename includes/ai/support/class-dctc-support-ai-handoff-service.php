@@ -291,11 +291,11 @@ class DCTC_Support_AI_Handoff_Service {
 		}
 
 		$ticket_info = array(
-			'id'            => (int) $ticket_id,
-			'ticket_number' => $ticket ? (int) $ticket['ticket_number'] : 0,
-			'status'        => $ticket ? $ticket['status'] : 'waiting_agent',
-			'control_mode'  => 'human',
-			'agent_name'    => $agent_name,
+			'id'           => (int) $ticket_id,
+			'ticket_id'    => (int) $ticket_id,
+			'status'       => $ticket ? $ticket['status'] : 'waiting_agent',
+			'control_mode' => 'human',
+			'agent_name'   => $agent_name,
 		);
 
 		return array(

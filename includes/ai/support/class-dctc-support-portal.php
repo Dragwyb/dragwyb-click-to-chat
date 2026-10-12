@@ -1622,7 +1622,7 @@ class DCTC_Support_Portal {
 								html += "<div class=\"dctc-portal-ticket-card\" data-uuid=\"" + t.uuid + "\">";
 								html += "  <div class=\"dctc-portal-card-left\" style=\"flex:1;\">";
 								html += "    <div class=\"dctc-portal-card-top\">";
-								html += "      <span class=\"dctc-portal-card-num\">#" + t.ticket_number + "</span>";
+								html += "      <span class=\"dctc-portal-card-num\">#" + (t.id) + "</span>";
 								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + (t.status || "open").toUpperCase() + "</span>";
 								html += "      <span class=\"dctc-portal-badge-cat\">" + categoryName + "</span>";
 								html += "      <span class=\"dctc-portal-badge-agent\">" + agentName + "</span>";
@@ -1701,7 +1701,7 @@ class DCTC_Support_Portal {
 							const statEl = root.querySelector(".dctc-detail-status");
 							const priEl = root.querySelector(".dctc-detail-priority");
 
-							if (numEl) numEl.textContent = "#" + t.ticket_number;
+							if (numEl) numEl.textContent = "#" + (t.id);
 							if (subEl) subEl.textContent = t.subject;
 							
 							if (statEl) {
@@ -2145,12 +2145,14 @@ class DCTC_Support_Portal {
 									form.style.display = "none";
 									const infoEl = successNotice.querySelector(".dctc-success-ticket-info");
 									if (infoEl) {
-										infoEl.textContent = "Your ticket #" + data.ticket.ticket_number + " has been received. Our support team will get back to you shortly.";
+										const displayTicketId = data.ticket.id;
+										infoEl.textContent = "Your ticket #" + displayTicketId + " has been received. Our support team will get back to you shortly.";
 									}
 									successNotice.style.display = "block";
 								} else {
 									closeModal();
-									alert("Ticket #" + data.ticket.ticket_number + " submitted successfully!");
+									const displayTicketId = data.ticket.id;
+									alert("Ticket #" + displayTicketId + " submitted successfully!");
 								}
 
 								// If there are portal lists on this page, refresh them

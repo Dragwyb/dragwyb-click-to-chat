@@ -48,7 +48,6 @@ class DCTC_Support_DB {
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 		$sql_tickets   = "CREATE TABLE `$table_tickets` (
 			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			ticket_number bigint(20) unsigned NOT NULL,
 			uuid varchar(64) NOT NULL,
 			customer_wp_user_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			customer_email varchar(100) DEFAULT '' NOT NULL,
@@ -64,7 +63,6 @@ class DCTC_Support_DB {
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY uuid (uuid),
-			KEY ticket_number (ticket_number),
 			KEY customer_wp_user_id (customer_wp_user_id),
 			KEY customer_email (customer_email),
 			KEY status (status),
@@ -548,20 +546,5 @@ class DCTC_Support_DB {
 				);
 			}
 		}
-	}
-
-	/**
-	 * Get next sequential ticket number atomically.
-	 *
-	 * @return int
-	 */
-	public static function get_next_ticket_number() {
-		global $wpdb;
-		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$max_number = $wpdb->get_var( "SELECT MAX(ticket_number) FROM `$table_tickets`" );
-
-		return $max_number ? ( (int) $max_number + 1 ) : 10001;
 	}
 }
