@@ -1,9 +1,10 @@
 import apiFetch from '@wordpress/api-fetch';
 import { useState, useRef, useEffect } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 
 export default function TicketDetailWorkspace({
 	selectedTicket,
+	agents = [],
 	userPermissions = {},
 	onCloseTicket,
 	handleToggleControl,
@@ -32,6 +33,16 @@ export default function TicketDetailWorkspace({
 	const [composerMode, setComposerMode] = useState('reply'); // 'reply' | 'note'
 	const [isComposerOpen, setIsComposerOpen] = useState(false);
 	const replyTextareaRef = useRef(null);
+
+	// Assigned agent resolution for header badge
+	const assignedAgentId = selectedTicket?.assigned_agent_id;
+	const isAssigned = Boolean(assignedAgentId && Number(assignedAgentId) > 0);
+	const matchedAgent = isAssigned && Array.isArray(agents)
+		? agents.find((a) => Number(a.id) === Number(assignedAgentId))
+		: null;
+	const assignedName = isAssigned
+		? (matchedAgent?.display_name || selectedTicket?.agent_name || `Agent #${assignedAgentId}`)
+		: __('Unassigned', 'dragwyb-click-to-chat');
 
 	// Message Action Dropdown and Inline Edit States
 	const [activeMessageMenuKey, setActiveMessageMenuKey] = useState(null);
@@ -288,6 +299,13 @@ export default function TicketDetailWorkspace({
 								<h2 className="dctc-sc-ws-subject">
 									<span className="dctc-sc-ws-subject-text">{selectedTicket?.subject || __('Untitled Ticket', 'dragwyb-click-to-chat')}</span>
 									<span className="dctc-sc-ws-ticket-id">#{selectedTicket?.ticket_number || selectedTicket?.id}</span>
+									<span
+										className={`dctc-sc-panel-badge-agent dctc-sc-ws-assigned-badge ${!isAssigned ? 'unassigned' : ''}`}
+										title={isAssigned ? sprintf(__('Assigned to %s', 'dragwyb-click-to-chat'), assignedName) : __('Unassigned Ticket', 'dragwyb-click-to-chat')}
+									>
+										<span className="dashicons dashicons-admin-users"></span>
+										<span className="dctc-sc-badge-agent-name">{assignedName}</span>
+									</span>
 								</h2>
 							</div>
 

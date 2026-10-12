@@ -941,6 +941,7 @@ export default function TicketsView({
 						) : (
 							<TicketDetailWorkspace
 								selectedTicket={selectedTicket}
+								agents={agents}
 								userPermissions={userPermissions}
 								onCloseTicket={handleCloseTicket}
 								handleToggleControl={handleToggleControl}

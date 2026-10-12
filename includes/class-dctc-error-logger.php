@@ -184,9 +184,19 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 		 * @param array  $context Optional context with provider, model, user_msg, file, line, code, etc.
 		 * @return bool True on success, false on failure.
 		 */
-		public static function log( $type, $message, $context = array() ) {
+		public static function log( $type, $message = '', $context = array() ) {
 			if ( self::$is_logging || ! self::is_enabled() ) {
 				return false;
+			}
+
+			// Support flexible calling patterns: log( $message, $context ) or log( $message ).
+			if ( is_array( $message ) && empty( $context ) ) {
+				$context = $message;
+				$message = $type;
+				$type    = 'Plugin Error';
+			} elseif ( empty( $message ) && ! empty( $type ) ) {
+				$message = $type;
+				$type    = 'Plugin Error';
 			}
 
 			self::$is_logging = true;

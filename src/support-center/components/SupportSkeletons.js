@@ -16,6 +16,7 @@ export function TicketWorkspaceSkeleton() {
 					<h2 className="dctc-sc-ws-subject">
 						<div className="dctc-sk dctc-sk-ticket-title" />
 						<span className="dctc-sk dctc-sk-ticket-id" />
+						<span className="dctc-sk dctc-sk-badge" style={{ width: 70, height: 20, borderRadius: 4 }} />
 					</h2>
 				</div>
 
