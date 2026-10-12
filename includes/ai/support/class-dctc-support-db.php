@@ -57,8 +57,6 @@ class DCTC_Support_DB {
 			status varchar(30) DEFAULT 'open' NOT NULL,
 			priority varchar(20) DEFAULT 'normal' NOT NULL,
 			customer_last_seen_at datetime DEFAULT NULL,
-			customer_last_read_message_id varchar(64) DEFAULT '' NOT NULL,
-			agent_last_read_message_id varchar(64) DEFAULT '' NOT NULL,
 			first_response_at datetime DEFAULT NULL,
 			resolved_at datetime DEFAULT NULL,
 			closed_at datetime DEFAULT NULL,

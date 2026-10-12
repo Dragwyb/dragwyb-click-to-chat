@@ -287,19 +287,17 @@ class DCTC_Support_Ticket_Service {
 
 		// Insert only clean core columns into dctc_support_tickets table
 		$core_fields = array(
-			'ticket_number'                 => $ticket_number,
-			'uuid'                          => $uuid,
-			'customer_wp_user_id'           => $user_id,
-			'customer_email'                => $email,
-			'customer_name'                 => $name,
-			'subject'                       => $subject,
-			'status'                        => $status,
-			'priority'                      => $priority,
-			'customer_last_seen_at'         => current_time( 'mysql', true ),
-			'customer_last_read_message_id' => '',
-			'agent_last_read_message_id'    => '',
-			'created_at'                    => current_time( 'mysql', true ),
-			'updated_at'                    => current_time( 'mysql', true ),
+			'ticket_number'              => $ticket_number,
+			'uuid'                       => $uuid,
+			'customer_wp_user_id'        => $user_id,
+			'customer_email'             => $email,
+			'customer_name'              => $name,
+			'subject'                    => $subject,
+			'status'                     => $status,
+			'priority'                   => $priority,
+			'customer_last_seen_at'      => current_time( 'mysql', true ),
+			'created_at'                 => current_time( 'mysql', true ),
+			'updated_at'                 => current_time( 'mysql', true ),
 		);
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
