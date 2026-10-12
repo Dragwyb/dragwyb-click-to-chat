@@ -850,7 +850,7 @@ class DCTC_AI_Settings_Handler {
 				'deepseek'   => 'deepseek-chat',
 			),
 			'chatbot'     => array(
-				'bot_name'                       => 'Dragwyb AI',
+				'bot_name'                       => 'AI Assistant',
 				'primary_color'                  => '#6366f1',
 				'greeting_msg'                   => 'Hello! I am your AI assistant. How can I help you today?',
 				'bot_avatar'                     => '',
@@ -947,10 +947,10 @@ class DCTC_AI_Settings_Handler {
 				'ticket_notification_email'      => '',
 				'appointment_notification_email' => '',
 				'enable_page_context'            => true,
-				'enable_multilingual'            => true,
+				'enable_multilingual'            => false,
 				'preferred_language'             => 'auto',
 				'visitor_language_override'      => true,
-				'enable_voice_input'             => true,
+				'enable_voice_input'             => false,
 				'enable_voice_output'            => false,
 				'voice_language'                 => 'auto',
 				'enable_vision_understanding'    => true,
@@ -1256,7 +1256,7 @@ class DCTC_AI_Settings_Handler {
 		$existing_chatbot = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
 
 		$chatbot_settings = array(
-			'bot_name'                       => isset( $params['bot_name'] ) ? sanitize_text_field( $params['bot_name'] ) : ( isset( $existing_chatbot['bot_name'] ) ? $existing_chatbot['bot_name'] : 'Dragwyb AI' ),
+			'bot_name'                       => isset( $params['bot_name'] ) ? sanitize_text_field( $params['bot_name'] ) : ( isset( $existing_chatbot['bot_name'] ) ? $existing_chatbot['bot_name'] : 'AI Assistant' ),
 			'primary_color'                  => isset( $params['primary_color'] ) ? sanitize_hex_color( $params['primary_color'] ) : ( isset( $existing_chatbot['primary_color'] ) ? $existing_chatbot['primary_color'] : '#6366f1' ),
 			'greeting_msg'                   => isset( $params['greeting_msg'] ) ? sanitize_textarea_field( $params['greeting_msg'] ) : ( isset( $existing_chatbot['greeting_msg'] ) ? $existing_chatbot['greeting_msg'] : '' ),
 			'bot_avatar'                     => isset( $params['bot_avatar'] ) ? esc_url_raw( $params['bot_avatar'] ) : ( isset( $existing_chatbot['bot_avatar'] ) ? $existing_chatbot['bot_avatar'] : '' ),
@@ -1380,10 +1380,10 @@ class DCTC_AI_Settings_Handler {
 			'ticket_notification_email'      => isset( $params['ticket_notification_email'] ) ? sanitize_email( $params['ticket_notification_email'] ) : ( isset( $existing_chatbot['ticket_notification_email'] ) ? $existing_chatbot['ticket_notification_email'] : '' ),
 			'appointment_notification_email' => isset( $params['appointment_notification_email'] ) ? sanitize_email( $params['appointment_notification_email'] ) : ( isset( $existing_chatbot['appointment_notification_email'] ) ? $existing_chatbot['appointment_notification_email'] : '' ),
 			'enable_page_context'            => isset( $params['enable_page_context'] ) ? (bool) $params['enable_page_context'] : ( isset( $existing_chatbot['enable_page_context'] ) ? (bool) $existing_chatbot['enable_page_context'] : true ),
-			'enable_multilingual'            => isset( $params['enable_multilingual'] ) ? (bool) $params['enable_multilingual'] : ( isset( $existing_chatbot['enable_multilingual'] ) ? (bool) $existing_chatbot['enable_multilingual'] : true ),
+			'enable_multilingual'            => isset( $params['enable_multilingual'] ) ? (bool) $params['enable_multilingual'] : ( isset( $existing_chatbot['enable_multilingual'] ) ? (bool) $existing_chatbot['enable_multilingual'] : false ),
 			'preferred_language'             => isset( $params['preferred_language'] ) ? sanitize_text_field( $params['preferred_language'] ) : ( isset( $existing_chatbot['preferred_language'] ) ? $existing_chatbot['preferred_language'] : 'auto' ),
 			'visitor_language_override'      => isset( $params['visitor_language_override'] ) ? (bool) $params['visitor_language_override'] : ( isset( $existing_chatbot['visitor_language_override'] ) ? (bool) $existing_chatbot['visitor_language_override'] : true ),
-			'enable_voice_input'             => isset( $params['enable_voice_input'] ) ? (bool) $params['enable_voice_input'] : ( isset( $existing_chatbot['enable_voice_input'] ) ? (bool) $existing_chatbot['enable_voice_input'] : true ),
+			'enable_voice_input'             => isset( $params['enable_voice_input'] ) ? (bool) $params['enable_voice_input'] : ( isset( $existing_chatbot['enable_voice_input'] ) ? (bool) $existing_chatbot['enable_voice_input'] : false ),
 			'enable_voice_output'            => isset( $params['enable_voice_output'] ) ? (bool) $params['enable_voice_output'] : ( isset( $existing_chatbot['enable_voice_output'] ) ? (bool) $existing_chatbot['enable_voice_output'] : false ),
 			'voice_language'                 => isset( $params['voice_language'] ) ? sanitize_text_field( $params['voice_language'] ) : ( isset( $existing_chatbot['voice_language'] ) ? $existing_chatbot['voice_language'] : 'auto' ),
 			'enable_vision_understanding'    => isset( $params['enable_vision_understanding'] ) ? (bool) $params['enable_vision_understanding'] : ( isset( $existing_chatbot['enable_vision_understanding'] ) ? (bool) $existing_chatbot['enable_vision_understanding'] : true ),
