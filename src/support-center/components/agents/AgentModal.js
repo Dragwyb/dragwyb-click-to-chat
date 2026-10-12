@@ -2,16 +2,6 @@ import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 
-const PRESET_SKILLS = [
-	'technical',
-	'woocommerce',
-	'billing',
-	'product',
-	'returns',
-	'general',
-	'orders',
-];
-
 const PRESET_COLORS = [
 	{ name: 'Indigo', value: '#4f46e5' },
 	{ name: 'Sky Blue', value: '#0284c7' },
@@ -43,8 +33,13 @@ export default function AgentModal({
 	const [color, setColor] = useState('#4f46e5');
 	const [maxTickets, setMaxTickets] = useState(10);
 	const [availability, setAvailability] = useState('available');
-	const [skills, setSkills] = useState(['technical', 'woocommerce', 'billing']);
-	const [customSkillInput, setCustomSkillInput] = useState('');
+
+	// Category and Sub-Taxonomies state
+	const [categories, setCategories] = useState([]);
+	const [taxonomies, setTaxonomies] = useState([]);
+	const [allowedCategories, setAllowedCategories] = useState([]);
+	const [allowedSubtaxonomies, setAllowedSubtaxonomies] = useState({});
+	const [loadingTaxonomies, setLoadingTaxonomies] = useState(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -55,7 +50,8 @@ export default function AgentModal({
 				setColor(agent.color || '#4f46e5');
 				setMaxTickets(agent.max_active_tickets || 10);
 				setAvailability(agent.availability_status || 'available');
-				setSkills(Array.isArray(agent.skills) ? agent.skills : []);
+				setAllowedCategories(Array.isArray(agent.allowed_categories) ? agent.allowed_categories.map(Number) : []);
+				setAllowedSubtaxonomies(agent.allowed_subtaxonomies && typeof agent.allowed_subtaxonomies === 'object' ? agent.allowed_subtaxonomies : {});
 			} else {
 				setSelectedUserId('');
 				setSupportRole('support');
@@ -63,7 +59,8 @@ export default function AgentModal({
 				setColor('#4f46e5');
 				setMaxTickets(10);
 				setAvailability('available');
-				setSkills(['technical', 'woocommerce', 'billing']);
+				setAllowedCategories([]);
+				setAllowedSubtaxonomies({});
 			}
 
 			setLoadingUsers(true);
@@ -87,6 +84,27 @@ export default function AgentModal({
 				.finally(() => {
 					setLoadingUsers(false);
 				});
+
+			// Fetch categories and taxonomies with their terms
+			setLoadingTaxonomies(true);
+			Promise.all([
+				apiFetch({ path: '/dctc-ai/v1/support/categories' }),
+				apiFetch({ path: '/dctc-ai/v1/support/taxonomies' }),
+			])
+				.then(([catsRes, taxRes]) => {
+					if (catsRes?.categories) {
+						setCategories(catsRes.categories);
+					}
+					if (taxRes?.taxonomies) {
+						setTaxonomies(taxRes.taxonomies);
+					}
+				})
+				.catch((err) => {
+					console.error('Error fetching categories & taxonomies:', err);
+				})
+				.finally(() => {
+					setLoadingTaxonomies(false);
+				});
 		}
 	}, [isOpen, agent]);
 
@@ -103,41 +121,77 @@ export default function AgentModal({
 			}
 			setMaxTickets(existingAgent.max_active_tickets || 10);
 			setAvailability(existingAgent.availability_status || 'available');
-			if (Array.isArray(existingAgent.skills) && existingAgent.skills.length > 0) {
-				setSkills(existingAgent.skills);
+			if (Array.isArray(existingAgent.allowed_categories)) {
+				setAllowedCategories(existingAgent.allowed_categories.map(Number));
+			}
+			if (existingAgent.allowed_subtaxonomies && typeof existingAgent.allowed_subtaxonomies === 'object') {
+				setAllowedSubtaxonomies(existingAgent.allowed_subtaxonomies);
 			}
 		}
 	};
 
-	const toggleSkillPreset = (skill) => {
-		if (skills.includes(skill)) {
-			setSkills(skills.filter((s) => s !== skill));
+	const toggleCategory = (catId) => {
+		const idNum = Number(catId);
+		let nextCats;
+		if (allowedCategories.includes(idNum)) {
+			nextCats = allowedCategories.filter((id) => id !== idNum);
 		} else {
-			setSkills([...skills, skill]);
+			nextCats = [...allowedCategories, idNum];
+		}
+		setAllowedCategories(nextCats);
+	};
+
+	const selectAllCategories = () => {
+		if (allowedCategories.length === categories.length) {
+			setAllowedCategories([]);
+		} else {
+			setAllowedCategories(categories.map((c) => Number(c.id)));
 		}
 	};
 
-	const removeSkill = (skillToRemove) => {
-		setSkills(skills.filter((s) => s !== skillToRemove));
+	// Determine active categories and supported sub-taxonomies
+	const activeCategoryObjects = categories.filter((c) => allowedCategories.includes(Number(c.id)));
+	const supportedSubTaxSlugs = Array.from(
+		new Set(
+			activeCategoryObjects.flatMap((c) => {
+				if (Array.isArray(c.sub_taxonomies) && c.sub_taxonomies.length > 0) {
+					return c.sub_taxonomies;
+				}
+				const fallback = [];
+				if (Number(c.show_product ?? 1)) fallback.push('product');
+				if (Number(c.show_tags ?? 1)) fallback.push('tag');
+				return fallback;
+			})
+		)
+	);
+
+	const toggleSubtaxTerm = (taxSlug, termVal) => {
+		const currentTerms = Array.isArray(allowedSubtaxonomies[taxSlug]) ? [...allowedSubtaxonomies[taxSlug]] : [];
+		const isIncluded = currentTerms.some((t) => String(t) === String(termVal));
+		let nextTerms;
+		if (isIncluded) {
+			nextTerms = currentTerms.filter((t) => String(t) !== String(termVal));
+		} else {
+			nextTerms = [...currentTerms, termVal];
+		}
+		setAllowedSubtaxonomies({
+			...allowedSubtaxonomies,
+			[taxSlug]: nextTerms,
+		});
 	};
 
-	const handleAddCustomSkill = (e) => {
-		if (e.key === 'Enter' || e.key === ',') {
-			e.preventDefault();
-			const trimmed = customSkillInput.trim().toLowerCase().replace(/,/g, '');
-			if (trimmed && !skills.includes(trimmed)) {
-				setSkills([...skills, trimmed]);
-			}
-			setCustomSkillInput('');
+	const toggleAllTermsForTax = (taxSlug, allTerms) => {
+		const currentTerms = Array.isArray(allowedSubtaxonomies[taxSlug]) ? allowedSubtaxonomies[taxSlug] : [];
+		if (currentTerms.length === allTerms.length) {
+			const updated = { ...allowedSubtaxonomies };
+			delete updated[taxSlug];
+			setAllowedSubtaxonomies(updated);
+		} else {
+			setAllowedSubtaxonomies({
+				...allowedSubtaxonomies,
+				[taxSlug]: allTerms.map((t) => t.id || t.slug),
+			});
 		}
-	};
-
-	const handleAddCustomSkillBlur = () => {
-		const trimmed = customSkillInput.trim().toLowerCase().replace(/,/g, '');
-		if (trimmed && !skills.includes(trimmed)) {
-			setSkills([...skills, trimmed]);
-		}
-		setCustomSkillInput('');
 	};
 
 	const handleAddAgent = async (e) => {
@@ -150,13 +204,15 @@ export default function AgentModal({
 				path: '/dctc-ai/v1/support/agents',
 				method: 'POST',
 				data: {
+					id: agent?.id || 0,
 					wp_user_id: parseInt(selectedUserId, 10),
 					support_role: supportRole,
 					seniority: seniority,
 					color: color || '#4f46e5',
 					max_active_tickets: parseInt(maxTickets, 10) || 10,
 					availability_status: availability,
-					skills: skills,
+					allowed_categories: allowedCategories,
+					allowed_subtaxonomies: allowedSubtaxonomies,
 					active: 1,
 					assignment_enabled: 1,
 				},
@@ -181,7 +237,7 @@ export default function AgentModal({
 
 	const selectedUserObj = (wpUsers || []).find((u) => String(u.id) === String(selectedUserId));
 	const currentDisplayName = selectedUserObj?.display_name || agent?.display_name || 'Support Agent';
-	const userInitials = (function(name) {
+	const userInitials = (function (name) {
 		if (!name) return 'AG';
 		const parts = name.trim().split(/\s+/);
 		if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
@@ -190,8 +246,12 @@ export default function AgentModal({
 
 	return (
 		<div className="dctc-sc-modal-backdrop" onClick={onClose}>
-			<div className="dctc-sc-agent-modal-card" onClick={(e) => e.stopPropagation()}>
-				{/* Modal Header */}
+			<div
+				className="dctc-sc-agent-modal-card"
+				style={{ maxWidth: '640px', width: '92%' }}
+				onClick={(e) => e.stopPropagation()}
+			>
+				{/* Modal Top Header */}
 				<div className="dctc-sc-modal-top-header">
 					<div className="dctc-sc-modal-icon-badge">
 						<span className="dashicons dashicons-businesswoman"></span>
@@ -200,7 +260,9 @@ export default function AgentModal({
 						<h3 className="dctc-sc-modal-title">
 							{agent ? __('Edit Staff Support Agent', 'dragwyb-click-to-chat') : __('Add Staff Support Agent', 'dragwyb-click-to-chat')}
 						</h3>
-						<p className="dctc-sc-modal-desc">{__('Assign a WordPress user to the live support roster with custom routing permissions & ticket limits.', 'dragwyb-click-to-chat')}</p>
+						<p className="dctc-sc-modal-desc">
+							{__('Assign a WordPress user to the live support roster with custom routing permissions & ticket limits.', 'dragwyb-click-to-chat')}
+						</p>
 					</div>
 					<button
 						type="button"
@@ -216,7 +278,9 @@ export default function AgentModal({
 				{loadingUsers ? (
 					<div style={{ textAlign: 'center', padding: '60px 20px' }}>
 						<span className="spinner is-active" style={{ float: 'none', margin: '0 auto 12px' }}></span>
-						<p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>{__('Loading WordPress users list...', 'dragwyb-click-to-chat')}</p>
+						<p style={{ color: '#64748b', fontSize: '13.5px', margin: 0 }}>
+							{__('Loading WordPress users list...', 'dragwyb-click-to-chat')}
+						</p>
 					</div>
 				) : (
 					<form className="dctc-sc-modal-form" onSubmit={handleAddAgent}>
@@ -233,10 +297,12 @@ export default function AgentModal({
 										className="dctc-sc-custom-select"
 										value={selectedUserId}
 										onChange={(e) => handleSelectUser(e.target.value)}
+										disabled={!!agent}
 										required
 									>
+										<option value="">{__('-- Choose WordPress User Account --', 'dragwyb-click-to-chat')}</option>
 										{wpUsers.length === 0 && (
-											<option value="">{__('No WordPress users found', 'dragwyb-click-to-chat')}</option>
+											<option disabled>{__('No eligible WordPress users found', 'dragwyb-click-to-chat')}</option>
 										)}
 										{wpUsers.map((u) => {
 											const isOnRoster = (agents || []).some((a) => String(a.wp_user_id) === String(u.id));
@@ -248,7 +314,9 @@ export default function AgentModal({
 										})}
 									</select>
 								</div>
-								<span className="dctc-sc-field-hint">{__('Choose which registered WordPress account will handle customer tickets.', 'dragwyb-click-to-chat')}</span>
+								<span className="dctc-sc-field-hint">
+									{__('Choose which registered WordPress account will handle customer tickets.', 'dragwyb-click-to-chat')}
+								</span>
 							</div>
 
 							{/* Section 2: Support Role & Seniority */}
@@ -302,13 +370,15 @@ export default function AgentModal({
 									<input
 										type="number"
 										min="1"
-										max="100"
+										max="200"
 										className="dctc-sc-custom-input"
 										value={maxTickets}
 										onChange={(e) => setMaxTickets(e.target.value)}
 										placeholder="10"
 									/>
-									<span className="dctc-sc-field-hint">{__('Concurrent active ticket limit', 'dragwyb-click-to-chat')}</span>
+									<span className="dctc-sc-field-hint">
+										{__('Maximum concurrent open tickets allowed before routing elsewhere.', 'dragwyb-click-to-chat')}
+									</span>
 								</div>
 
 								<div className="dctc-sc-form-group">
@@ -322,16 +392,18 @@ export default function AgentModal({
 											value={availability}
 											onChange={(e) => setAvailability(e.target.value)}
 										>
-											<option value="available">{__('Available (Accepting Tickets)', 'dragwyb-click-to-chat')}</option>
-											<option value="away">{__('Away (Temporarily Busy)', 'dragwyb-click-to-chat')}</option>
-											<option value="offline">{__('Offline (Not Accepting)', 'dragwyb-click-to-chat')}</option>
+											<option value="available">🟢 {__('Available (Accepting Tickets)', 'dragwyb-click-to-chat')}</option>
+											<option value="away">🟡 {__('Away (Temporarily Busy)', 'dragwyb-click-to-chat')}</option>
+											<option value="offline">⚪ {__('Offline (Not Accepting)', 'dragwyb-click-to-chat')}</option>
 										</select>
 									</div>
-									<span className="dctc-sc-field-hint">{__('Can be changed anytime by agent', 'dragwyb-click-to-chat')}</span>
+									<span className="dctc-sc-field-hint">
+										{__('Can be changed anytime by agent from the Support topbar.', 'dragwyb-click-to-chat')}
+									</span>
 								</div>
 							</div>
 
-							{/* Section 4: Agent Avatar & Identifier Color */}
+							{/* Section 4: Brand Accent Color & Avatar Preview */}
 							<div className="dctc-sc-form-group">
 								<label className="dctc-sc-field-label">
 									<span className="dashicons dashicons-art"></span>
@@ -372,7 +444,7 @@ export default function AgentModal({
 											})}
 										</div>
 
-										<div className="dctc-sc-custom-color-input-row">
+										<div className="dctc-sc-custom-color-input-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 											<input
 												type="color"
 												className="dctc-sc-color-input-native"
@@ -387,6 +459,7 @@ export default function AgentModal({
 												onChange={(e) => setColor(e.target.value)}
 												placeholder="#4f46e5"
 												maxLength={7}
+												style={{ width: '90px' }}
 											/>
 										</div>
 									</div>
@@ -396,63 +469,199 @@ export default function AgentModal({
 								</span>
 							</div>
 
-							{/* Section 5: Routing Skills with Interactive Tag Pillbox */}
-							<div className="dctc-sc-form-group">
+							{/* Section 5: Assigned Categories & Supported Sub-Taxonomies */}
+							<div className="dctc-sc-form-group" style={{ marginTop: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '14px' }}>
 								<label className="dctc-sc-field-label">
-									<span className="dashicons dashicons-tag"></span>
-									{__('Routing Skills & Specialties', 'dragwyb-click-to-chat')}
+									<span className="dashicons dashicons-category"></span>
+									{__('Categories & Sub-Taxonomies Specialization', 'dragwyb-click-to-chat')}
 								</label>
-
-								<div className="dctc-sc-tag-input-container">
-									<div className="dctc-sc-active-tags-list">
-										{skills.map((skill) => (
-											<span key={skill} className="dctc-sc-tag-badge">
-												<span className="dctc-sc-tag-text">{skill}</span>
-												<button
-													type="button"
-													className="dctc-sc-tag-remove"
-													onClick={() => removeSkill(skill)}
-													title={__('Remove skill', 'dragwyb-click-to-chat')}
-												>
-													✕
-												</button>
-											</span>
-										))}
-										<input
-											type="text"
-											className="dctc-sc-tag-inline-input"
-											value={customSkillInput}
-											onChange={(e) => setCustomSkillInput(e.target.value)}
-											onKeyDown={handleAddCustomSkill}
-											onBlur={handleAddCustomSkillBlur}
-											placeholder={skills.length === 0 ? __('Type skill & press Enter (e.g. billing, shipping)', 'dragwyb-click-to-chat') : __('+ Add skill...', 'dragwyb-click-to-chat')}
-										/>
-									</div>
-								</div>
-
-								{/* Quick Add Preset Buttons */}
-								<div className="dctc-sc-preset-skills-wrapper">
-									<span className="dctc-sc-preset-label">{__('Quick add:', 'dragwyb-click-to-chat')}</span>
-									<div className="dctc-sc-preset-chips">
-										{PRESET_SKILLS.map((skill) => {
-											const isActive = skills.includes(skill);
-											return (
-												<button
-													key={skill}
-													type="button"
-													className={`dctc-sc-skill-chip ${isActive ? 'is-selected' : ''}`}
-													onClick={() => toggleSkillPreset(skill)}
-												>
-													<span className="dctc-sc-chip-icon">{isActive ? '✓' : '+'}</span>
-													{skill}
-												</button>
-											);
-										})}
-									</div>
-								</div>
-								<span className="dctc-sc-field-hint">
-									{__('Incoming tickets with matching issue categories will be auto-routed to this agent.', 'dragwyb-click-to-chat')}
+								<span className="dctc-sc-field-hint" style={{ marginBottom: '10px' }}>
+									{__('Assign ticket categories to this agent. Sub-taxonomies (products, tags) supported by selected categories are displayed below for precise skill & item matching.', 'dragwyb-click-to-chat')}
 								</span>
+
+								{/* Category Selection */}
+								<div style={{ marginBottom: '14px' }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+										<span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+											{__('1. Select Authorized Categories:', 'dragwyb-click-to-chat')}
+										</span>
+										{categories.length > 0 && (
+											<button
+												type="button"
+												className="button button-small"
+												onClick={selectAllCategories}
+												style={{ fontSize: '11px', height: '24px', lineHeight: '22px' }}
+											>
+												{allowedCategories.length === categories.length
+													? __('Deselect All', 'dragwyb-click-to-chat')
+													: __('Select All Categories', 'dragwyb-click-to-chat')}
+											</button>
+										)}
+									</div>
+
+									{loadingTaxonomies ? (
+										<div style={{ padding: '8px 0', color: '#94a3b8', fontSize: '12px' }}>
+											<span className="spinner is-active" style={{ float: 'none', margin: '0 6px 0 0' }}></span>
+											{__('Loading categories & taxonomies...', 'dragwyb-click-to-chat')}
+										</div>
+									) : categories.length === 0 ? (
+										<p style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic', margin: 0 }}>
+											{__('No categories created yet. Create categories under Support > Taxonomies.', 'dragwyb-click-to-chat')}
+										</p>
+									) : (
+										<div className="dctc-sc-preset-chips">
+											{categories.map((cat) => {
+												const isSelected = allowedCategories.includes(Number(cat.id));
+												return (
+													<button
+														key={cat.id}
+														type="button"
+														className={`dctc-sc-skill-chip ${isSelected ? 'is-selected' : ''}`}
+														onClick={() => toggleCategory(cat.id)}
+														style={isSelected ? {
+															backgroundColor: cat.color || '#4f46e5',
+															borderColor: cat.color || '#4338ca',
+															color: '#ffffff',
+														} : {}}
+													>
+														<span
+															style={{
+																width: '7px',
+																height: '7px',
+																borderRadius: '50%',
+																backgroundColor: isSelected ? '#ffffff' : (cat.color || '#4f46e5'),
+																display: 'inline-block',
+															}}
+														></span>
+														<span>{cat.name}</span>
+														<span className="dctc-sc-chip-icon">
+															{isSelected ? '✓' : '+'}
+														</span>
+													</button>
+												);
+											})}
+										</div>
+									)}
+								</div>
+
+								{/* Supported Sub-Taxonomies */}
+								<div>
+									<div style={{ marginBottom: '8px' }}>
+										<span style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>
+											{__('2. Supported Sub-Taxonomies & Items (Based on Selected Categories):', 'dragwyb-click-to-chat')}
+										</span>
+									</div>
+
+									{allowedCategories.length === 0 ? (
+										<div
+											style={{
+												background: '#f8fafc',
+												border: '1px dashed #cbd5e1',
+												borderRadius: '8px',
+												padding: '12px 14px',
+												textAlign: 'center',
+												color: '#64748b',
+												fontSize: '12px',
+											}}
+										>
+											<span className="dashicons dashicons-info" style={{ verticalAlign: 'middle', marginRight: '4px' }}></span>
+											{__('Select one or more categories above to display and configure supported sub-taxonomies and items.', 'dragwyb-click-to-chat')}
+										</div>
+									) : supportedSubTaxSlugs.length === 0 ? (
+										<div
+											style={{
+												background: '#f8fafc',
+												border: '1px solid #e2e8f0',
+												borderRadius: '8px',
+												padding: '12px',
+												color: '#64748b',
+												fontSize: '12px',
+											}}
+										>
+											{__('The selected categories do not have sub-taxonomies assigned. Standard ticket fields will be used.', 'dragwyb-click-to-chat')}
+										</div>
+									) : (
+										<div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+											{supportedSubTaxSlugs.map((slug) => {
+												const taxDef = taxonomies.find((t) => t.slug === slug);
+												const taxTitle = taxDef ? taxDef.name : (slug.charAt(0).toUpperCase() + slug.slice(1));
+												const terms = Array.isArray(taxDef?.terms) ? taxDef.terms : [];
+												const selectedForTax = Array.isArray(allowedSubtaxonomies[slug]) ? allowedSubtaxonomies[slug] : [];
+
+												return (
+													<div
+														key={slug}
+														style={{
+															background: '#f8fafc',
+															border: '1px solid #e2e8f0',
+															borderRadius: '8px',
+															padding: '12px',
+														}}
+													>
+														<div
+															style={{
+																display: 'flex',
+																justifyContent: 'space-between',
+																alignItems: 'center',
+																marginBottom: '8px',
+															}}
+														>
+															<div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+																<span className="dashicons dashicons-tag" style={{ color: taxDef?.color || '#4f46e5', fontSize: '15px', lineHeight: 1 }}></span>
+																<strong style={{ fontSize: '12px', color: '#1e293b' }}>{taxTitle}</strong>
+																<span style={{ fontSize: '11px', color: '#64748b' }}>
+																	({selectedForTax.length > 0 ? `${selectedForTax.length}/${terms.length} ${__('specialized items', 'dragwyb-click-to-chat')}` : __('Handles all items', 'dragwyb-click-to-chat')})
+																</span>
+															</div>
+
+															{terms.length > 0 && (
+																<button
+																	type="button"
+																	className="button button-small"
+																	onClick={() => toggleAllTermsForTax(slug, terms)}
+																	style={{ fontSize: '10px', height: '22px', lineHeight: '20px', padding: '0 8px' }}
+																>
+																	{selectedForTax.length === terms.length
+																		? __('Clear Selection', 'dragwyb-click-to-chat')
+																		: __('Select All Items', 'dragwyb-click-to-chat')}
+																</button>
+															)}
+														</div>
+
+														{terms.length === 0 ? (
+															<p style={{ margin: '4px 0 0 0', fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+																{__('No items configured for this taxonomy yet.', 'dragwyb-click-to-chat')}
+															</p>
+														) : (
+															<div className="dctc-sc-preset-chips" style={{ marginTop: '6px' }}>
+																{terms.map((term) => {
+																	const termKey = term.id || term.slug;
+																	const isTermSelected = selectedForTax.some((val) => String(val) === String(term.id) || String(val) === String(term.slug));
+																	return (
+																		<button
+																			key={term.id || term.slug}
+																			type="button"
+																			className={`dctc-sc-skill-chip ${isTermSelected ? 'is-selected' : ''}`}
+																			onClick={() => toggleSubtaxTerm(slug, termKey)}
+																			style={isTermSelected ? {
+																				backgroundColor: '#4f46e5',
+																				borderColor: '#4338ca',
+																				color: '#ffffff',
+																			} : {}}
+																		>
+																			<span className="dctc-sc-chip-icon">{isTermSelected ? '✓' : '+'}</span>
+																			{term.name || term.slug}
+																		</button>
+																	);
+																})}
+															</div>
+														)}
+													</div>
+												);
+											})}
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 

@@ -40,16 +40,10 @@ class DCTC_Support_Assignment_Engine {
 		$respect_workload     = ! isset( $settings['respect_workload'] ) || (bool) $settings['respect_workload'];
 		$fallback_agent_id    = ! empty( $settings['fallback_agent_id'] ) ? absint( $settings['fallback_agent_id'] ) : 0;
 
-		// 1. Gather Required Skills for the Ticket
-		$required_skills = array();
-		if ( ! empty( $ticket['category_id'] ) ) {
-			$category = DCTC_Support_Category_Service::get_category( $ticket['category_id'] );
-			if ( $category && ! empty( $category['required_skills'] ) ) {
-				$required_skills = $category['required_skills'];
-			}
-		}
+		global $wpdb;
+		$table_agents = $wpdb->prefix . 'dctc_support_agents';
 
-		// 2. Fetch All Active Candidates
+		// 1. Fetch All Active Candidates
 		$candidate_args = array(
 			'active'             => 1,
 			'assignment_enabled' => 1,
@@ -63,21 +57,149 @@ class DCTC_Support_Assignment_Engine {
 			return self::handle_fallback( $ticket_id, $fallback_agent_id, 'No available agents found' );
 		}
 
-		// 3. Filter by Category & Workload Limits
-		$eligible_agents = array();
-		foreach ( $all_agents as $agent ) {
-			// Workload limit check
-			if ( $respect_workload && $agent['current_active_tickets'] >= $agent['max_active_tickets'] ) {
-				continue; // Overloaded
+		// 2. CHECK IF TICKET IS A LEAD GENERATION TICKET
+		// Lead generated tickets ALWAYS assign to Administrator or Support Manager
+		$is_lead_ticket = false;
+		if ( ! empty( $ticket['interaction_type'] ) && 'LEAD_GENERATION' === strtoupper( $ticket['interaction_type'] ) ) {
+			$is_lead_ticket = true;
+		} elseif ( ! empty( $ticket['intent_types'] ) && ( false !== strpos( (string) $ticket['intent_types'], 'lead_generation' ) ) ) {
+			$is_lead_ticket = true;
+		} elseif ( ! empty( $ticket['lead_id'] ) && (int) $ticket['lead_id'] > 0 ) {
+			$is_lead_ticket = true;
+		} elseif ( ! empty( $ticket['subject'] ) && 0 === strpos( $ticket['subject'], '[Lead]' ) ) {
+			$is_lead_ticket = true;
+		} else {
+			$lead_meta = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'lead_id', true );
+			if ( ! empty( $lead_meta ) && (int) $lead_meta > 0 ) {
+				$is_lead_ticket = true;
 			}
+		}
 
-			// Allowed categories check
-			if ( ! empty( $agent['allowed_categories'] ) && ! empty( $ticket['category_id'] ) ) {
-				if ( ! in_array( (int) $ticket['category_id'], array_map( 'intval', $agent['allowed_categories'] ), true ) ) {
-					continue; // Not authorized for this category
+		if ( $is_lead_ticket ) {
+			$lead_managers = array();
+			foreach ( $all_agents as $agent ) {
+				$is_admin_or_mgr = in_array( $agent['support_role'], array( 'admin', 'manager' ), true )
+					|| in_array( $agent['seniority'], array( 'manager' ), true )
+					|| user_can( $agent['wp_user_id'], 'manage_options' );
+
+				if ( $is_admin_or_mgr ) {
+					if ( $respect_workload && $agent['current_active_tickets'] >= $agent['max_active_tickets'] ) {
+						continue;
+					}
+					$lead_managers[] = $agent;
 				}
 			}
 
+			// If all managers are at capacity, ignore workload limit for leads to ensure an admin/manager handles it
+			if ( empty( $lead_managers ) ) {
+				foreach ( $all_agents as $agent ) {
+					if ( in_array( $agent['support_role'], array( 'admin', 'manager' ), true ) || user_can( $agent['wp_user_id'], 'manage_options' ) ) {
+						$lead_managers[] = $agent;
+					}
+				}
+			}
+
+			if ( ! empty( $lead_managers ) ) {
+				usort(
+					$lead_managers,
+					function ( $a, $b ) {
+						if ( (int) $a['current_active_tickets'] === (int) $b['current_active_tickets'] ) {
+							$time_a = ! empty( $a['last_assigned_at'] ) ? strtotime( $a['last_assigned_at'] ) : 0;
+							$time_b = ! empty( $b['last_assigned_at'] ) ? strtotime( $b['last_assigned_at'] ) : 0;
+							return $time_a <=> $time_b;
+						}
+						return (int) $a['current_active_tickets'] <=> (int) $b['current_active_tickets'];
+					}
+				);
+
+				$selected_lead_agent = $lead_managers[0];
+				$assigned_id         = (int) $selected_lead_agent['id'];
+
+				DCTC_Support_Ticket_Service::assign_ticket(
+					$ticket_id,
+					$assigned_id,
+					0,
+					'lead_auto_routing',
+					'Auto-assigned to Administrator / Support Manager for Lead follow-up',
+					0
+				);
+
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_agents,
+					array( 'last_assigned_at' => current_time( 'mysql' ) ),
+					array( 'id' => $assigned_id ),
+					array( '%s' ),
+					array( '%d' )
+				);
+
+				return $assigned_id;
+			}
+		}
+
+		// 3. GATHER TICKET CATEGORY & SUBTAXONOMY TERMS
+		$ticket_cat_id = ! empty( $ticket['category_id'] ) ? absint( $ticket['category_id'] ) : 0;
+
+		$ticket_terms_by_tax = array();
+		$ticket_term_ids     = array();
+		$ticket_term_slugs   = array();
+
+		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
+			$terms = DCTC_Support_Taxonomy_Service::get_object_terms( $ticket_id, '', 'ticket' );
+			if ( is_array( $terms ) ) {
+				foreach ( $terms as $term_row ) {
+					$tax_slug = ! empty( $term_row['taxonomy_slug'] ) ? $term_row['taxonomy_slug'] : 'tag';
+					$term_id  = absint( $term_row['id'] );
+					$t_slug   = ! empty( $term_row['slug'] ) ? $term_row['slug'] : '';
+
+					if ( ! isset( $ticket_terms_by_tax[ $tax_slug ] ) ) {
+						$ticket_terms_by_tax[ $tax_slug ] = array();
+					}
+					$ticket_terms_by_tax[ $tax_slug ][] = $term_id;
+					if ( $t_slug ) {
+						$ticket_terms_by_tax[ $tax_slug ][] = $t_slug;
+					}
+					$ticket_term_ids[]   = $term_id;
+					$ticket_term_slugs[] = $t_slug;
+				}
+			}
+		}
+
+		// Also include tags from ticket record if present
+		if ( ! empty( $ticket['tags'] ) && is_array( $ticket['tags'] ) ) {
+			foreach ( $ticket['tags'] as $tag_item ) {
+				$t_id   = is_array( $tag_item ) && ! empty( $tag_item['id'] ) ? absint( $tag_item['id'] ) : ( is_numeric( $tag_item ) ? absint( $tag_item ) : 0 );
+				$t_slug = is_array( $tag_item ) && ! empty( $tag_item['slug'] ) ? $tag_item['slug'] : ( is_string( $tag_item ) ? sanitize_title( $tag_item ) : '' );
+				if ( ! isset( $ticket_terms_by_tax['tag'] ) ) {
+					$ticket_terms_by_tax['tag'] = array();
+				}
+				if ( $t_id ) {
+					$ticket_terms_by_tax['tag'][] = $t_id;
+					$ticket_term_ids[]           = $t_id;
+				}
+				if ( $t_slug ) {
+					$ticket_terms_by_tax['tag'][] = $t_slug;
+					$ticket_term_slugs[]         = $t_slug;
+				}
+			}
+		}
+
+		// Also check product meta if present
+		if ( ! empty( $ticket['product'] ) ) {
+			$prod_slug = sanitize_title( $ticket['product'] );
+			if ( ! isset( $ticket_terms_by_tax['product'] ) ) {
+				$ticket_terms_by_tax['product'] = array();
+			}
+			$ticket_terms_by_tax['product'][] = $prod_slug;
+			$ticket_term_slugs[]             = $prod_slug;
+		}
+
+		// 4. FILTER BY WORKLOAD LIMITS
+		$eligible_agents = array();
+		foreach ( $all_agents as $agent ) {
+			if ( $respect_workload && $agent['current_active_tickets'] >= $agent['max_active_tickets'] ) {
+				continue; // Overloaded
+			}
 			$eligible_agents[] = $agent;
 		}
 
@@ -85,25 +207,62 @@ class DCTC_Support_Assignment_Engine {
 			return self::handle_fallback( $ticket_id, $fallback_agent_id, 'All eligible agents are currently at max capacity' );
 		}
 
-		// 4. Rank & Score Candidates
+		// 5. SCORE CANDIDATES BASED ON CATEGORY & SUBTAXONOMIES MATCHING
 		$scored_agents = array();
 		foreach ( $eligible_agents as $agent ) {
 			$score = 100;
 
-			// Skill Matching (+30 points per matching skill)
-			$agent_skills   = is_array( $agent['skills'] ) ? $agent['skills'] : array();
-			$matched_skills = 0;
-			if ( ! empty( $required_skills ) ) {
-				foreach ( $required_skills as $req_skill ) {
-					if ( in_array( $req_skill, $agent_skills, true ) ) {
-						$score += 30;
-						++$matched_skills;
+			$allowed_cats = ! empty( $agent['allowed_categories'] ) && is_array( $agent['allowed_categories'] )
+				? array_map( 'intval', $agent['allowed_categories'] )
+				: array();
+
+			$allowed_subtax = ! empty( $agent['allowed_subtaxonomies'] ) && is_array( $agent['allowed_subtaxonomies'] )
+				? $agent['allowed_subtaxonomies']
+				: array();
+
+			// CATEGORY MATCHING (+100 points if category matches)
+			$has_cat_match = false;
+			if ( $ticket_cat_id > 0 ) {
+				if ( ! empty( $allowed_cats ) ) {
+					if ( in_array( $ticket_cat_id, $allowed_cats, true ) ) {
+						$score        += 100;
+						$has_cat_match = true;
+					} else {
+						// Authorized for specific categories but NOT this one
+						$score -= 150;
+					}
+				} else {
+					// Handles all categories generally
+					$score += 30;
+				}
+			}
+
+			// SUBTAXONOMIES / ITEMS MATCHING (+80 points per matching item)
+			$subtax_matches = 0;
+			if ( ! empty( $allowed_subtax ) && ! empty( $ticket_terms_by_tax ) ) {
+				foreach ( $allowed_subtax as $tax_slug => $agent_tax_items ) {
+					if ( empty( $agent_tax_items ) || ! is_array( $agent_tax_items ) ) {
+						continue;
+					}
+
+					if ( isset( $ticket_terms_by_tax[ $tax_slug ] ) ) {
+						$ticket_items_for_tax = $ticket_terms_by_tax[ $tax_slug ];
+						foreach ( $agent_tax_items as $allowed_item ) {
+							$is_match = in_array( (string) $allowed_item, array_map( 'strval', $ticket_items_for_tax ), true )
+								|| ( is_numeric( $allowed_item ) && in_array( (int) $allowed_item, array_map( 'intval', $ticket_term_ids ), true ) );
+
+							if ( $is_match ) {
+								$score          += 80;
+								$subtax_matches += 1;
+							}
+						}
 					}
 				}
-				// If skills are required but agent has 0 matches, penalize
-				if ( $matched_skills === 0 ) {
-					$score -= 40;
-				}
+			}
+
+			// High synergy bonus: Agent matches BOTH category and subtaxonomies
+			if ( $has_cat_match && $subtax_matches > 0 ) {
+				$score += 50;
 			}
 
 			// Seniority & Urgent Priority (+25 points for senior/manager on urgent tickets)
@@ -113,29 +272,20 @@ class DCTC_Support_Assignment_Engine {
 				}
 			}
 
-			// Workload Penalty (-10 points per active ticket for balancing)
+			// Workload balancing penalty (-10 points per active ticket)
 			$score -= ( (int) $agent['current_active_tickets'] * 10 );
 
 			$agent['calculated_score'] = $score;
+			$agent['subtax_matches']   = $subtax_matches;
+			$agent['has_cat_match']    = $has_cat_match;
 			$scored_agents[]           = $agent;
 		}
 
-		// 5. Select Winning Agent based on Configured Algorithm
-		$selected_agent = null;
-		if ( 'skill_match' === $algorithm ) {
-			// Sort by calculated_score DESC
-			usort(
-				$scored_agents,
-				function ( $a, $b ) {
-					return $b['calculated_score'] <=> $a['calculated_score'];
-				}
-			);
-			$selected_agent = $scored_agents[0];
-		} else {
-			// Default: skill_match with round-robin tiebreaker
-			usort(
-				$scored_agents,
-				function ( $a, $b ) {
+		// 6. SELECT WINNING AGENT
+		usort(
+			$scored_agents,
+			function ( $a, $b ) {
+				if ( $a['calculated_score'] === $b['calculated_score'] ) {
 					if ( (int) $a['current_active_tickets'] === (int) $b['current_active_tickets'] ) {
 						$time_a = ! empty( $a['last_assigned_at'] ) ? strtotime( $a['last_assigned_at'] ) : 0;
 						$time_b = ! empty( $b['last_assigned_at'] ) ? strtotime( $b['last_assigned_at'] ) : 0;
@@ -143,30 +293,36 @@ class DCTC_Support_Assignment_Engine {
 					}
 					return (int) $a['current_active_tickets'] <=> (int) $b['current_active_tickets'];
 				}
-			);
-			$selected_agent = $scored_agents[0];
-		}
+				return $b['calculated_score'] <=> $a['calculated_score'];
+			}
+		);
 
+		$selected_agent = ! empty( $scored_agents[0] ) ? $scored_agents[0] : null;
 		if ( ! $selected_agent ) {
 			return self::handle_fallback( $ticket_id, $fallback_agent_id, 'Assignment algorithm yielded no agent' );
 		}
 
-		// 6. Execute Assignment
+		// 7. EXECUTE ASSIGNMENT
 		$assigned_id = (int) $selected_agent['id'];
-		$reason      = sprintf( 'Auto-assigned via %s algorithm (Score: %d)', $algorithm, $selected_agent['calculated_score'] );
+		$match_info  = '';
+		if ( ! empty( $selected_agent['has_cat_match'] ) && ! empty( $selected_agent['subtax_matches'] ) ) {
+			$match_info = ' (Matched Category & Subtaxonomies)';
+		} elseif ( ! empty( $selected_agent['has_cat_match'] ) ) {
+			$match_info = ' (Matched Category)';
+		}
+
+		$reason = sprintf( 'Auto-assigned via taxonomy routing%s (Score: %d)', $match_info, $selected_agent['calculated_score'] );
 
 		DCTC_Support_Ticket_Service::assign_ticket(
 			$ticket_id,
 			$assigned_id,
 			0,
-			'automatic_' . $algorithm,
+			'automatic_taxonomy_match',
 			$reason,
-			0 // system assigned
+			0
 		);
 
 		// Update agent's last_assigned_at timestamp
-		global $wpdb;
-		$table_agents = $wpdb->prefix . 'dctc_support_agents';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$wpdb->update(
 			$table_agents,

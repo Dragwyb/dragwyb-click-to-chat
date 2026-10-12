@@ -1,7 +1,7 @@
 /**
  * Support Center - Agents & Staff View
  */
-import { useState } from '@wordpress/element';
+import { useState, useEffect } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import { AgentModal } from '../components/agents';
@@ -10,6 +10,17 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 	const [showModal, setShowModal] = useState(false);
 	const [editingAgent, setEditingAgent] = useState(null);
 	const [notice, setNotice] = useState(null);
+	const [categories, setCategories] = useState([]);
+
+	useEffect(() => {
+		apiFetch({ path: '/dctc-ai/v1/support/categories' })
+			.then((res) => {
+				if (res?.categories) {
+					setCategories(res.categories);
+				}
+			})
+			.catch((err) => console.error('Error fetching categories in AgentsView:', err));
+	}, []);
 
 	const canManageAgents = !(userPermissions.is_admin === false && !userPermissions.manage_agents);
 
@@ -70,7 +81,7 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 				</div>
 				<div>
 					<h3>{__('Support Staff & Agent Roster', 'dragwyb-click-to-chat')}</h3>
-					<p className="dctc-sc-panel-sub">{__('Manage support specialist availability, routing skills, and active ticket capacities.', 'dragwyb-click-to-chat')}</p>
+					<p className="dctc-sc-panel-sub">{__('Manage support specialist availability, category routing, and active ticket capacities.', 'dragwyb-click-to-chat')}</p>
 				</div>
 				<div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
 					{canManageAgents && (
@@ -104,7 +115,7 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 						<th>{__('Seniority', 'dragwyb-click-to-chat')}</th>
 						<th>{__('Availability', 'dragwyb-click-to-chat')}</th>
 						<th>{__('Active Load', 'dragwyb-click-to-chat')}</th>
-						<th>{__('Assigned Skills', 'dragwyb-click-to-chat')}</th>
+						<th>{__('Categories & Specialization', 'dragwyb-click-to-chat')}</th>
 						{canManageAgents && <th style={{ width: '130px', textAlign: 'center' }}>{__('Action', 'dragwyb-click-to-chat')}</th>}
 					</tr>
 				</thead>
@@ -154,9 +165,53 @@ export default function AgentsView({ agents = [], onRefresh, userPermissions = {
 								</td>
 								<td>
 									<div className="dctc-sc-skills-wrap">
-										{(ag.skills || []).map((s) => (
-											<span key={s} className="dctc-sc-skill-tag">{s}</span>
-										))}
+										{(() => {
+											const allowedCats = Array.isArray(ag.allowed_categories) ? ag.allowed_categories.map(Number) : [];
+											const subtaxMap = ag.allowed_subtaxonomies && typeof ag.allowed_subtaxonomies === 'object' ? ag.allowed_subtaxonomies : {};
+											const subtaxKeys = Object.keys(subtaxMap).filter((k) => Array.isArray(subtaxMap[k]) && subtaxMap[k].length > 0);
+
+											if (allowedCats.length === 0 && subtaxKeys.length === 0) {
+												return (
+													<span className="dctc-sc-skill-tag" style={{ background: '#f1f5f9', color: '#64748b' }}>
+														{__('All Categories', 'dragwyb-click-to-chat')}
+													</span>
+												);
+											}
+
+											const catBadges = allowedCats.map((cid) => {
+												const cObj = categories.find((c) => Number(c.id) === cid);
+												return (
+													<span
+														key={`cat-${cid}`}
+														className="dctc-sc-skill-tag"
+														style={{
+															background: cObj ? `${cObj.color || '#4f46e5'}18` : '#ede9fe',
+															color: cObj ? (cObj.color || '#4f46e5') : '#5b21b6',
+															border: cObj ? `1px solid ${cObj.color || '#4f46e5'}33` : 'none',
+														}}
+													>
+														{cObj ? cObj.name : `Cat #${cid}`}
+													</span>
+												);
+											});
+
+											const subtaxBadges = subtaxKeys.map((taxSlug) => (
+												<span
+													key={`tax-${taxSlug}`}
+													className="dctc-sc-skill-tag"
+													style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a' }}
+												>
+													{`${taxSlug}: ${subtaxMap[taxSlug].length}`}
+												</span>
+											));
+
+											return (
+												<div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+													{catBadges}
+													{subtaxBadges}
+												</div>
+											);
+										})()}
 									</div>
 								</td>
 								{canManageAgents && (

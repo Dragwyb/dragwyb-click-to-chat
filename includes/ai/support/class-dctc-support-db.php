@@ -169,6 +169,7 @@ class DCTC_Support_DB {
 			color varchar(30) DEFAULT '#4f46e5' NOT NULL,
 			skills longtext,
 			allowed_categories longtext,
+			allowed_subtaxonomies longtext,
 			active tinyint(1) DEFAULT 1 NOT NULL,
 			assignment_enabled tinyint(1) DEFAULT 1 NOT NULL,
 			availability_status varchar(20) DEFAULT 'available' NOT NULL,

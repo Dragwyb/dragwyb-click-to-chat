@@ -96,8 +96,6 @@ class DCTC_Support_Category_Service {
 			$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 			$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
 
-			$req_skills             = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
-			$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
 
 			$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 			$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
@@ -141,8 +139,6 @@ class DCTC_Support_Category_Service {
 		$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 		$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
 
-		$req_skills             = ! empty( $meta['required_skills'] ) ? json_decode( $meta['required_skills'], true ) : array();
-		$row['required_skills'] = is_array( $req_skills ) ? $req_skills : array();
 
 		$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 		$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
@@ -192,10 +188,6 @@ class DCTC_Support_Category_Service {
 		$show_product = in_array( 'product', $sub_tax_list, true ) ? 1 : ( isset( $data['show_product'] ) ? ( $data['show_product'] ? 1 : 0 ) : 0 );
 		$show_tags    = in_array( 'tag', $sub_tax_list, true ) ? 1 : ( isset( $data['show_tags'] ) ? ( $data['show_tags'] ? 1 : 0 ) : 0 );
 
-		$skills = isset( $data['required_skills'] ) && is_array( $data['required_skills'] )
-			? wp_json_encode( array_values( array_map( 'sanitize_key', $data['required_skills'] ) ) )
-			: ( is_string( $data['required_skills'] ) && ! empty( $data['required_skills'] ) ? $data['required_skills'] : '[]' );
-
 		if ( empty( $name ) || empty( $slug ) ) {
 			return false;
 		}
@@ -231,7 +223,6 @@ class DCTC_Support_Category_Service {
 		if ( class_exists( 'DCTC_Support_Taxonomy_Service' ) ) {
 			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'default_priority', $default_priority );
 			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'default_team_id', $default_team_id );
-			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'required_skills', $skills );
 			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'requires_human', $requires_human );
 			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'ai_allowed', $ai_allowed );
 			DCTC_Support_Taxonomy_Service::update_term_meta( $term_id, 'auto_assign', $auto_assign );

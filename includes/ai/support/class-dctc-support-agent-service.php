@@ -61,6 +61,9 @@ class DCTC_Support_Agent_Service {
 
 			$row['allowed_categories'] = ! empty( $row['allowed_categories'] ) ? json_decode( $row['allowed_categories'], true ) : array();
 			$row['allowed_categories'] = is_array( $row['allowed_categories'] ) ? $row['allowed_categories'] : array();
+
+			$row['allowed_subtaxonomies'] = ! empty( $row['allowed_subtaxonomies'] ) ? json_decode( $row['allowed_subtaxonomies'], true ) : array();
+			$row['allowed_subtaxonomies'] = is_array( $row['allowed_subtaxonomies'] ) ? $row['allowed_subtaxonomies'] : array();
 		}
 
 		return $rows;
@@ -94,6 +97,9 @@ class DCTC_Support_Agent_Service {
 
 			$row['allowed_categories'] = ! empty( $row['allowed_categories'] ) ? json_decode( $row['allowed_categories'], true ) : array();
 			$row['allowed_categories'] = is_array( $row['allowed_categories'] ) ? $row['allowed_categories'] : array();
+
+			$row['allowed_subtaxonomies'] = ! empty( $row['allowed_subtaxonomies'] ) ? json_decode( $row['allowed_subtaxonomies'], true ) : array();
+			$row['allowed_subtaxonomies'] = is_array( $row['allowed_subtaxonomies'] ) ? $row['allowed_subtaxonomies'] : array();
 		}
 
 		return $row;
@@ -127,6 +133,9 @@ class DCTC_Support_Agent_Service {
 
 			$row['allowed_categories'] = ! empty( $row['allowed_categories'] ) ? json_decode( $row['allowed_categories'], true ) : array();
 			$row['allowed_categories'] = is_array( $row['allowed_categories'] ) ? $row['allowed_categories'] : array();
+
+			$row['allowed_subtaxonomies'] = ! empty( $row['allowed_subtaxonomies'] ) ? json_decode( $row['allowed_subtaxonomies'], true ) : array();
+			$row['allowed_subtaxonomies'] = is_array( $row['allowed_subtaxonomies'] ) ? $row['allowed_subtaxonomies'] : array();
 		}
 
 		return $row;
@@ -168,7 +177,11 @@ class DCTC_Support_Agent_Service {
 			: wp_json_encode( array() );
 
 		$allowed_categories = isset( $data['allowed_categories'] ) && is_array( $data['allowed_categories'] )
-			? wp_json_encode( array_map( 'absint', $data['allowed_categories'] ) )
+			? wp_json_encode( array_values( array_map( 'absint', $data['allowed_categories'] ) ) )
+			: wp_json_encode( array() );
+
+		$allowed_subtaxonomies = isset( $data['allowed_subtaxonomies'] ) && is_array( $data['allowed_subtaxonomies'] )
+			? wp_json_encode( $data['allowed_subtaxonomies'] )
 			: wp_json_encode( array() );
 
 		if ( ! $id && ! $wp_user_id ) {
@@ -192,6 +205,7 @@ class DCTC_Support_Agent_Service {
 			'color'                      => $color,
 			'skills'                     => $skills,
 			'allowed_categories'         => $allowed_categories,
+			'allowed_subtaxonomies'      => $allowed_subtaxonomies,
 			'active'                     => $active,
 			'assignment_enabled'         => $assignment_enabled,
 			'availability_status'        => $availability_status,

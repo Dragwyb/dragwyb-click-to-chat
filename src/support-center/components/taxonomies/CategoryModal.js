@@ -13,7 +13,6 @@ export default function CategoryModal({
 	saving,
 	generateSlug,
 	COLOR_PRESETS,
-	PRESET_SKILLS,
 	taxonomies,
 	draggedSubTaxSlug,
 	setDraggedSubTaxSlug,
@@ -279,51 +278,7 @@ export default function CategoryModal({
 							</div>
 						</div>
 
-						{/* Required Skills Pillbox */}
-						<div className="dctc-sc-form-group">
-							<label className="dctc-sc-field-label">
-								<span className="dashicons dashicons-awards"></span>
-								{__('Required Agent Skills (Auto-routing matching)', 'dragwyb-click-to-chat')}
-							</label>
-							<input
-								type="text"
-								className="dctc-sc-custom-input"
-								placeholder="e.g. technical, billing, returns"
-								value={catForm.required_skills}
-								onChange={(e) => setCatForm({ ...catForm, required_skills: e.target.value })}
-							/>
-							<div className="dctc-sc-preset-skills-wrapper" style={{ marginTop: '4px' }}>
-								<span className="dctc-sc-preset-label">{__('Quick Add Skills:', 'dragwyb-click-to-chat')}</span>
-								<div className="dctc-sc-preset-chips">
-									{PRESET_SKILLS.map((skill) => {
-										const activeSkills = (catForm.required_skills || '')
-											.split(',')
-											.map((s) => s.trim())
-											.filter(Boolean);
-										const isActive = activeSkills.includes(skill);
-										return (
-											<button
-												key={skill}
-												type="button"
-												className={`dctc-sc-skill-chip ${isActive ? 'is-selected' : ''}`}
-												onClick={() => {
-													let nextSkills;
-													if (isActive) {
-														nextSkills = activeSkills.filter((s) => s !== skill);
-													} else {
-														nextSkills = [...activeSkills, skill];
-													}
-													setCatForm({ ...catForm, required_skills: nextSkills.join(', ') });
-												}}
-											>
-												<span className="dctc-sc-chip-icon">{isActive ? '✓' : '+'}</span>
-												{skill}
-											</button>
-										);
-									})}
-								</div>
-							</div>
-						</div>
+
 
 						{/* Category Description */}
 						<div className="dctc-sc-form-group">

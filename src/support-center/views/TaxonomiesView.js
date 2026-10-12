@@ -29,7 +29,6 @@ const DASHICON_PRESETS = [
 	'dashicons-clipboard',
 	'dashicons-chart-pie',
 ];
-const PRESET_SKILLS = [ 'technical', 'billing', 'sales', 'returns', 'woocommerce', 'api', 'shipping', 'account' ];
 
 const generateSlug = ( text ) => {
 	return ( text || '' )
@@ -88,7 +87,6 @@ export default function TaxonomiesView( {
 		color: '#4F46E5',
 		default_priority: 'normal',
 		sub_taxonomies: [ 'product', 'tag' ],
-		required_skills: '',
 		description: '',
 	} );
 	const [ draggedSubTaxSlug, setDraggedSubTaxSlug ] = useState( null );
@@ -298,7 +296,6 @@ export default function TaxonomiesView( {
 			color: '#4F46E5',
 			default_priority: 'normal',
 			sub_taxonomies: [ 'product', 'tag' ],
-			required_skills: '',
 			description: '',
 		} );
 		setIsCatModalOpen( true );
@@ -319,7 +316,6 @@ export default function TaxonomiesView( {
 			color: cat.color || '#4F46E5',
 			default_priority: cat.default_priority || 'normal',
 			sub_taxonomies: subTax,
-			required_skills: cat.required_skills || '',
 			description: cat.description || '',
 		} );
 		setIsCatModalOpen( true );
@@ -1036,7 +1032,6 @@ export default function TaxonomiesView( {
 				saving={saving}
 				generateSlug={generateSlug}
 				COLOR_PRESETS={COLOR_PRESETS}
-				PRESET_SKILLS={PRESET_SKILLS}
 				taxonomies={taxonomies}
 				draggedSubTaxSlug={draggedSubTaxSlug}
 				setDraggedSubTaxSlug={setDraggedSubTaxSlug}
