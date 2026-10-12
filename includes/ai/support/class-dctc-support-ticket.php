@@ -106,11 +106,20 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 			return array();
 		}
 
+		// Retrieve from ticket meta as primary source of truth
+		$meta_msgs = $this->get_ticket_meta( '_dctc_ticket_messages', true );
+		if ( is_string( $meta_msgs ) ) {
+			$meta_msgs = json_decode( $meta_msgs, true );
+		}
+		if ( is_array( $meta_msgs ) && ! empty( $meta_msgs ) ) {
+			return $meta_msgs;
+		}
+
 		global $wpdb;
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$messages       = array();
 
-		// Check session table by session_id or support_ticket_id
+		// Backward compatibility: check session table by session_id or support_ticket_id
 		$session_row = null;
 		if ( ! empty( $this->session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -130,19 +139,13 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		if ( $session_row && ! empty( $session_row['content'] ) ) {
 			$decoded = json_decode( $session_row['content'], true );
-			if ( is_array( $decoded ) ) {
-				$messages = $decoded;
+			if ( is_array( $decoded ) && ! empty( $decoded ) ) {
+				$this->update_meta( '_dctc_ticket_messages', $decoded, 'auto' );
+				return $decoded;
 			}
 		}
 
-		if ( empty( $messages ) ) {
-			$meta_msgs = $this->get_ticket_meta( '_dctc_ticket_messages', true );
-			if ( is_array( $meta_msgs ) ) {
-				$messages = $meta_msgs;
-			}
-		}
-
-		return is_array( $messages ) ? $messages : array();
+		return array();
 	}
 
 	/**
@@ -680,33 +683,39 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$current_messages[] = $new_entry;
 		$messages_json      = wp_json_encode( array_slice( $current_messages, -50 ) );
 
-		if ( ! empty( $this->session_id ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->update(
-				$table_sessions,
-				array(
-					'content'    => $messages_json,
-					'updated_at' => $time,
-				),
-				array( 'session_id' => $this->session_id ),
-				array( '%s', '%s' ),
-				array( '%s' )
-			);
-		} else {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-			$wpdb->update(
-				$table_sessions,
-				array(
-					'content'    => $messages_json,
-					'updated_at' => $time,
-				),
-				array( 'support_ticket_id' => $this->id ),
-				array( '%s', '%s' ),
-				array( '%d' )
-			);
-		}
-
 		$this->update_meta( '_dctc_ticket_messages', $current_messages, 'auto' );
+
+		// Sync to session table ONLY if save_chat is enabled
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+
+		if ( $save_enabled ) {
+			if ( ! empty( $this->session_id ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_sessions,
+					array(
+						'content'    => $messages_json,
+						'updated_at' => $time,
+					),
+					array( 'session_id' => $this->session_id ),
+					array( '%s', '%s' ),
+					array( '%s' )
+				);
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_sessions,
+					array(
+						'content'    => $messages_json,
+						'updated_at' => $time,
+					),
+					array( 'support_ticket_id' => $this->id ),
+					array( '%s', '%s' ),
+					array( '%d' )
+				);
+			}
+		}
 
 		return true;
 	}

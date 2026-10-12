@@ -61,6 +61,47 @@ function linkifyContent(content) {
 }
 
 /**
+ * Format conversation history into standard message array for /chat payload.
+ *
+ * @param {Array} msgs Array of chat messages.
+ * @param {string} botName Default bot name.
+ * @return {Array}
+ */
+function formatConversationHistory(msgs, botName) {
+	if (!Array.isArray(msgs)) {
+		return [];
+	}
+
+	return msgs
+		.filter((m) => m && m.content && m.role !== 'system' && m.sender_type !== 'system' && m.role !== 'error')
+		.map((m) => {
+			const isBot =
+				m.role === 'bot' ||
+				m.role === 'assistant' ||
+				m.sender_type === 'ai_agent' ||
+				m.sender_type === 'support_agent' ||
+				m.sender_type === 'agent';
+			const role = isBot ? 'assistant' : 'user';
+			const senderType =
+				m.sender_type || (isBot ? 'ai_agent' : 'customer');
+			const senderName =
+				m.sender_name || (isBot ? (botName || 'AI Assistant') : 'Customer');
+			const createdAt = m.created_at || new Date().toISOString();
+
+			return {
+				role,
+				sender_type: senderType,
+				sender_name: senderName,
+				content:
+					typeof m.content === 'string'
+						? m.content
+						: (m.content?.text || JSON.stringify(m.content)),
+				created_at: createdAt,
+			};
+		});
+}
+
+/**
  * Helper to render launcher icon based on preset or custom image.
  */
 function renderLauncherIcon(preset, customUrl) {
@@ -403,6 +444,10 @@ export default function ChatWidget({ settings, inline }) {
 		return value === null || value === undefined || value;
 	});
 	const [messages, setMessages] = useState([]);
+	const messagesRef = useRef(messages);
+	useEffect(() => {
+		messagesRef.current = messages;
+	}, [messages]);
 	const [email, setEmail] = useState('');
 	const [emailDraft, setEmailDraft] = useState('');
 	const [emailError, setEmailError] = useState('');
@@ -412,6 +457,10 @@ export default function ChatWidget({ settings, inline }) {
 	const [activeControlMode, setActiveControlMode] = useState('ai');
 	const [assignedAgentName, setAssignedAgentName] = useState('');
 	const [hasActiveTicket, setHasActiveTicket] = useState(false);
+	const hasActiveTicketRef = useRef(hasActiveTicket);
+	useEffect(() => {
+		hasActiveTicketRef.current = hasActiveTicket;
+	}, [hasActiveTicket]);
 
 	// Human agent waiting & auto-fallback states
 	const [waitingAgentStatusText, setWaitingAgentStatusText] = useState('');
@@ -446,17 +495,28 @@ export default function ChatWidget({ settings, inline }) {
 				title: document.title,
 			};
 
+			const isSaveChatEnabled = !!chatbot.save_chat;
+			const ticketAlreadyCreated = Boolean(hasActiveTicket || hasActiveTicketRef.current);
+			const chatPayload = {
+				prompt: fallbackPrompt || 'Please assist me with my inquiry.',
+				session_id: sessionId,
+				email,
+				page_context: activePageContext,
+				visitor_lang: navigator.language || navigator.userLanguage || '',
+				fallback_trigger: true,
+			};
+
+			if (!isSaveChatEnabled && !ticketAlreadyCreated) {
+				chatPayload.messages = formatConversationHistory(
+					messagesRef.current,
+					chatbot.bot_name
+				);
+			}
+
 			const response = await apiFetch({
 				path: '/dctc-ai/v1/chat',
 				method: 'POST',
-				data: {
-					prompt: fallbackPrompt || 'Please assist me with my inquiry.',
-					session_id: sessionId,
-					email,
-					page_context: activePageContext,
-					visitor_lang: navigator.language || navigator.userLanguage || '',
-					fallback_trigger: true,
-				},
+				data: chatPayload,
 			});
 
 			if (!isMountedRef.current) return;
@@ -521,9 +581,10 @@ export default function ChatWidget({ settings, inline }) {
 					setActiveControlMode(response.control_mode);
 				}
 
-				if (response.ticket && response.ticket.id) {
+				if ((response.ticket && response.ticket.id) || response.has_ticket) {
 					setHasActiveTicket(true);
-					if (response.ticket.agent_name) {
+					hasActiveTicketRef.current = true;
+					if (response.ticket && response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);
 					}
 				}
@@ -2154,10 +2215,14 @@ export default function ChatWidget({ settings, inline }) {
 			return;
 		}
 
+		const userCreatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
 		const userMessageObj = {
 			role: 'user',
+			sender_type: 'customer',
+			sender_name: 'Customer',
 			content: prompt,
 			attachments: readyAttachments,
+			created_at: userCreatedAt,
 		};
 
 		setMessages((prev) => [...prev, userMessageObj]);
@@ -2195,17 +2260,28 @@ export default function ChatWidget({ settings, inline }) {
 				title: document.title,
 			};
 
+			const isSaveChatEnabled = !!chatbot.save_chat;
+			const ticketAlreadyCreated = Boolean(hasActiveTicket || hasActiveTicketRef.current);
+			const chatPayload = {
+				prompt: prompt || (readyAttachments.length > 0 ? 'Please analyze the attached file(s).' : ''),
+				session_id: sessionId,
+				email,
+				attachments: readyAttachments,
+				page_context: activePageContext,
+				visitor_lang: navigator.language || navigator.userLanguage || '',
+			};
+
+			if (!isSaveChatEnabled && !ticketAlreadyCreated) {
+				chatPayload.messages = formatConversationHistory(
+					messagesRef.current,
+					chatbot.bot_name
+				);
+			}
+
 			const response = await apiFetch({
 				path: '/dctc-ai/v1/chat',
 				method: 'POST',
-				data: {
-					prompt: prompt || (readyAttachments.length > 0 ? 'Please analyze the attached file(s).' : ''),
-					session_id: sessionId,
-					email,
-					attachments: readyAttachments,
-					page_context: activePageContext,
-					visitor_lang: navigator.language || navigator.userLanguage || '',
-				},
+				data: chatPayload,
 			});
 
 			if (!isMountedRef.current) {
@@ -2242,9 +2318,10 @@ export default function ChatWidget({ settings, inline }) {
 						}
 					}, Math.max(10, maxWaitSec) * 1000);
 
-					if (response.ticket && response.ticket.id) {
+					if ((response.ticket && response.ticket.id) || response.has_ticket) {
 						setHasActiveTicket(true);
-						if (response.ticket.agent_name) {
+						hasActiveTicketRef.current = true;
+						if (response.ticket && response.ticket.agent_name) {
 							setAssignedAgentName(response.ticket.agent_name);
 						}
 						if (response.control_mode) {
@@ -2340,9 +2417,10 @@ export default function ChatWidget({ settings, inline }) {
 					},
 				]);
 
-				if (response.ticket && response.ticket.id) {
+				if ((response.ticket && response.ticket.id) || response.has_ticket) {
 					setHasActiveTicket(true);
-					if (response.ticket.agent_name) {
+					hasActiveTicketRef.current = true;
+					if (response.ticket && response.ticket.agent_name) {
 						setAssignedAgentName(response.ticket.agent_name);
 					}
 					if (response.control_mode) {

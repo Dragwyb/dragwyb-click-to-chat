@@ -363,67 +363,100 @@ class DCTC_Support_Ticket_Service {
 
 		self::update_ticket_meta_batch( $ticket_id, $meta_batch );
 
-		// Ensure corresponding row in wp_dctc_ai_sessions exists and is linked
+		// Check save_chat setting
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+
+		// Resolve complete conversation history for the new ticket
+		$ticket_initial_messages = array();
+
+		// Priority 1: Caller-supplied conversation history (e.g. from /chat request payload when save_chat is disabled)
+		if ( ! empty( $data['messages'] ) && is_array( $data['messages'] ) ) {
+			$ticket_initial_messages = self::deduplicate_and_merge_messages( array(), $data['messages'] );
+		}
+
+		// Priority 2: Existing session data (when save_chat is enabled and session row exists)
+		if ( empty( $ticket_initial_messages ) && ! empty( $session_id ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$session_content = $wpdb->get_var(
+				$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			);
+			if ( ! empty( $session_content ) ) {
+				$decoded = json_decode( $session_content, true );
+				if ( is_array( $decoded ) && ! empty( $decoded ) ) {
+					$ticket_initial_messages = self::deduplicate_and_merge_messages( array(), $decoded );
+				}
+			}
+		}
+
+		// Priority 3: Single initial message (e.g. from support portal form or single initial prompt)
+		if ( empty( $ticket_initial_messages ) && ! empty( $data['initial_message'] ) ) {
+			$msg_uuid  = wp_generate_uuid4();
+			$msg_entry = array(
+				'id'          => $msg_uuid,
+				'uuid'        => $msg_uuid,
+				'role'        => 'user',
+				'sender_type' => 'customer',
+				'sender_name' => $name ? $name : 'Customer',
+				'content'     => wp_kses_post( $data['initial_message'] ),
+				'created_at'  => current_time( 'mysql', true ),
+			);
+
+			// Security (SEC-11): Validate and bound attachments
+			if ( ! empty( $data['attachments'] ) && is_array( $data['attachments'] ) ) {
+				$sanitized_attachments = array();
+				$bounded_attachments   = array_slice( $data['attachments'], 0, 5 ); // max 5 attachments
+				foreach ( $bounded_attachments as $att ) {
+					if ( is_array( $att ) && ! empty( $att['url'] ) ) {
+						$clean_url = esc_url_raw( $att['url'] );
+						$scheme    = wp_parse_url( $clean_url, PHP_URL_SCHEME );
+						if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
+							$sanitized_attachments[] = array(
+								'name' => ! empty( $att['name'] ) ? sanitize_file_name( $att['name'] ) : 'attachment',
+								'url'  => $clean_url,
+								'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
+								'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
+							);
+						}
+					}
+				}
+				if ( ! empty( $sanitized_attachments ) ) {
+					$msg_entry['attachments'] = $sanitized_attachments;
+				}
+			}
+
+			$ticket_initial_messages[] = $msg_entry;
+		}
+
+		// Save complete conversation history to _dctc_ticket_messages (Primary source of truth)
+		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $ticket_initial_messages );
+
+		// Manage corresponding row in wp_dctc_ai_sessions strictly adhering to save_chat setting
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$existing_session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT id FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 		);
 
 		if ( $existing_session ) {
+			$session_update = array(
+				'support_ticket_id' => $ticket_id,
+				'control_mode'      => $control,
+				'reply_surface'     => $surface,
+				'updated_at'        => current_time( 'mysql' ),
+			);
+			if ( $save_enabled && ! empty( $ticket_initial_messages ) ) {
+				$session_update['content'] = wp_json_encode( $ticket_initial_messages );
+			}
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
-				array(
-					'support_ticket_id' => $ticket_id,
-					'control_mode'      => $control,
-					'reply_surface'     => $surface,
-					'updated_at'        => current_time( 'mysql' ),
-				),
+				$session_update,
 				array( 'session_id' => $session_id ),
-				array( '%d', '%s', '%s', '%s' ),
+				array( '%d', '%s', '%s', '%s', '%s' ),
 				array( '%s' )
 			);
-		} else {
-			// Create new session entry for support portal origin
-			$initial_messages = array();
-			if ( ! empty( $data['initial_message'] ) ) {
-				$msg_uuid  = wp_generate_uuid4();
-				$msg_entry = array(
-					'id'          => $msg_uuid,
-					'uuid'        => $msg_uuid,
-					'role'        => 'user',
-					'sender_type' => 'customer',
-					'sender_name' => $name ? $name : 'Customer',
-					'content'     => wp_kses_post( $data['initial_message'] ),
-					'created_at'  => current_time( 'mysql', true ),
-				);
-
-				// Security (SEC-11): Validate and bound attachments
-				if ( ! empty( $data['attachments'] ) && is_array( $data['attachments'] ) ) {
-					$sanitized_attachments = array();
-					$bounded_attachments   = array_slice( $data['attachments'], 0, 5 ); // max 5 attachments
-					foreach ( $bounded_attachments as $att ) {
-						if ( is_array( $att ) && ! empty( $att['url'] ) ) {
-							$clean_url = esc_url_raw( $att['url'] );
-							$scheme    = wp_parse_url( $clean_url, PHP_URL_SCHEME );
-							if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
-								$sanitized_attachments[] = array(
-									'name' => ! empty( $att['name'] ) ? sanitize_file_name( $att['name'] ) : 'attachment',
-									'url'  => $clean_url,
-									'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
-									'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
-								);
-							}
-						}
-					}
-					if ( ! empty( $sanitized_attachments ) ) {
-						$msg_entry['attachments'] = $sanitized_attachments;
-					}
-				}
-
-				$initial_messages[] = $msg_entry;
-			}
-
+		} elseif ( $save_enabled && ! empty( $session_id ) ) {
+			// Create new session entry only when save_chat is enabled
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->insert(
 				$table_sessions,
@@ -432,7 +465,7 @@ class DCTC_Support_Ticket_Service {
 					'email'             => $email,
 					'model'             => 'support-agent',
 					'provider'          => 'dragwyb',
-					'content'           => wp_json_encode( $initial_messages ),
+					'content'           => wp_json_encode( $ticket_initial_messages ),
 					'control_mode'      => $control,
 					'reply_surface'     => $surface,
 					'support_ticket_id' => $ticket_id,
@@ -918,32 +951,42 @@ class DCTC_Support_Ticket_Service {
 		$ticket['tags']  = DCTC_Support_Tag_Service::get_ticket_tags( $ticket_id );
 		$ticket['notes'] = DCTC_Support_Note_Service::get_notes( $ticket_id );
 
-		// Retrieve conversation messages from sessions table (by session_id or support_ticket_id)
+		// Retrieve conversation messages from ticket meta (Primary source of truth)
+		$ticket_messages = ! empty( $ticket_meta['_dctc_ticket_messages'] ) ? $ticket_meta['_dctc_ticket_messages'] : array();
+		if ( is_string( $ticket_messages ) ) {
+			$ticket_messages = json_decode( $ticket_messages, true );
+		}
+		$ticket_messages = is_array( $ticket_messages ) ? $ticket_messages : array();
+
+		// Check if a session row exists in dctc_ai_sessions
 		$session_row = null;
 		if ( ! empty( $ticket['session_id'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $ticket['session_id'] ),
+				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $ticket['session_id'] ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 		}
 		if ( ! $session_row ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $ticket_id ),
+				$wpdb->prepare( "SELECT id, content, updated_at FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $ticket_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 		}
 		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
-		$ticket['has_session'] = ! empty( $session_row );
-		$session_content       = $session_row ? $session_row['content'] : '';
-		$ticket['messages']    = ! empty( $session_content ) ? json_decode( $session_content, true ) : array();
-		if ( empty( $ticket['messages'] ) ) {
-			$meta_msgs = ! empty( $ticket_meta['_dctc_ticket_messages'] ) ? $ticket_meta['_dctc_ticket_messages'] : array();
-			if ( is_array( $meta_msgs ) ) {
-				$ticket['messages'] = $meta_msgs;
+		// Backward compatibility: If _dctc_ticket_messages is empty, fall back to legacy session content and migrate
+		if ( empty( $ticket_messages ) && $session_row && ! empty( $session_row['content'] ) ) {
+			$session_messages = json_decode( $session_row['content'], true );
+			if ( is_array( $session_messages ) && ! empty( $session_messages ) ) {
+				$ticket_messages = $session_messages;
+				self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $ticket_messages );
 			}
 		}
-		$ticket['messages']      = is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
+
+		$ticket['has_session']   = ! empty( $session_row );
+		$ticket['messages']      = $ticket_messages;
 		$ticket['chat_count']    = count( $ticket['messages'] );
 		$ticket['message_count'] = $ticket['chat_count'];
 
@@ -1564,18 +1607,185 @@ class DCTC_Support_Ticket_Service {
 	 * @return bool|WP_Error
 	 */
 	public static function add_reply( $ticket_id, $message, $sender_type = 'customer', $user_id = null ) {
-		global $wpdb;
-		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		return self::reply_ticket( $ticket_id, $message, $user_id, $sender_type );
+	}
 
-		$ticket_id   = absint( $ticket_id );
-		$message     = wp_kses_post( $message );
-		$sender_type = sanitize_key( $sender_type );
+	/**
+	 * Deduplicate and merge incoming conversation messages into existing message history.
+	 *
+	 * Ensures preserved order, properties, and idempotency.
+	 *
+	 * @param array $existing_messages Existing ticket messages.
+	 * @param array $incoming_messages Incoming messages to append.
+	 * @return array Merged and deduplicated messages.
+	 */
+	public static function deduplicate_and_merge_messages( array $existing_messages, array $incoming_messages ) {
+		$merged          = $existing_messages;
+		$seen_ids        = array();
+		$seen_signatures = array();
 
-		// Security (SEC-02): Enforce allowed sender types
-		if ( ! in_array( $sender_type, self::ALLOWED_SENDER_TYPES, true ) ) {
-			$sender_type = 'customer';
+		foreach ( $merged as $msg ) {
+			if ( ! is_array( $msg ) ) {
+				continue;
+			}
+			$id = ! empty( $msg['uuid'] ) ? (string) $msg['uuid'] : ( ! empty( $msg['id'] ) ? (string) $msg['id'] : '' );
+			if ( ! empty( $id ) ) {
+				$seen_ids[ $id ] = true;
+			}
+			$role       = isset( $msg['role'] ) ? (string) $msg['role'] : '';
+			$content    = isset( $msg['content'] ) ? trim( (string) $msg['content'] ) : '';
+			$created_at = isset( $msg['created_at'] ) ? (string) $msg['created_at'] : '';
+
+			if ( '' !== $content ) {
+				$seen_signatures[ $role . '|' . $content . '|' . $created_at ] = true;
+				$seen_signatures[ $role . '|' . $content ]                     = true;
+			}
 		}
+
+		foreach ( $incoming_messages as $incoming ) {
+			if ( ! is_array( $incoming ) ) {
+				continue;
+			}
+			$in_id = ! empty( $incoming['uuid'] ) ? (string) $incoming['uuid'] : ( ! empty( $incoming['id'] ) ? (string) $incoming['id'] : '' );
+			if ( ! empty( $in_id ) && isset( $seen_ids[ $in_id ] ) ) {
+				continue; // Duplicate by ID/UUID
+			}
+
+			$role       = isset( $incoming['role'] ) ? (string) $incoming['role'] : '';
+			$content    = isset( $incoming['content'] ) ? trim( (string) $incoming['content'] ) : '';
+			$created_at = isset( $incoming['created_at'] ) ? (string) $incoming['created_at'] : '';
+
+			if ( '' !== $content && isset( $seen_signatures[ $role . '|' . $content . '|' . $created_at ] ) ) {
+				continue; // Duplicate by role + content + timestamp
+			}
+
+			// Consecutive identical role + content check
+			if ( ! empty( $merged ) ) {
+				$last         = end( $merged );
+				$last_role    = isset( $last['role'] ) ? (string) $last['role'] : '';
+				$last_content = isset( $last['content'] ) ? trim( (string) $last['content'] ) : '';
+				if ( $last_role === $role && $last_content === $content && '' !== $content ) {
+					continue;
+				}
+			}
+
+			$msg_uuid   = ! empty( $in_id ) ? $in_id : wp_generate_uuid4();
+			$normalized = array(
+				'id'          => $msg_uuid,
+				'uuid'        => $msg_uuid,
+				'role'        => $role ?: 'user',
+				'sender_type' => ! empty( $incoming['sender_type'] ) ? (string) $incoming['sender_type'] : ( 'assistant' === $role ? 'ai_agent' : 'customer' ),
+				'sender_name' => ! empty( $incoming['sender_name'] ) ? sanitize_text_field( $incoming['sender_name'] ) : ( 'assistant' === $role ? 'AI Assistant' : 'Customer' ),
+				'content'     => wp_kses_post( $incoming['content'] ?? '' ),
+				'created_at'  => ! empty( $created_at ) ? sanitize_text_field( $created_at ) : current_time( 'mysql', true ),
+			);
+
+			if ( ! empty( $incoming['attachments'] ) && is_array( $incoming['attachments'] ) ) {
+				$normalized['attachments'] = $incoming['attachments'];
+			}
+			if ( ! empty( $incoming['sources'] ) && is_array( $incoming['sources'] ) ) {
+				$normalized['sources'] = $incoming['sources'];
+			}
+			if ( isset( $incoming['show_form'] ) ) {
+				$normalized['show_form'] = $incoming['show_form'];
+			}
+			if ( isset( $incoming['show_order_tracker'] ) ) {
+				$normalized['show_order_tracker'] = $incoming['show_order_tracker'];
+			}
+			if ( isset( $incoming['is_agent'] ) ) {
+				$normalized['is_agent'] = (bool) $incoming['is_agent'];
+			}
+
+			$merged[]              = $normalized;
+			$seen_ids[ $msg_uuid ] = true;
+			if ( '' !== $content ) {
+				$seen_signatures[ $role . '|' . $content . '|' . $created_at ] = true;
+				$seen_signatures[ $role . '|' . $content ]                     = true;
+			}
+		}
+
+		return array_values( $merged );
+	}
+
+	/**
+	 * Append messages to an existing ticket without duplicating history.
+	 *
+	 * Uses _dctc_ticket_messages as the primary source of truth, and updates
+	 * dctc_ai_sessions only when save_chat is enabled.
+	 *
+	 * @param int   $ticket_id Ticket ID.
+	 * @param array $incoming_messages Incoming messages to append.
+	 * @return array The updated messages list.
+	 */
+	public static function append_ticket_messages( $ticket_id, array $incoming_messages ) {
+		if ( empty( $incoming_messages ) || ! $ticket_id ) {
+			return array();
+		}
+
+		$existing = self::get_ticket_meta( $ticket_id, '_dctc_ticket_messages', true );
+		if ( is_string( $existing ) ) {
+			$existing = json_decode( $existing, true );
+		}
+		$existing = is_array( $existing ) ? $existing : array();
+
+		if ( empty( $existing ) ) {
+			$ticket = self::get_ticket( $ticket_id );
+			if ( ! empty( $ticket['messages'] ) && is_array( $ticket['messages'] ) ) {
+				$existing = $ticket['messages'];
+			}
+		}
+
+		$merged = self::deduplicate_and_merge_messages( $existing, $incoming_messages );
+		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $merged );
+
+		// Touch ticket updated_at
+		global $wpdb;
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$wpdb->update(
+			$table_tickets,
+			array(
+				'updated_at'            => current_time( 'mysql', true ),
+				'customer_last_seen_at' => current_time( 'mysql', true ),
+			),
+			array( 'id' => (int) $ticket_id )
+		);
+
+		// If save_chat is enabled and session exists, also sync to session table
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+		if ( $save_enabled ) {
+			$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+			$session_id     = self::get_ticket_meta( $ticket_id, 'session_id', true );
+			if ( ! empty( $session_id ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_sessions,
+					array(
+						'content'    => wp_json_encode( $merged ),
+						'updated_at' => current_time( 'mysql', true ),
+					),
+					array( 'session_id' => $session_id )
+				);
+			}
+		}
+
+		return $merged;
+	}
+
+	/**
+	 * Post a reply on an existing ticket.
+	 *
+	 * @param int         $ticket_id Ticket ID.
+	 * @param string      $message Reply content.
+	 * @param int|null    $user_id User ID of the author.
+	 * @param string      $sender_type 'agent' or 'customer'.
+	 * @return array<string, mixed>|WP_Error Ticket record or WP_Error.
+	 */
+	public static function reply_ticket( $ticket_id, $message, $user_id = null, $sender_type = 'agent' ) {
+		global $wpdb;
+		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
 
 		// Security (SEC-10): Derive user ID safely
 		if ( is_user_logged_in() ) {
@@ -1602,15 +1812,13 @@ class DCTC_Support_Ticket_Service {
 
 		$session_id = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
-		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		) : null;
-
-		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
-		if ( empty( $messages ) && ! empty( $ticket['messages'] ) ) {
-			$messages = $ticket['messages'];
+		// Retrieve existing messages from _dctc_ticket_messages (Primary source of truth)
+		$messages = self::get_ticket_meta( $ticket_id, '_dctc_ticket_messages', true );
+		if ( is_string( $messages ) ) {
+			$messages = json_decode( $messages, true );
+		}
+		if ( empty( $messages ) || ! is_array( $messages ) ) {
+			$messages = ! empty( $ticket['messages'] ) && is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
 		}
 		$messages = is_array( $messages ) ? $messages : array();
 
@@ -1632,19 +1840,22 @@ class DCTC_Support_Ticket_Service {
 		$messages[] = $new_msg;
 		$messages   = array_slice( $messages, -100 ); // keep last 100 messages
 
-		if ( ! empty( $session_id ) ) {
+		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
+
+		// Sync to dctc_ai_sessions ONLY if save_chat is enabled
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+		if ( $save_enabled && ! empty( $session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
 				array(
 					'content'    => wp_json_encode( $messages ),
-					'updated_at' => current_time( 'mysql' ),
+					'updated_at' => current_time( 'mysql', true ),
 				),
 				array( 'session_id' => $session_id )
 			);
 		}
-
-		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
 
 		// If agent replies, auto-take control (Pause AI) and assign agent if unassigned
 		if ( 'agent' === $sender_type ) {
@@ -2310,15 +2521,13 @@ class DCTC_Support_Ticket_Service {
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
-		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		) : null;
-
-		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
-		if ( empty( $messages ) && ! empty( $ticket['messages'] ) ) {
-			$messages = $ticket['messages'];
+		// Retrieve existing messages from _dctc_ticket_messages (Primary source of truth)
+		$messages = self::get_ticket_meta( $ticket['id'], '_dctc_ticket_messages', true );
+		if ( is_string( $messages ) ) {
+			$messages = json_decode( $messages, true );
+		}
+		if ( empty( $messages ) || ! is_array( $messages ) ) {
+			$messages = ! empty( $ticket['messages'] ) && is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
 		}
 		$messages = is_array( $messages ) ? $messages : array();
 
@@ -2342,7 +2551,12 @@ class DCTC_Support_Ticket_Service {
 			return new WP_Error( 'message_not_found', __( 'Message not found in ticket conversation.', 'dragwyb-click-to-chat' ) );
 		}
 
-		if ( ! empty( $session_id ) ) {
+		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $messages );
+
+		// Sync to session table ONLY if save_chat is enabled
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+		if ( $save_enabled && ! empty( $session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
@@ -2353,8 +2567,6 @@ class DCTC_Support_Ticket_Service {
 				array( 'session_id' => $session_id )
 			);
 		}
-
-		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $messages );
 
 		// Touch ticket updated_at
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
@@ -2404,15 +2616,13 @@ class DCTC_Support_Ticket_Service {
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$session_id     = ! empty( $ticket['session_id'] ) ? $ticket['session_id'] : '';
 
-		// Read existing session content
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$raw_content = ! empty( $session_id ) ? $wpdb->get_var(
-			$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-		) : null;
-
-		$messages = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
-		if ( empty( $messages ) && ! empty( $ticket['messages'] ) ) {
-			$messages = $ticket['messages'];
+		// Retrieve existing messages from _dctc_ticket_messages (Primary source of truth)
+		$messages = self::get_ticket_meta( $ticket['id'], '_dctc_ticket_messages', true );
+		if ( is_string( $messages ) ) {
+			$messages = json_decode( $messages, true );
+		}
+		if ( empty( $messages ) || ! is_array( $messages ) ) {
+			$messages = ! empty( $ticket['messages'] ) && is_array( $ticket['messages'] ) ? $ticket['messages'] : array();
 		}
 		$messages = is_array( $messages ) ? $messages : array();
 
@@ -2436,7 +2646,12 @@ class DCTC_Support_Ticket_Service {
 
 		$filtered_messages = array_values( $filtered_messages );
 
-		if ( ! empty( $session_id ) ) {
+		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $filtered_messages );
+
+		// Sync to session table ONLY if save_chat is enabled
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+		if ( $save_enabled && ! empty( $session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
 				$table_sessions,
@@ -2447,8 +2662,6 @@ class DCTC_Support_Ticket_Service {
 				array( 'session_id' => $session_id )
 			);
 		}
-
-		self::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $filtered_messages );
 
 		// Touch ticket updated_at
 		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';

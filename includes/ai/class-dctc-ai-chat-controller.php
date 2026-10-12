@@ -131,8 +131,83 @@ class DCTC_AI_Chat_Controller {
 			);
 		}
 
-		$bot    = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
-		$models = isset( $settings['models'] ) ? $settings['models'] : array();
+		$bot                  = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+		$models               = isset( $settings['models'] ) ? $settings['models'] : array();
+		$is_save_chat_enabled = ! empty( $bot['save_chat'] );
+
+		// Parse and normalize client-provided conversation history when save_chat is disabled
+		$request_messages = array();
+		if ( ! empty( $params['messages'] ) && is_array( $params['messages'] ) ) {
+			foreach ( $params['messages'] as $m ) {
+				if ( ! is_array( $m ) ) {
+					continue;
+				}
+				$r = sanitize_key( $m['role'] ?? 'user' );
+				if ( in_array( $r, array( 'bot', 'agent' ), true ) ) {
+					$r = 'assistant';
+				}
+				$st = sanitize_key( $m['sender_type'] ?? ( 'assistant' === $r ? 'ai_agent' : 'customer' ) );
+				$sn = sanitize_text_field( $m['sender_name'] ?? ( 'assistant' === $r ? 'AI Assistant' : 'Customer' ) );
+				$c  = wp_kses_post( $m['content'] ?? '' );
+				$ca = sanitize_text_field( $m['created_at'] ?? current_time( 'mysql', true ) );
+
+				$msg_entry = array(
+					'role'        => $r,
+					'sender_type' => $st,
+					'sender_name' => $sn,
+					'content'     => $c,
+					'created_at'  => $ca,
+				);
+				if ( ! empty( $m['id'] ) ) {
+					$msg_entry['id'] = sanitize_text_field( (string) $m['id'] );
+				}
+				if ( ! empty( $m['uuid'] ) ) {
+					$msg_entry['uuid'] = sanitize_text_field( (string) $m['uuid'] );
+				}
+				if ( ! empty( $m['attachments'] ) && is_array( $m['attachments'] ) ) {
+					$msg_entry['attachments'] = isset( $m['attachments'] ) && is_array( $m['attachments'] ) ? array_values(
+						array_filter(
+							array_map(
+								function ( $att ) {
+									if ( ! is_array( $att ) ) {
+										return null;
+									}
+									return array(
+										'id'           => isset( $att['id'] ) ? sanitize_text_field( $att['id'] ) : uniqid( 'att_' ),
+										'attachmentId' => isset( $att['attachmentId'] ) ? intval( $att['attachmentId'] ) : 0,
+										'type'         => ( isset( $att['type'] ) && $att['type'] === 'image' ) ? 'image' : 'file',
+										'name'         => isset( $att['name'] ) ? sanitize_file_name( $att['name'] ) : '',
+										'size'         => isset( $att['size'] ) ? intval( $att['size'] ) : 0,
+										'mime'         => isset( $att['mime'] ) ? sanitize_text_field( $att['mime'] ) : '',
+										'url'          => isset( $att['url'] ) ? esc_url_raw( $att['url'] ) : '',
+									);
+								},
+								$m['attachments']
+							)
+						)
+					) : array();
+				}
+				if ( ! empty( $m['sources'] ) && is_array( $m['sources'] ) ) {
+					$msg_entry['sources'] = array_map( 'sanitize_text_field', $m['sources'] );
+				}
+				if ( isset( $m['show_form'] ) ) {
+					$msg_entry['show_form'] = array();
+					if ( isset( $m['show_form']['show'] ) && is_bool( $m['show_form']['show'] ) ) {
+						$msg_entry['show_form']['show'] = (bool) $m['show_form']['show'];
+					}
+					if ( isset( $m['show_form']['form_type'] ) && is_string( $m['show_form']['form_type'] ) ) {
+						$msg_entry['show_form']['form_type'] = sanitize_key( $m['show_form']['form_type'] );
+					}
+					if ( isset( $m['show_form']['form_filled'] ) && is_bool( $m['show_form']['form_filled'] ) ) {
+						$msg_entry['show_form']['form_filled'] = (bool) $m['show_form']['form_filled'];
+					}
+				}
+				if ( isset( $m['show_order_tracker'] ) ) {
+					$msg_entry['show_order_tracker'] = (bool) $m['show_order_tracker'];
+				}
+				$request_messages[] = $msg_entry;
+			}
+		}
 
 		// Check AI Usage & Budget Limits
 		if ( class_exists( 'DCTC_AI_Usage_Tracker' ) ) {
@@ -144,7 +219,9 @@ class DCTC_AI_Chat_Controller {
 					$bot,
 					$email,
 					$prompt,
-					! empty( $budget_check['action_buttons'] ) ? $budget_check['action_buttons'] : array()
+					! empty( $budget_check['action_buttons'] ) ? $budget_check['action_buttons'] : array(),
+					false,
+					$request_messages
 				);
 			}
 		}
@@ -156,6 +233,23 @@ class DCTC_AI_Chat_Controller {
 		if ( ! headers_sent() ) {
 			setcookie( 'dctc_ai_session_id', $session_id, time() + 3600, COOKIEPATH ? COOKIEPATH : '/', COOKIE_DOMAIN, is_ssl(), true );
 			$_COOKIE['dctc_ai_session_id'] = $session_id;
+		}
+
+		// Once a ticket is created, the client does not need to send conversation history in /chat.
+		// If request_messages is empty and a ticket exists for this session, retrieve history directly from _dctc_ticket_messages.
+		if ( empty( $request_messages ) && class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+			$session_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+			if ( $session_ticket && ! empty( $session_ticket['id'] ) ) {
+				$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $session_ticket['id'], '_dctc_ticket_messages', true );
+				if ( ! empty( $ticket_meta_msgs ) ) {
+					if ( is_string( $ticket_meta_msgs ) ) {
+						$ticket_meta_msgs = json_decode( $ticket_meta_msgs, true );
+					}
+					if ( is_array( $ticket_meta_msgs ) ) {
+						$request_messages = $ticket_meta_msgs;
+					}
+				}
+			}
 		}
 
 		if ( empty( $prompt ) && empty( $attachments ) ) {
@@ -206,13 +300,38 @@ class DCTC_AI_Chat_Controller {
 							'form_filled' => false,
 						);
 
-						if ( class_exists( 'DCTC_AI_DB' ) ) {
+						if ( $is_save_chat_enabled && class_exists( 'DCTC_AI_DB' ) ) {
 							$db    = new DCTC_AI_DB();
 							$extra = array(
 								'show_order_tracker' => true,
 								'show_form'          => $show_form,
 							);
 							$db->dctc_ai_save_message( $prompt, $msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+						}
+
+						if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+							$ticket_for_order = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+							if ( $ticket_for_order && ! empty( $ticket_for_order['id'] ) ) {
+								$order_msgs   = ! empty( $request_messages ) ? $request_messages : array(
+									array(
+										'role'        => 'user',
+										'sender_type' => 'customer',
+										'sender_name' => ! empty( $email ) ? $email : 'Customer',
+										'content'     => $prompt,
+										'created_at'  => current_time( 'mysql', true ),
+									),
+								);
+								$order_msgs[] = array(
+									'role'               => 'assistant',
+									'sender_type'        => 'ai_agent',
+									'sender_name'        => ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant',
+									'content'            => $msg,
+									'created_at'         => current_time( 'mysql', true ),
+									'show_order_tracker' => true,
+									'show_form'          => $show_form,
+								);
+								DCTC_Support_Ticket_Service::append_ticket_messages( (int) $ticket_for_order['id'], $order_msgs );
+							}
 						}
 
 						return new \WP_REST_Response(
@@ -234,13 +353,38 @@ class DCTC_AI_Chat_Controller {
 							'form_filled' => false,
 						);
 
-						if ( class_exists( 'DCTC_AI_DB' ) ) {
+						if ( $is_save_chat_enabled && class_exists( 'DCTC_AI_DB' ) ) {
 							$db    = new DCTC_AI_DB();
 							$extra = array(
 								'show_order_tracker' => true,
 								'show_form'          => $show_form,
 							);
 							$db->dctc_ai_save_message( $prompt, $err_msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+						}
+
+						if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+							$ticket_for_order = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+							if ( $ticket_for_order && ! empty( $ticket_for_order['id'] ) ) {
+								$order_msgs   = ! empty( $request_messages ) ? $request_messages : array(
+									array(
+										'role'        => 'user',
+										'sender_type' => 'customer',
+										'sender_name' => ! empty( $email ) ? $email : 'Customer',
+										'content'     => $prompt,
+										'created_at'  => current_time( 'mysql', true ),
+									),
+								);
+								$order_msgs[] = array(
+									'role'               => 'assistant',
+									'sender_type'        => 'ai_agent',
+									'sender_name'        => ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant',
+									'content'            => $err_msg,
+									'created_at'         => current_time( 'mysql', true ),
+									'show_order_tracker' => true,
+									'show_form'          => $show_form,
+								);
+								DCTC_Support_Ticket_Service::append_ticket_messages( (int) $ticket_for_order['id'], $order_msgs );
+							}
 						}
 
 						return new \WP_REST_Response(
@@ -266,13 +410,38 @@ class DCTC_AI_Chat_Controller {
 					'form_filled' => false,
 				);
 
-				if ( class_exists( 'DCTC_AI_DB' ) ) {
+				if ( $is_save_chat_enabled && class_exists( 'DCTC_AI_DB' ) ) {
 					$db    = new DCTC_AI_DB();
 					$extra = array(
 						'show_order_tracker' => true,
 						'show_form'          => $show_form,
 					);
 					$db->dctc_ai_save_message( $prompt, $tracker_msg, $session_id, 'system', 'order_tracker', '', array(), $extra );
+				}
+
+				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+					$ticket_for_order = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+					if ( $ticket_for_order && ! empty( $ticket_for_order['id'] ) ) {
+						$order_msgs   = ! empty( $request_messages ) ? $request_messages : array(
+							array(
+								'role'        => 'user',
+								'sender_type' => 'customer',
+								'sender_name' => ! empty( $email ) ? $email : 'Customer',
+								'content'     => $prompt,
+								'created_at'  => current_time( 'mysql', true ),
+							),
+						);
+						$order_msgs[] = array(
+							'role'               => 'assistant',
+							'sender_type'        => 'ai_agent',
+							'sender_name'        => ! empty( $bot['bot_name'] ) ? sanitize_text_field( $bot['bot_name'] ) : 'AI Assistant',
+							'content'            => $tracker_msg,
+							'created_at'         => current_time( 'mysql', true ),
+							'show_order_tracker' => true,
+							'show_form'          => $show_form,
+						);
+						DCTC_Support_Ticket_Service::append_ticket_messages( (int) $ticket_for_order['id'], $order_msgs );
+					}
 				}
 
 				return new \WP_REST_Response(
@@ -329,6 +498,8 @@ class DCTC_AI_Chat_Controller {
 								'reply_surface'    => 'chatbot_widget',
 								'interaction_type' => 'HYBRID_SUPPORT',
 								'control_mode'     => 'ai',
+								'initial_message'  => $prompt,
+								'messages'         => $request_messages,
 								'intent_types'     => 'support_ticket',
 								'product'          => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
 								'product_id'       => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
@@ -337,8 +508,13 @@ class DCTC_AI_Chat_Controller {
 						if ( ! empty( $page_context['product'] ) && is_array( $created ) && ! empty( $created['id'] ) ) {
 							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
 						}
-					} elseif ( ! empty( $page_context['product'] ) ) {
-						DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
+					} else {
+						if ( ! empty( $request_messages ) ) {
+							DCTC_Support_Ticket_Service::append_ticket_messages( (int) $existing_ticket['id'], $request_messages );
+						}
+						if ( ! empty( $page_context['product'] ) ) {
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
+						}
 					}
 				}
 			}
@@ -354,7 +530,8 @@ class DCTC_AI_Chat_Controller {
 				$email,
 				$prompt,
 				array(),
-				true
+				true,
+				$request_messages
 			);
 		}
 
@@ -398,6 +575,7 @@ class DCTC_AI_Chat_Controller {
 								'interaction_type'    => $is_sales_lead ? 'LEAD_GENERATION' : 'HYBRID_SUPPORT',
 								'control_mode'        => 'ai',
 								'initial_message'     => $history ?: $prompt,
+								'messages'            => $request_messages,
 								'intent_types'        => $is_sales_lead ? 'lead_generation' : 'support_ticket',
 								'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
 								'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
@@ -407,7 +585,10 @@ class DCTC_AI_Chat_Controller {
 							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
 						}
 					} else {
-						$ticket_id  = (int) $existing_ticket['id'];
+						$ticket_id = (int) $existing_ticket['id'];
+						if ( ! empty( $request_messages ) ) {
+							DCTC_Support_Ticket_Service::append_ticket_messages( $ticket_id, $request_messages );
+						}
 						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
 						if ( $ticket_obj && $ticket_obj->is_valid() ) {
 							$ticket_obj->update_email( $provided_email );
@@ -459,7 +640,8 @@ class DCTC_AI_Chat_Controller {
 					$provided_email,
 					$prompt,
 					array(),
-					true
+					true,
+					$request_messages
 				);
 			}
 		}
@@ -545,6 +727,7 @@ class DCTC_AI_Chat_Controller {
 									'interaction_type'    => 'HYBRID_SUPPORT',
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
+									'messages'            => $request_messages,
 									'intent_types'        => 'support_ticket',
 									'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
 									'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
@@ -553,8 +736,13 @@ class DCTC_AI_Chat_Controller {
 							if ( ! empty( $page_context['product'] ) && is_array( $created ) && ! empty( $created['id'] ) ) {
 								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
 							}
-						} elseif ( ! empty( $page_context['product'] ) ) {
-							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
+						} else {
+							if ( ! empty( $request_messages ) ) {
+								DCTC_Support_Ticket_Service::append_ticket_messages( (int) $existing_ticket['id'], $request_messages );
+							}
+							if ( ! empty( $page_context['product'] ) ) {
+								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
+							}
 						}
 					}
 
@@ -601,7 +789,9 @@ class DCTC_AI_Chat_Controller {
 					$bot,
 					$email,
 					$prompt,
-					! empty( $rag_data['action_buttons'] ) ? $rag_data['action_buttons'] : array()
+					! empty( $rag_data['action_buttons'] ) ? $rag_data['action_buttons'] : array(),
+					false,
+					$request_messages
 				);
 			}
 
@@ -683,7 +873,7 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		try {
-			$memory         = $this->get_optimized_memory( $session_id, $prompt, $system_message );
+			$memory         = $this->get_optimized_memory( $session_id, $prompt, $system_message, $is_save_chat_enabled ? null : $request_messages );
 			$system_message = $memory['system_message'];
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Memory Optimization Error: ' . $e->getMessage() );
@@ -703,7 +893,19 @@ class DCTC_AI_Chat_Controller {
 			}
 
 			$email_already_requested = false;
-			if ( ! empty( $session_id ) ) {
+			if ( ! $is_save_chat_enabled && ! empty( $request_messages ) ) {
+				foreach ( $request_messages as $m ) {
+					$m_text = ! empty( $m['content'] ) ? $m['content'] : '';
+					if ( empty( $known_user_email ) && preg_match( '/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/', $m_text, $m_matches ) ) {
+						$known_user_email = $m_matches[0];
+					}
+					if ( ! empty( $m['role'] ) && 'assistant' === $m['role'] ) {
+						if ( preg_match( '/\b(comfortable.*email|share.*email|provide.*email|your email address|follow up.*email)\b/i', $m_text ) ) {
+							$email_already_requested = true;
+						}
+					}
+				}
+			} elseif ( $is_save_chat_enabled && ! empty( $session_id ) ) {
 				global $wpdb;
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				$session_row = $wpdb->get_row(
@@ -1006,6 +1208,7 @@ class DCTC_AI_Chat_Controller {
 									'interaction_type'    => $effective_ticket_type,
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
+									'messages'            => $request_messages,
 									'intent_types'        => 'support_ticket',
 									'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : ( is_string( $prod_to_sync ) ? sanitize_text_field( $prod_to_sync ) : '' ),
 									'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
@@ -1015,7 +1218,10 @@ class DCTC_AI_Chat_Controller {
 								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $prod_to_sync );
 							}
 						} else {
-							$ticket_id  = (int) $existing_ticket['id'];
+							$ticket_id = (int) $existing_ticket['id'];
+							if ( ! empty( $request_messages ) ) {
+								DCTC_Support_Ticket_Service::append_ticket_messages( $ticket_id, $request_messages );
+							}
 							$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
 							if ( $ticket_obj && $ticket_obj->is_valid() ) {
 								$ticket_obj->update_email( $effective_email );
@@ -1133,7 +1339,7 @@ class DCTC_AI_Chat_Controller {
 		);
 
 		try {
-			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $detected_intent, $sources, $extra );
+			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $detected_intent, $sources, $extra, $request_messages );
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Save Conversation Error: ' . $e->getMessage() );
 		}
@@ -1148,7 +1354,7 @@ class DCTC_AI_Chat_Controller {
 		}
 
 		try {
-			$formatted_messages = $this->get_formatted_messages( $session_id );
+			$formatted_messages = $this->get_formatted_messages( $session_id, $is_save_chat_enabled, $request_messages, $prompt, $ai_message, $bot, $sources, $extra );
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Get Formatted Messages Error: ' . $e->getMessage() );
 			$formatted_messages = array();
@@ -1181,7 +1387,7 @@ class DCTC_AI_Chat_Controller {
 		$detected_company  = ! empty( $intent_data['company'] ) ? $intent_data['company'] : '';
 
 		$this->set_ticket_ai_responding( $session_id, false );
-		$ticket_info  = $this->get_session_ticket_info( $session_id );
+		$ticket_info = $this->get_session_ticket_info( $session_id );
 		if ( ! empty( $ticket_info['id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$prod_to_sync = ! empty( $page_context['product'] ) ? $page_context['product'] : ( ! empty( $detected_interest ) ? $detected_interest : '' );
 			if ( ! empty( $prod_to_sync ) ) {
@@ -2145,7 +2351,7 @@ class DCTC_AI_Chat_Controller {
 	/**
 	 * Get optimized memory and conversation history
 	 */
-	private function get_optimized_memory( $session_id, $prompt, $system_message ) {
+	private function get_optimized_memory( $session_id, $prompt, $system_message, $request_messages = null ) {
 		try {
 
 			$rag_context = '';
@@ -2159,7 +2365,8 @@ class DCTC_AI_Chat_Controller {
 			$optimized_memory = $memory_optimizer->build_optimized_context(
 				$session_id,
 				$prompt,
-				$rag_context
+				$rag_context,
+				$request_messages
 			);
 
 			$memory_text = $memory_optimizer->format_for_prompt(
@@ -2176,7 +2383,8 @@ class DCTC_AI_Chat_Controller {
 			 */
 			$conversation_history = $this->get_recent_conversation(
 				$session_id,
-				10
+				10,
+				$request_messages
 			);
 
 			if ( ! empty( $conversation_history ) ) {
@@ -2238,10 +2446,10 @@ class DCTC_AI_Chat_Controller {
 	/**
 	 * Save conversation to database
 	 */
-	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $intent_type, $sources = array(), $extra = array() ) {
-		// Save to database if enabled or if ticket is attached
-		$save_enabled = ! isset( $bot['save_chat'] ) || (bool) $bot['save_chat'];
-		if ( $save_enabled || class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $intent_type, $sources = array(), $extra = array(), $request_messages = array() ) {
+		// Save to database only if save_chat is enabled
+		$save_enabled = ! empty( $bot['save_chat'] );
+		if ( $save_enabled ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db = new DCTC_AI_DB();
 				$db->dctc_ai_save_message( $prompt, $ai_message, $session_id, $provider, $model_id, $email, $sources, $extra );
@@ -2253,9 +2461,7 @@ class DCTC_AI_Chat_Controller {
 			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 			if ( $ticket && ! empty( $ticket['id'] ) ) {
 				global $wpdb;
-				$table_tickets      = $wpdb->prefix . 'dctc_support_tickets';
-				$table_tickets_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
-				$table_sessions     = $wpdb->prefix . 'dctc_ai_sessions';
+				$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 
 				$ticket_updates = array(
 					'customer_last_seen_at' => current_time( 'mysql', true ),
@@ -2271,18 +2477,39 @@ class DCTC_AI_Chat_Controller {
 					array( 'id' => (int) $ticket['id'] )
 				);
 
-				// Sync ticket messages meta from session table
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$session_content = $wpdb->get_var(
-					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				// Prepare new messages for ticket
+				$now_time     = current_time( 'mysql', true );
+				$new_user_msg = array(
+					'role'        => 'user',
+					'sender_type' => 'customer',
+					'sender_name' => ! empty( $ticket['customer_name'] ) ? $ticket['customer_name'] : 'Customer',
+					'content'     => $prompt,
+					'created_at'  => $now_time,
+				);
+				$new_ai_msg   = array(
+					'role'        => 'assistant',
+					'sender_type' => 'ai_agent',
+					'sender_name' => ! empty( $bot['bot_name'] ) ? $bot['bot_name'] : 'AI Assistant',
+					'content'     => $ai_message,
+					'created_at'  => $now_time,
+					'sources'     => is_array( $sources ) ? $sources : array(),
 				);
 
-				if ( ! empty( $session_content ) ) {
-					$all_msgs = json_decode( $session_content, true );
-					if ( is_array( $all_msgs ) ) {
-						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $all_msgs );
-					}
+				if ( ! empty( $extra['show_form'] ) ) {
+					$new_ai_msg['show_form'] = $extra['show_form'];
 				}
+				if ( ! empty( $extra['show_order_tracker'] ) ) {
+					$new_ai_msg['show_order_tracker'] = true;
+				}
+
+				$incoming_for_ticket = array();
+				if ( ! $save_enabled && ! empty( $request_messages ) && is_array( $request_messages ) ) {
+					$incoming_for_ticket = array_merge( $request_messages, array( $new_user_msg, $new_ai_msg ) );
+				} else {
+					$incoming_for_ticket = array( $new_user_msg, $new_ai_msg );
+				}
+
+				DCTC_Support_Ticket_Service::append_ticket_messages( (int) $ticket['id'], $incoming_for_ticket );
 
 				$existing_intent_types = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'intent_types', true );
 				if ( ! empty( $existing_intent_types ) ) {
@@ -2299,10 +2526,61 @@ class DCTC_AI_Chat_Controller {
 	}
 
 	/**
-	 * Get formatted messages from database
+	 * Get formatted messages from database or request
 	 */
-	private function get_formatted_messages( $session_id ) {
+	private function get_formatted_messages( $session_id, $is_save_chat_enabled = true, $request_messages = array(), $prompt = '', $ai_message = '', $bot = array(), $sources = array(), $extra = array() ) {
 		$formatted_messages = array();
+
+		if ( ! $is_save_chat_enabled ) {
+			if ( is_array( $request_messages ) ) {
+				foreach ( $request_messages as $msg ) {
+					if ( isset( $msg['role'] ) && isset( $msg['content'] ) ) {
+						$formatted_messages[] = array(
+							'role'               => in_array( $msg['role'], array( 'assistant', 'bot' ), true ) ? 'bot' : 'user',
+							'sender_type'        => isset( $msg['sender_type'] ) ? $msg['sender_type'] : ( in_array( $msg['role'], array( 'assistant', 'bot' ), true ) ? 'ai_agent' : 'customer' ),
+							'sender_name'        => isset( $msg['sender_name'] ) ? $msg['sender_name'] : ( in_array( $msg['role'], array( 'assistant', 'bot' ), true ) ? 'AI Assistant' : 'Customer' ),
+							'created_at'         => isset( $msg['created_at'] ) ? $msg['created_at'] : '',
+							'content'            => $msg['content'],
+							'sources'            => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
+							'show_form'          => isset( $msg['show_form'] ) ? $msg['show_form'] : null,
+							'show_order_tracker' => ! empty( $msg['show_order_tracker'] ),
+						);
+					}
+				}
+			}
+
+			$now_time           = current_time( 'mysql', true );
+			$last_fmt           = ! empty( $formatted_messages ) ? end( $formatted_messages ) : null;
+			$already_has_prompt = $last_fmt && 'user' === ( $last_fmt['role'] ?? '' ) && trim( $last_fmt['content'] ?? '' ) === trim( $prompt );
+
+			if ( ! empty( $prompt ) && ! $already_has_prompt ) {
+				$formatted_messages[] = array(
+					'role'               => 'user',
+					'sender_type'        => 'customer',
+					'sender_name'        => 'Customer',
+					'created_at'         => $now_time,
+					'content'            => $prompt,
+					'sources'            => array(),
+					'show_form'          => null,
+					'show_order_tracker' => false,
+				);
+			}
+
+			if ( ! empty( $ai_message ) ) {
+				$formatted_messages[] = array(
+					'role'               => 'bot',
+					'sender_type'        => 'ai_agent',
+					'sender_name'        => ! empty( $bot['bot_name'] ) ? $bot['bot_name'] : 'AI Assistant',
+					'created_at'         => $now_time,
+					'content'            => $ai_message,
+					'sources'            => is_array( $sources ) ? $sources : array(),
+					'show_form'          => ! empty( $extra['show_form'] ) ? $extra['show_form'] : null,
+					'show_order_tracker' => ! empty( $extra['show_order_tracker'] ),
+				);
+			}
+
+			return $formatted_messages;
+		}
 
 		if ( ! class_exists( 'DCTC_AI_DB' ) ) {
 			return $formatted_messages;
@@ -2551,13 +2829,41 @@ class DCTC_AI_Chat_Controller {
 	/**
 	 * Save response and return
 	 */
-	private function save_and_respond( $message, $session_id, $bot, $email, $prompt, $action_buttons = array(), $is_handoff = false ) {
-		if ( isset( $bot['save_chat'] ) && (bool) $bot['save_chat'] ) {
+	private function save_and_respond( $message, $session_id, $bot, $email, $prompt, $action_buttons = array(), $is_handoff = false, $request_messages = array() ) {
+		$save_enabled = ! empty( $bot['save_chat'] );
+		if ( $save_enabled ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db          = new DCTC_AI_DB();
 				$source_type = $is_handoff ? 'human-handoff' : 'knowledge-base';
 				$model_used  = $is_handoff ? 'handoff' : 'no-data';
 				$db->dctc_ai_save_message( $prompt, $message, $session_id, $source_type, $model_used, $email );
+			}
+		}
+
+		// Also sync to ticket if ticket exists
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+			if ( $ticket && ! empty( $ticket['id'] ) ) {
+				$now_time            = current_time( 'mysql', true );
+				$incoming_for_ticket = array();
+				if ( ! $save_enabled && ! empty( $request_messages ) && is_array( $request_messages ) ) {
+					$incoming_for_ticket = $request_messages;
+				}
+				$incoming_for_ticket[] = array(
+					'role'        => 'user',
+					'sender_type' => 'customer',
+					'sender_name' => ! empty( $ticket['customer_name'] ) ? $ticket['customer_name'] : 'Customer',
+					'content'     => $prompt,
+					'created_at'  => $now_time,
+				);
+				$incoming_for_ticket[] = array(
+					'role'        => 'assistant',
+					'sender_type' => 'ai_agent',
+					'sender_name' => ! empty( $bot['bot_name'] ) ? $bot['bot_name'] : 'AI Assistant',
+					'content'     => $message,
+					'created_at'  => $now_time,
+				);
+				DCTC_Support_Ticket_Service::append_ticket_messages( (int) $ticket['id'], $incoming_for_ticket );
 			}
 		}
 
@@ -2584,11 +2890,31 @@ class DCTC_AI_Chat_Controller {
 	/**
 	 * Get recent conversation history.
 	 *
-	 * @param string $session_id Session ID.
-	 * @param int    $limit Number of messages.
+	 * @param string     $session_id Session ID.
+	 * @param int        $limit Number of messages.
+	 * @param array|null $request_messages Optional messages provided in request.
 	 * @return string
 	 */
-	private function get_recent_conversation( $session_id, $limit = 10 ) {
+	private function get_recent_conversation( $session_id, $limit = 10, $request_messages = null ) {
+		if ( is_array( $request_messages ) ) {
+			$messages = array_slice( $request_messages, -$limit );
+			$history  = '';
+			foreach ( $messages as $message ) {
+				if ( empty( $message['content'] ) ) {
+					continue;
+				}
+				$role     = ( isset( $message['role'] ) && in_array( $message['role'], array( 'assistant', 'bot' ), true ) )
+					? 'Assistant'
+					: 'User';
+				$history .= sprintf(
+					"%s: %s\n",
+					$role,
+					trim( $message['content'] )
+				);
+			}
+			return trim( $history );
+		}
+
 		global $wpdb;
 
 		if ( empty( $session_id ) ) {
@@ -2737,14 +3063,11 @@ class DCTC_AI_Chat_Controller {
 			);
 		}
 
-		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-
-		// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$session = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
-
 		$ticket_info = $this->get_session_ticket_info( $session_id );
 		$has_ticket  = ! empty( $ticket_info );
 		$ai_waiting  = ! empty( $ticket_info['ai_response_waiting'] );
+		$messages    = array();
+		$updated_at  = current_time( 'mysql', true );
 
 		if ( $has_ticket && ! empty( $ticket_info['id'] ) ) {
 			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
@@ -2754,26 +3077,35 @@ class DCTC_AI_Chat_Controller {
 				array( 'customer_last_seen_at' => current_time( 'mysql', true ) ),
 				array( 'id' => (int) $ticket_info['id'] )
 			);
-		}
 
-		if ( ! $session ) {
-			return new \WP_REST_Response(
-				array(
-					'success'             => true,
-					'session_id'          => $session_id,
-					'control_mode'        => ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai',
-					'messages'            => array(),
-					'has_ticket'          => $has_ticket,
-					'ticket'              => $ticket_info,
-					'ai_response_waiting' => $ai_waiting,
-					'ai_response'         => $ai_waiting,
-				),
-				200
-			);
+			// Retrieve ticket conversation history exclusively from _dctc_ticket_messages
+			$raw_ticket_messages = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $ticket_info['id'], '_dctc_ticket_messages', true );
+			if ( ! empty( $raw_ticket_messages ) ) {
+				if ( is_string( $raw_ticket_messages ) ) {
+					$raw_ticket_messages = json_decode( $raw_ticket_messages, true );
+				}
+				$messages = is_array( $raw_ticket_messages ) ? $raw_ticket_messages : array();
+			} else {
+				$ticket_obj = DCTC_Support_Ticket_Service::get_ticket( (int) $ticket_info['id'] );
+				if ( ! empty( $ticket_obj['messages'] ) && is_array( $ticket_obj['messages'] ) ) {
+					$messages = $ticket_obj['messages'];
+				}
+			}
+		} else {
+			// No ticket attached: check if save_chat is enabled before querying session table
+			$settings     = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+			$save_enabled = ! empty( $settings['chatbot']['save_chat'] );
+			if ( $save_enabled ) {
+				$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$session = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), ARRAY_A );
+				if ( $session ) {
+					$messages   = ! empty( $session['content'] ) ? json_decode( $session['content'], true ) : array();
+					$messages   = is_array( $messages ) ? $messages : array();
+					$updated_at = $session['updated_at'] ?? $updated_at;
+				}
+			}
 		}
-
-		$messages = ! empty( $session['content'] ) ? json_decode( $session['content'], true ) : array();
-		$messages = is_array( $messages ) ? $messages : array();
 
 		// Clean internal system notices from client chat stream
 		$client_messages = array();
@@ -2787,20 +3119,7 @@ class DCTC_AI_Chat_Controller {
 			$client_messages[] = $msg;
 		}
 
-		// Check if the latest message was an assistant lead form prompt
-		$has_lead_prompt = false;
-		if ( ! empty( $client_messages ) ) {
-			$last_msg = end( $client_messages );
-			if ( is_array( $last_msg ) && ! empty( $last_msg['content'] ) ) {
-				$is_bot = ( isset( $last_msg['role'] ) && in_array( $last_msg['role'], array( 'assistant', 'bot' ), true ) )
-					|| ( isset( $last_msg['sender_type'] ) && in_array( $last_msg['sender_type'], array( 'ai_agent', 'bot' ), true ) );
-				if ( $is_bot && false !== stripos( (string) $last_msg['content'], 'form below' ) ) {
-					$has_lead_prompt = true;
-				}
-			}
-		}
-
-		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : ( ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai' );
+		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
 
 		return new \WP_REST_Response(
 			array(
@@ -2812,7 +3131,7 @@ class DCTC_AI_Chat_Controller {
 				'ticket'              => $ticket_info,
 				'ai_response_waiting' => $ai_waiting,
 				'ai_response'         => $ai_waiting,
-				'updated_at'          => $session['updated_at'] ?? current_time( 'mysql', true ),
+				'updated_at'          => $updated_at,
 			),
 			200
 		);

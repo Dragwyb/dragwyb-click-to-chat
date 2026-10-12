@@ -201,61 +201,70 @@ class DCTC_Support_AI_Handoff_Service {
 		$session_id = sanitize_text_field( $session_id );
 		$prompt     = sanitize_textarea_field( $prompt );
 
+		$ticket = null;
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+		}
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$session = $wpdb->get_row(
 			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
 
-		$messages = ( $session && ! empty( $session['content'] ) ) ? json_decode( $session['content'], true ) : array();
-		$messages = is_array( $messages ) ? $messages : array();
+		if ( ! $ticket && $session && ! empty( $session['support_ticket_id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			$ticket = DCTC_Support_Ticket_Service::get_ticket( absint( $session['support_ticket_id'] ) );
+		}
 
 		$user_id      = get_current_user_id();
 		$current_user = $user_id ? get_userdata( $user_id ) : null;
-		$sender_name  = $current_user ? $current_user->display_name : 'Customer';
+		$sender_name  = $current_user ? $current_user->display_name : ( ! empty( $email ) ? $email : 'Customer' );
+		$msg_uuid     = wp_generate_uuid4();
 
-		// Deduplicate consecutive identical customer message
-		$last_idx = count( $messages ) - 1;
-		if ( ! ( $last_idx >= 0 && isset( $messages[ $last_idx ]['role'] ) && 'user' === $messages[ $last_idx ]['role'] && trim( (string) $messages[ $last_idx ]['content'] ) === trim( (string) $prompt ) ) ) {
-			$messages[] = array(
-				'role'        => 'user',
-				'sender_type' => 'customer',
-				'sender_name' => $sender_name,
-				'content'     => $prompt,
-				'created_at'  => current_time( 'mysql' ),
+		$new_user_msg = array(
+			'id'          => $msg_uuid,
+			'uuid'        => $msg_uuid,
+			'role'        => 'user',
+			'sender_type' => 'customer',
+			'sender_name' => $sender_name,
+			'content'     => $prompt,
+			'created_at'  => current_time( 'mysql', true ),
+		);
+
+		$ticket_id  = 0;
+		$agent_name = __( 'a support specialist', 'dragwyb-click-to-chat' );
+
+		if ( $ticket && ! empty( $ticket['id'] ) ) {
+			$ticket_id = (int) $ticket['id'];
+			if ( ! empty( $ticket['agent_name'] ) && __( 'Unassigned', 'dragwyb-click-to-chat' ) !== $ticket['agent_name'] ) {
+				$agent_name = $ticket['agent_name'];
+			}
+
+			// Append to ticket messages (Primary source of truth)
+			DCTC_Support_Ticket_Service::append_ticket_messages( $ticket_id, array( $new_user_msg ) );
+		}
+
+		// Persist to session table ONLY if save_chat is enabled
+		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
+		$save_enabled = ! empty( $ai_settings['chatbot']['save_chat'] );
+
+		if ( $save_enabled && $session ) {
+			$session_messages   = ( ! empty( $session['content'] ) ) ? json_decode( $session['content'], true ) : array();
+			$session_messages   = is_array( $session_messages ) ? $session_messages : array();
+			$session_messages[] = $new_user_msg;
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$table_sessions,
+				array(
+					'content'      => wp_json_encode( $session_messages ),
+					'unread_count' => isset( $session['unread_count'] ) ? ( (int) $session['unread_count'] + 1 ) : 1,
+					'updated_at'   => current_time( 'mysql', true ),
+				),
+				array( 'session_id' => $session_id )
 			);
 		}
 
-		// Persist message to session
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->update(
-			$table_sessions,
-			array(
-				'content'      => wp_json_encode( $messages ),
-				'unread_count' => isset( $session['unread_count'] ) ? ( (int) $session['unread_count'] + 1 ) : 1,
-				'updated_at'   => current_time( 'mysql' ),
-			),
-			array( 'session_id' => $session_id )
-		);
-
-		$agent_name = __( 'a support specialist', 'dragwyb-click-to-chat' );
-		$ticket_id  = 0;
-		$ticket     = null;
-
-		// Update ticket state & log customer reply
-		if ( $session && ! empty( $session['support_ticket_id'] ) ) {
-			$ticket_id = absint( $session['support_ticket_id'] );
-			$ticket    = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( $ticket_id ) : null;
-
-			if ( $ticket ) {
-				if ( ! empty( $ticket['agent_name'] ) && __( 'Unassigned', 'dragwyb-click-to-chat' ) !== $ticket['agent_name'] ) {
-					$agent_name = $ticket['agent_name'];
-				}
-
-				// Sync messages to ticket meta
-				if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-					DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $messages );
-				}
+		if ( $ticket && $ticket_id ) {
 
 				// If ticket was resolved/closed, reopen it
 				if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
@@ -288,7 +297,6 @@ class DCTC_Support_AI_Handoff_Service {
 					DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $prompt );
 				}
 			}
-		}
 
 		$ticket_info = array(
 			'id'           => (int) $ticket_id,
