@@ -222,12 +222,13 @@ class DCTC_Support_Ticket_Service {
 		$raw_surface = ! empty( $data['reply_surface'] ) ? sanitize_key( $data['reply_surface'] ) : 'chatbot_widget';
 		$surface     = in_array( $raw_surface, self::ALLOWED_REPLY_SURFACES, true ) ? $raw_surface : 'chatbot_widget';
 
-		$interaction = ! empty( $data['interaction_type'] ) ? sanitize_key( $data['interaction_type'] ) : 'SUPPORT_TICKET';
-		$category_id = ! empty( $data['category_id'] ) ? absint( $data['category_id'] ) : 0;
-		$agent_id    = ! empty( $data['assigned_agent_id'] ) ? absint( $data['assigned_agent_id'] ) : 0;
-		$team_id     = ! empty( $data['assigned_team_id'] ) ? absint( $data['assigned_team_id'] ) : 0;
-		$ai_summary  = isset( $data['ai_summary'] ) ? sanitize_textarea_field( $data['ai_summary'] ) : '';
-		$confidence  = isset( $data['ai_classification_confidence'] ) ? floatval( $data['ai_classification_confidence'] ) : 0.0;
+		$interaction  = ! empty( $data['interaction_type'] ) ? sanitize_key( $data['interaction_type'] ) : 'SUPPORT_TICKET';
+		$category_id  = ! empty( $data['category_id'] ) ? absint( $data['category_id'] ) : 0;
+		$agent_id     = ! empty( $data['assigned_agent_id'] ) ? absint( $data['assigned_agent_id'] ) : 0;
+		$team_id      = ! empty( $data['assigned_team_id'] ) ? absint( $data['assigned_team_id'] ) : 0;
+		$ai_summary   = isset( $data['ai_summary'] ) ? sanitize_textarea_field( $data['ai_summary'] ) : '';
+		$confidence   = isset( $data['ai_classification_confidence'] ) ? floatval( $data['ai_classification_confidence'] ) : 0.0;
+		$intent_types = ! empty( $data['intent_types'] ) ? array( sanitize_key( $data['intent_types'] ) ) : array();
 
 		// Security (SEC-15): Verify agent eligibility if agent_id supplied
 		if ( $agent_id > 0 ) {
@@ -341,6 +342,10 @@ class DCTC_Support_Ticket_Service {
 		}
 		if ( ! empty( $ai_summary ) ) {
 			$meta_batch['ai_summary'] = $ai_summary;
+		}
+
+		if ( ! empty( $intent_types ) ) {
+			$meta_batch['intent_types'] = $intent_types;
 		}
 
 		// Security (SEC-07): Prevent caller-supplied metadata from overwriting protected keys

@@ -285,6 +285,18 @@ class DCTC_AI_Leads_Controller {
 						}
 					}
 
+					// Add lead generation intent to existing intent types
+					$existing_intent_types = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'intent_types', true );
+					if ( ! empty( $existing_intent_types ) ) {
+						$existint_intent_types = json_decode( $existing_intent_types, true );
+						if ( is_array( $existint_intent_types ) ) {
+							if ( ! in_array( 'lead_generation', $existint_intent_types, true ) ) {
+								$existint_intent_types[] = 'lead_generation';
+								DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'intent_types', $existint_intent_types );
+							}
+						}
+					}
+
 					// Log Event in support ticket activity
 					if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 						DCTC_Support_Event_Service::log_event(
@@ -320,6 +332,7 @@ class DCTC_AI_Leads_Controller {
 							'interaction_type' => 'LEAD_GENERATION',
 							'control_mode'     => 'ai',
 							'initial_message'  => $lead_summary,
+							'intent_types'     => 'lead_generation',
 						)
 					);
 

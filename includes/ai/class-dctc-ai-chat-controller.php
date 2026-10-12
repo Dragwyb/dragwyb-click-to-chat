@@ -187,7 +187,7 @@ class DCTC_AI_Chat_Controller {
 
 					if ( $lookup && ! is_wp_error( $lookup ) && ! empty( $lookup['success'] ) ) {
 						$formatted_total_clean = html_entity_decode( $lookup['formatted_total'] ?? ( $lookup['formated_total'] ?? '' ), ENT_QUOTES, 'UTF-8' );
-						$msg = sprintf(
+						$msg                   = sprintf(
 						/* translators: 1: Order number, 2: Status label, 3: Order Total, 4: Date */
 							esc_html__( 'Here are the live details for Order #%1$s: Status is %2$s. Total: %3$s placed on %4$s.', 'dragwyb-click-to-chat' ),
 							$lookup['order_number'],
@@ -325,6 +325,7 @@ class DCTC_AI_Chat_Controller {
 								'reply_surface'    => 'chatbot_widget',
 								'interaction_type' => 'HYBRID_SUPPORT',
 								'control_mode'     => 'ai',
+								'intent_types'     => 'support_ticket',
 							)
 						);
 					}
@@ -386,6 +387,7 @@ class DCTC_AI_Chat_Controller {
 								'interaction_type'    => $is_sales_lead ? 'LEAD_GENERATION' : 'HYBRID_SUPPORT',
 								'control_mode'        => 'ai',
 								'initial_message'     => $history ?: $prompt,
+								'intent_types'        => $is_sales_lead ? 'lead_generation' : 'support_ticket',
 							)
 						);
 					} else {
@@ -523,6 +525,7 @@ class DCTC_AI_Chat_Controller {
 									'interaction_type'    => 'HYBRID_SUPPORT',
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
+									'intent_types'        => 'support_ticket',
 								)
 							);
 						}
@@ -975,6 +978,7 @@ class DCTC_AI_Chat_Controller {
 									'interaction_type'    => $effective_ticket_type,
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
+									'intent_types'        => 'support_ticket',
 								)
 							);
 						} else {
@@ -1093,7 +1097,7 @@ class DCTC_AI_Chat_Controller {
 		);
 
 		try {
-			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $sources, $extra );
+			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $detected_intent, $sources, $extra );
 		} catch ( Exception $e ) {
 			self::log_debug( 'Dragwyb AI AI Save Conversation Error: ' . $e->getMessage() );
 		}
@@ -2191,7 +2195,7 @@ class DCTC_AI_Chat_Controller {
 	/**
 	 * Save conversation to database
 	 */
-	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $sources = array(), $extra = array() ) {
+	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $intent_type, $sources = array(), $extra = array() ) {
 		// Save to database if enabled or if ticket is attached
 		$save_enabled = ! isset( $bot['save_chat'] ) || (bool) $bot['save_chat'];
 		if ( $save_enabled || class_exists( 'DCTC_Support_Ticket_Service' ) ) {
@@ -2206,8 +2210,9 @@ class DCTC_AI_Chat_Controller {
 			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 			if ( $ticket && ! empty( $ticket['id'] ) ) {
 				global $wpdb;
-				$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-				$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
+				$table_tickets      = $wpdb->prefix . 'dctc_support_tickets';
+				$table_tickets_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+				$table_sessions     = $wpdb->prefix . 'dctc_ai_sessions';
 
 				$ticket_updates = array(
 					'customer_last_seen_at' => current_time( 'mysql', true ),
@@ -2228,10 +2233,22 @@ class DCTC_AI_Chat_Controller {
 				$session_content = $wpdb->get_var(
 					$wpdb->prepare( "SELECT content FROM `$table_sessions` WHERE session_id = %s", $session_id ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				);
+
 				if ( ! empty( $session_content ) ) {
 					$all_msgs = json_decode( $session_content, true );
 					if ( is_array( $all_msgs ) ) {
 						DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_dctc_ticket_messages', $all_msgs );
+					}
+				}
+
+				$existing_intent_types = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'intent_types', true );
+				if ( ! empty( $existing_intent_types ) ) {
+					$existint_intent_types = json_decode( $existing_intent_types, true );
+					if ( is_array( $existint_intent_types ) ) {
+						if ( ! in_array( $intent_type, $existint_intent_types, true ) ) {
+							$existint_intent_types[] = $intent_type;
+							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], 'intent_types', $existint_intent_types );
+						}
 					}
 				}
 			}
