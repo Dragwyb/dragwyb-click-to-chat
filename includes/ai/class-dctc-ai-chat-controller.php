@@ -100,6 +100,30 @@ class DCTC_AI_Chat_Controller {
 			$page_context = $params['page_context'];
 		}
 
+		// Security (SEC-004): Enforce session isolation so guests and users can only interact with their own session
+		$user_id        = get_current_user_id();
+		$cookie_session = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
+		$is_staff       = current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets', $user_id ) );
+
+		if ( ! $is_staff ) {
+			if ( ! empty( $cookie_session ) && ! empty( $session_id ) && 'default' !== $session_id && ! hash_equals( (string) $cookie_session, (string) $session_id ) ) {
+				// Client tried to pass another user's session_id; enforce their own cookie session
+				$session_id = $cookie_session;
+			} elseif ( empty( $cookie_session ) && ! empty( $session_id ) && 'default' !== $session_id ) {
+				// If no cookie was provided, verify the requested session does not belong to another user's existing ticket or session
+				$ticket_info  = $this->get_session_ticket_info( $session_id );
+				$has_existing = ! empty( $ticket_info );
+				if ( ! $has_existing ) {
+					global $wpdb;
+					$sess_table   = $wpdb->prefix . 'dctc_ai_sessions';
+					$has_existing = (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$sess_table} WHERE session_id = %s LIMIT 1", $session_id ) );
+				}
+				if ( $has_existing ) {
+					$session_id = 'sess_' . wp_generate_uuid4();
+				}
+			}
+		}
+
 		$attachments = isset( $params['attachments'] ) && is_array( $params['attachments'] ) ? array_values(
 			array_filter(
 				array_map(
@@ -3075,10 +3099,19 @@ class DCTC_AI_Chat_Controller {
 		$user_id        = get_current_user_id();
 		$cookie_session = isset( $_COOKIE['dctc_ai_session_id'] ) ? sanitize_text_field( wp_unslash( $_COOKIE['dctc_ai_session_id'] ) ) : '';
 		$guest_token    = $request->get_header( 'X-Guest-Token' ) ?: $request->get_param( 'guest_token' );
-		$is_authorized  = false;
+		$is_staff       = current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets', $user_id ) );
+
+		// If caller is not staff and provided a session_id that differs from their active cookie, enforce their own session
+		if ( ! $is_staff && ! empty( $cookie_session ) && ! hash_equals( (string) $cookie_session, (string) $session_id ) ) {
+			$session_id  = $cookie_session;
+			$ticket_info = $this->get_session_ticket_info( $session_id );
+			$has_ticket  = ! empty( $ticket_info );
+		}
+
+		$is_authorized = false;
 
 		// 1. Administrators and privileged support staff
-		if ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets', $user_id ) ) ) {
+		if ( $is_staff ) {
 			$is_authorized = true;
 		}
 
