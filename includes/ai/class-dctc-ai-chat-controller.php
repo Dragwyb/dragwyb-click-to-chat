@@ -541,7 +541,12 @@ class DCTC_AI_Chat_Controller {
 			$is_short_email_response = ( mb_strlen( trim( $prompt ) ) < 90 ) || preg_match( '/^(?:my email is|here is my email|email:?|sure,? it\'s|it is)?\s*[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\.?$/i', trim( $prompt ) );
 
 			if ( $is_short_email_response ) {
-				$history              = $this->get_recent_conversation( $session_id, 5 );
+				$history = $this->get_recent_conversation( $session_id, 5 );
+
+				if ( empty( $history ) && ! empty( $request_messages ) ) {
+					$history = $this->get_recent_conversation( $session_id, 5, $request_messages );
+				}
+
 				$is_sales_lead        = preg_match( '/\b(quote|pricing|demo|bulk|consultation|custom pricing|buy|purchase|interested|how to buy|order|cost|store)\b/i', $history );
 				$is_support_connected = ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) && ! empty( $bot['enable_support_escalation'] );
 
@@ -3110,9 +3115,9 @@ class DCTC_AI_Chat_Controller {
 			);
 		}
 
-		$ai_waiting  = ! empty( $ticket_info['ai_response_waiting'] );
-		$messages    = array();
-		$updated_at  = current_time( 'mysql', true );
+		$ai_waiting = ! empty( $ticket_info['ai_response_waiting'] );
+		$messages   = array();
+		$updated_at = current_time( 'mysql', true );
 
 		if ( $has_ticket && ! empty( $ticket_info['id'] ) ) {
 			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
