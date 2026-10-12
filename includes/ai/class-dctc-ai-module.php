@@ -277,13 +277,13 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$support_settings = get_option( 'dctc_support_settings', array() );
 			$portal_page_id   = get_option( 'dctc_support_portal_page_id' );
 			$portal_url       = $portal_page_id ? get_permalink( $portal_page_id ) : home_url( '/support-portal' );
-			$is_guide_page = ( 'dragwyb-click-to-chat-guide' === $page );
+			$is_guide_page    = ( 'dragwyb-click-to-chat-guide' === $page );
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
-			$tab_param     = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
+			$tab_param = isset( $_GET['tab'] ) ? sanitize_text_field( wp_unslash( $_GET['tab'] ) ) : '';
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
-			$open_param    = isset( $_GET['open'] ) ? sanitize_text_field( wp_unslash( $_GET['open'] ) ) : '';
+			$open_param = isset( $_GET['open'] ) ? sanitize_text_field( wp_unslash( $_GET['open'] ) ) : '';
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI state parameter.
-			$force_open    = isset( $_GET['dctc_open_onboarding'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_open_onboarding'] ) );
+			$force_open = isset( $_GET['dctc_open_onboarding'] ) && 'true' === sanitize_text_field( wp_unslash( $_GET['dctc_open_onboarding'] ) );
 
 			// Check tab === setup and open === 1 before auto-opening modal
 			$show_onboarding = ( $is_guide_page && 'setup' === $tab_param && '1' === $open_param ) || $force_open;
@@ -910,19 +910,21 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			if ( $chat_retention_days > 0 && class_exists( 'DCTC_AI_DB' ) ) {
 				try {
 					DCTC_AI_DB::dctc_ai_clean_old_sessions( $chat_retention_days );
-				} catch ( Exception $e ) {
+				} catch ( Throwable $e ) {
 					if ( class_exists( 'DCTC_Error_Logger' ) ) {
-						DCTC_Error_Logger::log( 'Daily Retention Cleanup Error: ' . $e->getMessage() );
+						DCTC_Error_Logger::log( 'Cleanup Error', 'Daily Retention Cleanup Error: ' . $e->getMessage() );
 					}
 				}
 			}
 
 			if ( class_exists( 'DCTC_Error_Logger' ) ) {
 				try {
-					DCTC_Error_Logger::clean_old_logs();
-				} catch ( Exception $e ) {
+					if ( method_exists( 'DCTC_Error_Logger', 'run_cron_cleanup' ) ) {
+						DCTC_Error_Logger::run_cron_cleanup();
+					}
+				} catch ( Throwable $e ) {
 					if ( class_exists( 'DCTC_Error_Logger' ) ) {
-						DCTC_Error_Logger::log( 'Daily Error Log Cleanup Error: ' . $e->getMessage() );
+						DCTC_Error_Logger::log( 'Cleanup Error', 'Daily Error Log Cleanup Error: ' . $e->getMessage() );
 					}
 				}
 			}
@@ -943,9 +945,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 						wp_delete_attachment( (int) $att_id, true );
 					}
 				}
-			} catch ( Exception $e ) {
+			} catch ( Throwable $e ) {
 				if ( class_exists( 'DCTC_Error_Logger' ) ) {
-					DCTC_Error_Logger::log( 'Temp Attachment Cleanup Error: ' . $e->getMessage() );
+					DCTC_Error_Logger::log( 'Cleanup Error', 'Temp Attachment Cleanup Error: ' . $e->getMessage() );
 				}
 			}
 		}
