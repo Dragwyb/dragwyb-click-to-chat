@@ -559,7 +559,7 @@ export default function TicketSidebar({
 					</button>
 
 					{showCommerceCard && (
-						<div className="dctc-sc-card-body dctc-sc-wc-orders-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+						<div className="dctc-sc-card-body dctc-sc-wc-orders-list">
 							{wcData.recent_orders.map((order) => (
 								<div key={order.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
 									<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -649,7 +649,7 @@ export default function TicketSidebar({
 						<h4>{__('Viewers', 'dragwyb-click-to-chat')} ({displayViewers.length})</h4>
 					</div>
 				</div>
-				<div className="dctc-sc-card-body" style={{ paddingTop: '10px', paddingBottom: '14px' }}>
+				<div className="dctc-sc-card-body">
 					<div className="dctc-sc-sidebar-viewers-stack">
 						{displayViewers.map((viewer, vIdx) => {
 							const colors = [

@@ -227,7 +227,7 @@ export function TicketDetailsSidebarSkeleton() {
 						<h4>{__('Viewers', 'dragwyb-click-to-chat')} (1)</h4>
 					</div>
 				</div>
-				<div className="dctc-sc-card-body" style={{ paddingTop: '10px', paddingBottom: '14px' }}>
+				<div className="dctc-sc-card-body">
 					<div className="dctc-sc-sidebar-viewers-stack">
 						<div
 							className="dctc-sc-sidebar-viewer-avatar"

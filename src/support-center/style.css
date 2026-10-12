@@ -19,6 +19,22 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   overflow: hidden;
 }
 
+body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-single-ticket{
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  top: 0px;
+  left: 0px;
+  z-index: 99999999;
+  margin: 0;
+}
+
+body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-single-ticket .dctc-sc-header-bar{
+  top: 0px;
+  padding-inline: 22px;
+}
+
 /* Container & Full-Width Layout */
 .dctc-support-admin-fullwidth {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
@@ -1705,8 +1721,6 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
 /* COLUMN 3: MAIN WORKSPACE & CONVERSATION */
 .dctc-sc-col-main {
   background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1721,7 +1735,6 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   height: 100%;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow: hidden;
 }
@@ -2326,7 +2339,7 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   gap: 10px;
   overflow-y: auto;
   flex-shrink: 0;
-  max-height: calc(100vh - 113px);
+  max-height: calc(100vh - 79px);
   width: 300px;
 }
 
@@ -5400,7 +5413,7 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
   gap: 0;
   overflow-y: auto;
   padding: 6px;
-  max-height: calc(100vh - 237px);
+  max-height: calc(100vh - 205px);
 }
 
 .dctc-sc-left-panel-item {
@@ -5802,13 +5815,10 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
 }
 
 .dctc-sc-workspace-layout.ticket-active .dctc-sc-col-main {
-  border-color: #dbe3ee;
-  border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-  min-width: 0;
-  position: sticky;
-  top: 111px;
-  height: calc(100vh - 110px);
+    min-width: 0;
+    position: sticky;
+    top: 77px;
+    height: calc(100vh - 79px);
 }
 
 .dctc-sc-ws-badge-dropdown, .dctc-sc-field-row {
@@ -5887,7 +5897,7 @@ body.support-center_page_dragwyb-support-tickets.dctc-view-ticket{
 }
 
 .dctc-sc-card-body {
-  padding: 14px 16px 16px;
+  padding: 0px 16px 16px;
 }
 
 .dctc-sc-expand-toggle-btn .dashicons:last-child {

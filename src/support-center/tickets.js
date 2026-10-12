@@ -604,7 +604,7 @@ function TicketsApp() {
 	};
 
 	return (
-		<div className="dctc-sc-app-wrap">
+		<div className={`dctc-sc-app-wrap ${selectedTicketId ? 'dctc-sc-view-single-ticket' : 'dctc-sc-view-tickets-list'}`}>
 			<SupportHeader
 				activeTab="tickets"
 				userPermissions={userPermissions}
