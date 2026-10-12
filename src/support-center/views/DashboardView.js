@@ -316,7 +316,7 @@ export default function DashboardView({
 						</div>
 						<div className="dctc-sc-metric-info">
 							<span className="dctc-sc-metric-title">{__('New Tickets', 'dragwyb-click-to-chat')}</span>
-							<span className="dctc-sc-metric-value">{todayCreated || 1}</span>
+							<span className="dctc-sc-metric-value">{todayCreated || 0}</span>
 						</div>
 						<span className="dctc-sc-trend-pill green">
 							&uarr; 12%
@@ -352,7 +352,7 @@ export default function DashboardView({
 						</div>
 						<div className="dctc-sc-metric-info">
 							<span className="dctc-sc-metric-title">{__('Pending Action', 'dragwyb-click-to-chat')}</span>
-							<span className="dctc-sc-metric-value">{totalPending || 1}</span>
+							<span className="dctc-sc-metric-value">{totalPending || 0}</span>
 						</div>
 						<span className="dctc-sc-trend-pill rose">
 							&uarr; 3%

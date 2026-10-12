@@ -226,6 +226,9 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 			$result = DCTC_Support_Ticket_Service::update_ticket_meta( $this->id, $key, $sanitized_value );
+			if ( in_array( $key, array( 'product', 'product_name', 'product_id' ), true ) ) {
+				DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $this->id, $sanitized_value );
+			}
 		} else {
 			global $wpdb;
 			$table   = $wpdb->prefix . 'dctc_support_ticket_meta';

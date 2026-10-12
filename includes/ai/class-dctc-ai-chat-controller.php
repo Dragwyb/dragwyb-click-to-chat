@@ -95,6 +95,10 @@ class DCTC_AI_Chat_Controller {
 		$session_id       = isset( $params['session_id'] ) ? sanitize_text_field( $params['session_id'] ) : 'default';
 		$email            = isset( $params['email'] ) ? sanitize_email( $params['email'] ) : '';
 		$fallback_trigger = isset( $params['fallback_trigger'] ) && true === $params['fallback_trigger'];
+		$page_context     = $request->get_param( 'page_context' );
+		if ( empty( $page_context ) && isset( $params['page_context'] ) && is_array( $params['page_context'] ) ) {
+			$page_context = $params['page_context'];
+		}
 
 		$attachments = isset( $params['attachments'] ) && is_array( $params['attachments'] ) ? array_values(
 			array_filter(
@@ -316,7 +320,7 @@ class DCTC_AI_Chat_Controller {
 				if ( ! empty( $support_settings['enabled'] ) ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
-						DCTC_Support_Ticket_Service::create_ticket(
+						$created = DCTC_Support_Ticket_Service::create_ticket(
 							array(
 								'subject'          => '[Support Handoff] ' . wp_trim_words( $prompt, 8, '...' ),
 								'session_id'       => $session_id,
@@ -326,8 +330,15 @@ class DCTC_AI_Chat_Controller {
 								'interaction_type' => 'HYBRID_SUPPORT',
 								'control_mode'     => 'ai',
 								'intent_types'     => 'support_ticket',
+								'product'          => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
+								'product_id'       => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
 							)
 						);
+						if ( ! empty( $page_context['product'] ) && is_array( $created ) && ! empty( $created['id'] ) ) {
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
+						}
+					} elseif ( ! empty( $page_context['product'] ) ) {
+						DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
 					}
 				}
 			}
@@ -375,7 +386,7 @@ class DCTC_AI_Chat_Controller {
 				if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $is_support_connected ) {
 					$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 					if ( ! $existing_ticket ) {
-						DCTC_Support_Ticket_Service::create_ticket(
+						$created = DCTC_Support_Ticket_Service::create_ticket(
 							array(
 								'subject'             => ( $is_sales_lead ? '[Lead Inquiry] ' : '[Support Request] ' ) . ( ! empty( $history ) ? wp_trim_words( $history, 8, '...' ) : ( $is_sales_lead ? 'Customer Sales Inquiry' : 'Customer Technical Support' ) ),
 								'session_id'          => $session_id,
@@ -388,13 +399,22 @@ class DCTC_AI_Chat_Controller {
 								'control_mode'        => 'ai',
 								'initial_message'     => $history ?: $prompt,
 								'intent_types'        => $is_sales_lead ? 'lead_generation' : 'support_ticket',
+								'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
+								'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
 							)
 						);
+						if ( ! empty( $page_context['product'] ) && is_array( $created ) && ! empty( $created['id'] ) ) {
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
+						}
 					} else {
-						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( (int) $existing_ticket['id'] ) : null;
+						$ticket_id  = (int) $existing_ticket['id'];
+						$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
 						if ( $ticket_obj && $ticket_obj->is_valid() ) {
 							$ticket_obj->update_email( $provided_email );
 							$ticket_obj->update_meta( 'detected_intent', ( $is_sales_lead ? 'lead_generation' : 'support_ticket' ), 'auto' );
+						}
+						if ( ! empty( $page_context['product'] ) ) {
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $ticket_id, $page_context['product'] );
 						}
 					}
 				}
@@ -513,7 +533,7 @@ class DCTC_AI_Chat_Controller {
 					if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 						$existing_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 						if ( ! $existing_ticket ) {
-							DCTC_Support_Ticket_Service::create_ticket(
+							$created = DCTC_Support_Ticket_Service::create_ticket(
 								array(
 									'subject'             => '[Support Inquiry] ' . wp_trim_words( $prompt, 8, '...' ),
 									'session_id'          => $session_id,
@@ -526,8 +546,15 @@ class DCTC_AI_Chat_Controller {
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
 									'intent_types'        => 'support_ticket',
+									'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : '',
+									'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
 								)
 							);
+							if ( ! empty( $page_context['product'] ) && is_array( $created ) && ! empty( $created['id'] ) ) {
+								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $page_context['product'] );
+							}
+						} elseif ( ! empty( $page_context['product'] ) ) {
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $existing_ticket['id'], $page_context['product'] );
 						}
 					}
 
@@ -965,8 +992,9 @@ class DCTC_AI_Chat_Controller {
 
 					// 2. Support Ticket creation (only if $ask_support_email)
 					if ( class_exists( 'DCTC_Support_Ticket_Service' ) && $ask_support_email ) {
+						$prod_to_sync = ! empty( $page_context['product'] ) ? $page_context['product'] : ( ! empty( $detected_interest ) ? $detected_interest : '' );
 						if ( ! $existing_ticket ) {
-							DCTC_Support_Ticket_Service::create_ticket(
+							$created = DCTC_Support_Ticket_Service::create_ticket(
 								array(
 									'subject'             => $effective_subject_prefix . wp_trim_words( $prompt, 8, '...' ),
 									'session_id'          => $session_id,
@@ -979,8 +1007,13 @@ class DCTC_AI_Chat_Controller {
 									'control_mode'        => 'ai',
 									'initial_message'     => $prompt,
 									'intent_types'        => 'support_ticket',
+									'product'             => ! empty( $page_context['product']['name'] ) ? sanitize_text_field( $page_context['product']['name'] ) : ( is_string( $prod_to_sync ) ? sanitize_text_field( $prod_to_sync ) : '' ),
+									'product_id'          => ! empty( $page_context['product']['id'] ) ? absint( $page_context['product']['id'] ) : 0,
 								)
 							);
+							if ( ! empty( $prod_to_sync ) && is_array( $created ) && ! empty( $created['id'] ) ) {
+								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $created['id'], $prod_to_sync );
+							}
 						} else {
 							$ticket_id  = (int) $existing_ticket['id'];
 							$ticket_obj = class_exists( 'DCTC_Support_Ticket' ) ? new DCTC_Support_Ticket( $ticket_id ) : null;
@@ -990,6 +1023,9 @@ class DCTC_AI_Chat_Controller {
 									$ticket_obj->update_phone( $detected_phone );
 								}
 								$ticket_obj->update_meta( 'detected_intent', ( 'LEAD_GENERATION' === $effective_ticket_type ? 'lead_generation' : 'support_ticket' ), 'auto' );
+							}
+							if ( ! empty( $prod_to_sync ) ) {
+								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $ticket_id, $prod_to_sync );
 							}
 						}
 					}
@@ -1146,6 +1182,13 @@ class DCTC_AI_Chat_Controller {
 
 		$this->set_ticket_ai_responding( $session_id, false );
 		$ticket_info  = $this->get_session_ticket_info( $session_id );
+		if ( ! empty( $ticket_info['id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			$prod_to_sync = ! empty( $page_context['product'] ) ? $page_context['product'] : ( ! empty( $detected_interest ) ? $detected_interest : '' );
+			if ( ! empty( $prod_to_sync ) ) {
+				DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( (int) $ticket_info['id'], $prod_to_sync );
+				$ticket_info = $this->get_session_ticket_info( $session_id );
+			}
+		}
 		$has_ticket   = ! empty( $ticket_info );
 		$control_mode = ! empty( $ticket_info['control_mode'] ) ? $ticket_info['control_mode'] : 'ai';
 

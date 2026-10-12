@@ -76,6 +76,13 @@ class DCTC_Support_Ticket_Service {
 	private static $categories_cache = null;
 
 	/**
+	 * Guard to prevent infinite recursion during product sync and reassignment.
+	 *
+	 * @var bool
+	 */
+	private static $is_syncing_product = false;
+
+	/**
 	 * Invalidate internal memory cache.
 	 *
 	 * @param int    $ticket_id Optional ticket ID.
@@ -1375,6 +1382,153 @@ class DCTC_Support_Ticket_Service {
 	}
 
 	/**
+	 * Synchronize product metadata and taxonomy term relationships on a ticket,
+	 * and reassign the ticket to the best-matching agent according to category and product taxonomy data.
+	 *
+	 * @param int              $ticket_id Ticket ID.
+	 * @param string|int|array $product_input Product name, slug, ID, or page_context product array.
+	 * @param bool             $force_reassign Whether to reassign even if already assigned. Default true.
+	 * @return int|false Assigned agent ID or false on failure.
+	 */
+	public static function sync_ticket_product_and_reassign( $ticket_id, $product_input, $force_reassign = true ) {
+		if ( self::$is_syncing_product ) {
+			return false;
+		}
+
+		$ticket_id = absint( $ticket_id );
+		if ( ! $ticket_id ) {
+			return false;
+		}
+
+		self::$is_syncing_product = true;
+
+		try {
+			$product_id   = 0;
+			$product_name = '';
+			$product_slug = '';
+
+			if ( is_array( $product_input ) ) {
+				$product_id   = ! empty( $product_input['id'] ) ? absint( $product_input['id'] ) : ( ! empty( $product_input['wc_id'] ) ? absint( $product_input['wc_id'] ) : ( ! empty( $product_input['product_id'] ) ? absint( $product_input['product_id'] ) : 0 ) );
+				$product_name = ! empty( $product_input['name'] ) ? sanitize_text_field( $product_input['name'] ) : ( ! empty( $product_input['title'] ) ? sanitize_text_field( $product_input['title'] ) : '' );
+				$product_slug = ! empty( $product_input['slug'] ) ? sanitize_title( $product_input['slug'] ) : sanitize_title( $product_name );
+			} elseif ( is_numeric( $product_input ) && (int) $product_input > 0 ) {
+				$product_id = absint( $product_input );
+			} elseif ( is_string( $product_input ) && '' !== trim( $product_input ) ) {
+				$product_name = sanitize_text_field( trim( $product_input ) );
+				$product_slug = sanitize_title( $product_name );
+			}
+
+			if ( ! $product_id && empty( $product_name ) ) {
+				return false;
+			}
+
+			// If ID is set but name is empty, lookup name via WooCommerce
+			if ( $product_id > 0 && empty( $product_name ) && function_exists( 'wc_get_product' ) ) {
+				$wc_p = wc_get_product( $product_id );
+				if ( $wc_p ) {
+					$product_name = $wc_p->get_name();
+					$product_slug = $wc_p->get_slug();
+				}
+			}
+
+			global $wpdb;
+			$table_terms = $wpdb->prefix . 'dctc_support_terms';
+			$table_meta  = $wpdb->prefix . 'dctc_support_term_meta';
+			$table_rel   = $wpdb->prefix . 'dctc_support_term_relationships';
+
+			$term_id = 0;
+			// 1. Find product term in dctc_support_terms
+			if ( $product_id > 0 ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND id = %d LIMIT 1", $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				if ( ! $term_id ) {
+					// Check by wc_product_id meta
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+					$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_meta` WHERE meta_key = 'wc_product_id' AND meta_value = %s LIMIT 1", (string) $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				}
+			}
+
+			if ( ! $term_id && ! empty( $product_slug ) ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s) LIMIT 1", $product_slug, $product_name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			}
+
+			// 2. Update ticket metadata
+			if ( ! empty( $product_name ) ) {
+				self::update_ticket_meta( $ticket_id, 'product', $product_name );
+				self::update_ticket_meta( $ticket_id, 'product_name', $product_name );
+			}
+			if ( $product_id > 0 ) {
+				self::update_ticket_meta( $ticket_id, 'product_id', $product_id );
+			}
+
+			// 3. Link product in dctc_support_term_relationships
+			if ( $term_id > 0 ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->replace(
+					$table_rel,
+					array(
+						'object_id'     => $ticket_id,
+						'object_type'   => 'ticket',
+						'term_id'       => $term_id,
+						'taxonomy_slug' => 'product',
+						'created_at'    => current_time( 'mysql' ),
+					),
+					array( '%d', '%s', '%d', '%s', '%s' )
+				);
+			}
+
+			// 4. Discover Category from product if ticket currently lacks one
+			$ticket_cat_id = (int) self::get_ticket_meta( $ticket_id, 'category_id', true );
+			if ( ! $ticket_cat_id && $term_id > 0 ) {
+				// Check category linked to this product term
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM `$table_meta` WHERE term_id = %d AND meta_key = 'category_id' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				if ( ! $prod_cat ) {
+					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+					$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_rel` WHERE object_id = %d AND object_type = 'term' AND taxonomy_slug = 'category' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				}
+
+				if ( $prod_cat && (int) $prod_cat > 0 ) {
+					self::update_ticket_meta( $ticket_id, 'category_id', absint( $prod_cat ) );
+				} elseif ( $product_id > 0 && function_exists( 'wp_get_post_terms' ) ) {
+					// Check WooCommerce product categories
+					$wc_terms = wp_get_post_terms( $product_id, 'product_cat' );
+					if ( ! empty( $wc_terms ) && ! is_wp_error( $wc_terms ) ) {
+						foreach ( $wc_terms as $wc_t ) {
+							// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+							$matched_cat_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s) LIMIT 1", $wc_t->slug, $wc_t->name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+							if ( $matched_cat_id ) {
+								self::update_ticket_meta( $ticket_id, 'category_id', absint( $matched_cat_id ) );
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			// Invalidate cache so assignment engine reads fresh product & category
+			self::invalidate_cache( $ticket_id );
+
+			// 5. Update assigned agent according to category and product taxonomies
+			if ( class_exists( 'DCTC_Support_Assignment_Engine' ) ) {
+				$current_assigned = (int) self::get_ticket_meta( $ticket_id, 'assigned_agent_id', true );
+				if ( $force_reassign || ! $current_assigned ) {
+					$new_agent_id = DCTC_Support_Assignment_Engine::assign_ticket_automatically( $ticket_id );
+					if ( $new_agent_id ) {
+						self::$is_syncing_product = false;
+						return $new_agent_id;
+					}
+				}
+			}
+		} finally {
+			self::$is_syncing_product = false;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Verify guest ticket authorization token.
 	 *
 	 * @param string $ticket_uuid  Ticket UUID.
@@ -2091,6 +2245,9 @@ class DCTC_Support_Ticket_Service {
 			if ( class_exists( 'DCTC_Support_Event_Service' ) ) {
 				$prev_product = isset( $ticket['product'] ) ? $ticket['product'] : '';
 				DCTC_Support_Event_Service::log_event( $ticket['id'], 'product_changed', $actor_type, $actor_id, $actor_name, $prev_product, $product_val );
+			}
+			if ( ! isset( $data['assigned_agent_id'] ) ) {
+				self::sync_ticket_product_and_reassign( $ticket['id'], $product_val );
 			}
 		}
 

@@ -229,6 +229,9 @@ class DCTC_AI_Leads_Controller {
 						if ( ! empty( $interest ) ) {
 							$ticket_obj->update_meta( 'interest', $interest, 'auto' );
 							$ticket_obj->update_meta( 'product', $interest, 'auto' );
+							if ( class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+								DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $ticket_id, $interest );
+							}
 						}
 						if ( ! empty( $requirement ) ) {
 							$ticket_obj->update_meta( 'requirement', $requirement, 'textarea' );
@@ -279,6 +282,8 @@ class DCTC_AI_Leads_Controller {
 						}
 						if ( ! empty( $interest ) ) {
 							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'interest', $interest );
+							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'product', $interest );
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $ticket_id, $interest );
 						}
 						if ( ! empty( $requirement ) ) {
 							DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'requirement', $requirement );
@@ -359,6 +364,8 @@ class DCTC_AI_Leads_Controller {
 						}
 						if ( ! empty( $interest ) ) {
 							DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'interest', $interest );
+							DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'product', $interest );
+							DCTC_Support_Ticket_Service::sync_ticket_product_and_reassign( $new_ticket_id, $interest );
 						}
 						if ( ! empty( $requirement ) ) {
 							DCTC_Support_Ticket_Service::update_ticket_meta( $new_ticket_id, 'requirement', $requirement );

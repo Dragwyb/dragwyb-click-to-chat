@@ -542,9 +542,14 @@ class DCTC_Support_Taxonomy_Service {
 	 * @param array  $terms_input Array of term IDs or names.
 	 * @param string $taxonomy_slug Taxonomy slug.
 	 * @param string $object_type Object type ('ticket', 'term', etc.).
+	 * @param int    $object_id Object ID.
+	 * @param array  $terms_input Array of term IDs or names.
+	 * @param string $taxonomy_slug Taxonomy slug.
+	 * @param string $object_type Object type ('ticket', 'term', etc.).
+	 * @param bool   $auto_create Whether to create terms if not found. Default false.
 	 * @return bool
 	 */
-	public static function set_object_terms( $object_id, $terms_input = array(), $taxonomy_slug = 'tag', $object_type = 'ticket' ) {
+	public static function set_object_terms( $object_id, $terms_input = array(), $taxonomy_slug = 'tag', $object_type = 'ticket', $auto_create = false ) {
 		global $wpdb;
 		$table_terms = $wpdb->prefix . 'dctc_support_terms';
 		$table_rel   = $wpdb->prefix . 'dctc_support_term_relationships';
@@ -553,6 +558,16 @@ class DCTC_Support_Taxonomy_Service {
 		$taxonomy_slug = sanitize_title( $taxonomy_slug );
 		$object_type   = sanitize_key( $object_type );
 		$terms_input   = is_array( $terms_input ) ? $terms_input : array();
+
+		// Verify taxonomy exists; do NOT auto-create taxonomies
+		$table_taxonomies = $wpdb->prefix . 'dctc_support_taxonomies';
+		if ( ! in_array( $taxonomy_slug, array( 'category', 'tag', 'product' ), true ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$tax_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_taxonomies` WHERE slug = %s LIMIT 1", $taxonomy_slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( ! $tax_exists ) {
+				return false;
+			}
+		}
 
 		// Delete existing associations for this object and taxonomy
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -581,7 +596,7 @@ class DCTC_Support_Taxonomy_Service {
 					continue;
 				}
 
-				// Find or create term
+				// Find existing term
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$existing_id = $wpdb->get_var(
 					$wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = %s AND (slug = %s OR name = %s)", $taxonomy_slug, $slug, $name ) // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -589,7 +604,8 @@ class DCTC_Support_Taxonomy_Service {
 
 				if ( $existing_id ) {
 					$term_ids[] = (int) $existing_id;
-				} else {
+				} elseif ( $auto_create ) {
+					// Only create if explicitly allowed
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 					$wpdb->insert(
 						$table_terms,
