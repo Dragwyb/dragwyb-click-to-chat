@@ -146,14 +146,6 @@ class DCTC_Support_Agent_Service {
 		global $wpdb;
 		$table = $wpdb->prefix . 'dctc_support_agents';
 
-		// Ensure color column exists in database
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$col_check = $wpdb->get_results( "SHOW COLUMNS FROM `$table` LIKE 'color'" );
-		if ( empty( $col_check ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$wpdb->query( "ALTER TABLE `$table` ADD `color` varchar(30) DEFAULT '#4f46e5' NOT NULL AFTER `seniority`" );
-		}
-
 		$id           = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
 		$wp_user_id   = ! empty( $data['wp_user_id'] ) ? absint( $data['wp_user_id'] ) : 0;
 		$support_role = ! empty( $data['support_role'] ) ? sanitize_key( $data['support_role'] ) : 'support';
