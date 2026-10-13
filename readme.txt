@@ -1,144 +1,174 @@
-=== Dragwyb Click to Chat - AI Chatbot & Social Messaging ===
+=== Dragwyb Click to Chat – AI Chatbot, Helpdesk & Lead Generation ===
 Contributors: dragwyb
-Tags: ai chatbot, live chat, chat widget, multi-channel chat, automated support
-Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
-Author: Dragwyb
-Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
-Requires at least: 5.0
+Tags: ai chatbot, helpdesk, live chat, lead generation, whatsapp chat
+Requires at least: 5.9
 Tested up to: 7.1
 Stable tag: 1.1.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-An AI chatbot and multi-channel chat widget for WordPress. Provide automated support and offer social platform redirects in a floating interface.
+AI Chatbot, Customer Support Helpdesk, WooCommerce AI Sales Assistant, Lead Generation, and WhatsApp Click-to-Chat in one powerful plugin.
 
 == Description ==
 
-Dragwyb Click to Chat is a multi-channel chat and automated support WordPress plugin designed to connect you with your website visitors. The plugin provides a floating chat widget that supports an AI chatbot alongside multiple messaging and social platforms in one interface.
+🚀 **Dragwyb Click to Chat** is the ultimate all-in-one customer communication, AI automation, and support ticketing suite for WordPress.
 
-The plugin features an expandable floating button that acts as a central communication hub. Whether you need an AI chatbot to answer automated inquiries, a social messenger redirect, or a direct link to your professional profiles, this plugin handles various channels simultaneously.
+Turn your website into a 24/7 sales and customer support powerhouse. Answer visitor questions instantly using smart AI (OpenAI & Google Gemini), manage support tickets with a full-featured helpdesk, boost WooCommerce revenue with an interactive AI shopping assistant, capture and score high-intent leads, and let customers reach you on WhatsApp, Telegram, Messenger, SMS, and Email.
 
-== Live Demo ==
+[▶ Live Demo](https://dragwyb.com/demo/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=chatbot_demo) | [💎 Upgrade to Pro](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=buy_pro) | [📖 Documentation](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=docs)
 
-Explore live examples of the plugin in action:
+= ⚡ Why Choose Dragwyb Click to Chat? =
 
-🔗 [Click to Chat & AI Chatbot Demo](https://dragwyb.com/demo/ai-chatbot/?&utm_source=wpplugin&utm_medium=readme&utm_campaign=chatbot_demo)
+* 🌟 **Replaces 5 Separate Plugins:** Combines an AI Chatbot, Customer Support Helpdesk, WooCommerce Shopping Assistant, Lead Capture Engine, and WhatsApp Floating Widget into a single lightweight plugin.
+* 🧠 **Accurate AI (No Hallucinations):** Uses Retrieval-Augmented Generation (RAG) to answer questions strictly from your WordPress content and WooCommerce catalog, complete with clickable source links.
+* 🛍️ **WooCommerce Sales Booster:** Shoppers ask for product advice, view live product cards, add items to cart in 1 click, and track their order delivery status in chat.
+* 🎧 **Complete Customer Helpdesk:** Manage the entire ticket lifecycle from your WordPress admin, assign tickets to agents, write private staff notes, and embed self-service customer portals with simple shortcodes.
+* 🎯 **Conversational Lead Capture:** Collect visitor contact details naturally and automatically score buyer readiness (0–100) so you know which leads to prioritize.
+* 💬 **Omnichannel Floating Widget:** Connect WhatsApp, Telegram, Facebook Messenger, Phone, SMS, and Email with dynamic page title and URL tags.
+* 🔒 **100% Privacy & BYOK:** Bring Your Own Key (OpenAI & Google Gemini). No middleman subscription fees, no markup on AI usage, and full control over your data.
 
-##👉 Check out our other plugin:
+= 🤖 1. Smart AI Chatbot & Knowledge Base =
 
-**[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – Create animated 3D flip boxes for your WordPress site.
+* **Multi-Provider AI Intelligence:** Connect your OpenAI (GPT-4o, GPT-4o-mini, GPT-3.5) or Google Gemini (Gemini 1.5 Flash & Pro) API key.
+* **RAG Vector Knowledge Base:** Automatically indexes your WordPress pages, posts, documentation, FAQs, and custom post types into vector embeddings.
+* **Built-in Fast SQLite Vector Engine:** Enjoy high-performance vector search right on your server without needing third-party databases.
+* **Pinecone Vector Database Integration:** Connect remote Pinecone indexes when managing enterprise catalogs or high-traffic sites.
+* **Clickable Source Citations:** AI displays verified links to your website pages so visitors can verify facts and explore related content.
+* **Real-Time Content Sync:** Automatically updates or deletes vector index embeddings when posts are published, edited, or trashed.
+* **Confidence Fallback & Handoff:** Set minimum confidence thresholds so the AI gracefully passes unresolved questions to human support or creates a ticket.
 
-**[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – A drag and drop form builder plugin for WordPress.
+= 🛍️ 2. WooCommerce AI Shopping & Order Assistant =
 
-**[Contact form 7 Addon](https://wordpress.org/plugins/enhanced-addon-for-contact-form-7/)** – Enhances the functionality of Contact Form 7.
+* **Conversational Product Recommendations:** Shoppers find products in plain language (e.g., *"Show me waterproof hiking boots under $100"*).
+* **Interactive Live Product Cards:** Displays real-time price, stock status, ratings, and featured product images directly inside the chat window.
+* **1-Click Add to Cart:** Customers can add recommended items to their WooCommerce cart directly from chat.
+* **Secure Order Status Lookup:** Customers check real-time order status and shipment tracking by providing their Order ID and verified billing email.
+* **Agent WooCommerce Context:** Support agents view the customer's cart items and past orders directly within the support ticket workspace.
 
-### Why Use an AI Chatbot & Multi-Channel Chat Plugin?
-* Deploy an AI chatbot to offer automated customer support.
-* Add a floating WhatsApp or Messenger chat button to WordPress.
-* Allow visitors to contact you from any page via their preferred app.
-* Offer multiple communication options in a single widget.
-* Provide an accessible way for users to submit inquiries.
+= 🎧 3. Built-In Support Helpdesk & Customer Portal =
 
-### 🤖 Smart AI Chatbot Integration
-The integrated AI Chatbot allows you to answer common visitor queries automatically. Visitors can chat with the AI natively on your site or switch to a social channel if they need to contact a human representative.
+* **Complete Ticket Workspace:** Create, assign, reply to, prioritize, resolve, and reopen support tickets from a streamlined dashboard.
+* **Self-Service Customer Portals:** Embed front-end support portals anywhere on your site using shortcodes:
+  * `[dctc_support_portal]` – Full customer support desk with ticket submission, status tracking, and message history.
+  * `[dctc_support_form]` – Standalone ticket submission form with instant validation.
+  * `[dctc_user_tickets]` – Customer dashboard to view existing tickets and replies.
+* **Multi-Agent Roster & Permissions:** Add staff members, assign custom avatar colors, and assign tickets manually to team agents.
+* **Private Staff Notes:** Leave internal notes on tickets that are visible only to your support team.
+* **Viewer Agent Presence:** See in real time when another agent is viewing or replying to a ticket to prevent duplicate replies.
+* **Automated Email Notifications:** Notify customers and agents instantly on ticket creation, status changes, and new replies.
+* **Guest Ticket Access:** Secure token-based access allows guest shoppers to track tickets without creating a WordPress account.
 
-### 🚀 All-in-One Multi-Channel Widget
-This widget allows you to offer your customers their preferred choice of communication. It can be used for WooCommerce stores, business portfolios, and service-based websites to capture inquiries across different channels.
+= 🎯 4. Conversational Lead Capture & 0–100 Scoring =
 
-### 💬 Versatile Social Redirect Features
-The floating button supports a range of redirect options:
-* Social Messaging: Direct links to popular messaging apps.
-* Instant Redirects: Transition users from your site to your social chat inboxes.
-* Direct Voice & Text: Integrated "Click to Call" and SMS functionality for mobile users.
-* Professional Networks: Quick-access links for business and networking platforms.
+* **Natural Lead Collection:** Collect visitor names, emails, phone numbers, and project requirements seamlessly in conversation.
+* **Smart Intent Scoring (0–100):** AI automatically evaluates messages and scores buying intent, budget, and readiness to purchase.
+* **Full Transcript Inspection:** View the complete chat history behind every lead to understand customer intent before following up.
+* **Lead Pipeline Stages:** Organize leads by status (New, Contacted, Qualified, Closed).
+* **1-Click CSV Export:** Export leads directly to CSV for easy import into your CRM, email marketing tool, or spreadsheet.
 
-== External services ==
+= 💬 5. WhatsApp & Multi-Channel Floating Contact Widget =
 
-This plugin relies on third-party services to provide artificial intelligence capabilities and to collect optional user feedback. 
+* **Omnichannel Chat Launcher:** Add WhatsApp, Telegram, Facebook Messenger, Viber, LINE, WeChat, Phone, SMS, and Email.
+* **Smart WhatsApp Page Tags:** Pre-fill WhatsApp greetings with `{title}` and `{url}` so you know exactly which product or page the visitor was looking at.
+* **Customizable Widget Styling:** Customize brand colors, button position (bottom-right / bottom-left), container height, greeting text, and badges.
+* **Device Visibility Controls:** Enable or disable specific channels separately on Desktop and Mobile devices.
 
-* **OpenAI API:** Used to process natural language queries and generate responses when the OpenAI provider is selected in the settings. When a user interacts with the chatbot, their chat prompts are sent to OpenAI's servers. 
-  * [Terms of Service](https://openai.com/policies/terms-of-use)
-  * [Privacy Policy](https://openai.com/policies/privacy-policy)
+= ⚙️ 6. Setup Wizard, Guide Center & Privacy =
 
-* **Google Gemini API:** Used to process natural language queries and generate responses when the Gemini provider is selected in the settings. When a user interacts with the chatbot, their chat prompts are sent to Google's servers.
-  * [Terms of Service](https://ai.google.dev/gemini-api/terms)
-  * [Privacy Policy](https://ai.google.dev/gemini-api/docs/usage-policies)
+* **4-Step Setup Wizard:** Configure your AI credentials, knowledge base, support desk, and contact channels in under 2 minutes.
+* **Interactive Guide Center:** In-dashboard documentation, shortcode references, and configuration tips.
+* **Settings JSON Import & Export:** Easily migrate or backup your entire plugin configuration between staging and production sites.
+* **GDPR & Privacy Controls:** Choose exactly what data to retain and select clean uninstall options to remove tables when uninstalled.
 
-* **Dragwyb Feedback API:** Used to submit optional user feedback and diagnostic reports directly to the developers from the WordPress admin dashboard (https://feedback.dragwyb.com). Data is only sent when the site administrator explicitly submits the feedback form.
+= 💎 Free vs Pro – Which Version Is Right For You? =
 
-== Supported Communication Channels ==
+**🌟 Always Included in the Free Version:**
 
-* AI Chatbot (Native) – Automated on-site responses.
-* Social Messaging Apps – Connect via chat platforms (WhatsApp, Messenger, Telegram, etc.).
-* Messenger Redirect – Links to your business chat inboxes.
-* Photo & Video Socials – Direct DMs for visual social networks.
-* Phone (Click to Call) – One-click dialing for voice support.
-* Email & SMS – Traditional communication methods built into the widget.
-* Professional & Work Networks – Links to corporate or creative profiles.
+* **OpenAI & Google Gemini AI:** Connect GPT-4o, GPT-4o-mini, and Gemini 1.5 using your own API keys (BYOK).
+* **RAG Knowledge Base:** SQLite vector search & Pinecone integration with real-time content sync.
+* **Clickable Source Links:** Displays verified links back to your pages and products in AI answers.
+* **WooCommerce Shopping Assistant:** Conversational product search, interactive product cards, and 1-click Add to Cart.
+* **Live WooCommerce Order Lookup:** Customers track order shipping status securely with Order ID and billing email.
+* **Support Helpdesk Ticketing:** Full ticket lifecycle, private staff notes, and manual agent assignment.
+* **Front-End Customer Portals:** Embed support anywhere using `[dctc_support_portal]`, `[dctc_support_form]`, and `[dctc_user_tickets]`.
+* **Conversational Lead Capture:** Collect visitor inquiries with automatic 0–100 buying intent scoring and CSV export.
+* **WhatsApp & Multi-Channel Widget:** WhatsApp with dynamic `{title}` & `{url}` tags, Telegram, Messenger, SMS, and Email.
+* **Setup Wizard & Privacy Controls:** 4-step onboarding, Guide Center, JSON settings import/export, and GDPR compliance.
 
-== Key Features ==
+**🚀 Supercharge Your Workflow with Click to Chat Pro:**
 
-* Integrated AI Chatbot: Enable an automated AI assistant to greet visitors and answer questions.
-* Expandable Multi-Channel Widget: A floating chat widget that holds multiple icons alongside your AI bot.
-* Channel Chat Widget: Includes an interactive channel chat widget complete with a customizable greeting message.
-* Custom Social Redirects: Configure where each button directs your visitors.
-* Smart Positioning: Choose bottom-left or bottom-right placement with custom pixel offsets.
-* Device Visibility Control: Display your chat button and AI bot on mobile, desktop, or both.
-* Attention-Grabbing Delay: Set a timer for the floating button to appear after page load.
-* Custom Branding: Adjust colors, button sizes, and icon styles to match your theme.
+* ☑️ **More AI Providers:** Unlock Anthropic Claude 3.5 Sonnet, Groq, DeepSeek, OpenRouter, and local Ollama models.
+* ☑️ **Automatic Provider Failover:** Keep your chatbot 99.99% online with automated failover to backup AI providers.
+* ☑️ **AI Reply Suggestions for Agents:** Help support staff answer tickets faster with 1-click AI-suggested responses.
+* ☑️ **AI Ticket Summarization:** Instantly generate concise summaries of long customer ticket threads.
+* ☑️ **Automated Ticket Assignment:** Automatically distribute and balance incoming tickets across your support team.
+* ☑️ **CRM & Webhook Automations:** Instantly send leads and tickets to Zapier, Make, HubSpot, ActiveCampaign, or custom endpoints.
+* ☑️ **Admin AI Copilot:** Built-in AI assistant inside your WordPress admin to draft documentation and answer questions.
+* ☑️ **Advanced Usage & Token Limits:** Set strict per-user rate limiting and daily token budgets to control API costs.
+
+👉 [Upgrade to Click to Chat Pro Now](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=buy_pro)
 
 == Installation ==
 
-1. Upload the plugin files to the `/wp-content/plugins/dragwyb-click-to-chat` directory, or install it through the WordPress Plugins screen.
-2. Activate the plugin through the **Plugins** menu.
-3. Open **Click to Chat** from the WordPress admin menu.
-4. Enable your AI Chatbot, configure your preferred social chat channels, and customize the widget.
+1. In your WordPress Admin, go to **Plugins → Add New**.
+2. Search for **Dragwyb Click to Chat**.
+3. Click **Install Now**, then click **Activate**.
+4. Click on **Click to Chat** in your WordPress sidebar menu.
+5. Follow the quick **Setup Wizard** to configure your AI keys, knowledge base, support desk, and chat buttons.
+6. (Optional) Paste `[dctc_support_portal]` on any page to show your Customer Support Desk.
 
-== Contribute ==
+== Shortcodes Reference ==
 
-Dragwyb Click to Chat is an open-source project, and we welcome contributions from the community. 
-
-* **GitHub Repository:** [https://github.com/dragwyb/dragwyb-click-to-chat](https://github.com/dragwyb/dragwyb-click-to-chat)
-* **Report Bugs:** Please report any issues or bugs on the [GitHub Issues page](https://github.com/dragwyb/dragwyb-click-to-chat/issues).
-* **Pull Requests:** Feel free to fork the repository and submit pull requests for review.
-
-== Screenshots ==
-
-1. AI chatbot preview.
-2. AI chatbot knowledge base configurations.
-3. AI chatbot Display options settings.
-4. AI chatbot sessions preview.
-5. Enable various social chat and communication channels.
-6. Configure individual chat widget channel settings.
-7. Customize the floating chat widget design and position.
-8. Control device visibility and display timing options.
+* `[dctc_support_portal]` – Displays the complete multi-tab customer support desk (Submit Ticket, View Tickets, Knowledge Search).
+* `[dctc_support_form]` – Displays a clean ticket submission form.
+* `[dctc_user_tickets]` – Displays a table of submitted tickets for logged-in users with status filters and direct thread access.
 
 == Frequently Asked Questions ==
 
-= What is the AI Chatbot feature? =
-The AI Chatbot is an automated assistant inside your chat widget. It can greet visitors and answer common queries natively on your website without requiring the user to switch apps.
+= Is this plugin really free? =
+Yes! The Free version gives you a complete AI chatbot, RAG knowledge base, customer support ticketing helpdesk, WooCommerce sales assistant, lead capture, and WhatsApp floating contact button.
 
-= Can I use both the AI Chatbot and the social media buttons? =
-Yes. The widget is designed to be an all-in-one hub. You can feature the AI Chatbot as the primary support method while keeping social redirect buttons available in the expandable menu.
+= Do I need my own AI API key (BYOK)? =
+Yes. You connect your own OpenAI (ChatGPT) or Google Gemini API key. You pay the AI provider directly for what you use, without any subscription markups or middleman fees.
 
-= What is a click to chat widget? =
-A click to chat widget is a floating button that lets website visitors contact you via various social messaging apps, email, or phone.
+= How does the chatbot know about my website? =
+The plugin indexes your WordPress pages, posts, documentation, and WooCommerce products. When a visitor asks a question, the chatbot retrieves relevant excerpts from your site and generates an accurate answer with source citations.
 
-= Does this plugin support multiple chat platforms? =
-Yes. The plugin allows you to add several different social and contact redirect buttons in one widget.
+= Can I use this on websites without WooCommerce? =
+Yes! The plugin works on any WordPress site (blogs, agencies, portfolios, service businesses). When WooCommerce is active, product recommendations and order lookup activate automatically.
 
-= Does this plugin store or track user data? =
-The social redirect functionality does not store cookies or collect analytics. The AI chatbot processes queries strictly to generate responses, sending the prompt data to the respective API provider as outlined in the External Services section.
+= How do customers submit and view support tickets? =
+Simply paste `[dctc_support_portal]`, `[dctc_support_form]`, or `[dctc_user_tickets]` on any page. Guest customers can also access their tickets securely via tokenized tracking links sent by email.
 
-= Is this plugin suitable for eCommerce? =
-Yes. It can be used for businesses, online stores, agencies, and service providers looking for an omnichannel contact and automated support solution.
+= What does Click to Chat Pro include? =
+Click to Chat Pro adds Claude 3.5 Sonnet, Groq, DeepSeek, OpenRouter, and local Ollama models, Automatic Provider Failover, 1-Click AI Reply Suggestions for agents, AI Ticket Summaries, Auto Ticket Assignment, CRM Webhooks (Zapier/Make), Admin AI Copilot, and Advanced Usage Limits.
 
-= Is this plugin suitable for business websites and eCommerce? =
-Yes. It is ideal for businesses, online stores, agencies, freelancers, and service providers looking for an omnichannel contact and automated support solution.
+== External Services ==
 
-= Will this plugin slow down my website? =
-No. The plugin is lightweight, optimized for performance, and loads minimal assets to ensure fast page speeds.
+This plugin connects to external third-party services only when configured and enabled by an administrator:
+
+* **OpenAI API:** When enabled, user prompts, chat messages, and knowledge base text are sent to OpenAI to generate responses and search embeddings.
+  * [OpenAI Terms of Use](https://openai.com/policies/terms-of-use)
+  * [OpenAI Privacy Policy](https://openai.com/policies/privacy-policy)
+* **Google Gemini API:** When enabled, chat inquiries and knowledge base text are sent to Google AI to generate responses and embeddings.
+  * [Google Gemini API Terms](https://ai.google.dev/gemini-api/terms)
+  * [Google AI Privacy Policy](https://ai.google.dev/gemini-api/docs/usage-policies)
+* **Pinecone:** When selected as your vector storage provider, text embeddings are stored in Pinecone indexes for semantic search.
+  * [Pinecone Terms of Service](https://www.pinecone.io/terms/)
+  * [Pinecone Privacy Policy](https://www.pinecone.io/privacy/)
+* **Dragwyb Feedback API:** Optional diagnostic or deactivation feedback is sent to https://feedback.dragwyb.com only when explicitly submitted by an administrator.
+
+== Screenshots ==
+
+1. AI Chatbot answering questions with product recommendations and clickable source links.
+2. Knowledge Base manager with automatic page indexing and vector search.
+3. Live Support Center helpdesk ticket workspace with agent replies and private staff notes.
+4. WooCommerce product search cards and live order lookup.
+5. Conversational Lead Capture dashboard with 0–100 buying intent scoring and CSV export.
+6. Multi-channel floating contact widget with WhatsApp dynamic page tags.
+7. AI Provider settings supporting OpenAI and Google Gemini (BYOK).
+8. Interactive Setup Wizard, Guide Center, and Free vs Pro comparison.
 
 == Changelog ==
 
@@ -198,21 +228,4 @@ No. The plugin is lightweight, optimized for performance, and loads minimal asse
 == Upgrade Notice ==
 
 = 1.1.0 =
-Major update introducing an integrated AI Chatbot widget alongside the existing multi-channel social redirects. 
-
-= 1.0.2 =
-Initial stable release. No breaking changes.
-
-== Recommended Plugins ==
-
-* 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – Design animated flip boxes and 3D cards inside Elementor.
-* 🧩 **[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – A drag and drop form builder plugin for WordPress.
-* 🎨 **[Contact form 7 Addon](https://wordpress.org/plugins/enhanced-addon-for-contact-form-7/)** – Enhances the functionality of Contact Form 7.
-
-== Acknowledgements ==
-
-Thanks to the WordPress community for continued inspiration and support.
-
-== License ==
-
-This plugin is licensed under the GPLv2 or later license. See the LICENSE file for more details.
+Major update introducing an integrated AI Chatbot widget alongside the existing multi-channel social redirects.

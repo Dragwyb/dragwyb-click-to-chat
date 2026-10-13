@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Plugin Name: Dragwyb Click to Chat - AI Chatbot & Social Messaging
- * Description: AI Chatbot plus multi-channel social chat widget with floating button.
+ * Plugin Name: Dragwyb Click to Chat – AI Chatbot, Helpdesk & Lead Generation
+ * Description: AI chatbot, live helpdesk, lead generation, WooCommerce AI assistant, and multi-channel social chat widget with a customizable floating button. Connect with visitors through WhatsApp, Messenger, Telegram, and more.
  * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=plugin_uri&utm_campaign=chatbot_demo
  * Author: Dragwyb
  * Author URI: https://dragwyb.com/?utm_source=dctc&utm_medium=author_uri&utm_campaign=chatbot_demo
  * Version: 1.1.4
- * Requires at least: 5.0
+ * Requires at least: 5.9
  * Requires PHP: 7.4
  * Text Domain: dragwyb-click-to-chat
  * License: GPLv2 or later
