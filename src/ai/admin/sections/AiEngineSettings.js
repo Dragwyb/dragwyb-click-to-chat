@@ -176,7 +176,7 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 		setResetting((prev) => ({ ...prev, [provider]: true }));
 		try {
 			const res = await apiFetch({
-				path: '/dctc-ai/v1/reset-api-key',
+				path: '/dctc-ai/v1/reset-key',
 				method: 'POST',
 				data: { provider },
 			});

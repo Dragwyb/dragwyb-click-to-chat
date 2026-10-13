@@ -256,9 +256,31 @@ class DCTC_AI_Key_Store
 			update_option('wp_ai_client_provider_credentials', $creds);
 		}
 
+		$api_keys    = [];
+		$models_list = [];
+		foreach ($supported as $id) {
+			$key = self::get_provider_key($id);
+			if (!empty($key)) {
+				if (strlen($key) < 8) {
+					$api_keys[$id] = '********';
+				} else {
+					$api_keys[$id] = substr($key, 0, 4) . '...' . substr($key, -4);
+				}
+			}
+			$models_list[$id] = self::get_models($id);
+		}
+
+		$updated_settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$chatbot_data     = isset($updated_settings['chatbot']) ? $updated_settings['chatbot'] : [];
+
 		return new \WP_REST_Response([
-			'success' => true,
-			'chatbot' => isset($settings['chatbot']) ? $settings['chatbot'] : [],
+			'success'          => true,
+			'message'          => esc_html__('API key reset successfully.', 'dragwyb-click-to-chat'),
+			'chatbot'          => $chatbot_data,
+			'default_provider' => isset($chatbot_data['default_provider']) ? $chatbot_data['default_provider'] : '',
+			'api_keys'         => $api_keys,
+			'models'           => isset($updated_settings['models']) ? $updated_settings['models'] : [],
+			'models_list'      => $models_list,
 		], 200);
 	}
 

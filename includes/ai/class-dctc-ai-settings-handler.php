@@ -146,7 +146,17 @@ class DCTC_AI_Settings_Handler {
 			array(
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->key_store, 'reset_key' ),
-				'permission_callback' => array( $this, 'dctc_ai_permission_only_admins' ),
+				'permission_callback' => array( $this, 'dctc_ai_permission_reset_api_key' ),
+				'args'                => array(
+					'provider' => array(
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && ! empty( trim( $param ) );
+						},
+					),
+				),
 			)
 		);
 
@@ -730,6 +740,39 @@ class DCTC_AI_Settings_Handler {
 	 */
 	public function dctc_ai_permission_only_admins() {
 		return current_user_can( 'manage_options' );
+	}
+
+	/**
+	 * Permission and nonce check for resetting API keys.
+	 *
+	 * Requires administrator privileges ('manage_options') and a valid WP REST nonce.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function dctc_ai_permission_reset_api_key( $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__( 'Sorry, you are not allowed to reset API keys.', 'dragwyb-click-to-chat' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		$nonce = $request->get_header( 'X-WP-Nonce' );
+		if ( empty( $nonce ) ) {
+			$nonce = $request->get_param( '_wpnonce' );
+		}
+
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return new \WP_Error(
+				'rest_cookie_invalid_nonce',
+				__( 'Invalid or missing security nonce.', 'dragwyb-click-to-chat' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
 	}
 
 
