@@ -582,7 +582,7 @@ class DCTC_Support_Portal {
 							</div>
 
 							<!-- Dynamic Sub-Fields (Rendered dynamically in category-defined order with term dropdowns) -->
-							<div class="dctc-portal-dynamic-subfields dctc-form-grid-2" style="display:none; margin-bottom:16px;"></div>
+							<div class="dctc-portal-dynamic-subfields" style="display:none; margin-bottom:16px;"></div>
 
 							<div class="dctc-form-group">
 								<label>
@@ -848,7 +848,7 @@ class DCTC_Support_Portal {
 							</select>
 						</div>
 
-						<div class="dctc-portal-dynamic-subfields dctc-form-grid-2" style="display:none; margin-bottom:16px;"></div>
+						<div class="dctc-portal-dynamic-subfields" style="display:none; margin-bottom:16px;"></div>
 
 						<div class="dctc-form-group">
 							<label>
@@ -960,7 +960,7 @@ class DCTC_Support_Portal {
 									</select>
 								</div>
 
-								<div class="dctc-portal-dynamic-subfields dctc-form-grid-2" style="display:none; margin-bottom:16px;"></div>
+								<div class="dctc-portal-dynamic-subfields" style="display:none; margin-bottom:16px;"></div>
 
 								<div class="dctc-form-group">
 									<label>
@@ -1265,7 +1265,7 @@ class DCTC_Support_Portal {
 								</select>
 							</div>
 
-							<div class="dctc-portal-dynamic-subfields dctc-form-grid-2" style="display:none; margin-bottom:16px;"></div>
+							<div class="dctc-portal-dynamic-subfields" style="display:none; margin-bottom:16px;"></div>
 
 							<div class="dctc-form-group">
 								<label>
@@ -1434,14 +1434,6 @@ class DCTC_Support_Portal {
 					return;
 				}
 
-				if (activeSubTaxes.length === 1) {
-					container.className = "dctc-portal-dynamic-subfields dctc-form-grid-1";
-					container.style.gridTemplateColumns = "1fr";
-				} else {
-					container.className = "dctc-portal-dynamic-subfields dctc-form-grid-2";
-					container.style.gridTemplateColumns = "";
-				}
-
 				let fieldsHtml = "";
 				activeSubTaxes.forEach(function(tax) {
 					const slug = tax.slug;
@@ -1461,7 +1453,7 @@ class DCTC_Support_Portal {
 				});
 
 				container.innerHTML = fieldsHtml;
-				container.style.display = "grid";
+				container.style.display = "flex";
 			}
 
 			// Initialize Support Portal & Ticket Tables
@@ -2561,6 +2553,15 @@ class DCTC_Support_Portal {
 				display: grid;
 				gap: 16px;
 				grid-template-columns: 1fr 1fr;
+			}
+			.dctc-portal-dynamic-subfields{
+				display: flex;
+				flex-wrap: wrap;
+				gap: 16px;
+			}
+			.dctc-portal-dynamic-subfields .dctc-form-group{
+				flex: 1 1 250px;
+				margin-bottom: 0;
 			}
 			.dctc-form-group {
 				display: flex;
