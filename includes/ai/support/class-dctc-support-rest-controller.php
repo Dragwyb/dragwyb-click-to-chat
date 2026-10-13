@@ -239,7 +239,6 @@ class DCTC_Support_REST_Controller {
 			)
 		);
 
-
 		// Staff: Categories & Tags & Agents
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -363,7 +362,7 @@ class DCTC_Support_REST_Controller {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
-			'/support/taxonomies/(?P<slug>[a-zA-Z0-9_\-]+)/terms',
+			'/support/taxonomies/(?P<term_slug>[a-zA-Z0-9_\-]+)/terms',
 			array(
 				array(
 					'methods'             => WP_REST_Server::READABLE,
@@ -703,7 +702,7 @@ class DCTC_Support_REST_Controller {
 		global $wpdb;
 		$table_agents = $wpdb->prefix . 'dctc_support_agents';
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$updated      = $wpdb->update(
+		$updated = $wpdb->update(
 			$table_agents,
 			array(
 				'availability_status' => $status,
@@ -1500,7 +1499,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function get_taxonomy_terms( $request ) {
-		$slug  = $request->get_param( 'slug' );
+		$slug  = $request->get_param( 'term_slug' );
 		$terms = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::get_terms( $slug ) : array();
 		return new WP_REST_Response(
 			array(
@@ -1512,7 +1511,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function save_taxonomy_term( $request ) {
-		$slug = $request->get_param( 'slug' );
+		$slug = $request->get_param( 'term_slug' );
 		$data = $request->get_json_params();
 		$id   = class_exists( 'DCTC_Support_Taxonomy_Service' ) ? DCTC_Support_Taxonomy_Service::save_term( $slug, $data ) : false;
 		if ( ! $id ) {
@@ -1979,7 +1978,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$updated_ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket['id'] );
+		$updated_ticket   = DCTC_Support_Ticket_Service::get_ticket( $ticket['id'] );
 		$sanitized_ticket = DCTC_Support_Ticket_Service::filter_for_portal( $updated_ticket, false );
 
 		return new WP_REST_Response(
