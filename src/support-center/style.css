@@ -44,11 +44,11 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
   width: calc(100% + 20px);
 }
 
-#dctc-support-admin-root button.button-primary{
+#dctc-support-admin-root button.button{
   min-height: unset;
   line-height: 1;
 } 
-#dctc-support-admin-root button.button-primary .dashicons{
+#dctc-support-admin-root button.button .dashicons{
   color: inherit;
   line-height: 1;
 } 
@@ -1714,7 +1714,7 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
 .dctc-sc-badge-low { background: #f1f5f9; color: #475569; }
 
 .dctc-sc-badge-open { background: #dbeafe; color: #1d4ed8; }
-.dctc-sc-badge-waiting, .dctc-sc-subtab-btn.active .dctc-sc-pill-count, .dctc-sc-order-badge.is-active, .dctc-sc-badge.status-open { background: #e0e7ff; color: #4338ca; }
+.dctc-sc-badge-waiting, .dctc-sc-order-badge.is-active, .dctc-sc-badge.status-open { background: #e0e7ff; color: #4338ca; }
 .dctc-sc-badge-resolved { background: #d1fae5; color: #047857; }
 .dctc-sc-badge-closed, .dctc-sc-badge-secondary, .dctc-sc-badge.status-closed, .dctc-sc-badge.priority-low { background: #f1f5f9; color: #64748b; }
 .dctc-sc-badge-trash, .dctc-sc-badge.status-trash { background: #fee2e2; color: #991b1b; }
@@ -3643,9 +3643,9 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
 
 .dctc-sc-subtab-btn.active {
   background: #ffffff;
-  border-color: #bfcaf9;
-  box-shadow: inset 3px 0 0 #4f46e5, 0 1px 2px rgba(15, 23, 42, 0.04);
-  color: #4f46e5;
+  border-color: var(--dctc-sc-tx-color, #4f46e5);
+  box-shadow: inset 3px 0 0 var(--dctc-sc-tx-color, #4f46e5), 0 1px 2px rgba(15, 23, 42, 0.04);
+  color: var(--dctc-sc-tx-color, #4f46e5);
   font-weight: 700;
 }
 
@@ -3728,13 +3728,16 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
 }
 
 .dctc-sc-pill-count {
-  background: #e2e8f0;
+  background: #f3f7fd;
   border-radius: 10px;
-  color: #475569;
-  font-size: 11px;
+  color: var(--dctc-sc-tx-color, #4f46e5);
+  font-size: 12px;
   font-weight: 700;
-  padding: 1px 6px;
-  transition: all 0.15s ease;
+  padding: 4px 6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  line-height: 1;
 }
 
 .dctc-sc-add-tax-btn {
