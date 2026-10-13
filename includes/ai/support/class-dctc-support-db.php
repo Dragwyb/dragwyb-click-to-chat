@@ -477,6 +477,14 @@ class DCTC_Support_DB {
 			}
 		}
 
+		// Seed Product Terms
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$count_products = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `$table_terms` WHERE taxonomy_slug = %s", 'product' ) );
+
+		if ( 0 === $count_products ) {
+			DCTC_Support_Product_Service::sync_woocommerce_products();
+		}
+
 		// Seed Default Support Settings
 		$default_support_settings = array(
 			'enabled'               => false,

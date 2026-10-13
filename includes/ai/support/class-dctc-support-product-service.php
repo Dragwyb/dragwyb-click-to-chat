@@ -77,14 +77,6 @@ class DCTC_Support_Product_Service {
 		$rows     = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
 		$products = is_array( $rows ) ? $rows : array();
 
-		// If no custom products yet and WooCommerce is active, automatically sync WooCommerce products
-		if ( empty( $products ) && empty( $args['search'] ) && empty( $args['category_id'] ) && post_type_exists( 'product' ) ) {
-			self::sync_woocommerce_products();
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$rows     = $wpdb->get_results( "SELECT t.* FROM `$table_terms` t WHERE $where ORDER BY t.name ASC", ARRAY_A );
-			$products = is_array( $rows ) ? $rows : array();
-		}
-
 		if ( empty( $products ) ) {
 			return array();
 		}

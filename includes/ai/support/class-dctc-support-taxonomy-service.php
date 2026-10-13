@@ -316,12 +316,8 @@ class DCTC_Support_Taxonomy_Service {
 		$taxonomy_slug = sanitize_title( $taxonomy_slug );
 		$term_id       = absint( $term_id );
 
-		if ( 'category' === $taxonomy_slug ) {
-			return class_exists( 'DCTC_Support_Category_Service' ) ? DCTC_Support_Category_Service::delete_category( $term_id ) : false;
-		} elseif ( 'tag' === $taxonomy_slug ) {
-			return class_exists( 'DCTC_Support_Tag_Service' ) ? DCTC_Support_Tag_Service::delete_tag( $term_id ) : false;
-		} elseif ( 'product' === $taxonomy_slug ) {
-			return class_exists( 'DCTC_Support_Product_Service' ) ? DCTC_Support_Product_Service::delete_product( $term_id ) : false;
+		if ( ! $term_id || empty( $taxonomy_slug ) ) {
+			return false;
 		}
 
 		global $wpdb;
