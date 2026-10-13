@@ -165,10 +165,9 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 		 */
 		public function dctc_ai_maybe_upgrade_schema() {
 			$installed = get_option( 'dctc_ai_db_version' );
-			if ( $installed !== DCTC_VERSION ) {
+			if ( $installed !== DCTC_AI_DB::DB_VERSION ) {
 				DCTC_AI_DB::dctc_ai_create_tables();
-				update_option( 'dctc_ai_db_version', DCTC_VERSION );
-				update_option( 'dctc_ai_installed', '1' );
+				update_option( 'dctc_ai_db_version', DCTC_AI_DB::DB_VERSION );
 			}
 		}
 

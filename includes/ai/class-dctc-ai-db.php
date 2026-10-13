@@ -14,6 +14,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DCTC_AI_DB {
 
+	const DB_VERSION = '1';
+
 	/**
 	 * Create Tables
 	 *

@@ -26,7 +26,7 @@ class DCTC_Support_DB {
 	/**
 	 * Database schema version
 	 */
-	const DB_VERSION = '2.0.0';
+	const DB_VERSION = '1';
 
 	/**
 	 * Option key for support DB version
