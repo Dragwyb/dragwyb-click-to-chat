@@ -562,8 +562,7 @@ class DCTC_Support_Taxonomy_Service {
 		// Verify taxonomy exists; do NOT auto-create taxonomies
 		$table_taxonomies = $wpdb->prefix . 'dctc_support_taxonomies';
 		if ( ! in_array( $taxonomy_slug, array( 'category', 'tag', 'product' ), true ) ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$tax_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_taxonomies` WHERE slug = %s LIMIT 1", $taxonomy_slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			$tax_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_taxonomies` WHERE slug = %s LIMIT 1", $taxonomy_slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			if ( ! $tax_exists ) {
 				return false;
 			}

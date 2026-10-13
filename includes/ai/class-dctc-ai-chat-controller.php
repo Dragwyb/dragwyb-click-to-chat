@@ -116,7 +116,7 @@ class DCTC_AI_Chat_Controller {
 				if ( ! $has_existing ) {
 					global $wpdb;
 					$sess_table   = $wpdb->prefix . 'dctc_ai_sessions';
-					$has_existing = (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$sess_table} WHERE session_id = %s LIMIT 1", $session_id ) );
+					$has_existing = (bool) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$sess_table} WHERE session_id = %s LIMIT 1", $session_id ) ); // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 				}
 				if ( $has_existing ) {
 					$session_id = 'sess_' . wp_generate_uuid4();

@@ -1482,18 +1482,15 @@ class DCTC_Support_Ticket_Service {
 			$term_id = 0;
 			// 1. Find product term in dctc_support_terms
 			if ( $product_id > 0 ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND id = %d LIMIT 1", $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND id = %d LIMIT 1", $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				if ( ! $term_id ) {
 					// Check by wc_product_id meta
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_meta` WHERE meta_key = 'wc_product_id' AND meta_value = %s LIMIT 1", (string) $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_meta` WHERE meta_key = 'wc_product_id' AND meta_value = %s LIMIT 1", (string) $product_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				}
 			}
 
 			if ( ! $term_id && ! empty( $product_slug ) ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s) LIMIT 1", $product_slug, $product_name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$term_id = (int) $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s) LIMIT 1", $product_slug, $product_name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			}
 
 			// 2. Update ticket metadata
@@ -1525,11 +1522,9 @@ class DCTC_Support_Ticket_Service {
 			$ticket_cat_id = (int) self::get_ticket_meta( $ticket_id, 'category_id', true );
 			if ( ! $ticket_cat_id && $term_id > 0 ) {
 				// Check category linked to this product term
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM `$table_meta` WHERE term_id = %d AND meta_key = 'category_id' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM `$table_meta` WHERE term_id = %d AND meta_key = 'category_id' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				if ( ! $prod_cat ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_rel` WHERE object_id = %d AND object_type = 'term' AND taxonomy_slug = 'category' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$prod_cat = $wpdb->get_var( $wpdb->prepare( "SELECT term_id FROM `$table_rel` WHERE object_id = %d AND object_type = 'term' AND taxonomy_slug = 'category' LIMIT 1", $term_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				}
 
 				if ( $prod_cat && (int) $prod_cat > 0 ) {
@@ -1539,8 +1534,7 @@ class DCTC_Support_Ticket_Service {
 					$wc_terms = wp_get_post_terms( $product_id, 'product_cat' );
 					if ( ! empty( $wc_terms ) && ! is_wp_error( $wc_terms ) ) {
 						foreach ( $wc_terms as $wc_t ) {
-							// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-							$matched_cat_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s) LIMIT 1", $wc_t->slug, $wc_t->name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+							$matched_cat_id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM `$table_terms` WHERE taxonomy_slug = 'category' AND (slug = %s OR name = %s) LIMIT 1", $wc_t->slug, $wc_t->name ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 							if ( $matched_cat_id ) {
 								self::update_ticket_meta( $ticket_id, 'category_id', absint( $matched_cat_id ) );
 								break;
@@ -1776,10 +1770,10 @@ class DCTC_Support_Ticket_Service {
 	/**
 	 * Post a reply on an existing ticket.
 	 *
-	 * @param int         $ticket_id Ticket ID.
-	 * @param string      $message Reply content.
-	 * @param int|null    $user_id User ID of the author.
-	 * @param string      $sender_type 'agent' or 'customer'.
+	 * @param int      $ticket_id Ticket ID.
+	 * @param string   $message Reply content.
+	 * @param int|null $user_id User ID of the author.
+	 * @param string   $sender_type 'agent' or 'customer'.
 	 * @return array<string, mixed>|WP_Error Ticket record or WP_Error.
 	 */
 	public static function reply_ticket( $ticket_id, $message, $user_id = null, $sender_type = 'agent' ) {

@@ -175,17 +175,17 @@ class DCTC_Support_Assignment_Engine {
 				}
 				if ( $t_id ) {
 					$ticket_terms_by_tax['tag'][] = $t_id;
-					$ticket_term_ids[]           = $t_id;
+					$ticket_term_ids[]            = $t_id;
 				}
 				if ( $t_slug ) {
 					$ticket_terms_by_tax['tag'][] = $t_slug;
-					$ticket_term_slugs[]         = $t_slug;
+					$ticket_term_slugs[]          = $t_slug;
 				}
 			}
 		}
 
 		// Also check product meta if present
-		$prod_id = ! empty( $ticket['product_id'] ) ? absint( $ticket['product_id'] ) : (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'product_id', true );
+		$prod_id   = ! empty( $ticket['product_id'] ) ? absint( $ticket['product_id'] ) : (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'product_id', true );
 		$prod_name = ! empty( $ticket['product'] ) ? $ticket['product'] : (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'product', true );
 		if ( empty( $prod_name ) ) {
 			$prod_name = (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, 'product_name', true );
@@ -202,22 +202,19 @@ class DCTC_Support_Assignment_Engine {
 			$prod_row    = null;
 
 			if ( $prod_id > 0 ) {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$prod_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, slug, name FROM `$table_terms` WHERE taxonomy_slug = 'product' AND id = %d LIMIT 1", $prod_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$prod_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, slug, name FROM `$table_terms` WHERE taxonomy_slug = 'product' AND id = %d LIMIT 1", $prod_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				if ( ! $prod_row ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$prod_row = $wpdb->get_row( $wpdb->prepare( "SELECT t.id, t.slug, t.name FROM `$table_terms` t INNER JOIN `$table_meta` m ON t.id = m.term_id WHERE t.taxonomy_slug = 'product' AND m.meta_key = 'wc_product_id' AND m.meta_value = %s LIMIT 1", (string) $prod_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$prod_row = $wpdb->get_row( $wpdb->prepare( "SELECT t.id, t.slug, t.name FROM `$table_terms` t INNER JOIN `$table_meta` m ON t.id = m.term_id WHERE t.taxonomy_slug = 'product' AND m.meta_key = 'wc_product_id' AND m.meta_value = %s LIMIT 1", (string) $prod_id ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				}
 				$ticket_terms_by_tax['product'][] = $prod_id;
-				$ticket_term_ids[]               = $prod_id;
+				$ticket_term_ids[]                = $prod_id;
 			}
 
 			if ( ! $prod_row && ! empty( $prod_name ) ) {
-				$prod_slug = sanitize_title( $prod_name );
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-				$prod_row = $wpdb->get_row( $wpdb->prepare( "SELECT id, slug, name FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s) LIMIT 1", $prod_slug, sanitize_text_field( $prod_name ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$prod_slug                        = sanitize_title( $prod_name );
+				$prod_row                         = $wpdb->get_row( $wpdb->prepare( "SELECT id, slug, name FROM `$table_terms` WHERE taxonomy_slug = 'product' AND (slug = %s OR name = %s) LIMIT 1", $prod_slug, sanitize_text_field( $prod_name ) ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$ticket_terms_by_tax['product'][] = $prod_slug;
-				$ticket_term_slugs[]             = $prod_slug;
+				$ticket_term_slugs[]              = $prod_slug;
 			}
 
 			if ( $prod_row ) {
@@ -225,17 +222,16 @@ class DCTC_Support_Assignment_Engine {
 				$p_slug = $prod_row['slug'];
 				if ( ! in_array( $p_id, $ticket_terms_by_tax['product'], true ) ) {
 					$ticket_terms_by_tax['product'][] = $p_id;
-					$ticket_term_ids[]               = $p_id;
+					$ticket_term_ids[]                = $p_id;
 				}
 				if ( ! in_array( $p_slug, $ticket_terms_by_tax['product'], true ) ) {
 					$ticket_terms_by_tax['product'][] = $p_slug;
-					$ticket_term_slugs[]             = $p_slug;
+					$ticket_term_slugs[]              = $p_slug;
 				}
 
 				// If ticket category is missing, derive it from the product's category
 				if ( 0 === $ticket_cat_id ) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-					$derived_cat = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM `$table_meta` WHERE term_id = %d AND meta_key = 'category_id' LIMIT 1", $p_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$derived_cat = $wpdb->get_var( $wpdb->prepare( "SELECT meta_value FROM `$table_meta` WHERE term_id = %d AND meta_key = 'category_id' LIMIT 1", $p_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 					if ( $derived_cat && (int) $derived_cat > 0 ) {
 						$ticket_cat_id = absint( $derived_cat );
 					}
