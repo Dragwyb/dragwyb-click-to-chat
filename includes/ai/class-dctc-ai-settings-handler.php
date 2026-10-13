@@ -1152,7 +1152,7 @@ class DCTC_AI_Settings_Handler {
 			'has_api_key'           => DCTC_AI_Key_Store::has_configured_provider(),
 			'is_admin'              => $is_admin,
 			'is_woocommerce_active' => $is_wc_active,
-			'settings_url'          => $is_admin ? admin_url( 'admin.php?page=dragwyb-click-to-chat' ) : '',
+			'settings_url'          => $is_admin ? admin_url( 'admin.php?page=dragwyb-click-to-chat#ai-engine' ) : '',
 		);
 	}
 
