@@ -18,19 +18,23 @@ Turn your website into a 24/7 sales and customer support powerhouse. Answer visi
 
 [▶ Live Demo](https://dragwyb.com/demo/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=chatbot_demo) | [💎 Upgrade to Pro](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=buy_pro) | [📖 Documentation](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=docs)
 
-= ⚡ Why Choose Dragwyb Click to Chat? =
+## ⚡ Why Choose Dragwyb Click to Chat?
 
 * 🌟 **Replaces 5 Separate Plugins:** Combines an AI Chatbot, Customer Support Helpdesk, WooCommerce Shopping Assistant, Lead Capture Engine, and WhatsApp Floating Widget into a single lightweight plugin.
 * 🧠 **Accurate AI (No Hallucinations):** Uses Retrieval-Augmented Generation (RAG) to answer questions strictly from your WordPress content and WooCommerce catalog, complete with clickable source links.
+* 📐 **Fully Customizable Window & Height:** Customize exact chatbot container height (px, vh, %), width, position (bottom-right / bottom-left), custom avatar icons, brand colors, and responsive auto-sizing for a flawless fit on any theme.
 * 🛍️ **WooCommerce Sales Booster:** Shoppers ask for product advice, view live product cards, add items to cart in 1 click, and track their order delivery status in chat.
 * 🎧 **Complete Customer Helpdesk:** Manage the entire ticket lifecycle from your WordPress admin, assign tickets to agents, write private staff notes, and embed self-service customer portals with simple shortcodes.
+* 🏷️ **Dynamic Custom Taxonomies:** Create unlimited custom ticket classifications (Departments, Regions, Platforms) alongside Categories, Tags, and WooCommerce Products with dynamic ticket form ordering.
 * 🎯 **Conversational Lead Capture:** Collect visitor contact details naturally and automatically score buyer readiness (0–100) so you know which leads to prioritize.
 * 💬 **Omnichannel Floating Widget:** Connect WhatsApp, Telegram, Facebook Messenger, Phone, SMS, and Email with dynamic page title and URL tags.
+* ⚡ **Modular Optimization & Zero Bloat:** Under **Click to Chat → Settings → General (Feature & Module Management)**, you can toggle individual modules on or off (Social Channels, AI Assistant, Support Center). Disabling any module completely stops its files, scripts, stylesheets, and assets from loading on your site for pure page-speed optimization.
 * 🔒 **100% Privacy & BYOK:** Bring Your Own Key (OpenAI & Google Gemini). No middleman subscription fees, no markup on AI usage, and full control over your data.
 
-= 🤖 1. Smart AI Chatbot & Knowledge Base =
+**🤖 1. Smart AI Chatbot & Knowledge Base**
 
 * **Multi-Provider AI Intelligence:** Connect your OpenAI (GPT-4o, GPT-4o-mini, GPT-3.5) or Google Gemini (Gemini 1.5 Flash & Pro) API key.
+* **Custom Window Height & Sizing:** Set your exact chatbot container height with flexible unit controls (px, vh, %) and width to match your website design seamlessly.
 * **RAG Vector Knowledge Base:** Automatically indexes your WordPress pages, posts, documentation, FAQs, and custom post types into vector embeddings.
 * **Built-in Fast SQLite Vector Engine:** Enjoy high-performance vector search right on your server without needing third-party databases.
 * **Pinecone Vector Database Integration:** Connect remote Pinecone indexes when managing enterprise catalogs or high-traffic sites.
@@ -38,7 +42,7 @@ Turn your website into a 24/7 sales and customer support powerhouse. Answer visi
 * **Real-Time Content Sync:** Automatically updates or deletes vector index embeddings when posts are published, edited, or trashed.
 * **Confidence Fallback & Handoff:** Set minimum confidence thresholds so the AI gracefully passes unresolved questions to human support or creates a ticket.
 
-= 🛍️ 2. WooCommerce AI Shopping & Order Assistant =
+**🛍️ 2. WooCommerce AI Shopping & Order Assistant**
 
 * **Conversational Product Recommendations:** Shoppers find products in plain language (e.g., *"Show me waterproof hiking boots under $100"*).
 * **Interactive Live Product Cards:** Displays real-time price, stock status, ratings, and featured product images directly inside the chat window.
@@ -46,20 +50,28 @@ Turn your website into a 24/7 sales and customer support powerhouse. Answer visi
 * **Secure Order Status Lookup:** Customers check real-time order status and shipment tracking by providing their Order ID and verified billing email.
 * **Agent WooCommerce Context:** Support agents view the customer's cart items and past orders directly within the support ticket workspace.
 
-= 🎧 3. Built-In Support Helpdesk & Customer Portal =
+**🎧 3. Built-In Support Helpdesk & Customer Portal**
 
 * **Complete Ticket Workspace:** Create, assign, reply to, prioritize, resolve, and reopen support tickets from a streamlined dashboard.
 * **Self-Service Customer Portals:** Embed front-end support portals anywhere on your site using shortcodes:
   * `[dctc_support_portal]` – Full customer support desk with ticket submission, status tracking, and message history.
   * `[dctc_support_form]` – Standalone ticket submission form with instant validation.
   * `[dctc_user_tickets]` – Customer dashboard to view existing tickets and replies.
+* **Dynamic Category Sub-Fields:** Support ticket forms automatically adapt sub-fields (Products, Tags, Custom Taxonomies) based on the customer's chosen category.
 * **Multi-Agent Roster & Permissions:** Add staff members, assign custom avatar colors, and assign tickets manually to team agents.
 * **Private Staff Notes:** Leave internal notes on tickets that are visible only to your support team.
 * **Viewer Agent Presence:** See in real time when another agent is viewing or replying to a ticket to prevent duplicate replies.
 * **Automated Email Notifications:** Notify customers and agents instantly on ticket creation, status changes, and new replies.
 * **Guest Ticket Access:** Secure token-based access allows guest shoppers to track tickets without creating a WordPress account.
 
-= 🎯 4. Conversational Lead Capture & 0–100 Scoring =
+**🏷️ 4. Dynamic Custom Taxonomies & Routing Engine**
+
+* **Unlimited Custom Taxonomies:** Create custom user-defined taxonomies (e.g. Department, Problem Type, Region, Platform) with custom colors and Dashicons or uploaded image icons.
+* **WooCommerce & Support Catalog Sync:** 1-click sync WooCommerce store products into support product terms for instant ticket classification.
+* **Category-Controlled Sub-Field Ordering:** Choose exactly which taxonomies appear on ticket submission forms per category, and reorder them with intuitive controls.
+* **Polymorphic Ticket Relationships:** Automatically link tickets to multiple taxonomies simultaneously for comprehensive agent filtering and queue segmentation.
+
+**🎯 5. Conversational Lead Capture & 0–100 Scoring**
 
 * **Natural Lead Collection:** Collect visitor names, emails, phone numbers, and project requirements seamlessly in conversation.
 * **Smart Intent Scoring (0–100):** AI automatically evaluates messages and scores buying intent, budget, and readiness to purchase.
@@ -67,34 +79,53 @@ Turn your website into a 24/7 sales and customer support powerhouse. Answer visi
 * **Lead Pipeline Stages:** Organize leads by status (New, Contacted, Qualified, Closed).
 * **1-Click CSV Export:** Export leads directly to CSV for easy import into your CRM, email marketing tool, or spreadsheet.
 
-= 💬 5. WhatsApp & Multi-Channel Floating Contact Widget =
+**💬 6. WhatsApp & Multi-Channel Floating Contact Widget**
 
 * **Omnichannel Chat Launcher:** Add WhatsApp, Telegram, Facebook Messenger, Viber, LINE, WeChat, Phone, SMS, and Email.
 * **Smart WhatsApp Page Tags:** Pre-fill WhatsApp greetings with `{title}` and `{url}` so you know exactly which product or page the visitor was looking at.
-* **Customizable Widget Styling:** Customize brand colors, button position (bottom-right / bottom-left), container height, greeting text, and badges.
+* **Customizable Widget Styling:** Customize brand colors, button position (bottom-right / bottom-left), container height, launcher icon, greeting text, and badges.
 * **Device Visibility Controls:** Enable or disable specific channels separately on Desktop and Mobile devices.
 
-= ⚙️ 6. Setup Wizard, Guide Center & Privacy =
+**🛡️ 7. Staff Roles & Granular Permission Matrix**
+
+* **5-Tier Staff Hierarchy:** Assign roles including Administrator, Support Manager, Senior Specialist, Support Agent, and Junior/Fresher.
+* **Granular Capability Matrix:** Manage granular privileges for ticket assignment, AI takeover, category management, and ticket deletion.
+* **Agent Availability Controls:** Staff set their availability (Available, Away, Offline) to ensure incoming inquiries route only to active agents.
+
+**⚙️ 8. Setup Wizard, Diagnostics & Privacy**
 
 * **4-Step Setup Wizard:** Configure your AI credentials, knowledge base, support desk, and contact channels in under 2 minutes.
+* **Built-in Error Logger:** Track and inspect AI API responses, timeouts, and vector database errors directly in the admin dashboard.
 * **Interactive Guide Center:** In-dashboard documentation, shortcode references, and configuration tips.
 * **Settings JSON Import & Export:** Easily migrate or backup your entire plugin configuration between staging and production sites.
 * **GDPR & Privacy Controls:** Choose exactly what data to retain and select clean uninstall options to remove tables when uninstalled.
 
-= 💎 Free vs Pro – Which Version Is Right For You? =
+**⚡ 9. Feature & Module Management (Performance & Asset Control)** 
+
+* **Granular Module Toggles:** Navigate to **Click to Chat → Settings → General** to independently enable or disable:
+  * **Social Channels Widget** (WhatsApp, Messenger, Phone, SMS, Email buttons)
+  * **AI Chatbot & Knowledge Base** (Conversational on-site AI assistant)
+  * **Customer Support Helpdesk** (Support ticketing, agent roster, and portals)
+* **Zero Bloat & Asset Optimization:** Disabling an unused module completely stops its frontend and backend scripts, stylesheets, and database queries from loading. If you only want WhatsApp, turn off AI and Support; if you only want the AI Chatbot, disable channels for 100% optimized page load speed.
+* **Embedded Configuration Drawers:** Each enabled module reveals a quick-access drawer with shortcodes (`[dctc-widget]`) and direct shortcuts.
+
+## 💎 Free vs Pro – Which Version Is Right For You? 
 
 **🌟 Always Included in the Free Version:**
 
 * **OpenAI & Google Gemini AI:** Connect GPT-4o, GPT-4o-mini, and Gemini 1.5 using your own API keys (BYOK).
+* **Feature & Module Management:** Toggle modules in Settings → General to stop file and asset loading for maximum speed.
+* **Custom Chatbot Height & Appearance:** Full control over container height (px, vh, %), width, custom avatar, and brand colors.
 * **RAG Knowledge Base:** SQLite vector search & Pinecone integration with real-time content sync.
 * **Clickable Source Links:** Displays verified links back to your pages and products in AI answers.
 * **WooCommerce Shopping Assistant:** Conversational product search, interactive product cards, and 1-click Add to Cart.
 * **Live WooCommerce Order Lookup:** Customers track order shipping status securely with Order ID and billing email.
 * **Support Helpdesk Ticketing:** Full ticket lifecycle, private staff notes, and manual agent assignment.
+* **Dynamic Custom Taxonomies:** Categories, Tags, WooCommerce Products, and custom user-defined taxonomies with dynamic form sub-fields.
 * **Front-End Customer Portals:** Embed support anywhere using `[dctc_support_portal]`, `[dctc_support_form]`, and `[dctc_user_tickets]`.
 * **Conversational Lead Capture:** Collect visitor inquiries with automatic 0–100 buying intent scoring and CSV export.
 * **WhatsApp & Multi-Channel Widget:** WhatsApp with dynamic `{title}` & `{url}` tags, Telegram, Messenger, SMS, and Email.
-* **Setup Wizard & Privacy Controls:** 4-step onboarding, Guide Center, JSON settings import/export, and GDPR compliance.
+* **Setup Wizard, Error Logger & Privacy:** 4-step onboarding, Guide Center, diagnostic log viewer, JSON settings backup, and GDPR compliance.
 
 **🚀 Supercharge Your Workflow with Click to Chat Pro:**
 
@@ -141,6 +172,9 @@ Yes! The plugin works on any WordPress site (blogs, agencies, portfolios, servic
 = How do customers submit and view support tickets? =
 Simply paste `[dctc_support_portal]`, `[dctc_support_form]`, or `[dctc_user_tickets]` on any page. Guest customers can also access their tickets securely via tokenized tracking links sent by email.
 
+= Can I disable features I don't use to optimize my site speed? =
+Yes! Navigate to **Click to Chat → Settings → General (Feature & Module Management)**. You can independently enable or disable any module (Social Channels, AI Chatbot Assistant, or Customer Support Center). When a module is disabled, the plugin completely stops its JavaScript, CSS, and background queries from loading on your site, ensuring zero bloat and maximum page speed.
+
 = What does Click to Chat Pro include? =
 Click to Chat Pro adds Claude 3.5 Sonnet, Groq, DeepSeek, OpenRouter, and local Ollama models, Automatic Provider Failover, 1-Click AI Reply Suggestions for agents, AI Ticket Summaries, Auto Ticket Assignment, CRM Webhooks (Zapier/Make), Admin AI Copilot, and Advanced Usage Limits.
 
@@ -161,16 +195,45 @@ This plugin connects to external third-party services only when configured and e
 
 == Screenshots ==
 
-1. AI Chatbot answering questions with product recommendations and clickable source links.
-2. Knowledge Base manager with automatic page indexing and vector search.
-3. Live Support Center helpdesk ticket workspace with agent replies and private staff notes.
-4. WooCommerce product search cards and live order lookup.
-5. Conversational Lead Capture dashboard with 0–100 buying intent scoring and CSV export.
-6. Multi-channel floating contact widget with WhatsApp dynamic page tags.
-7. AI Provider settings supporting OpenAI and Google Gemini (BYOK).
-8. Interactive Setup Wizard, Guide Center, and Free vs Pro comparison.
+1. Front-end AI Chatbot answering customer queries with interactive WooCommerce product cards, 1-click Add to Cart, and clickable source links.
+2. RAG Knowledge Base Manager with automatic WordPress page/post indexing, SQLite vector search, and Pinecone cloud database setup.
+3. Live Support Center Helpdesk Workspace with conversation threads, WooCommerce customer context, and private staff notes.
+4. Front-End Customer Support Portal ([dctc_support_portal]) featuring category-driven dynamic sub-fields and ticket status tracking.
+5. Dynamic Taxonomies & Classification Hub managing Categories, visual Tags, Products (WooCommerce sync), and Custom Taxonomies with custom icons & colors.
+6. Conversational Lead Capture Dashboard with automated 0–100 buying intent scoring, chat transcript viewer, and CSV export.
+7. Multi-Channel Floating Contact Launcher with WhatsApp dynamic page context tags ({title}, {url}) and omnichannel channels.
+8. Chatbot Window Customization & Height Controls with container height (px, vh, %), width, position, custom avatar icon, and AI provider settings (BYOK).
+9. Feature & Module Management (Settings > General Tab) – Independently enable or disable core modules (Channels, AI Assistant, Support Helpdesk) to stop unnecessary file and asset loading for maximum speed.
+10. Staff Roles & Granular Permission Matrix – Manage access for 5 staff tiers (Administrator to Junior Agent) with agent availability toggles and error diagnostics.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: Feature & Module Management in Settings > General to independently toggle modules and completely stop unused scripts and assets from loading.
+* New: Live Support Center with full ticket lifecycle management, status workflows, priorities, categories, and private staff notes.
+* New: Front-end customer support shortcodes [dctc_support_portal], [dctc_support_form], and [dctc_user_tickets].
+* New: Dynamic custom taxonomies and category-driven form sub-field ordering engine for ticket classification.
+* New: Chatbot window container height customization with flexible units (px, vh, %) and responsive dimension controls.
+* New: Staff roles and granular capability permission matrix with agent availability toggles.
+* New: Secure token-based guest ticket access and email notification workflows.
+* New: Multi-agent support team management with custom avatar colors and manual ticket assignment.
+* New: Active viewer presence indicators in support ticket workspace to prevent duplicate agent replies.
+* New: WooCommerce AI sales assistant with conversational product search, interactive product cards, and 1-click Add to Cart.
+* New: WooCommerce order tracking with secure Order ID and billing email verification.
+* New: Support agent WooCommerce customer context displaying past orders and live cart details.
+* New: RAG Knowledge Base with built-in SQLite vector search engine and Pinecone cloud vector database integration.
+* New: Verified clickable source links in AI answers citing website pages and products.
+* New: Automatic real-time vector index synchronization when WordPress posts/pages are published, edited, or deleted.
+* New: Google Gemini AI provider integration supporting Gemini 1.5 Flash and Gemini 1.5 Pro alongside OpenAI.
+* New: Conversational lead capture with automated 0-100 buying intent scoring, full transcript viewer, and CSV export.
+* New: Dynamic {title} and {url} context tags in WhatsApp default greetings.
+* New: 4-step onboarding setup wizard and built-in Guide Center cheat sheets.
+* New: Settings JSON backup, export, and import tools.
+* New: Privacy and GDPR compliance tab with granular database cleanup options upon plugin uninstall.
+* New: Free vs Pro comparison and preview badges in admin settings.
+* New: Dynamic tag support for page title & URL in social widget default greeting messages.
+* Improvement: Optimized asset loading and unified admin styling across settings and support pages.
+* Fix: Fixed social widget channel visibility toggles for desktop and mobile devices.
 
 = 1.1.4 =
 * Fixed widget position veritcal alignment not working.
@@ -227,5 +290,5 @@ This plugin connects to external third-party services only when configured and e
 
 == Upgrade Notice ==
 
-= 1.1.0 =
-Major update introducing an integrated AI Chatbot widget alongside the existing multi-channel social redirects.
+= 1.2.0 =
+Major update introducing the full Customer Support Helpdesk portal, WooCommerce AI Sales Assistant, RAG Knowledge Base with SQLite & Pinecone vector search, Google Gemini support, and Conversational Lead Generation.
