@@ -2378,6 +2378,9 @@ class DCTC_Support_Portal {
 				flex-wrap: wrap;
 				gap: 10px;
 			}
+			.dctc-portal-new-ticket-form{
+				overflow-y: auto;
+			}
 			.dctc-portal-btn-primary {
 				align-items: center;
 				background: var(--dctc-portal-primary, #4F46E5);
