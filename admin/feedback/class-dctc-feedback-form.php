@@ -183,6 +183,10 @@ if (! class_exists('DCTC_Feedback_Form')) {
 			if (isset($_POST['action']) && 'dctc_send_feedback' === $_POST['action']) {
 				check_ajax_referer('dctc_send_feedback_nonce', 'nonce');
 
+				if (! current_user_can('manage_options')) {
+					wp_send_json_error(array('message' => esc_html__('Permission denied.', 'dragwyb-click-to-chat')), 403);
+				}
+
 				$wordpress_version = get_bloginfo('version');
 				$php_version = phpversion();
 
