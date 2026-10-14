@@ -18,6 +18,7 @@ import {
 export default function TicketsView({
 	tickets = [],
 	totalTickets = 0,
+	folderCounts: propFolderCounts = null,
 	loading = false,
 	currentPage = 1,
 	perPage = 10,
@@ -80,8 +81,41 @@ export default function TicketsView({
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
 	// Active View / Folder filter
-	const [activeFolder, setActiveFolder] = useState('all');
+	const [activeFolder, setActiveFolder] = useState(() => {
+		if (assignedToFilter === 'me' || assignedToFilter === 'my') return 'my';
+		if (assignedToFilter === '0' || assignedToFilter === 'unassigned') return 'unassigned';
+		return statusFilter || 'all';
+	});
 	const [activeView, setActiveView] = useState(null);
+
+	// Keep activeFolder and activeView in sync with external filter updates
+	useEffect(() => {
+		if (assignedToFilter === 'me' || assignedToFilter === 'my') {
+			setActiveFolder('my');
+			setActiveView(null);
+		} else if (assignedToFilter === '0' || assignedToFilter === 'unassigned') {
+			setActiveFolder('unassigned');
+			setActiveView(null);
+		} else if (dateRangeFilter === 'today') {
+			setActiveView('today');
+			setActiveFolder(null);
+		} else if (dateRangeFilter === 'this_week') {
+			setActiveView('this_week');
+			setActiveFolder(null);
+		} else if (dateRangeFilter === 'overdue') {
+			setActiveView('overdue');
+			setActiveFolder(null);
+		} else if (priorityFilter === 'high' && statusFilter === 'all') {
+			setActiveView('high_priority');
+			setActiveFolder(null);
+		} else if (statusFilter === 'ai_bot') {
+			setActiveView('ai_suggested');
+			setActiveFolder(null);
+		} else if (['all', 'open', 'pending', 'resolved', 'closed', 'trash', 'spam'].includes(statusFilter)) {
+			setActiveFolder(statusFilter);
+			setActiveView(null);
+		}
+	}, [statusFilter, assignedToFilter, priorityFilter, dateRangeFilter]);
 
 	// Expandable filter toggle state
 	const [showMoreFilters, setShowMoreFilters] = useState(false);
@@ -223,42 +257,27 @@ export default function TicketsView({
 		}
 	}, [selectedTicket?.viewing_users]);
 
-	// Counts calculation for folders and views
+	// Counts calculation for folders and views: Use true global un-filtered counts from backend
 	const folderCounts = useMemo(() => {
-		const counts = {
-			all: totalTickets || tickets.length,
-			open: 0,
-			pending: 0,
-			my: 0,
-			unassigned: 0,
-			resolved: 0,
-			closed: 0,
-			spam: 0,
-			trash: 0,
-			high_priority: 0,
-			waiting_reply: 0,
-			today: 0,
-			this_week: 0,
-			ai_suggested: 0,
-			overdue: 0,
+		const base = propFolderCounts || window.dctc_support_data?.folder_counts || {};
+		return {
+			all: typeof base.all === 'number' ? base.all : (totalTickets || (tickets || []).length),
+			open: typeof base.open === 'number' ? base.open : 0,
+			pending: typeof base.pending === 'number' ? base.pending : 0,
+			my: typeof base.my === 'number' ? base.my : 0,
+			unassigned: typeof base.unassigned === 'number' ? base.unassigned : 0,
+			resolved: typeof base.resolved === 'number' ? base.resolved : 0,
+			closed: typeof base.closed === 'number' ? base.closed : 0,
+			spam: typeof base.spam === 'number' ? base.spam : 0,
+			trash: typeof base.trash === 'number' ? base.trash : 0,
+			high_priority: typeof base.high_priority === 'number' ? base.high_priority : 0,
+			waiting_reply: typeof base.waiting_reply === 'number' ? base.waiting_reply : 0,
+			today: typeof base.today === 'number' ? base.today : 0,
+			this_week: typeof base.this_week === 'number' ? base.this_week : 0,
+			ai_suggested: typeof base.ai_suggested === 'number' ? base.ai_suggested : 0,
+			overdue: typeof base.overdue === 'number' ? base.overdue : 0,
 		};
-
-		tickets.forEach((t) => {
-			if (t.status !== 'resolved' && t.status !== 'closed' && t.status !== 'trash') counts.open++;
-			if (t.status === 'pending' || t.status === 'waiting_customer' || t.status === 'waiting_agent' || t.status === 'hold') counts.pending++;
-			if (t.status === 'resolved') counts.resolved++;
-			if (t.status === 'closed') counts.closed++;
-			if (t.status === 'trash') counts.trash++;
-			if (!t.assigned_agent_id || t.assigned_agent_id === 0) counts.unassigned++;
-			if (t.priority === 'high' || t.priority === 'urgent') counts.high_priority++;
-			if (t.status === 'pending') counts.waiting_reply++;
-			if (t.control_mode === 'ai' || t.origin_type === 'chatbot' || t.origin_type === 'ai' || (t.session_id && t.session_id !== '')) {
-				counts.ai_suggested++;
-			}
-		});
-
-		return counts;
-	}, [tickets, totalTickets]);
+	}, [propFolderCounts, totalTickets, tickets]);
 
 	// Count active secondary filters
 	const activeSecondaryFilterCount = useMemo(() => {
@@ -359,12 +378,20 @@ export default function TicketsView({
 		if (folderKey === 'all') {
 			if (setStatusFilter) setStatusFilter('all');
 			if (setAssignedToFilter) setAssignedToFilter('all');
-		} else if (['open', 'pending', 'resolved', 'closed', 'trash', 'ai_bot'].includes(folderKey)) {
-			if (setStatusFilter) setStatusFilter(folderKey);
-			if (setAssignedToFilter) setAssignedToFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+			if (setPriorityFilter) setPriorityFilter('all');
+		} else if (folderKey === 'my') {
+			if (setStatusFilter) setStatusFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('me');
+			if (setDateRangeFilter) setDateRangeFilter('all');
 		} else if (folderKey === 'unassigned') {
 			if (setStatusFilter) setStatusFilter('all');
 			if (setAssignedToFilter) setAssignedToFilter('0');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+		} else if (['open', 'pending', 'resolved', 'closed', 'trash', 'ai_bot', 'spam'].includes(folderKey)) {
+			if (setStatusFilter) setStatusFilter(folderKey);
+			if (setAssignedToFilter) setAssignedToFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
 		}
 	};
 
@@ -372,14 +399,37 @@ export default function TicketsView({
 	const handleSelectView = (viewKey) => {
 		setActiveView(viewKey);
 		setActiveFolder(null);
-		setCurrentPage(1);
+		if (setCurrentPage) setCurrentPage(1);
 		if (viewKey === 'high_priority') {
-			setPriorityFilter('high');
-			setStatusFilter('all');
+			if (setPriorityFilter) setPriorityFilter('high');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
 		} else if (viewKey === 'waiting_reply') {
-			setStatusFilter('pending');
+			if (setStatusFilter) setStatusFilter('pending');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
+		} else if (viewKey === 'today') {
+			if (setDateRangeFilter) setDateRangeFilter('today');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
+		} else if (viewKey === 'this_week') {
+			if (setDateRangeFilter) setDateRangeFilter('this_week');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
 		} else if (viewKey === 'ai_suggested') {
-			setStatusFilter('ai_bot');
+			if (setStatusFilter) setStatusFilter('ai_bot');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setDateRangeFilter) setDateRangeFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
+		} else if (viewKey === 'overdue') {
+			if (setDateRangeFilter) setDateRangeFilter('overdue');
+			if (setStatusFilter) setStatusFilter('all');
+			if (setPriorityFilter) setPriorityFilter('all');
+			if (setAssignedToFilter) setAssignedToFilter('all');
 		}
 	};
 

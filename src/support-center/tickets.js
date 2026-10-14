@@ -34,6 +34,25 @@ function TicketsApp() {
 	const [perPage, setPerPage] = useState(10);
 	const [totalPages, setTotalPages] = useState(1);
 	const [loading, setLoading] = useState(false);
+	const [folderCounts, setFolderCounts] = useState(
+		window.dctc_support_data?.folder_counts || {
+			all: 0,
+			open: 0,
+			pending: 0,
+			my: 0,
+			unassigned: 0,
+			resolved: 0,
+			closed: 0,
+			spam: 0,
+			trash: 0,
+			high_priority: 0,
+			waiting_reply: 0,
+			today: 0,
+			this_week: 0,
+			ai_suggested: 0,
+			overdue: 0,
+		}
+	);
 	const [selectedTicketId, setSelectedTicketId] = useState(ticketIdFromUrl);
 	const [selectedTicket, setSelectedTicket] = useState(null);
 	const [ticketLoading, setTicketLoading] = useState(false);
@@ -265,6 +284,9 @@ function TicketsApp() {
 				setTickets(data.tickets || []);
 				setTotalTickets(data.total || 0);
 				setTotalPages(data.total_pages || 1);
+				if (data.folder_counts && typeof data.folder_counts === 'object') {
+					setFolderCounts(data.folder_counts);
+				}
 			}
 		} catch (err) {
 			console.error('Error fetching tickets:', err);
@@ -615,6 +637,7 @@ function TicketsApp() {
 					tickets={tickets}
 					setTickets={setTickets}
 					totalTickets={totalTickets}
+					folderCounts={folderCounts}
 					currentPage={currentPage}
 					setCurrentPage={setCurrentPage}
 					perPage={perPage}

@@ -331,6 +331,7 @@ class DCTC_Support_Manager {
 				'saved_filters'         => $saved_filters,
 				'current_page'          => $page,
 				'is_woocommerce_active' => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
+				'folder_counts'         => class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_folder_counts( $user_id ) : array(),
 			)
 		);
 	}

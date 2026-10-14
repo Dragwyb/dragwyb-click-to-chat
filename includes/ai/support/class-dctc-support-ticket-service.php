@@ -585,7 +585,7 @@ class DCTC_Support_Ticket_Service {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$count = (int) $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT COUNT(*) FROM `$table_tickets` WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",
+				"SELECT COUNT(*) FROM `$table_tickets` WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$user_email
 			)
 		);
@@ -593,7 +593,7 @@ class DCTC_Support_Ticket_Service {
 		if ( $count > 0 ) {
 			$updated = $wpdb->query(
 				$wpdb->prepare(
-					"UPDATE `$table_tickets` SET customer_wp_user_id = %d WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",
+					"UPDATE `$table_tickets` SET customer_wp_user_id = %d WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",  // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 					$user_id,
 					$user_email
 				)
@@ -747,12 +747,14 @@ class DCTC_Support_Ticket_Service {
 				$where .= ' AND DATE(t.created_at) = CURDATE()';
 			} elseif ( 'yesterday' === $range ) {
 				$where .= ' AND DATE(t.created_at) = SUBDATE(CURDATE(), 1)';
-			} elseif ( in_array( $range, array( '7days', '7d', 'week' ), true ) ) {
+			} elseif ( in_array( $range, array( '7days', '7d', 'week', 'this_week' ), true ) ) {
 				$where .= ' AND t.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)';
 			} elseif ( in_array( $range, array( '30days', '30d', 'month' ), true ) ) {
 				$where .= ' AND t.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)';
 			} elseif ( 'this_month' === $range ) {
 				$where .= ' AND YEAR(t.created_at) = YEAR(CURDATE()) AND MONTH(t.created_at) = MONTH(CURDATE())';
+			} elseif ( 'overdue' === $range ) {
+				$where .= " AND t.created_at <= DATE_SUB(NOW(), INTERVAL 48 HOUR) AND t.status NOT IN ('resolved', 'closed', 'trash')";
 			}
 		}
 
@@ -775,7 +777,14 @@ class DCTC_Support_Ticket_Service {
 		// Assigned Agent filter
 		$agent_arg = isset( $args['assigned_agent_id'] ) ? $args['assigned_agent_id'] : ( isset( $args['assigned_to'] ) ? $args['assigned_to'] : '' );
 		if ( '' !== $agent_arg && 'all' !== $agent_arg ) {
-			if ( 'unassigned' === $agent_arg || 0 === (int) $agent_arg || '0' === (string) $agent_arg ) {
+			if ( in_array( $agent_arg, array( 'me', 'my' ), true ) ) {
+				$my_uid          = get_current_user_id();
+				$my_agent        = $wpdb->get_row( $wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d LIMIT 1", $my_uid ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+				$my_agent_id     = $my_agent ? (int) $my_agent['id'] : 0;
+				$my_ids_check    = array_filter( array_unique( array( $my_agent_id, $my_uid ) ) );
+				$my_placeholders = ! empty( $my_ids_check ) ? implode( ',', array_map( 'absint', $my_ids_check ) ) : '0';
+				$where          .= " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value IN ($my_placeholders))";
+			} elseif ( 'unassigned' === $agent_arg || 0 === (int) $agent_arg || '0' === (string) $agent_arg ) {
 				$where .= " AND t.id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value != '0' AND meta_value != '')";
 			} else {
 				$where .= $wpdb->prepare( " AND t.id IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value = %s)", (string) absint( $agent_arg ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
@@ -952,11 +961,12 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		return array(
-			'tickets'     => $rows,
-			'total'       => $total,
-			'total_pages' => ceil( $total / $per_page ),
-			'page'        => $page,
-			'per_page'    => $per_page,
+			'tickets'       => $rows,
+			'total'         => $total,
+			'total_pages'   => ceil( $total / $per_page ),
+			'page'          => $page,
+			'per_page'      => $per_page,
+			'folder_counts' => self::get_folder_counts( $link_user_id ? $link_user_id : get_current_user_id() ),
 		);
 	}
 
@@ -2026,6 +2036,137 @@ class DCTC_Support_Ticket_Service {
 		self::invalidate_cache( $ticket_id, $session_id );
 
 		return true;
+	}
+
+	/**
+	 * Get total counts for all folders and saved views across the support system.
+	 * Returns constant, un-filtered system totals so folder buttons maintain their true counts.
+	 *
+	 * @param int|null $user_id Optional WP User ID.
+	 * @return array<string, int>
+	 */
+	public static function get_folder_counts( $user_id = null ) {
+		global $wpdb;
+		$table_tickets     = $wpdb->prefix . 'dctc_support_tickets';
+		$table_ticket_meta = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$table_agents      = $wpdb->prefix . 'dctc_support_agents';
+
+		$user_id = $user_id ? absint( $user_id ) : get_current_user_id();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$agent    = $wpdb->get_row(
+			$wpdb->prepare( "SELECT id FROM `$table_agents` WHERE wp_user_id = %d AND active = 1 LIMIT 1", $user_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
+		);
+		$agent_id = $agent ? (int) $agent['id'] : 0;
+
+		$today = current_time( 'Y-m-d' );
+
+		// Status counts grouped in one single fast query
+		$status_rows = $wpdb->get_results(
+			"SELECT status, COUNT(*) as cnt FROM `$table_tickets` GROUP BY status", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			ARRAY_A
+		);
+
+		$status_map = array();
+		if ( is_array( $status_rows ) ) {
+			foreach ( $status_rows as $sr ) {
+				$status_map[ $sr['status'] ] = (int) $sr['cnt'];
+			}
+		}
+
+		$all_count = 0;
+		foreach ( $status_map as $st => $c ) {
+			if ( 'trash' !== $st ) {
+				$all_count += $c;
+			}
+		}
+
+		$open_count = 0;
+		foreach ( $status_map as $st => $c ) {
+			if ( ! in_array( $st, array( 'resolved', 'closed', 'trash' ), true ) ) {
+				$open_count += $c;
+			}
+		}
+
+		$pending_count = ( isset( $status_map['pending'] ) ? $status_map['pending'] : 0 )
+			+ ( isset( $status_map['waiting_customer'] ) ? $status_map['waiting_customer'] : 0 )
+			+ ( isset( $status_map['waiting_agent'] ) ? $status_map['waiting_agent'] : 0 )
+			+ ( isset( $status_map['hold'] ) ? $status_map['hold'] : 0 );
+
+		$resolved_count = isset( $status_map['resolved'] ) ? $status_map['resolved'] : 0;
+		$closed_count   = isset( $status_map['closed'] ) ? $status_map['closed'] : 0;
+		$spam_count     = isset( $status_map['spam'] ) ? $status_map['spam'] : 0;
+		$trash_count    = isset( $status_map['trash'] ) ? $status_map['trash'] : 0;
+
+		// My tickets count (assigned to current agent or current user)
+		$agent_ids_check    = array_filter( array_unique( array( $agent_id, $user_id ) ) );
+		$agent_placeholders = ! empty( $agent_ids_check ) ? implode( ',', array_map( 'absint', $agent_ids_check ) ) : '0';
+
+		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$my_count = (int) $wpdb->get_var(
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id WHERE tm.meta_key = 'assigned_agent_id' AND tm.meta_value IN ($agent_placeholders) AND t.status != 'trash'"
+		);
+
+		// Unassigned count: active tickets with no assigned_agent_id or assigned_agent_id = 0
+		$unassigned_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM `$table_tickets` WHERE status NOT IN ('resolved', 'closed', 'trash') AND id NOT IN (SELECT ticket_id FROM `$table_ticket_meta` WHERE meta_key = 'assigned_agent_id' AND meta_value != '0' AND meta_value != '')"
+		);
+
+		// Views counts:
+		// High priority: priority in ('high', 'urgent') and status != 'trash'
+		$high_priority_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM `$table_tickets` WHERE priority IN ('high', 'urgent') AND status != 'trash'"
+		);
+
+		// Waiting reply: status in ('pending', 'waiting_customer') and status != 'trash'
+		$waiting_reply_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM `$table_tickets` WHERE status IN ('pending', 'waiting_customer') AND status != 'trash'"
+		);
+
+		// Today: created today
+		$today_count = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM `$table_tickets` WHERE DATE(created_at) = %s AND status != 'trash'", $today )
+		);
+
+		// This week: created last 7 days
+		$this_week_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM `$table_tickets` WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND status != 'trash'"
+		);
+
+		// AI Suggested / Chatbot
+		$ai_suggested_count = (int) $wpdb->get_var(
+			"SELECT COUNT(DISTINCT t.id) FROM `$table_tickets` t 
+			 INNER JOIN `$table_ticket_meta` tm ON t.id = tm.ticket_id
+			 WHERE ((tm.meta_key = 'origin_type' AND tm.meta_value IN ('chatbot', 'ai', 'ai_assistant'))
+			    OR (tm.meta_key = 'session_id' AND tm.meta_value != '' AND tm.meta_value IS NOT NULL)
+			    OR (tm.meta_key = 'control_mode' AND tm.meta_value = 'ai')) 
+			   AND t.status != 'trash'"
+		);
+
+		// Overdue: created more than 48 hours ago and still open
+		$overdue_count = (int) $wpdb->get_var(
+			"SELECT COUNT(*) FROM `$table_tickets` WHERE created_at <= DATE_SUB(NOW(), INTERVAL 48 HOUR) AND status NOT IN ('resolved', 'closed', 'trash')"
+		);
+		// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+
+		return array(
+			'all'           => $all_count,
+			'open'          => $open_count,
+			'pending'       => $pending_count,
+			'my'            => $my_count,
+			'unassigned'    => $unassigned_count,
+			'resolved'      => $resolved_count,
+			'closed'        => $closed_count,
+			'spam'          => $spam_count,
+			'trash'         => $trash_count,
+			'high_priority' => $high_priority_count,
+			'waiting_reply' => $waiting_reply_count,
+			'today'         => $today_count,
+			'this_week'     => $this_week_count,
+			'ai_suggested'  => $ai_suggested_count,
+			'overdue'       => $overdue_count,
+		);
 	}
 
 	/**
