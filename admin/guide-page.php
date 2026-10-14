@@ -85,7 +85,7 @@ if ( $dctc_ai_enabled ) {
 			</div>
 			<div>
 				<h1 class="dctc-sc-app-title"><?php esc_html_e( 'Click to Chat Guide', 'dragwyb-click-to-chat' ); ?></h1>
-				<span class="dctc-sc-app-tagline"><?php esc_html_e( 'Documentation, Feature Walkthroughs & Setup Wizard', 'dragwyb-click-to-chat' ); ?></span>
+				<span class="dctc-sc-app-tagline"><?php esc_html_e( 'Documentation & Setup Wizard', 'dragwyb-click-to-chat' ); ?></span>
 			</div>
 		</div>
 
