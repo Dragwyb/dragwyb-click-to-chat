@@ -1389,6 +1389,13 @@ class DCTC_AI_Chat_Controller {
 			$formatted_messages = array();
 		}
 
+		// Extract structured lead fields for autofill
+		$detected_name     = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : '' );
+		$detected_email    = ! empty( $intent_data['email'] ) ? $intent_data['email'] : ( ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' ) );
+		$detected_phone    = ! empty( $intent_data['phone'] ) ? $intent_data['phone'] : '';
+		$detected_interest = ! empty( $intent_data['interest'] ) ? $intent_data['interest'] : ( ! empty( $page_context['product']['name'] ) ? $page_context['product']['name'] : '' );
+		$detected_company  = ! empty( $intent_data['company'] ) ? $intent_data['company'] : '';
+
 		$wc_products                  = array();
 		$is_support_or_tracking_query = in_array( $detected_intent, array( 'support_ticket', 'human_handoff', 'order_tracking' ), true )
 		|| preg_match( '/\b(issue|problem|bug|glitch|error|broken|not working|conflict|defect|trouble|refund|damage|support|ticket|help me|how to fix|facing|face a)\b/i', $prompt );
@@ -1400,20 +1407,18 @@ class DCTC_AI_Chat_Controller {
 			if ( $is_explicit_catalog_query ) {
 				$wc_products = DCTC_AI_WooCommerce::get_recommendations( 'popular', 3 );
 			} elseif ( $is_shopping_query ) {
-				$clean_search = preg_replace( '/\b(buy|purchase|how much is|pricing of|price of|can i get|show me|want to|looking for|recommend)\b/i', '', $prompt );
-				$clean_search = trim( $clean_search );
-				if ( ! empty( $clean_search ) && strlen( $clean_search ) >= 3 ) {
-					$wc_products = DCTC_AI_WooCommerce::search_products( $clean_search, 3 );
+				if ( ! empty( $detected_interest ) ) {
+					$wc_products = DCTC_AI_WooCommerce::search_products( $detected_interest, 1 );
+				}
+				if ( empty( $wc_products ) ) {
+					$clean_search = preg_replace( '/\b(buy|purchase|how much is|pricing of|price of|can i get|show me|want to|looking for|recommend)\b/i', '', $prompt );
+					$clean_search = trim( $clean_search );
+					if ( ! empty( $clean_search ) && strlen( $clean_search ) >= 3 ) {
+						$wc_products = DCTC_AI_WooCommerce::search_products( $clean_search, 3 );
+					}
 				}
 			}
 		}
-
-		// Extract structured lead fields for autofill
-		$detected_name     = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : '' );
-		$detected_email    = ! empty( $intent_data['email'] ) ? $intent_data['email'] : ( ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' ) );
-		$detected_phone    = ! empty( $intent_data['phone'] ) ? $intent_data['phone'] : '';
-		$detected_interest = ! empty( $intent_data['interest'] ) ? $intent_data['interest'] : ( ! empty( $page_context['product']['name'] ) ? $page_context['product']['name'] : '' );
-		$detected_company  = ! empty( $intent_data['company'] ) ? $intent_data['company'] : '';
 
 		$this->set_ticket_ai_responding( $session_id, false );
 		$ticket_info = $this->get_session_ticket_info( $session_id );
