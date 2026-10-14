@@ -3338,6 +3338,7 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
   padding: 0 36px 0 12px !important;
   transition: all 0.2s ease !important;
   width: 100% !important;
+  max-width: unset !important;
 }
 
 .dctc-sc-custom-input {
@@ -7498,3 +7499,215 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
   border-radius: 5px !important;
   text-transform: uppercase;
 }
+
+/* ==========================================================================
+   Ticket Properties Card Redesign - Matching Screenshot
+   ========================================================================== */
+.dctc-sc-card-badge-icon {
+  background: #6366f1;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(99, 102, 241, 0.25);
+}
+
+.dctc-sc-card-badge-icon svg {
+  display: block;
+}
+
+.dctc-sc-properties-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dctc-sc-prop-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dctc-sc-prop-fullwidth {
+  grid-column: span 2;
+}
+
+.dctc-sc-prop-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+  line-height: 1.2;
+  display: block;
+}
+
+.dctc-sc-prop-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  height: 38px;
+  padding: 0 10px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.dctc-sc-prop-select-wrap:hover {
+  border-color: #94a3b8;
+}
+
+.dctc-sc-prop-select-wrap:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.dctc-sc-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+.dctc-sc-priority-flag {
+  flex-shrink: 0;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+.dctc-sc-prop-value-text {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 14px;
+  text-align: left;
+}
+
+.dctc-sc-prop-chevron {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.dctc-sc-prop-select-native{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 10;
+  margin: 0;
+  border: none;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 0;
+  max-width: none;
+}
+
+/* Tags Box */
+.dctc-sc-prop-tags-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  min-height: 38px;
+  padding: 4px 8px;
+  gap: 6px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.dctc-sc-prop-tags-box:hover {
+  border-color: #94a3b8;
+}
+
+.dctc-sc-prop-tags-box:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.dctc-sc-prop-tags-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.dctc-sc-prop-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.dctc-sc-prop-tag-close {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.dctc-sc-prop-tag-close:hover {
+  color: #ef4444;
+}
+
+.dctc-sc-prop-tags-placeholder {
+  color: #94a3b8;
+  font-size: 12.5px;
+}
+
+.dctc-sc-prop-tags-trigger {
+  position: relative;
+  width: 22px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+

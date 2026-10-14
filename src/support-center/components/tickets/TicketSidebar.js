@@ -26,11 +26,10 @@ export default function TicketSidebar({
 }) {
 	const [showCustomerCard, setShowCustomerCard] = useState(true);
 	const [showAiUsefulContentCard, setShowAiUsefulContentCard] = useState(false);
-	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(false);
+	const [showTicketPropertiesCard, setShowTicketPropertiesCard] = useState(true);
 	const [showCommerceCard, setShowCommerceCard] = useState(false);
 	const [showQuickActionsCard, setShowQuickActionsCard] = useState(false);
 	const [showCustomerSession, setShowCustomerSession] = useState(false);
-	const [showAdvancedProps, setShowAdvancedProps] = useState(false);
 
 	const formatDateTime = (dateStr) => {
 		if (!dateStr) return '';
@@ -121,6 +120,70 @@ export default function TicketSidebar({
 			} catch (err) {
 				console.error(err);
 			}
+		}
+	};
+
+	const getStatusDotColor = (status) => {
+		switch (status) {
+			case 'open':
+				return '#10b981';
+			case 'pending':
+				return '#f59e0b';
+			case 'waiting_customer':
+				return '#3b82f6';
+			case 'resolved':
+				return '#8b5cf6';
+			case 'closed':
+				return '#64748b';
+			default:
+				return '#10b981';
+		}
+	};
+
+	const getStatusLabel = (status) => {
+		switch (status) {
+			case 'open':
+				return __('Open', 'dragwyb-click-to-chat');
+			case 'pending':
+				return __('Pending', 'dragwyb-click-to-chat');
+			case 'waiting_customer':
+				return __('Waiting Customer', 'dragwyb-click-to-chat');
+			case 'resolved':
+				return __('Resolved', 'dragwyb-click-to-chat');
+			case 'closed':
+				return __('Closed', 'dragwyb-click-to-chat');
+			default:
+				return status ? status.charAt(0).toUpperCase() + status.slice(1) : __('Open', 'dragwyb-click-to-chat');
+		}
+	};
+
+	const getPriorityColor = (priority) => {
+		switch (priority) {
+			case 'urgent':
+				return '#dc2626';
+			case 'high':
+				return '#ef4444';
+			case 'normal':
+				return '#3b82f6';
+			case 'low':
+				return '#94a3b8';
+			default:
+				return '#3b82f6';
+		}
+	};
+
+	const getPriorityLabel = (priority) => {
+		switch (priority) {
+			case 'urgent':
+				return __('Urgent', 'dragwyb-click-to-chat');
+			case 'high':
+				return __('High', 'dragwyb-click-to-chat');
+			case 'normal':
+				return __('Normal', 'dragwyb-click-to-chat');
+			case 'low':
+				return __('Low', 'dragwyb-click-to-chat');
+			default:
+				return priority ? priority.charAt(0).toUpperCase() + priority.slice(1) : __('Normal', 'dragwyb-click-to-chat');
 		}
 	};
 
@@ -379,82 +442,156 @@ export default function TicketSidebar({
 					aria-expanded={showTicketPropertiesCard}
 				>
 					<div className="dctc-sc-card-head-title">
-						<span className="dashicons dashicons-clipboard"></span>
-						<h4>{__('Ticket Properties', 'dragwyb-click-to-chat')}</h4>
+						<div
+							className="dctc-sc-card-badge-icon"
+						>
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+								<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+								<line x1="7" y1="7" x2="7.01" y2="7"></line>
+							</svg>
+						</div>
+						<h4 style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a', margin: 0 }}>
+							{__('Ticket Properties', 'dragwyb-click-to-chat')}
+						</h4>
 					</div>
 					<span className={`dashicons ${showTicketPropertiesCard ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`}></span>
 				</button>
 
 				{showTicketPropertiesCard && (
 					<div className="dctc-sc-card-body dctc-sc-ticket-fields">
-						{/* Daily Vital 1: Status */}
-						<div className="dctc-sc-field-row">
-							<label>{__('Status', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={selectedTicket?.status || 'open'}
-								onChange={(e) => handleStatusChange(e.target.value)}
-								className="dctc-sc-detail-select"
-							>
-								<option value="open">Open</option>
-								<option value="pending">Pending</option>
-								<option value="waiting_customer">Waiting Customer</option>
-								<option value="resolved">Resolved</option>
-								<option value="closed">Closed</option>
-							</select>
-						</div>
-
-						{/* Daily Vital 2: Priority */}
-						<div className="dctc-sc-field-row">
-							<label>{__('Priority', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={selectedTicket?.priority || 'normal'}
-								onChange={(e) => handlePriorityChange(e.target.value)}
-								className="dctc-sc-detail-select"
-							>
-								<option value="low">Low</option>
-								<option value="normal">Normal</option>
-								<option value="high">High</option>
-								<option value="urgent">Urgent</option>
-							</select>
-						</div>
-
-						{/* Daily Vital 3: Assigned To */}
-						<div className="dctc-sc-field-row">
-							<label>{__('Assigned To', 'dragwyb-click-to-chat')}</label>
-							<select
-								value={selectedTicket?.assigned_agent_id || 0}
-								onChange={(e) => handleAssignAgent(Number(e.target.value))}
-								className="dctc-sc-detail-select"
-							>
-								<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
-								{agents.map((ag) => (
-									<option key={ag.id} value={ag.id}>
-										{ag.display_name}
-									</option>
-								))}
-							</select>
-						</div>
-
-						{/* Expand Secondary Properties Toggle */}
-						<button
-							type="button"
-							className="dctc-sc-expand-toggle-btn"
-							onClick={() => setShowAdvancedProps((prev) => !prev)}
+						<div
+							className="dctc-sc-properties-grid"
 						>
-							<span className="dashicons dashicons-category"></span>
-							<span>{__('More Properties', 'dragwyb-click-to-chat')}</span>
-							<span className={`dashicons ${showAdvancedProps ? 'dashicons-arrow-up-alt2' : 'dashicons-arrow-down-alt2'}`} style={{ fontSize: '11px', width: '11px', height: '11px' }}></span>
-						</button>
+							{/* Status */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Status', 'dragwyb-click-to-chat')}
+								</label>
+								<div className="dctc-sc-prop-select-wrap">
+									<span
+										className="dctc-sc-status-dot"
+										style={{
+											backgroundColor: getStatusDotColor(selectedTicket?.status || 'open'),
+										}}
+									/>
+									<span
+										className="dctc-sc-prop-value-text"
+									>
+										{getStatusLabel(selectedTicket?.status || 'open')}
+									</span>
+									<svg
+										className="dctc-sc-prop-chevron"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
+									<select
+										value={selectedTicket?.status || 'open'}
+										onChange={(e) => handleStatusChange(e.target.value)}
+										className="dctc-sc-prop-select-native"
+										title={getStatusLabel(selectedTicket?.status || 'open')}
+									>
+										<option value="open">{__('Open', 'dragwyb-click-to-chat')}</option>
+										<option value="pending">{__('Pending', 'dragwyb-click-to-chat')}</option>
+										<option value="waiting_customer">{__('Waiting Customer', 'dragwyb-click-to-chat')}</option>
+										<option value="resolved">{__('Resolved', 'dragwyb-click-to-chat')}</option>
+										<option value="closed">{__('Closed', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+							</div>
 
-						{showAdvancedProps && (
-							<div className="dctc-sc-expanded-section">
-								{/* Category */}
-								<div className="dctc-sc-field-row">
-									<label>{__('Category', 'dragwyb-click-to-chat')}</label>
+							{/* Priority */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Priority', 'dragwyb-click-to-chat')}
+								</label>
+								<div
+									className="dctc-sc-prop-select-wrap"
+								>
+									<svg
+										className="dctc-sc-priority-flag"
+										width="13"
+										height="13"
+										viewBox="0 0 24 24"
+										fill={getPriorityColor(selectedTicket?.priority || 'normal')}
+										stroke={getPriorityColor(selectedTicket?.priority || 'normal')}
+										strokeWidth="2"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+										<line x1="4" y1="22" x2="4" y2="15"></line>
+									</svg>
+									<span
+										className="dctc-sc-prop-value-text"
+									>
+										{getPriorityLabel(selectedTicket?.priority || 'normal')}
+									</span>
+									<svg
+										className="dctc-sc-prop-chevron"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
+									<select
+										value={selectedTicket?.priority || 'normal'}
+										onChange={(e) => handlePriorityChange(e.target.value)}
+										className="dctc-sc-prop-select-native"
+										title={getPriorityLabel(selectedTicket?.priority || 'normal')}
+									>
+										<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
+										<option value="normal">{__('Normal', 'dragwyb-click-to-chat')}</option>
+										<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
+										<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
+									</select>
+								</div>
+							</div>
+
+							{/* Category */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Category', 'dragwyb-click-to-chat')}
+								</label>
+								<div
+									className="dctc-sc-prop-select-wrap"
+								>
+									<span
+										className="dctc-sc-prop-value-text"
+									>
+										{categories.find((c) => Number(c.id) === Number(selectedTicket?.category_id))?.name || __('Select Category', 'dragwyb-click-to-chat')}
+									</span>
+									<svg
+										className="dctc-sc-prop-chevron"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
 									<select
 										value={selectedTicket?.category_id || 0}
 										onChange={(e) => handleCategoryChange(Number(e.target.value))}
-										className="dctc-sc-detail-select"
+										className="dctc-sc-prop-select-native"
+										title={categories.find((c) => Number(c.id) === Number(selectedTicket?.category_id))?.name || __('Select Category', 'dragwyb-click-to-chat')}
 									>
 										<option value="0">{__('-- Select Category --', 'dragwyb-click-to-chat')}</option>
 										{categories.map((cat) => (
@@ -462,14 +599,40 @@ export default function TicketSidebar({
 										))}
 									</select>
 								</div>
+							</div>
 
-								{/* Product */}
-								<div className="dctc-sc-field-row">
-									<label>{__('Product', 'dragwyb-click-to-chat')}</label>
+							{/* Product */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Product', 'dragwyb-click-to-chat')}
+								</label>
+								<div
+									className="dctc-sc-prop-select-wrap"
+								>
+									<span
+										className="dctc-sc-prop-value-text"
+										title={selectedTicket?.product || ''}
+									>
+										{selectedTicket?.product || __('Select Product', 'dragwyb-click-to-chat')}
+									</span>
+									<svg
+										className="dctc-sc-prop-chevron"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
 									<select
 										value={selectedTicket?.product || ''}
 										onChange={(e) => handleProductChange(e.target.value)}
-										className="dctc-sc-detail-select"
+										className="dctc-sc-prop-select-native"
+										title={products.find((a) => Number(a.id) === Number(selectedTicket?.product))?.display_name || __('Select Product', 'dragwyb-click-to-chat')}
 									>
 										<option value="">{__('-- Select Product (Optional) --', 'dragwyb-click-to-chat')}</option>
 										{products.map((prod) => (
@@ -479,60 +642,135 @@ export default function TicketSidebar({
 										))}
 									</select>
 								</div>
+							</div>
 
-								{/* Tags */}
-								<div className="dctc-sc-field-row">
-									<label>{__('Tags', 'dragwyb-click-to-chat')}</label>
-									<div className="dctc-sc-tags-manager-wrap">
-										<div className="dctc-sc-tags-list">
-											{(Array.isArray(selectedTicket?.tags) && selectedTicket.tags.length > 0) ? (
-												selectedTicket.tags.map((tg, idx) => {
-													const tagName = typeof tg === 'object' ? tg.name : tg;
-													return (
-														<span key={idx} className="dctc-sc-tag-pill">
-															{tagName}
-															<button
-																type="button"
-																className="dctc-sc-tag-remove"
-																onClick={() => handleRemoveTag(tagName)}
-																title={__('Remove tag', 'dragwyb-click-to-chat')}
-															>
-																&times;
-															</button>
-														</span>
-													);
-												})
-											) : (
-												<span className="dctc-sc-tag-empty">{__('No tags assigned', 'dragwyb-click-to-chat')}</span>
-											)}
-										</div>
-
-										<div className="dctc-sc-add-tag-row">
-											<select
-												value=""
-												onChange={(e) => handleAddTag(e.target.value)}
-												className="dctc-sc-add-tag-select"
+							{/* Tags (Span 2) */}
+							<div
+								className="dctc-sc-prop-group dctc-sc-prop-fullwidth"
+							>
+								<label className="dctc-sc-prop-label">
+									{__('Tags', 'dragwyb-click-to-chat')}
+								</label>
+								<div className="dctc-sc-prop-tags-box">
+									<div className="dctc-sc-prop-tags-chips">
+										{Array.isArray(selectedTicket?.tags) && selectedTicket.tags.length > 0 ? (
+											selectedTicket.tags.map((tg, idx) => {
+												const tagName = typeof tg === 'object' ? tg.name : tg;
+												return (
+													<span
+														key={idx}
+														className="dctc-sc-prop-tag-chip"
+													>
+														<span>{tagName}</span>
+														<button
+															type="button"
+															className="dctc-sc-prop-tag-close"
+															onClick={(e) => {
+																e.stopPropagation();
+																handleRemoveTag(tagName);
+															}}
+															title={__('Remove tag', 'dragwyb-click-to-chat')}
+														>
+															&times;
+														</button>
+													</span>
+												);
+											})
+										) : (
+											<span
+												className="dctc-sc-prop-tags-placeholder"
 											>
-												<option value="">{__('+ Add Tag...', 'dragwyb-click-to-chat')}</option>
-												{tags.map((tg) => (
-													<option key={tg.id || tg.name} value={tg.name}>
-														{tg.name}
-													</option>
-												))}
-											</select>
-										</div>
+												{__('No tags assigned', 'dragwyb-click-to-chat')}
+											</span>
+										)}
+									</div>
+									<div className="dctc-sc-prop-tags-trigger">
+										<svg
+											className="dctc-sc-prop-chevron"
+											width="12"
+											height="12"
+											viewBox="0 0 24 24"
+											fill="none"
+											stroke="currentColor"
+											strokeWidth="2.5"
+											strokeLinecap="round"
+											strokeLinejoin="round"
+										>
+											<polyline points="6 9 12 15 18 9"></polyline>
+										</svg>
+										<select
+											value=""
+											onChange={(e) => {
+												if (e.target.value) {
+													handleAddTag(e.target.value);
+												}
+											}}
+											className="dctc-sc-prop-select-native"
+											title={__('Add tag', 'dragwyb-click-to-chat')}
+										>
+											<option value="">{__('+ Add Tag...', 'dragwyb-click-to-chat')}</option>
+											{tags.map((tg) => (
+												<option key={tg.id || tg.name} value={tg.name}>
+													{tg.name}
+												</option>
+											))}
+										</select>
 									</div>
 								</div>
+							</div>
 
-								{/* Source */}
-								<div className="dctc-sc-field-row">
-									<label>{__('Source', 'dragwyb-click-to-chat')}</label>
-									<span className="dctc-sc-static-val">
+							{/* Assigned To */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Assigned To', 'dragwyb-click-to-chat')}
+								</label>
+								<div className="dctc-sc-prop-select-wrap">
+									<span
+										className="dctc-sc-prop-value-text"
+									>
+										{agents.find((a) => Number(a.id) === Number(selectedTicket?.assigned_agent_id))?.display_name || __('Unassigned', 'dragwyb-click-to-chat')}
+									</span>
+									<svg
+										className="dctc-sc-prop-chevron"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										strokeWidth="2.5"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+									>
+										<polyline points="6 9 12 15 18 9"></polyline>
+									</svg>
+									<select
+										value={selectedTicket?.assigned_agent_id || 0}
+										onChange={(e) => handleAssignAgent(Number(e.target.value))}
+										className="dctc-sc-prop-select-native"
+										title={agents.find((a) => Number(a.id) === Number(selectedTicket?.assigned_agent_id))?.display_name || __('Unassigned', 'dragwyb-click-to-chat')}
+									>
+										<option value="0">{__('Unassigned', 'dragwyb-click-to-chat')}</option>
+										{agents.map((ag) => (
+											<option key={ag.id} value={ag.id}>
+												{ag.display_name}
+											</option>
+										))}
+									</select>
+								</div>
+							</div>
+
+							{/* Source */}
+							<div className="dctc-sc-prop-group">
+								<label className="dctc-sc-prop-label">
+									{__('Source', 'dragwyb-click-to-chat')}
+								</label>
+								<div className="dctc-sc-prop-select-wrap" style={{ padding: '5px' }}>
+									<span style={{ color: '#0f172a' }}>
 										{selectedTicket?.reply_surface === 'chatbot_widget' ? 'Chatbot Widget' : 'Support Portal'}
 									</span>
 								</div>
 							</div>
-						)}
+						</div>
 					</div>
 				)}
 			</div>
