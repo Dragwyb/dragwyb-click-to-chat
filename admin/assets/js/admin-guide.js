@@ -25,6 +25,16 @@
             // Instant Feature Activation Button on Disabled State
             $(document).on('click', '.dctc-guide-activate-btn', this.handleFeatureActivation.bind(this));
 
+            // Tab switch links (from setup tab or guide overview)
+            $(document).on('click', '.dctc-guide-switch-tab', function (e) {
+                e.preventDefault();
+                const tab = $(this).data('tab');
+                if (tab) {
+                    DCTC_Guide_App.switchTab(tab);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
             // Copy Shortcode Button
             $(document).on('click', '.dctc-copy-btn', function (e) {
                 e.preventDefault();
@@ -82,11 +92,11 @@
                 if (window.dctc_admin.is_ai_enabled) {
                     return 'ai';
                 }
-                if (window.dctc_admin.is_support_enabled) {
-                    return 'support';
-                }
                 if (window.dctc_admin.is_channels_enabled) {
                     return 'channels';
+                }
+                if (window.dctc_admin.is_support_enabled) {
+                    return 'support';
                 }
             }
             return 'channels';

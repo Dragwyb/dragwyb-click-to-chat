@@ -287,6 +287,28 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			// Check tab === setup and open === 1 before auto-opening modal
 			$show_onboarding = ( $is_guide_page && 'setup' === $tab_param && '1' === $open_param ) || $force_open;
 
+			$is_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : ( ! isset( $social_settings['channels_enabled'] ) || '1' === (string) $social_settings['channels_enabled'] );
+			$is_ai_enabled       = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : ( ! empty( $settings['display']['entire_site'] ) );
+			$is_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : ( ! empty( $support_settings['enabled'] ) );
+
+			// Check if user has already configured or used each module
+			$has_channels_setup = ! empty( $social_settings['whatsapp_value'] )
+				|| ! empty( $social_settings['phone_value'] )
+				|| ! empty( $social_settings['email_value'] )
+				|| ! empty( $social_settings['telegram_value'] )
+				|| isset( $social_settings['channels_enabled'] )
+				|| ! empty( $social_settings['show_widget'] );
+
+			$has_ai_setup = ! empty( $settings['chatbot']['default_provider'] )
+				|| ! empty( $settings['api_keys'] )
+				|| ! empty( $settings['display']['entire_site'] );
+
+			$has_support_setup = ! empty( $support_settings['enabled'] )
+				|| ! empty( $support_settings['support_email'] )
+				|| ! empty( $portal_page_id );
+
+			$is_existing_user = $has_channels_setup || $has_ai_setup || $has_support_setup;
+
 			wp_localize_script(
 				'dctc-ai-dashboard-script',
 				'dctc_ai_data',
@@ -307,7 +329,13 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 					'social_settings'       => $social_settings,
 					'support_settings'      => $support_settings,
 					'portal_url'            => $portal_url,
-					'is_support_enabled'    => class_exists( 'DCTC_Support_Manager' ) && ! empty( $support_settings['enabled'] ),
+					'is_channels_enabled'   => $is_channels_enabled,
+					'is_ai_enabled'         => $is_ai_enabled,
+					'is_support_enabled'    => $is_support_enabled,
+					'has_channels_setup'    => $has_channels_setup,
+					'has_ai_setup'          => $has_ai_setup,
+					'has_support_setup'     => $has_support_setup,
+					'is_existing_user'      => $is_existing_user,
 					'is_woocommerce_active' => class_exists( 'WooCommerce' ) || function_exists( 'WC' ),
 				)
 			);

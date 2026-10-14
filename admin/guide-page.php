@@ -51,6 +51,25 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 } else {
 	$dctc_active_tab = 'channels';
 }
+
+// Determine primary active destination for header button to avoid circular redirects when AI is disabled
+if ( $dctc_ai_enabled ) {
+	$dctc_primary_url   = admin_url( 'admin.php?page=dragwyb-click-to-chat' );
+	$dctc_primary_label = __( 'AI Assistant', 'dragwyb-click-to-chat' );
+	$dctc_primary_icon  = 'dashicons-dashboard';
+} elseif ( $dctc_channels_enabled ) {
+	$dctc_primary_url   = admin_url( 'admin.php?page=dragwyb-click-to-chat-channels' );
+	$dctc_primary_label = __( 'Channels', 'dragwyb-click-to-chat' );
+	$dctc_primary_icon  = 'dashicons-smartphone';
+} elseif ( $dctc_support_enabled ) {
+	$dctc_primary_url   = admin_url( 'admin.php?page=dragwyb-support-center' );
+	$dctc_primary_label = __( 'Support Center', 'dragwyb-click-to-chat' );
+	$dctc_primary_icon  = 'dashicons-shield';
+} else {
+	$dctc_primary_url   = admin_url( 'admin.php?page=dragwyb-click-to-chat-settings' );
+	$dctc_primary_label = __( 'Settings', 'dragwyb-click-to-chat' );
+	$dctc_primary_icon  = 'dashicons-admin-generic';
+}
 ?>
 
 <div class="dctc-admin-wrap dctc-guide-wrap">
@@ -78,6 +97,9 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 				data-tab="channels">
 				<span class="dashicons dashicons-smartphone" aria-hidden="true"></span>
 				<?php esc_html_e( '1. Channels', 'dragwyb-click-to-chat' ); ?>
+				<span class="dctc-nav-status-pill <?php echo $dctc_channels_enabled ? 'is-active' : 'is-disabled'; ?>">
+					<?php echo $dctc_channels_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+				</span>
 			</button>
 
 			<button 
@@ -87,6 +109,9 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 				data-tab="ai">
 				<span class="dashicons dashicons-format-chat" aria-hidden="true"></span>
 				<?php esc_html_e( '2. AI Assistant', 'dragwyb-click-to-chat' ); ?>
+				<span class="dctc-nav-status-pill <?php echo $dctc_ai_enabled ? 'is-active' : 'is-disabled'; ?>">
+					<?php echo $dctc_ai_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+				</span>
 			</button>
 
 			<button
@@ -96,6 +121,9 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 				data-tab="support">
 				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
 				<?php esc_html_e( '3. Support Center', 'dragwyb-click-to-chat' ); ?>
+				<span class="dctc-nav-status-pill <?php echo $dctc_support_enabled ? 'is-active' : 'is-disabled'; ?>">
+					<?php echo $dctc_support_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+				</span>
 			</button>
 
 			<button 
@@ -113,9 +141,9 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 				<span class="dashicons dashicons-admin-generic"></span>
 				<?php esc_html_e( 'Settings', 'dragwyb-click-to-chat' ); ?>
 			</a>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ); ?>" class="dctc-ai-btn dctc-ai-btn-primary">
-				<span class="dashicons dashicons-dashboard" style="margin-right:4px; font-size:16px; width:16px; height:16px;"></span>
-				<?php esc_html_e( 'AI Assistant', 'dragwyb-click-to-chat' ); ?>
+			<a href="<?php echo esc_url( $dctc_primary_url ); ?>" class="dctc-ai-btn dctc-ai-btn-primary">
+				<span class="dashicons <?php echo esc_attr( $dctc_primary_icon ); ?>" style="margin-right:4px; font-size:16px; width:16px; height:16px;"></span>
+				<?php echo esc_html( $dctc_primary_label ); ?>
 			</a>
 		</div>
 	</header>
@@ -1085,9 +1113,15 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 				</div>
 
 				<div class="dctc-setup-landing-cards">
-					<div class="dctc-setup-landing-card">
-						<div class="dctc-setup-landing-card__icon" style="background: #ec4899;">
-							<span class="dashicons dashicons-format-chat" style="font-size: 20px; color: #fff;"></span>
+					<!-- Card 1: Social Chat (Channels) -->
+					<div class="dctc-setup-landing-card <?php echo $dctc_channels_enabled ? 'is-enabled' : 'is-disabled'; ?>">
+						<div class="dctc-setup-landing-card__top">
+							<div class="dctc-setup-landing-card__icon" style="background: #ec4899;">
+								<span class="dashicons dashicons-format-chat" style="font-size: 20px; color: #fff;"></span>
+							</div>
+							<span class="dctc-status-pill <?php echo $dctc_channels_enabled ? 'is-active' : 'is-inactive'; ?>">
+								<?php echo $dctc_channels_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+							</span>
 						</div>
 						<h3 class="dctc-setup-landing-card__title">
 							<?php esc_html_e( 'Social Chat (Channels)', 'dragwyb-click-to-chat' ); ?>
@@ -1095,14 +1129,33 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 						<p class="dctc-setup-landing-card__desc">
 							<?php esc_html_e( 'Configure WhatsApp, Phone, Email and custom action buttons for your visitors.', 'dragwyb-click-to-chat' ); ?>
 						</p>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-channels' ) ); ?>" class="dctc-setup-landing-card__link">
-							<?php esc_html_e( 'Configure Channels →', 'dragwyb-click-to-chat' ); ?>
-						</a>
+						<div class="dctc-setup-landing-card__footer">
+							<?php if ( $dctc_channels_enabled ) : ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-channels' ) ); ?>" class="dctc-setup-landing-card__link">
+									<?php esc_html_e( 'Configure Channels →', 'dragwyb-click-to-chat' ); ?>
+								</a>
+							<?php else : ?>
+								<div class="dctc-setup-card-action-row">
+									<button type="button" class="dctc-btn-action-sm dctc-guide-activate-btn" data-feature="channels">
+										<span>⚡</span> <?php esc_html_e( 'Enable Channels', 'dragwyb-click-to-chat' ); ?>
+									</button>
+									<button type="button" class="dctc-guide-switch-tab" data-tab="channels">
+										<?php esc_html_e( 'Read Guide →', 'dragwyb-click-to-chat' ); ?>
+									</button>
+								</div>
+							<?php endif; ?>
+						</div>
 					</div>
 
-					<div class="dctc-setup-landing-card">
-						<div class="dctc-setup-landing-card__icon" style="background: #6366f1;">
-							<span class="dashicons dashicons-superhero" style="font-size: 20px; color: #fff;"></span>
+					<!-- Card 2: AI Assistant -->
+					<div class="dctc-setup-landing-card <?php echo $dctc_ai_enabled ? 'is-enabled' : 'is-disabled'; ?>">
+						<div class="dctc-setup-landing-card__top">
+							<div class="dctc-setup-landing-card__icon" style="background: #6366f1;">
+								<span class="dashicons dashicons-superhero" style="font-size: 20px; color: #fff;"></span>
+							</div>
+							<span class="dctc-status-pill <?php echo $dctc_ai_enabled ? 'is-active' : 'is-inactive'; ?>">
+								<?php echo $dctc_ai_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+							</span>
 						</div>
 						<h3 class="dctc-setup-landing-card__title">
 							<?php esc_html_e( 'AI Assistant', 'dragwyb-click-to-chat' ); ?>
@@ -1110,14 +1163,33 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 						<p class="dctc-setup-landing-card__desc">
 							<?php esc_html_e( 'Manage AI engine providers, training content, knowledge base and lead scoring.', 'dragwyb-click-to-chat' ); ?>
 						</p>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ); ?>" class="dctc-setup-landing-card__link">
-							<?php esc_html_e( 'Open AI Dashboard →', 'dragwyb-click-to-chat' ); ?>
-						</a>
+						<div class="dctc-setup-landing-card__footer">
+							<?php if ( $dctc_ai_enabled ) : ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat' ) ); ?>" class="dctc-setup-landing-card__link">
+									<?php esc_html_e( 'Open AI Dashboard →', 'dragwyb-click-to-chat' ); ?>
+								</a>
+							<?php else : ?>
+								<div class="dctc-setup-card-action-row">
+									<button type="button" class="dctc-btn-action-sm dctc-guide-activate-btn" data-feature="ai">
+										<span>⚡</span> <?php esc_html_e( 'Enable AI Assistant', 'dragwyb-click-to-chat' ); ?>
+									</button>
+									<button type="button" class="dctc-guide-switch-tab" data-tab="ai">
+										<?php esc_html_e( 'Read Guide →', 'dragwyb-click-to-chat' ); ?>
+									</button>
+								</div>
+							<?php endif; ?>
+						</div>
 					</div>
 
-					<div class="dctc-setup-landing-card">
-						<div class="dctc-setup-landing-card__icon" style="background: #10b981;">
-							<span class="dashicons dashicons-tickets-alt" style="font-size: 20px; color: #fff;"></span>
+					<!-- Card 3: Support Center -->
+					<div class="dctc-setup-landing-card <?php echo $dctc_support_enabled ? 'is-enabled' : 'is-disabled'; ?>">
+						<div class="dctc-setup-landing-card__top">
+							<div class="dctc-setup-landing-card__icon" style="background: #10b981;">
+								<span class="dashicons dashicons-tickets-alt" style="font-size: 20px; color: #fff;"></span>
+							</div>
+							<span class="dctc-status-pill <?php echo $dctc_support_enabled ? 'is-active' : 'is-inactive'; ?>">
+								<?php echo $dctc_support_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
+							</span>
 						</div>
 						<h3 class="dctc-setup-landing-card__title">
 							<?php esc_html_e( 'Support Center', 'dragwyb-click-to-chat' ); ?>
@@ -1125,10 +1197,40 @@ if ( in_array( $dctc_requested_tab, array( 'channels', 'ai', 'support', 'setup' 
 						<p class="dctc-setup-landing-card__desc">
 							<?php esc_html_e( 'Manage support tickets, assign agent staff, taxonomies and customer portal.', 'dragwyb-click-to-chat' ); ?>
 						</p>
-						<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-support-center' ) ); ?>" class="dctc-setup-landing-card__link">
-							<?php esc_html_e( 'View Support Center →', 'dragwyb-click-to-chat' ); ?>
-						</a>
+						<div class="dctc-setup-landing-card__footer">
+							<?php if ( $dctc_support_enabled ) : ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-support-center' ) ); ?>" class="dctc-setup-landing-card__link">
+									<?php esc_html_e( 'View Support Center →', 'dragwyb-click-to-chat' ); ?>
+								</a>
+							<?php else : ?>
+								<div class="dctc-setup-card-action-row">
+									<button type="button" class="dctc-btn-action-sm dctc-guide-activate-btn" data-feature="support">
+										<span>⚡</span> <?php esc_html_e( 'Enable Support Center', 'dragwyb-click-to-chat' ); ?>
+									</button>
+									<button type="button" class="dctc-guide-switch-tab" data-tab="support">
+										<?php esc_html_e( 'Read Guide →', 'dragwyb-click-to-chat' ); ?>
+									</button>
+								</div>
+							<?php endif; ?>
+						</div>
 					</div>
+				</div>
+
+				<!-- Dedicated Settings Navigation Shortcut -->
+				<div class="dctc-setup-settings-banner">
+					<div class="dctc-setup-settings-banner__left">
+						<div class="dctc-setup-settings-banner__icon">
+							<span class="dashicons dashicons-admin-generic"></span>
+						</div>
+						<div class="dctc-setup-settings-banner__text">
+							<h4 class="dctc-setup-settings-banner__title"><?php esc_html_e( 'Looking to toggle modules on or off?', 'dragwyb-click-to-chat' ); ?></h4>
+							<p class="dctc-setup-settings-banner__desc"><?php esc_html_e( 'You can enable or disable Channels, AI Assistant, and Support Center anytime from Click to Chat > Settings > General.', 'dragwyb-click-to-chat' ); ?></p>
+						</div>
+					</div>
+					<a href="<?php echo esc_url( admin_url( 'admin.php?page=dragwyb-click-to-chat-settings' ) ); ?>" class="dctc-btn-settings-shortcut">
+						<span class="dashicons dashicons-admin-settings" style="font-size: 15px; width: 15px; height: 15px; margin-right: 4px;"></span>
+						<?php esc_html_e( 'Manage Modules in Settings →', 'dragwyb-click-to-chat' ); ?>
+					</a>
 				</div>
 
 				<div class="dctc-setup-landing-action-box">

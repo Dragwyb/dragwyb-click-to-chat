@@ -151,6 +151,85 @@ function normalizeModels(rawModels) {
 	return [{ id: 'default', name: 'Default Model' }];
 }
 
+function getInitialFeatures() {
+	const d = typeof window !== 'undefined' ? window.dctc_ai_data : {};
+	if (!d) {
+		return { socialChat: false, aiAssistant: true, supportCenter: true };
+	}
+
+	const hasSavedSettings = !!d.is_existing_user;
+	const isChannelsActive = d.is_channels_enabled !== undefined ? !!d.is_channels_enabled : false;
+	const isAiActive = d.is_ai_enabled !== undefined ? !!d.is_ai_enabled : false;
+	const isSupportActive = d.is_support_enabled !== undefined ? !!d.is_support_enabled : false;
+
+	// If existing user with saved settings and at least one active module
+	if (hasSavedSettings && (isChannelsActive || isAiActive || isSupportActive)) {
+		return {
+			socialChat: isChannelsActive,
+			aiAssistant: isAiActive,
+			supportCenter: isSupportActive,
+		};
+	}
+
+	// Default when no settings found, or no module is currently active / already saved:
+	// Default AI Assistant and Support Ticket module enabled
+	return {
+		socialChat: false,
+		aiAssistant: true,
+		supportCenter: true,
+	};
+}
+
+function getInitialSocialSettings(feats) {
+	const d = typeof window !== 'undefined' ? window.dctc_ai_data : {};
+	const s = d?.social_settings || {};
+	const isEnabled = feats ? feats.socialChat : (d?.is_channels_enabled !== undefined ? !!d.is_channels_enabled : false);
+
+	return {
+		enabled: isEnabled,
+		whatsapp_enabled: s.whatsapp_enabled !== undefined ? (s.whatsapp_enabled === '1' || s.whatsapp_enabled === true) : true,
+		whatsapp_number: s.whatsapp_value || '',
+		phone_enabled: s.phone_enabled !== undefined ? (s.phone_enabled === '1' || s.phone_enabled === true) : false,
+		phone_number: s.phone_value || '',
+		email_enabled: s.email_enabled !== undefined ? (s.email_enabled === '1' || s.email_enabled === true) : true,
+		email_address: s.email_value || d?.admin_email || '',
+		telegram_enabled: s.telegram_enabled !== undefined ? (s.telegram_enabled === '1' || s.telegram_enabled === true) : false,
+		telegram_username: s.telegram_value || '',
+		greeting_message: s.greeting_message || 'Chat with us',
+	};
+}
+
+function getInitialAiSettings(feats) {
+	const d = typeof window !== 'undefined' ? window.dctc_ai_data : {};
+	const ai = d?.settings || {};
+	const isEnabled = feats ? feats.aiAssistant : (d?.is_ai_enabled !== undefined ? !!d.is_ai_enabled : true);
+	const provider = ai.chatbot?.default_provider || 'openai';
+
+	return {
+		enabled: isEnabled,
+		provider: provider,
+		api_key: '',
+		model: ai.chatbot?.default_model || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'gpt-4o-mini'),
+		assistant_name: ai.chatbot?.bot_name || 'Dragwyb Assistant',
+		welcome_message: ai.chatbot?.welcome_message || 'Hi! How can I help you today?',
+	};
+}
+
+function getInitialSupportSettings(feats) {
+	const d = typeof window !== 'undefined' ? window.dctc_ai_data : {};
+	const supp = d?.support_settings || {};
+	const isEnabled = feats ? feats.supportCenter : (d?.is_support_enabled !== undefined ? !!d.is_support_enabled : true);
+
+	return {
+		enabled: isEnabled,
+		default_category: supp.default_category || 'Product Support',
+		default_priority: supp.default_priority || 'normal',
+		support_email: supp.support_email || d?.admin_email || '',
+		customer_portal: supp.customer_portal !== false,
+		auto_create_portal_page: !d?.portal_url,
+	};
+}
+
 export default function OnboardingWizard({ open, onClose, showNotice }) {
 	const [currentStep, setCurrentStep] = useState(1);
 	const [isSaving, setIsSaving] = useState(false);
@@ -158,86 +237,24 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 	const [showPassword, setShowPassword] = useState(false);
 	const [createdPortalUrl, setCreatedPortalUrl] = useState('');
 
-	// Module Enable States (Step 2)
-	const [features, setFeatures] = useState({
-		socialChat: false,
-		aiAssistant: true,
-		supportCenter: true,
-	});
+	// Module Enable States (Step 2) initialized dynamically from existing user setup
+	const [features, setFeatures] = useState(getInitialFeatures);
 
-	// Module Settings (Step 3)
-	const [socialChatSettings, setSocialChatSettings] = useState({
-		enabled: true,
-		whatsapp_enabled: true,
-		whatsapp_number: '+1 (555) 234-5678',
-		phone_enabled: true,
-		phone_number: '+1 (555) 234-5678',
-		email_enabled: true,
-		email_address: window.dctc_ai_data?.admin_email || 'support@yourdomain.com',
-		telegram_enabled: false,
-		telegram_username: '@support_team',
-		greeting_message: 'Chat with us',
-	});
+	// Module Settings (Step 3) initialized with user's real saved settings and matching initial features
+	const [socialChatSettings, setSocialChatSettings] = useState(() => getInitialSocialSettings(getInitialFeatures()));
+	const [aiSettings, setAiSettings] = useState(() => getInitialAiSettings(getInitialFeatures()));
+	const [supportSettings, setSupportSettings] = useState(() => getInitialSupportSettings(getInitialFeatures()));
 
-	const [aiSettings, setAiSettings] = useState({
-		enabled: true,
-		provider: 'openai',
-		api_key: '',
-		model: 'gpt-4o-mini',
-		assistant_name: 'Dragwyb Assistant',
-		welcome_message: 'Hi! How can I help you today?',
-	});
-
-	const [supportSettings, setSupportSettings] = useState({
-		enabled: true,
-		default_category: 'Product Support',
-		default_priority: 'normal',
-		support_email: window.dctc_ai_data?.admin_email || 'support@yourdomain.com',
-		customer_portal: true,
-		auto_create_portal_page: true,
-	});
-
-	// Pre-fill existing settings if available
+	// Synchronize when the modal is opened
 	useEffect(() => {
-		const s = window.dctc_ai_data?.social_settings || {};
-		const ai = window.dctc_ai_data?.settings || {};
-		const supp = window.dctc_ai_data?.support_settings || {};
-
-		if (s.whatsapp_value || s.phone_value || s.email_value || s.telegram_value || s.channels_enabled !== undefined) {
-			setSocialChatSettings((prev) => ({
-				...prev,
-				enabled: s.channels_enabled !== '0',
-				whatsapp_enabled: s.whatsapp_enabled !== '0',
-				whatsapp_number: s.whatsapp_value || prev.whatsapp_number,
-				phone_enabled: s.phone_enabled === '1',
-				phone_number: s.phone_value || prev.phone_number,
-				email_enabled: s.email_enabled !== '0',
-				email_address: s.email_value || prev.email_address,
-				telegram_enabled: s.telegram_enabled === '1',
-				telegram_username: s.telegram_value || prev.telegram_username,
-				greeting_message: s.greeting_message || prev.greeting_message,
-			}));
+		if (open) {
+			const feats = getInitialFeatures();
+			setFeatures(feats);
+			setSocialChatSettings(getInitialSocialSettings(feats));
+			setAiSettings(getInitialAiSettings(feats));
+			setSupportSettings(getInitialSupportSettings(feats));
 		}
-
-		if (ai.chatbot?.default_provider) {
-			setAiSettings((prev) => ({
-				...prev,
-				provider: ai.chatbot.default_provider || 'openai',
-				model: ai.chatbot.default_model || 'gpt-4o-mini',
-				assistant_name: ai.chatbot.bot_name || 'Dragwyb Assistant',
-				welcome_message: ai.chatbot.welcome_message || 'Hi! How can I help you today?',
-			}));
-		}
-
-		if (supp.support_email) {
-			setSupportSettings((prev) => ({
-				...prev,
-				support_email: supp.support_email,
-				default_priority: supp.default_priority || 'normal',
-				customer_portal: supp.customer_portal !== false,
-			}));
-		}
-	}, []);
+	}, [open]);
 
 	if (!open) {
 		return null;
@@ -245,11 +262,22 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 
 	const toggleFeature = (key) => {
 		setFeatures((prev) => {
-			const updated = { ...prev, [key]: !prev[key] };
+			const nextVal = !prev[key];
+			const updated = { ...prev, [key]: nextVal };
 			// Prevent disabling all features
 			if (!updated.socialChat && !updated.aiAssistant && !updated.supportCenter) {
 				return prev;
 			}
+
+			// When user selects or deselects a module in Step 2, update its Step 3 switcher state
+			if (key === 'socialChat') {
+				setSocialChatSettings((s) => ({ ...s, enabled: nextVal }));
+			} else if (key === 'aiAssistant') {
+				setAiSettings((s) => ({ ...s, enabled: nextVal }));
+			} else if (key === 'supportCenter') {
+				setSupportSettings((s) => ({ ...s, enabled: nextVal }));
+			}
+
 			return updated;
 		});
 	};
@@ -328,6 +356,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 	// Models for currently selected AI provider (normalized cleanly)
 	const rawProviderModels = window.dctc_ai_data?.models_list?.[aiSettings.provider] || DEFAULT_MODELS[aiSettings.provider];
 	const availableModels = normalizeModels(rawProviderModels);
+	const savedApiKey = window.dctc_ai_data?.settings?.api_keys?.[aiSettings.provider];
 
 	return (
 		<div className="dctc-onboarding-overlay" role="main" aria-label="Onboarding Setup">
@@ -606,9 +635,16 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 											</div>
 										</div>
 
-										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--social">
-											⚡ {__('Daily Use: 1-Tap WhatsApp & Direct Calls', 'dragwyb-click-to-chat')}
-										</span>
+										<div className="dctc-feature-badge-row">
+											<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--social">
+												⚡ {__('Daily Use: 1-Tap WhatsApp & Direct Calls', 'dragwyb-click-to-chat')}
+											</span>
+											{window.dctc_ai_data?.is_existing_user && (
+												<span className={`dctc-setup-current-pill ${window.dctc_ai_data?.is_channels_enabled ? 'is-active' : 'is-disabled'}`}>
+													{window.dctc_ai_data?.is_channels_enabled ? __('Currently Active', 'dragwyb-click-to-chat') : __('Disabled in Settings', 'dragwyb-click-to-chat')}
+												</span>
+											)}
+										</div>
 
 										<h3 className="dctc-feature-select-card__title">
 											{__('Social Chat (Floating Widget)', 'dragwyb-click-to-chat')}
@@ -647,9 +683,18 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 											</div>
 										</div>
 
-										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--ai">
-											🤖 {__('Daily Use: 24/7 Q&A & Lead Scoring', 'dragwyb-click-to-chat')}
-										</span>
+										<div className="dctc-feature-badge-row">
+											<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--ai">
+												🤖 {__('Daily Use: 24/7 Q&A & Lead Scoring', 'dragwyb-click-to-chat')}
+											</span>
+											{window.dctc_ai_data?.is_existing_user && (
+												<span className={`dctc-setup-current-pill ${window.dctc_ai_data?.is_ai_enabled ? 'is-active' : (window.dctc_ai_data?.has_ai_setup ? 'is-disabled' : 'is-unconfigured')}`}>
+													{window.dctc_ai_data?.is_ai_enabled
+														? __('Currently Active', 'dragwyb-click-to-chat')
+														: (window.dctc_ai_data?.has_ai_setup ? __('Disabled in Settings', 'dragwyb-click-to-chat') : __('Not Configured', 'dragwyb-click-to-chat'))}
+												</span>
+											)}
+										</div>
 
 										<h3 className="dctc-feature-select-card__title">
 											{__('Autonomous AI Assistant', 'dragwyb-click-to-chat')}
@@ -688,9 +733,18 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 											</div>
 										</div>
 
-										<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--support">
-											🎫 {__('Daily Use: Ticket Queue & Agent Routing', 'dragwyb-click-to-chat')}
-										</span>
+										<div className="dctc-feature-badge-row">
+											<span className="dctc-feature-select-card__daily-badge dctc-feature-select-card__daily-badge--support">
+												🎫 {__('Daily Use: Ticket Queue & Agent Routing', 'dragwyb-click-to-chat')}
+											</span>
+											{window.dctc_ai_data?.is_existing_user && (
+												<span className={`dctc-setup-current-pill ${window.dctc_ai_data?.is_support_enabled ? 'is-active' : (window.dctc_ai_data?.has_support_setup ? 'is-disabled' : 'is-unconfigured')}`}>
+													{window.dctc_ai_data?.is_support_enabled
+														? __('Currently Active', 'dragwyb-click-to-chat')
+														: (window.dctc_ai_data?.has_support_setup ? __('Disabled in Settings', 'dragwyb-click-to-chat') : __('Not Configured', 'dragwyb-click-to-chat'))}
+												</span>
+											)}
+										</div>
 
 										<h3 className="dctc-feature-select-card__title">
 											{__('Support Center Helpdesk', 'dragwyb-click-to-chat')}
@@ -732,7 +786,12 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 									<button
 										type="button"
 										className="dctc-btn-primary"
-										onClick={() => setCurrentStep(3)}
+										onClick={() => {
+											setSocialChatSettings((s) => ({ ...s, enabled: features.socialChat }));
+											setAiSettings((s) => ({ ...s, enabled: features.aiAssistant }));
+											setSupportSettings((s) => ({ ...s, enabled: features.supportCenter }));
+											setCurrentStep(3);
+										}}
 									>
 										{__('Continue →', 'dragwyb-click-to-chat')}
 									</button>
@@ -943,7 +1002,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													<input
 														type={showPassword ? 'text' : 'password'}
 														className="dctc-input"
-														placeholder="sk-..."
+														placeholder={savedApiKey ? `${__('Configured:', 'dragwyb-click-to-chat')} ${savedApiKey}` : 'sk-...'}
 														value={aiSettings.api_key}
 														onChange={(e) => setAiSettings((prev) => ({ ...prev, api_key: e.target.value }))}
 													/>
@@ -956,6 +1015,11 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 														{showPassword ? Icons.eyeOff : Icons.eye}
 													</button>
 												</div>
+												{savedApiKey && !aiSettings.api_key && (
+													<p className="dctc-form-helper" style={{ color: '#059669', fontWeight: 600 }}>
+														✓ {__('Existing API key configured. Leave blank to keep using saved key.', 'dragwyb-click-to-chat')}
+													</p>
+												)}
 											</div>
 
 											<div className="dctc-form-group">

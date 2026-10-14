@@ -1890,3 +1890,183 @@ body.folded .dctc-toast-notification {
         align-items: flex-start;
     }
 }
+
+/* Guide Top Navigation Status Pills */
+.dctc-nav-status-pill {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 1px 7px;
+    border-radius: 999px;
+    margin-left: 6px;
+    line-height: 1.4;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.dctc-nav-status-pill.is-active {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+.dctc-sc-nav-link.active .dctc-nav-status-pill.is-active {
+    background: rgba(255, 255, 255, 0.22);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.45);
+}
+
+.dctc-nav-status-pill.is-disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.dctc-sc-nav-link.active .dctc-nav-status-pill.is-disabled {
+    background: rgba(255, 255, 255, 0.16);
+    color: rgba(255, 255, 255, 0.85);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Tab 4 Setup Cards & Settings Shortcut Banner */
+.dctc-setup-landing-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.dctc-setup-landing-card.is-disabled {
+    background: #fafafa;
+    border-color: #f1f5f9;
+}
+
+.dctc-setup-landing-card__footer {
+    margin-top: auto;
+}
+
+.dctc-setup-card-action-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dctc-btn-action-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    background: #4f46e5;
+    color: #ffffff !important;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.dctc-btn-action-sm:hover {
+    background: #4338ca;
+    color: #ffffff !important;
+    transform: translateY(-1px);
+}
+
+.dctc-guide-switch-tab {
+    display: inline-flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: #4f46e5;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.dctc-guide-switch-tab:hover {
+    color: #3730a3;
+    text-decoration: underline;
+}
+
+.dctc-setup-settings-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 18px 24px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.dctc-setup-settings-banner__left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    min-width: 260px;
+}
+
+.dctc-setup-settings-banner__icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dctc-setup-settings-banner__icon .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+}
+
+.dctc-setup-settings-banner__title {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 750;
+    color: #0f172a;
+}
+
+.dctc-setup-settings-banner__desc {
+    margin: 0;
+    font-size: 12.5px;
+    color: #64748b;
+    line-height: 1.45;
+}
+
+.dctc-btn-settings-shortcut {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 9px 18px;
+    color: #1e293b;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.dctc-btn-settings-shortcut:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+    transform: translateY(-1px);
+}
