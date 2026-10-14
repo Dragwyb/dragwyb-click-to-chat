@@ -702,18 +702,16 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		};
 
 		try {
-			await Promise.all([
-				apiFetch({
-					path: '/dctc-ai/v1/save-bot-settings',
-					method: 'POST',
-					data: botPayload,
-				}),
-				apiFetch({
-					path: '/dctc-ai/v1/save-display-settings',
-					method: 'POST',
-					data: displayPayload,
-				}),
-			]);
+			await apiFetch({
+				path: '/dctc-ai/v1/save-bot-settings',
+				method: 'POST',
+				data: botPayload,
+			});
+			await apiFetch({
+				path: '/dctc-ai/v1/save-display-settings',
+				method: 'POST',
+				data: displayPayload,
+			});
 
 			onSave({
 				chatbot: { ...chatbot, ...botPayload },
@@ -729,13 +727,18 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		}
 	};
 
+	const onSubmitRef = useRef();
+	onSubmitRef.current = onSubmit;
+
 	useEffect(() => {
 		const handleTriggerSave = () => {
-			onSubmit();
+			if (onSubmitRef.current) {
+				onSubmitRef.current();
+			}
 		};
 		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
 		return () => window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
-	}, [onSubmit]);
+	}, []);
 
 	const getBubbleRadiusStyle = () => {
 		if (form.bubble_style === 'square') return '4px';

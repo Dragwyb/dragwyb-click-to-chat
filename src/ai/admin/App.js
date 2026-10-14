@@ -265,6 +265,16 @@ export default function App({ settings: initialSettings }) {
 		);
 	}
 
+	const handleTriggerGlobalSave = () => {
+		if (isSaving) return;
+		if (typeof document !== 'undefined' && document.activeElement && typeof document.activeElement.blur === 'function') {
+			document.activeElement.blur();
+		}
+		setTimeout(() => {
+			window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
+		}, 30);
+	};
+
 	// Normal Main Menu Page (dragwyb-click-to-chat):
 	return (
 		<div className="dctc-ai-app-wrapper">
@@ -292,9 +302,7 @@ export default function App({ settings: initialSettings }) {
 							id="dctc-global-save-btn"
 							className="dctc-ai-btn dctc-ai-btn-primary"
 							disabled={isSaving}
-							onClick={() => {
-								window.dispatchEvent(new CustomEvent('dctc_ai_trigger_save'));
-							}}
+							onClick={handleTriggerGlobalSave}
 						>
 							<span
 								className={`dashicons ${isSaving ? 'dashicons-update spin' : 'dashicons-saved'}`}

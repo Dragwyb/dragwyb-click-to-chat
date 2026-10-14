@@ -5,7 +5,7 @@
  * 3. System Persona & Instructions
  * 4. Model Parameters & Accuracy
  */
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
@@ -59,15 +59,20 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
+	const onSubmitRef = useRef();
+	onSubmitRef.current = onSubmit;
+
 	useEffect(() => {
 		const handleTriggerSave = () => {
-			onSubmit();
+			if (onSubmitRef.current) {
+				onSubmitRef.current();
+			}
 		};
 		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
 		return () => {
 			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
 		};
-	}, [form, settings]);
+	}, []);
 
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
@@ -101,18 +106,16 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				enable_failover: form.enable_failover,
 			};
 
-			const [resApi, resBot] = await Promise.all([
-				apiFetch({
-					path: '/dctc-ai/v1/save-settings',
-					method: 'POST',
-					data: apiPayload,
-				}),
-				apiFetch({
-					path: '/dctc-ai/v1/save-bot-settings',
-					method: 'POST',
-					data: botPayload,
-				}),
-			]);
+			const resApi = await apiFetch({
+				path: '/dctc-ai/v1/save-settings',
+				method: 'POST',
+				data: apiPayload,
+			});
+			const resBot = await apiFetch({
+				path: '/dctc-ai/v1/save-bot-settings',
+				method: 'POST',
+				data: botPayload,
+			});
 
 			showNotice(
 				__('AI Engine & Prompt settings saved successfully!', 'dragwyb-click-to-chat'),

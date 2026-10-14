@@ -1,7 +1,7 @@
 /**
  * Knowledge Base — Sources + Database tabs, indexing with 2s status poll.
  */
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import ConfirmModal from '../components/ConfirmModal';
@@ -177,15 +177,6 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 		(selectedPostTypes.length !== indexedTypes.length ||
 			selectedPostTypes.some((t) => !new Set(indexedTypes).has(t)));
 
-	useEffect(() => {
-		const handleTriggerSave = () => {
-			onSubmit();
-		};
-		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
-		return () => {
-			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
-		};
-	}, [currentSnapshot, settings]);
 
 	useEffect(() => {
 		fetchPostTypes();
@@ -344,6 +335,21 @@ export default function KnowledgeBase({ settings, onSave, showNotice }) {
 			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
+
+	const onSubmitRef = useRef();
+	onSubmitRef.current = onSubmit;
+
+	useEffect(() => {
+		const handleTriggerSave = () => {
+			if (onSubmitRef.current) {
+				onSubmitRef.current();
+			}
+		};
+		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		return () => {
+			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		};
+	}, []);
 
 	const startIndex = async () => {
 		if (selectedPostTypes.length === 0) {
