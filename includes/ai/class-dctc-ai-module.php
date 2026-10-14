@@ -288,7 +288,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			$show_onboarding = ( $is_guide_page && 'setup' === $tab_param && '1' === $open_param ) || $force_open;
 
 			$is_channels_enabled = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_channels_enabled() : ( ! isset( $social_settings['channels_enabled'] ) || '1' === (string) $social_settings['channels_enabled'] );
-			$is_ai_enabled       = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : ( ! empty( $settings['display']['entire_site'] ) );
+			$is_ai_enabled       = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : true;
 			$is_support_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_support_enabled() : ( ! empty( $support_settings['enabled'] ) );
 
 			// Check if user has already configured or used each module

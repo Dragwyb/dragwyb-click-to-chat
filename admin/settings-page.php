@@ -20,7 +20,7 @@ $dctc_channels_enabled = ! isset( $dctc_settings['channels_enabled'] ) || '1' ==
 
 // 2. AI Assistant status
 $dctc_ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
-$dctc_ai_enabled  = ! empty( $dctc_ai_settings['display']['entire_site'] );
+$dctc_ai_enabled  = class_exists( 'DCTC_Helper' ) ? DCTC_Helper::is_ai_enabled() : true;
 
 // 3. Support Center status
 $dctc_support_settings = get_option( 'dctc_support_settings', array() );

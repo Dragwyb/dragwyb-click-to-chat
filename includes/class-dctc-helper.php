@@ -199,11 +199,18 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		 * @return bool
 		 */
 		public static function is_ai_enabled() {
-			$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
-			if ( ! is_array( $ai_settings ) ) {
-				return false;
+			$settings = get_option( 'dctc_settings', array() );
+			if ( is_array( $settings ) && isset( $settings['ai_assistant_enabled'] ) ) {
+				return '1' === (string) $settings['ai_assistant_enabled'] || true === $settings['ai_assistant_enabled'];
 			}
-			return ! empty( $ai_settings['display']['entire_site'] );
+
+			$ai_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
+			if ( is_array( $ai_settings ) && isset( $ai_settings['enabled'] ) ) {
+				return ! empty( $ai_settings['enabled'] );
+			}
+
+			// Enabled by default (consistent with is_channels_enabled)
+			return true;
 		}
 
 		/**

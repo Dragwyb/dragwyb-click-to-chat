@@ -415,12 +415,10 @@ function dctc_save_settings() {
 			if ( ! is_array( $ai_settings ) ) {
 				$ai_settings = array();
 			}
-			if ( ! isset( $ai_settings['display'] ) || ! is_array( $ai_settings['display'] ) ) {
-				$ai_settings['display'] = array();
-			}
-			$ai_settings['display']['entire_site'] = ( '1' === $_POST['ai_assistant_enabled'] );
+			$ai_enabled = ( '1' === $_POST['ai_assistant_enabled'] );
+			$ai_settings['enabled'] = $ai_enabled;
 			update_option( 'dctc_ai_chat_assistant_settings', $ai_settings );
-			$settings['ai_assistant_enabled'] = ( '1' === $_POST['ai_assistant_enabled'] ) ? '1' : '0';
+			$settings['ai_assistant_enabled'] = $ai_enabled ? '1' : '0';
 		}
 
 		// Support Center Module Toggle
