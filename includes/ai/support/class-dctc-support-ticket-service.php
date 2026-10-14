@@ -569,14 +569,13 @@ class DCTC_Support_Ticket_Service {
 			return 0;
 		}
 
-		if ( empty( $user_email ) ) {
-			$user = get_userdata( $user_id );
-			if ( $user && ! empty( $user->user_email ) ) {
-				$user_email = $user->user_email;
-			}
+		$user = get_userdata( $user_id );
+		if ( ! $user || empty( $user->user_email ) ) {
+			return 0;
 		}
 
-		$user_email = sanitize_email( $user_email );
+		// Security: Always use the verified WordPress user's registered email address
+		$user_email = sanitize_email( $user->user_email );
 		if ( empty( $user_email ) ) {
 			return 0;
 		}
@@ -634,14 +633,22 @@ class DCTC_Support_Ticket_Service {
 		$table_sessions    = $wpdb->prefix . 'dctc_ai_sessions';
 
 		// Automatically link unlinked guest tickets (customer_wp_user_id = 0) to logged-in user or customer requested
-		$link_user_id = ! empty( $args['customer_wp_user_id'] ) ? absint( $args['customer_wp_user_id'] ) : ( is_user_logged_in() ? get_current_user_id() : 0 );
+		$link_user_id = 0;
+		if ( is_user_logged_in() ) {
+			$curr_user = get_current_user_id();
+			if ( ! empty( $args['customer_wp_user_id'] ) && ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) ) {
+				$link_user_id = absint( $args['customer_wp_user_id'] );
+			} else {
+				$link_user_id = $curr_user;
+			}
+		}
 		if ( $link_user_id > 0 ) {
 			self::link_guest_tickets_to_user( $link_user_id );
 		}
-		if ( ! empty( $args['customer_email'] ) ) {
+		if ( ! empty( $args['customer_email'] ) && ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) ) {
 			$email_user = get_user_by( 'email', sanitize_email( $args['customer_email'] ) );
 			if ( $email_user && ! empty( $email_user->ID ) ) {
-				self::link_guest_tickets_to_user( $email_user->ID, $email_user->user_email );
+				self::link_guest_tickets_to_user( $email_user->ID );
 			}
 		}
 
@@ -1903,8 +1910,12 @@ class DCTC_Support_Ticket_Service {
 			$user_id = $user_id ? absint( $user_id ) : 0;
 		}
 
-		if ( empty( $message ) ) {
+		$message = is_string( $message ) ? trim( $message ) : '';
+		if ( '' === $message || '' === trim( wp_strip_all_tags( $message ) ) ) {
 			return new WP_Error( 'empty_message', __( 'Reply content cannot be empty.', 'dragwyb-click-to-chat' ) );
+		}
+		if ( mb_strlen( $message ) > 50000 ) {
+			$message = mb_substr( $message, 0, 50000 );
 		}
 
 		$ticket = self::get_ticket( $ticket_id );
@@ -2803,9 +2814,16 @@ class DCTC_Support_Ticket_Service {
 	public static function filter_for_portal( array $ticket, $is_new_guest_creation = false ) {
 		$filtered = $ticket;
 		unset(
+			$filtered['meta'],
 			$filtered['notes'],
 			$filtered['internal_notes'],
-			$filtered['ai_classification_confidence']
+			$filtered['ai_classification_confidence'],
+			$filtered['active_viewers'],
+			$filtered['session_id'],
+			$filtered['agent_wp_user_id'],
+			$filtered['agent_role'],
+			$filtered['assigned_agent_id'],
+			$filtered['assigned_team_id']
 		);
 
 		// If this is not a brand new guest ticket creation response, omit the guest secret token from public output

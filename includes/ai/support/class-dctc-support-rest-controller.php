@@ -1767,15 +1767,33 @@ class DCTC_Support_REST_Controller {
 
 	public function get_portal_tickets( $request ) {
 		$user_id = get_current_user_id();
-		$params  = $request->get_params();
+
+		$query_args = array(
+			'page'     => max( 1, absint( $request->get_param( 'page' ) ) ),
+			'per_page' => min( 50, max( 1, absint( $request->get_param( 'per_page' ) ?: 20 ) ) ),
+		);
+
+		$status = $request->get_param( 'status' );
+		if ( ! empty( $status ) && is_string( $status ) ) {
+			$query_args['status'] = sanitize_key( $status );
+		}
+
+		$search = $request->get_param( 'search' );
+		if ( ! empty( $search ) && is_string( $search ) ) {
+			$query_args['search'] = sanitize_text_field( $search );
+		}
 
 		if ( $user_id ) {
 			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id );
-			$params['customer_wp_user_id'] = $user_id;
+			$query_args['customer_wp_user_id'] = $user_id;
 		} else {
 			$guest_token = $request->get_header( 'X-Guest-Token' );
+			if ( empty( $guest_token ) ) {
+				$guest_token = $request->get_param( 'guest_token' );
+			}
+			$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
 			if ( ! empty( $guest_token ) ) {
-				$params['guest_access_token'] = sanitize_text_field( $guest_token );
+				$query_args['guest_access_token'] = $guest_token;
 			} else {
 				// Logged-out visitor with no guest token has no tickets
 				return new WP_REST_Response(
@@ -1790,7 +1808,7 @@ class DCTC_Support_REST_Controller {
 			}
 		}
 
-		$result = DCTC_Support_Ticket_Service::get_tickets( $params );
+		$result = DCTC_Support_Ticket_Service::get_tickets( $query_args );
 
 		// Security (SEC-05, SEC-16): Filter all returned tickets for portal viewer
 		if ( ! empty( $result['tickets'] ) && is_array( $result['tickets'] ) ) {
@@ -1803,8 +1821,9 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function create_portal_ticket( $request ) {
-		$params  = $request->get_json_params();
-		$user_id = get_current_user_id();
+		$raw_params = $request->get_json_params();
+		$raw_params = is_array( $raw_params ) ? $raw_params : array();
+		$user_id    = get_current_user_id();
 
 		// Security (SEC-18): Rate limit ticket creation for guests (max 15/hour)
 		if ( ! $user_id && ! $this->check_rate_limit( 'create_portal_ticket', 15, 3600 ) ) {
@@ -1817,11 +1836,16 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		// If user is logged out, verify that guest ticket submissions are enabled
+		require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
+		$portal_settings  = DCTC_Support_Portal::get_settings();
+		$support_settings = get_option( 'dctc_support_settings', array() );
+
+		// If user is logged out, verify that guest ticket submissions are enabled in BOTH portal and general support settings
 		if ( ! $user_id ) {
-			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
-			$portal_settings = DCTC_Support_Portal::get_settings();
-			if ( empty( $portal_settings['enable_guest_ticket_form'] ) ) {
+			$guest_allowed_portal  = ! empty( $portal_settings['enable_guest_ticket_form'] );
+			$guest_allowed_support = ! isset( $support_settings['allow_guest_tickets'] ) || ! empty( $support_settings['allow_guest_tickets'] );
+
+			if ( ! $guest_allowed_portal || ! $guest_allowed_support ) {
 				return new WP_REST_Response(
 					array(
 						'success' => false,
@@ -1831,8 +1855,9 @@ class DCTC_Support_REST_Controller {
 				);
 			}
 
-			// Require visitor name and email for guest ticket
-			if ( empty( $params['customer_email'] ) || ! is_email( $params['customer_email'] ) ) {
+			// Require visitor name and valid email for guest ticket
+			$email = isset( $raw_params['customer_email'] ) ? sanitize_email( $raw_params['customer_email'] ) : '';
+			if ( empty( $email ) || ! is_email( $email ) ) {
 				return new WP_REST_Response(
 					array(
 						'success' => false,
@@ -1843,18 +1868,53 @@ class DCTC_Support_REST_Controller {
 			}
 		}
 
-		// Security (SEC-20): Enforce guest media and attachment blocking
-		if ( ! $user_id || ! empty( $portal_settings['prevent_guest_media_upload'] ) ) {
-			unset( $params['attachments'] );
+		$subject = isset( $raw_params['subject'] ) ? sanitize_text_field( mb_substr( trim( (string) $raw_params['subject'] ), 0, 255 ) ) : '';
+		if ( empty( $subject ) ) {
+			$subject = __( 'Support Request', 'dragwyb-click-to-chat' );
 		}
 
-		$params['origin_type']      = 'support_portal';
-		$params['reply_surface']    = 'support_portal';
-		$params['interaction_type'] = 'SUPPORT_TICKET';
-		$params['control_mode']     = 'human';
+		$message = isset( $raw_params['message'] ) ? wp_kses_post( trim( (string) $raw_params['message'] ) ) : '';
+		if ( empty( $message ) || '' === trim( wp_strip_all_tags( $message ) ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Please describe your request in the message field.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		// Security: Whitelist only permitted customer fields and strictly enforce user identity
+		$params = array(
+			'subject'          => $subject,
+			'message'          => $message,
+			'origin_type'      => 'support_portal',
+			'reply_surface'    => 'support_portal',
+			'interaction_type' => 'SUPPORT_TICKET',
+			'control_mode'     => 'human',
+		);
 
 		if ( $user_id ) {
+			$curr_user                     = wp_get_current_user();
 			$params['customer_wp_user_id'] = $user_id;
+			$params['customer_name']       = $curr_user ? $curr_user->display_name : '';
+			$params['customer_email']      = $curr_user ? $curr_user->user_email : '';
+		} else {
+			$params['customer_wp_user_id'] = 0;
+			$params['customer_name']       = isset( $raw_params['customer_name'] ) ? sanitize_text_field( mb_substr( trim( (string) $raw_params['customer_name'] ), 0, 150 ) ) : '';
+			$params['customer_email']      = sanitize_email( mb_substr( trim( (string) $raw_params['customer_email'] ), 0, 100 ) );
+		}
+
+		if ( ! empty( $raw_params['category_id'] ) ) {
+			$params['category_id'] = absint( $raw_params['category_id'] );
+		}
+		if ( ! empty( $raw_params['product_id'] ) ) {
+			$params['product_id'] = absint( $raw_params['product_id'] );
+		}
+
+		// Security (SEC-20): Enforce guest media and attachment blocking
+		if ( $user_id && empty( $portal_settings['prevent_guest_media_upload'] ) && ! empty( $raw_params['attachments'] ) && is_array( $raw_params['attachments'] ) ) {
+			$params['attachments'] = array_slice( $raw_params['attachments'], 0, 5 );
 		}
 
 		$ticket = DCTC_Support_Ticket_Service::create_ticket( $params );
@@ -1900,6 +1960,10 @@ class DCTC_Support_REST_Controller {
 
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $guest_token ) ) {
+			$guest_token = $request->get_param( 'guest_token' );
+		}
+		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
 
 		// Security (SEC-01, SEC-05): Customer authorization check with constant-time hash comparison
 		$is_owner = false;
@@ -1967,6 +2031,17 @@ class DCTC_Support_REST_Controller {
 			$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
 		}
 
+		$message = trim( (string) $message );
+		if ( '' === $message || '' === trim( wp_strip_all_tags( $message ) ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Reply message cannot be empty.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
 		// Security (SEC-18): Rate limit replies (max 40 per 10 minutes)
 		if ( ! $this->check_rate_limit( 'portal_reply', 40, 600 ) ) {
 			return new WP_REST_Response(
@@ -1991,6 +2066,10 @@ class DCTC_Support_REST_Controller {
 
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $guest_token ) ) {
+			$guest_token = $request->get_param( 'guest_token' );
+		}
+		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
 
 		// Security (SEC-01): Strict ownership check
 		$is_owner = false;
@@ -2048,6 +2127,10 @@ class DCTC_Support_REST_Controller {
 
 		$user_id     = get_current_user_id();
 		$guest_token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $guest_token ) ) {
+			$guest_token = $request->get_param( 'guest_token' );
+		}
+		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
 
 		// Security (SEC-01): Strict ownership check
 		$is_owner = false;
