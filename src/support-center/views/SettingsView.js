@@ -227,6 +227,34 @@ export default function SettingsView({
 									notifications: { ...(prev.notifications || {}), customer_email_enabled: val },
 								}))}
 							/>
+
+							{/* Input when Customer Email Notifications is enabled */}
+							=								<div className="dctc-sc-nested-field">
+								<label htmlFor="dctc-sc-notification-email" className="dctc-sc-field-card-label" style={{ fontSize: '12.5px', marginBottom: '4px' }}>
+									{__('Sender / Reply-To Notification Email', 'dragwyb-click-to-chat')}
+								</label>
+								<p className="dctc-sc-field-card-desc" style={{ marginBottom: '8px' }}>
+									{__('Customer email updates will be sent from this email address.', 'dragwyb-click-to-chat')}
+								</p>
+								<div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+									<span className="dashicons dashicons-email" style={{ position: 'absolute', left: '10px', color: '#94a3b8', fontSize: '16px', width: '16px', height: '16px', pointerEvents: 'none' }}></span>
+									<input
+										id="dctc-sc-notification-email"
+										type="email"
+										className="dctc-sc-styled-input"
+										style={{ paddingLeft: '34px' }}
+										placeholder={__('Leave empty for default site admin email', 'dragwyb-click-to-chat')}
+										value={supportSettings.ticket_notification_email || ''}
+										onChange={(e) => {
+											const val = e.target.value;
+											setSupportSettings((prev) => ({
+												...prev,
+												ticket_notification_email: val
+											}));
+										}}
+									/>
+								</div>
+							</div>
 						</div>
 
 						{/* Staff Agent Assignment Alerts */}
