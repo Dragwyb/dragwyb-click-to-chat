@@ -263,6 +263,17 @@ const DEFAULT_PORTAL_SETTINGS = {
 	guest_name_placeholder: __('John Doe', 'dragwyb-click-to-chat'),
 	guest_email_label: __('Your Email Address', 'dragwyb-click-to-chat'),
 	guest_email_placeholder: __('you@example.com', 'dragwyb-click-to-chat'),
+	guest_session_timeout: 5,
+	show_guest_expiry_timer: true,
+	show_guest_clear_session_btn: true,
+	btn_guest_clear_session_text: __('End Guest Session', 'dragwyb-click-to-chat'),
+	guest_storage_mode: 'session',
+	show_guest_public_device_notice: true,
+	prevent_guest_media_upload: true,
+	guest_ticket_received_email_enabled: true,
+	guest_ticket_received_email_subject: __('We have received your support request #{ticket_id}', 'dragwyb-click-to-chat'),
+	guest_ticket_received_email_message: __('We have received your ticket in guest mode. You can manage this ticket from our support portal with your current email account when guest mode expires or is closed.', 'dragwyb-click-to-chat'),
+	guest_email_confirm_prompt: __("We will send a notification to this email address which you have entered:\n\n{email}\n\nIf this email is not correct, click Cancel to change it. Otherwise, click OK to continue.", 'dragwyb-click-to-chat'),
 };
 
 export default function PortalView({
@@ -1202,6 +1213,156 @@ export default function PortalView({
 													placeholder="you@example.com"
 												/>
 											</FormField>
+										</div>
+
+										<div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+											<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+												<span className="dashicons dashicons-shield-alt" style={{ color: '#059669', fontSize: '18px', width: '18px', height: '18px' }}></span>
+												<div>
+													<h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+														{__('Guest Session Privacy & Public Device Protection', 'dragwyb-click-to-chat')}
+													</h4>
+													<p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+														{__('Automatically clear guest ticket history on shared/public computers to protect conversation privacy.', 'dragwyb-click-to-chat')}
+													</p>
+												</div>
+											</div>
+
+											<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+												<FormField id="dctc-portal-guest-timeout" label={__('Session Inactivity Timeout (Minutes)', 'dragwyb-click-to-chat')}>
+													<input
+														type="number"
+														id="dctc-portal-guest-timeout"
+														min="1"
+														max="1440"
+														value={settings.guest_session_timeout ?? 5}
+														onChange={(e) => updateSetting('guest_session_timeout', Math.max(1, parseInt(e.target.value, 10) || 5))}
+													/>
+													<span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+														{__('Default: 5 minutes. Session automatically expires after inactivity.', 'dragwyb-click-to-chat')}
+													</span>
+												</FormField>
+
+												<FormField id="dctc-portal-guest-storage-mode" label={__('Session Storage Mode', 'dragwyb-click-to-chat')}>
+													<select
+														id="dctc-portal-guest-storage-mode"
+														value={settings.guest_storage_mode || 'session'}
+														onChange={(e) => updateSetting('guest_storage_mode', e.target.value)}
+														style={{ width: '100%', height: '38px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+													>
+														<option value="session">{__('Browser Session Only (Auto-clears on tab close)', 'dragwyb-click-to-chat')}</option>
+														<option value="local">{__('Remember Across Tabs with Inactivity Timeout', 'dragwyb-click-to-chat')}</option>
+													</select>
+													<span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+														{__('Session Only is safest for shared & library computers.', 'dragwyb-click-to-chat')}
+													</span>
+												</FormField>
+											</div>
+
+											<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+												<SettingCard
+													id="dctc-portal-show-timer"
+													title={__('Show Session Expiry Timer in Guest Mode', 'dragwyb-click-to-chat')}
+													desc={__('Displays a live countdown timer (e.g. 05:00) in the support portal.', 'dragwyb-click-to-chat')}
+													checked={settings.show_guest_expiry_timer !== false}
+													onChange={(val) => updateSetting('show_guest_expiry_timer', val)}
+												/>
+
+												<SettingCard
+													id="dctc-portal-show-clear-btn"
+													title={__('Show "End Guest Session" Button', 'dragwyb-click-to-chat')}
+													desc={__('Allows visitors to explicitly wipe their history before leaving the computer.', 'dragwyb-click-to-chat')}
+													checked={settings.show_guest_clear_session_btn !== false}
+													onChange={(val) => updateSetting('show_guest_clear_session_btn', val)}
+												/>
+											</div>
+
+											<div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+												<FormField id="dctc-portal-clear-btn-text" label={__('"End Session" Button Text', 'dragwyb-click-to-chat')}>
+													<input
+														type="text"
+														id="dctc-portal-clear-btn-text"
+														value={settings.btn_guest_clear_session_text || ''}
+														onChange={(e) => updateSetting('btn_guest_clear_session_text', e.target.value)}
+														placeholder="End Guest Session"
+													/>
+												</FormField>
+
+												<SettingCard
+													id="dctc-portal-prevent-media"
+													title={__('Prevent Media Buttons & File Uploads for Guests', 'dragwyb-click-to-chat')}
+													desc={__('Strictly disables the WordPress media library and attachments for guests.', 'dragwyb-click-to-chat')}
+													checked={settings.prevent_guest_media_upload !== false}
+													onChange={(val) => updateSetting('prevent_guest_media_upload', val)}
+												/>
+											</div>
+										</div>
+
+										<div style={{ marginTop: '18px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
+											<div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+												<span className="dashicons dashicons-email-alt" style={{ color: '#4f46e5', fontSize: '18px', width: '18px', height: '18px' }}></span>
+												<div>
+													<h4 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+														{__('Guest Ticket Received Email Notification & Access Notice', 'dragwyb-click-to-chat')}
+													</h4>
+													<p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>
+														{__('Send confirmation email to guest customer with instructions on managing their ticket when guest mode expires or is closed.', 'dragwyb-click-to-chat')}
+													</p>
+												</div>
+											</div>
+
+											<SettingCard
+												id="dctc-portal-guest-ticket-email-enabled"
+												title={__('Send Email on Guest Ticket Submission', 'dragwyb-click-to-chat')}
+												desc={__('When Customer Email Notifications is enabled in Support Settings, sends an immediate ticket receipt notice to the guest email address.', 'dragwyb-click-to-chat')}
+												checked={settings.guest_ticket_received_email_enabled !== false}
+												onChange={(val) => updateSetting('guest_ticket_received_email_enabled', val)}
+											/>
+
+											{settings.guest_ticket_received_email_enabled !== false && (
+												<div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+													<FormField id="dctc-portal-guest-email-subject" label={__('Guest Confirmation Email Subject', 'dragwyb-click-to-chat')}>
+														<input
+															type="text"
+															id="dctc-portal-guest-email-subject"
+															value={settings.guest_ticket_received_email_subject || ''}
+															onChange={(e) => updateSetting('guest_ticket_received_email_subject', e.target.value)}
+															placeholder="We have received your support request #{ticket_id}"
+														/>
+														<span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+															{__('Available tags: {site_name}, {ticket_id}, {ticket_subject}, {customer_name}', 'dragwyb-click-to-chat')}
+														</span>
+													</FormField>
+
+													<FormField id="dctc-portal-guest-email-message" label={__('Guest Ticket Received Message & Portal Guidance', 'dragwyb-click-to-chat')}>
+														<textarea
+															id="dctc-portal-guest-email-message"
+															rows={4}
+															value={settings.guest_ticket_received_email_message || ''}
+															onChange={(e) => updateSetting('guest_ticket_received_email_message', e.target.value)}
+															placeholder="We have received your ticket in guest mode. You can manage this ticket from our support portal with your current email account when guest mode expires or is closed."
+															style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', lineHeight: '1.5' }}
+														/>
+														<span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+															{__('Guidance message sent to the guest explaining how they can view and manage their support request from the portal using their email once their temporary session expires or is closed.', 'dragwyb-click-to-chat')}
+														</span>
+													</FormField>
+
+													<FormField id="dctc-portal-guest-confirm-prompt" label={__('Guest Email Confirmation Alert Dialog Prompt', 'dragwyb-click-to-chat')}>
+														<textarea
+															id="dctc-portal-guest-confirm-prompt"
+															rows={3}
+															value={settings.guest_email_confirm_prompt || ''}
+															onChange={(e) => updateSetting('guest_email_confirm_prompt', e.target.value)}
+															placeholder="We will send a notification to this email address which you have entered:\n\n{email}\n\nIf this email is not correct, click Cancel to change it. Otherwise, click OK to continue."
+															style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', lineHeight: '1.5' }}
+														/>
+														<span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '3px' }}>
+															{__('Confirmation alert shown to the guest visitor before submitting a ticket to double-check their entered email address. Use {email} placeholder.', 'dragwyb-click-to-chat')}
+														</span>
+													</FormField>
+												</div>
+											)}
 										</div>
 									</div>
 								) : (

@@ -1838,6 +1838,11 @@ class DCTC_Support_REST_Controller {
 			}
 		}
 
+		// Security (SEC-20): Enforce guest media and attachment blocking
+		if ( ! $user_id || ! empty( $portal_settings['prevent_guest_media_upload'] ) ) {
+			unset( $params['attachments'] );
+		}
+
 		$params['origin_type']      = 'support_portal';
 		$params['reply_surface']    = 'support_portal';
 		$params['interaction_type'] = 'SUPPORT_TICKET';
@@ -1922,7 +1927,36 @@ class DCTC_Support_REST_Controller {
 	public function portal_reply( $request ) {
 		$uuid    = $request->get_param( 'uuid' );
 		$params  = $request->get_json_params();
-		$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
+		$user_id = get_current_user_id();
+
+		// Security (SEC-20): If reply is from guest or media is prevented, sanitize without media tags
+		if ( ! $user_id ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
+			$portal_settings = DCTC_Support_Portal::get_settings();
+			if ( ! empty( $portal_settings['prevent_guest_media_upload'] ) ) {
+				$allowed_tags = array(
+					'p'          => array(),
+					'br'         => array(),
+					'strong'     => array(),
+					'em'         => array(),
+					'b'          => array(),
+					'i'          => array(),
+					'u'          => array(),
+					'ul'         => array(),
+					'ol'         => array(),
+					'li'         => array(),
+					'blockquote' => array(),
+					'code'       => array(),
+					'pre'        => array(),
+					'a'          => array( 'href' => array(), 'title' => array(), 'target' => array() ),
+				);
+				$message = isset( $params['message'] ) ? wp_kses( $params['message'], $allowed_tags ) : '';
+			} else {
+				$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
+			}
+		} else {
+			$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
+		}
 
 		// Security (SEC-18): Rate limit replies (max 40 per 10 minutes)
 		if ( ! $this->check_rate_limit( 'portal_reply', 40, 600 ) ) {

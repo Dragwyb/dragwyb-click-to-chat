@@ -321,6 +321,101 @@ class DCTC_Support_Notification_Service {
 	}
 
 	/**
+	 * Send confirmation notification when a support ticket is created in guest mode.
+	 *
+	 * Notifies the customer of receipt and informs them how to manage their ticket
+	 * from the support portal with their email account when the guest session expires or closes.
+	 *
+	 * @param int $ticket_id Ticket ID.
+	 * @return bool
+	 */
+	public static function notify_guest_ticket_created( $ticket_id ) {
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		if ( ! $ticket || empty( $ticket['customer_email'] ) ) {
+			return false;
+		}
+
+		// Only applicable for guest visitors (no authenticated WP user)
+		if ( ! empty( $ticket['customer_wp_user_id'] ) ) {
+			return false;
+		}
+
+		// Check global Customer Email Notifications policy
+		$support_settings = get_option( 'dctc_support_settings', array() );
+		$notifs           = ! empty( $support_settings['notifications'] ) ? $support_settings['notifications'] : array();
+		if ( isset( $notifs['customer_email_enabled'] ) && ! $notifs['customer_email_enabled'] ) {
+			return false;
+		}
+
+		// Check portal specific guest confirmation setting
+		$portal_settings = class_exists( 'DCTC_Support_Portal' ) ? DCTC_Support_Portal::get_settings() : array();
+		if ( isset( $portal_settings['guest_ticket_received_email_enabled'] ) && ! $portal_settings['guest_ticket_received_email_enabled'] ) {
+			return false;
+		}
+
+		$site_name   = get_bloginfo( 'name' );
+		$ticket_no   = ! empty( $ticket['id'] ) ? (int) $ticket['id'] : 0;
+		$cust_name   = ! empty( $ticket['customer_name'] ) ? $ticket['customer_name'] : 'there';
+		$cust_email  = $ticket['customer_email'];
+		$ticket_subj = ! empty( $ticket['subject'] ) ? $ticket['subject'] : 'Support Request';
+
+		$portal_page_id = get_option( 'dctc_support_portal_page_id', 0 );
+		$portal_url     = $portal_page_id ? get_permalink( $portal_page_id ) : home_url( '/support-portal/' );
+
+		$raw_subject = ! empty( $portal_settings['guest_ticket_received_email_subject'] )
+			? $portal_settings['guest_ticket_received_email_subject']
+			: sprintf( '[%s] We have received your support request #%d', $site_name, $ticket_no );
+
+		$raw_message = ! empty( $portal_settings['guest_ticket_received_email_message'] )
+			? $portal_settings['guest_ticket_received_email_message']
+			: __( 'We have received your ticket in guest mode. You can manage this ticket from our support portal with your current email account when guest mode expires or is closed.', 'dragwyb-click-to-chat' );
+
+		// Interpolate tags
+		$replacements = array(
+			'{site_name}'      => $site_name,
+			'{ticket_id}'      => $ticket_no,
+			'{ticket_subject}' => $ticket_subj,
+			'{customer_name}'  => $cust_name,
+			'{customer_email}' => $cust_email,
+			'{portal_url}'     => $portal_url,
+		);
+
+		$subject = str_replace( array_keys( $replacements ), array_values( $replacements ), $raw_subject );
+		$message = str_replace( array_keys( $replacements ), array_values( $replacements ), $raw_message );
+
+		if ( strpos( $subject, $site_name ) === false && strpos( $raw_subject, '{site_name}' ) === false ) {
+			$subject = sprintf( '[%s] %s', $site_name, $subject );
+		}
+
+		$content  = '<h2>' . esc_html__( 'We have received your support request', 'dragwyb-click-to-chat' ) . '</h2>';
+		/* translators: %s: Customer name */
+		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $cust_name ) ) . '</p>';
+		/* translators: 1: Ticket number, 2: Ticket subject */
+		$content .= '<p>' . sprintf( esc_html__( 'Thank you for reaching out to us. Your ticket #%1$d (%2$s) has been successfully created in guest mode.', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket_subj ) ) . '</p>';
+
+		// Configured guidance card
+		$content .= '<div style="background:#EEF2FF;border-left:4px solid #4F46E5;border-radius:4px;padding:14px 16px;margin:18px 0;color:#1E1B4B;font-size:13.5px;line-height:1.6;">';
+		$content .= nl2br( esc_html( $message ) );
+		$content .= '</div>';
+
+		// Helpful details box
+		$content .= '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px 16px;margin:18px 0;font-size:13px;color:#334155;">';
+		$content .= '<p style="margin:0 0 6px 0;font-weight:700;color:#0F172A;">' . esc_html__( 'Ticket Details:', 'dragwyb-click-to-chat' ) . '</p>';
+		$content .= '<ul style="margin:0;padding-left:18px;line-height:1.6;">';
+		$content .= '<li><strong>' . esc_html__( 'Registered Email:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $cust_email ) . '</li>';
+		$content .= '<li><strong>' . esc_html__( 'Subject:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket_subj ) . '</li>';
+		$content .= '<li>' . esc_html__( 'Whenever your guest browser session expires or closes, you can access and track all tickets associated with this email directly from our support portal.', 'dragwyb-click-to-chat' ) . '</li>';
+		$content .= '</ul>';
+		$content .= '</div>';
+
+		if ( ! empty( $portal_url ) ) {
+			$content .= '<p style="margin-top:24px;text-align:center;"><a href="' . esc_url( $portal_url ) . '" style="background:#4F46E5;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">' . esc_html__( 'View in Support Portal', 'dragwyb-click-to-chat' ) . '</a></p>';
+		}
+
+		return self::send_email( $cust_email, $subject, $content, $ticket['id'], 'customer', 0, 'guest_ticket_created' );
+	}
+
+	/**
 	 * Centralized Decision Engine for notifications.
 	 *
 	 * @param string $recipient_type 'agent', 'admin', or 'customer'.

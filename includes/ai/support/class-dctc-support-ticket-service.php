@@ -509,6 +509,11 @@ class DCTC_Support_Ticket_Service {
 			DCTC_Support_Agent_Service::update_workload( $agent_id );
 		}
 
+		// Dispatch guest ticket confirmation email if customer email notifications are enabled
+		if ( ! $user_id && ! empty( $email ) && class_exists( 'DCTC_Support_Notification_Service' ) ) {
+			DCTC_Support_Notification_Service::notify_guest_ticket_created( $ticket_id );
+		}
+
 		// Return fully populated ticket object with meta
 		$result = array_merge(
 			$core_fields,

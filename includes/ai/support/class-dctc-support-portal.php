@@ -87,18 +87,33 @@ class DCTC_Support_Portal {
 			'reply_placeholder'            => __( 'Type your reply message...', 'dragwyb-click-to-chat' ),
 
 			// Guest & Logged-out User Controls
-			'enable_guest_ticket_form'     => true,
-			'show_login_button'            => true,
-			'show_register_button'         => true,
-			'guest_auth_box_title'         => __( 'Customer Support Portal', 'dragwyb-click-to-chat' ),
-			'guest_auth_box_desc'          => __( 'Please log in to your account or submit a support request directly below as a guest.', 'dragwyb-click-to-chat' ),
-			'btn_login_text'               => __( 'Log In to Submit Ticket', 'dragwyb-click-to-chat' ),
-			'btn_register_text'            => __( 'Register Account', 'dragwyb-click-to-chat' ),
-			'btn_guest_create_ticket_text' => __( 'Submit Ticket as Guest', 'dragwyb-click-to-chat' ),
-			'guest_name_label'             => __( 'Your Name', 'dragwyb-click-to-chat' ),
-			'guest_name_placeholder'       => __( 'John Doe', 'dragwyb-click-to-chat' ),
-			'guest_email_label'            => __( 'Your Email Address', 'dragwyb-click-to-chat' ),
-			'guest_email_placeholder'      => __( 'you@example.com', 'dragwyb-click-to-chat' ),
+			'enable_guest_ticket_form'        => true,
+			'show_login_button'               => true,
+			'show_register_button'            => true,
+			'guest_auth_box_title'            => __( 'Customer Support Portal', 'dragwyb-click-to-chat' ),
+			'guest_auth_box_desc'             => __( 'Please log in to your account or submit a support request directly below as a guest.', 'dragwyb-click-to-chat' ),
+			'btn_login_text'                  => __( 'Log In to Submit Ticket', 'dragwyb-click-to-chat' ),
+			'btn_register_text'               => __( 'Register Account', 'dragwyb-click-to-chat' ),
+			'btn_guest_create_ticket_text'    => __( 'Submit Ticket as Guest', 'dragwyb-click-to-chat' ),
+			'guest_name_label'                => __( 'Your Name', 'dragwyb-click-to-chat' ),
+			'guest_name_placeholder'          => __( 'John Doe', 'dragwyb-click-to-chat' ),
+			'guest_email_label'               => __( 'Your Email Address', 'dragwyb-click-to-chat' ),
+			'guest_email_placeholder'         => __( 'you@example.com', 'dragwyb-click-to-chat' ),
+
+			// Guest Session & Privacy Settings (Auto-Expiry & Public Device Protection)
+			'guest_session_timeout'           => 5, // Default timeout: 5 minutes only
+			'show_guest_expiry_timer'         => true, // Show live countdown expiry timer in guest mode
+			'show_guest_clear_session_btn'    => true, // Show "End Guest Session" button
+			'btn_guest_clear_session_text'    => __( 'End Guest Session', 'dragwyb-click-to-chat' ),
+			'guest_storage_mode'              => 'session', // 'session' (browser session only, clears on tab close) or 'local' (retains with timeout)
+			'show_guest_public_device_notice' => true,
+			'prevent_guest_media_upload'      => true, // Prevent file uploads & media button in guest session
+
+			// Guest Ticket Received Email Notification & Access Notice
+			'guest_ticket_received_email_enabled' => true,
+			'guest_ticket_received_email_subject' => __( 'We have received your support request #{ticket_id}', 'dragwyb-click-to-chat' ),
+			'guest_ticket_received_email_message' => __( 'We have received your ticket in guest mode. You can manage this ticket from our support portal with your current email account when guest mode expires or is closed.', 'dragwyb-click-to-chat' ),
+			'guest_email_confirm_prompt'          => __( "We will send a notification to this email address which you have entered:\n\n{email}\n\nIf this email is not correct, click Cancel to change it. Otherwise, click OK to continue.", 'dragwyb-click-to-chat' ),
 		);
 	}
 
@@ -199,6 +214,21 @@ class DCTC_Support_Portal {
 		$sanitized['guest_name_placeholder']       = isset( $data['guest_name_placeholder'] ) ? sanitize_text_field( $data['guest_name_placeholder'] ) : $defaults['guest_name_placeholder'];
 		$sanitized['guest_email_label']            = isset( $data['guest_email_label'] ) ? sanitize_text_field( $data['guest_email_label'] ) : $defaults['guest_email_label'];
 		$sanitized['guest_email_placeholder']      = isset( $data['guest_email_placeholder'] ) ? sanitize_text_field( $data['guest_email_placeholder'] ) : $defaults['guest_email_placeholder'];
+
+		// Guest Session & Privacy Protection
+		$sanitized['guest_session_timeout']           = isset( $data['guest_session_timeout'] ) ? max( 1, min( 1440, absint( $data['guest_session_timeout'] ) ) ) : $defaults['guest_session_timeout'];
+		$sanitized['show_guest_expiry_timer']         = isset( $data['show_guest_expiry_timer'] ) ? rest_sanitize_boolean( $data['show_guest_expiry_timer'] ) : $defaults['show_guest_expiry_timer'];
+		$sanitized['show_guest_clear_session_btn']    = isset( $data['show_guest_clear_session_btn'] ) ? rest_sanitize_boolean( $data['show_guest_clear_session_btn'] ) : $defaults['show_guest_clear_session_btn'];
+		$sanitized['btn_guest_clear_session_text']    = isset( $data['btn_guest_clear_session_text'] ) ? sanitize_text_field( $data['btn_guest_clear_session_text'] ) : $defaults['btn_guest_clear_session_text'];
+		$sanitized['guest_storage_mode']              = isset( $data['guest_storage_mode'] ) && in_array( $data['guest_storage_mode'], array( 'session', 'local' ), true ) ? $data['guest_storage_mode'] : $defaults['guest_storage_mode'];
+		$sanitized['show_guest_public_device_notice'] = isset( $data['show_guest_public_device_notice'] ) ? rest_sanitize_boolean( $data['show_guest_public_device_notice'] ) : $defaults['show_guest_public_device_notice'];
+		$sanitized['prevent_guest_media_upload']      = isset( $data['prevent_guest_media_upload'] ) ? rest_sanitize_boolean( $data['prevent_guest_media_upload'] ) : $defaults['prevent_guest_media_upload'];
+
+		// Guest Ticket Received Email Notification
+		$sanitized['guest_ticket_received_email_enabled'] = isset( $data['guest_ticket_received_email_enabled'] ) ? rest_sanitize_boolean( $data['guest_ticket_received_email_enabled'] ) : $defaults['guest_ticket_received_email_enabled'];
+		$sanitized['guest_ticket_received_email_subject'] = isset( $data['guest_ticket_received_email_subject'] ) ? sanitize_text_field( $data['guest_ticket_received_email_subject'] ) : $defaults['guest_ticket_received_email_subject'];
+		$sanitized['guest_ticket_received_email_message'] = isset( $data['guest_ticket_received_email_message'] ) ? sanitize_textarea_field( $data['guest_ticket_received_email_message'] ) : $defaults['guest_ticket_received_email_message'];
+		$sanitized['guest_email_confirm_prompt']          = isset( $data['guest_email_confirm_prompt'] ) ? sanitize_textarea_field( $data['guest_email_confirm_prompt'] ) : $defaults['guest_email_confirm_prompt'];
 
 		return $sanitized;
 	}
@@ -420,7 +450,14 @@ class DCTC_Support_Portal {
 			data-empty-desc="<?php echo esc_attr( $settings['empty_tickets_desc'] ); ?>"
 			data-loading-text="<?php echo esc_attr( $settings['loading_text'] ); ?>"
 			data-btn-submit-text="<?php echo esc_attr( $settings['btn_submit_ticket_text'] ); ?>"
-			data-btn-send-reply-text="<?php echo esc_attr( $settings['btn_send_reply_text'] ); ?>">
+			data-btn-send-reply-text="<?php echo esc_attr( $settings['btn_send_reply_text'] ); ?>"
+			data-guest-timeout="<?php echo esc_attr( $settings['guest_session_timeout'] ); ?>"
+			data-guest-show-timer="<?php echo ! empty( $settings['show_guest_expiry_timer'] ) ? '1' : '0'; ?>"
+			data-guest-show-clear-btn="<?php echo ! empty( $settings['show_guest_clear_session_btn'] ) ? '1' : '0'; ?>"
+			data-guest-clear-btn-text="<?php echo esc_attr( $settings['btn_guest_clear_session_text'] ); ?>"
+			data-guest-storage-mode="<?php echo esc_attr( $settings['guest_storage_mode'] ); ?>"
+			data-guest-show-notice="<?php echo ! empty( $settings['show_guest_public_device_notice'] ) ? '1' : '0'; ?>"
+			data-guest-confirm-prompt="<?php echo esc_attr( $settings['guest_email_confirm_prompt'] ); ?>">
 			
 			<!-- Portal Header -->
 			<div class="dctc-portal-header">
@@ -510,6 +547,7 @@ class DCTC_Support_Portal {
 
 					<!-- Container for returning guest who has a saved ticket token -->
 					<div class="dctc-portal-guest-recent-section" style="display:none; margin-top:24px;">
+						<div class="dctc-portal-guest-session-bar" style="display:none;"></div>
 						<h4 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--dctc-portal-header-title, #111827);"><?php esc_html_e( 'Your Recent Support Request', 'dragwyb-click-to-chat' ); ?></h4>
 						<div class="dctc-portal-tickets-container dctc-portal-tickets-list"></div>
 					</div>
@@ -603,7 +641,7 @@ class DCTC_Support_Portal {
 									$editor_id  = 'dctcportalnewmessage';
 									$editor_opt = array(
 										'textarea_name' => 'ticket_message',
-										'media_buttons' => true,
+										'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 										'textarea_rows' => 8,
 										'teeny'         => false,
 										'quicktags'     => false,
@@ -637,6 +675,7 @@ class DCTC_Support_Portal {
 
 			<!-- View 2: Single Ticket Conversation Detail -->
 			<div class="dctc-portal-view-detail dctc-portal-view">
+				<div class="dctc-portal-guest-session-bar" style="display:none; margin-bottom: 16px;"></div>
 				<div class="dctc-detail-header">
 					<div class="dctc-detail-header-left">
 						<div class="dctc-detail-badges">
@@ -650,7 +689,7 @@ class DCTC_Support_Portal {
 						<div class="dctc-detail-tags-row dctc-portal-tags-row" style="margin-top: 6px;"></div>
 						<h3 class="dctc-detail-subject"><?php esc_html_e( 'Ticket Subject', 'dragwyb-click-to-chat' ); ?></h3>
 					</div>
-					<div class="dctc-detail-header-right">
+					<div class="dctc-detail-header-right" style="display:flex; align-items:center; gap:8px;">
 						<button type="button" class="dctc-portal-btn-secondary dctc-detail-close-btn">
 							<?php echo esc_html( $settings['btn_close_ticket_text'] ); ?>
 						</button>
@@ -668,7 +707,7 @@ class DCTC_Support_Portal {
 						$editor_id  = 'dctcportalreplymessage';
 						$editor_opt = array(
 							'textarea_name' => 'reply_message',
-							'media_buttons' => true,
+							'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 							'textarea_rows' => 5,
 							'teeny'         => false,
 							'quicktags'     => false,
@@ -777,7 +816,9 @@ class DCTC_Support_Portal {
 			data-taxonomies-data="<?php echo esc_attr( wp_json_encode( $taxonomy_map ) ); ?>"
 			data-trigger-selector="<?php echo esc_attr( $trigger_selector ); ?>"
 			data-editor-id="<?php echo esc_attr( $editor_id ); ?>"
-			data-is-inline="<?php echo $is_inline ? '1' : '0'; ?>">
+			data-is-inline="<?php echo $is_inline ? '1' : '0'; ?>"
+			data-guest-timeout="<?php echo esc_attr( $settings['guest_session_timeout'] ); ?>"
+			data-guest-storage-mode="<?php echo esc_attr( $settings['guest_storage_mode'] ); ?>">
 
 			<?php if ( $is_inline ) : ?>
 				<!-- Inline Create Ticket Card -->
@@ -868,7 +909,7 @@ class DCTC_Support_Portal {
 								$content    = '';
 								$editor_opt = array(
 									'textarea_name' => 'ticket_message',
-									'media_buttons' => true,
+									'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 									'textarea_rows' => 8,
 									'teeny'         => false,
 									'quicktags'     => false,
@@ -980,7 +1021,7 @@ class DCTC_Support_Portal {
 										$content    = '';
 										$editor_opt = array(
 											'textarea_name' => 'ticket_message',
-											'media_buttons' => true,
+											'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 											'textarea_rows' => 8,
 											'teeny'     => false,
 											'quicktags' => false,
@@ -1102,7 +1143,14 @@ class DCTC_Support_Portal {
 			data-empty-desc="<?php echo esc_attr( $settings['empty_tickets_desc'] ); ?>"
 			data-loading-text="<?php echo esc_attr( $settings['loading_text'] ); ?>"
 			data-btn-submit-text="<?php echo esc_attr( $settings['btn_submit_ticket_text'] ); ?>"
-			data-btn-send-reply-text="<?php echo esc_attr( $settings['btn_send_reply_text'] ); ?>">
+			data-btn-send-reply-text="<?php echo esc_attr( $settings['btn_send_reply_text'] ); ?>"
+			data-guest-timeout="<?php echo esc_attr( $settings['guest_session_timeout'] ); ?>"
+			data-guest-show-timer="<?php echo ! empty( $settings['show_guest_expiry_timer'] ) ? '1' : '0'; ?>"
+			data-guest-show-clear-btn="<?php echo ! empty( $settings['show_guest_clear_session_btn'] ) ? '1' : '0'; ?>"
+			data-guest-clear-btn-text="<?php echo esc_attr( $settings['btn_guest_clear_session_text'] ); ?>"
+			data-guest-storage-mode="<?php echo esc_attr( $settings['guest_storage_mode'] ); ?>"
+			data-guest-show-notice="<?php echo ! empty( $settings['show_guest_public_device_notice'] ) ? '1' : '0'; ?>"
+			data-guest-confirm-prompt="<?php echo esc_attr( $settings['guest_email_confirm_prompt'] ); ?>">
 
 			<?php if ( $show_header ) : ?>
 			<div class="dctc-portal-header">
@@ -1199,6 +1247,7 @@ class DCTC_Support_Portal {
 					</div>
 
 					<div class="dctc-portal-guest-recent-section" style="display:none; margin-top:24px;">
+						<div class="dctc-portal-guest-session-bar" style="display:none;"></div>
 						<h4 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--dctc-portal-header-title, #111827);"><?php esc_html_e( 'Your Recent Support Request', 'dragwyb-click-to-chat' ); ?></h4>
 						<div class="dctc-portal-tickets-container dctc-portal-tickets-list"></div>
 					</div>
@@ -1286,7 +1335,7 @@ class DCTC_Support_Portal {
 									$editor_id  = 'dctctablesnewmsg' . wp_rand( 100, 999 );
 									$editor_opt = array(
 										'textarea_name' => 'ticket_message',
-										'media_buttons' => true,
+										'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 										'textarea_rows' => 8,
 										'teeny'         => false,
 										'quicktags'     => false,
@@ -1319,6 +1368,7 @@ class DCTC_Support_Portal {
 
 			<!-- View 2: Single Ticket Conversation Detail -->
 			<div class="dctc-portal-view-detail dctc-portal-view">
+				<div class="dctc-portal-guest-session-bar" style="display:none; margin-bottom: 16px;"></div>
 				<div class="dctc-detail-header">
 					<div class="dctc-detail-header-left">
 						<div class="dctc-detail-badges">
@@ -1332,7 +1382,7 @@ class DCTC_Support_Portal {
 						<div class="dctc-detail-tags-row dctc-portal-tags-row" style="margin-top: 6px;"></div>
 						<h3 class="dctc-detail-subject"><?php esc_html_e( 'Ticket Subject', 'dragwyb-click-to-chat' ); ?></h3>
 					</div>
-					<div class="dctc-detail-header-right">
+					<div class="dctc-detail-header-right" style="display:flex; align-items:center; gap:8px;">
 						<button type="button" class="dctc-portal-btn-secondary dctc-detail-close-btn">
 							<?php echo esc_html( $settings['btn_close_ticket_text'] ); ?>
 						</button>
@@ -1350,7 +1400,7 @@ class DCTC_Support_Portal {
 						$editor_id  = 'dctctablesreplymsg' . wp_rand( 100, 999 );
 						$editor_opt = array(
 							'textarea_name' => 'reply_message',
-							'media_buttons' => true,
+							'media_buttons' => ( ! empty( $user_id ) && current_user_can( 'upload_files' ) && empty( $settings['prevent_guest_media_upload'] ) ),
 							'textarea_rows' => 5,
 							'teeny'         => false,
 							'quicktags'     => false,
@@ -1384,6 +1434,110 @@ class DCTC_Support_Portal {
 	public static function get_portal_js() {
 		return '
 		(function() {
+			function escapeHtml(str) {
+				if (str === null || str === undefined) return "";
+				return String(str)
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;")
+					.replace(/\'/g, "&#039;");
+			}
+
+			function getGuestStorage(mode) {
+				if (mode === "local") {
+					try { return window.localStorage; } catch(e){}
+				}
+				try { return window.sessionStorage; } catch(e){}
+				try { return window.localStorage; } catch(e){}
+				return null;
+			}
+
+			function loadGuestSession(timeoutMinutes, mode) {
+				const primary = getGuestStorage(mode);
+				const fallback = mode === "session" ? window.localStorage : window.sessionStorage;
+				let raw = null;
+				if (primary) {
+					try { raw = primary.getItem("dctc_guest_session"); } catch(e){}
+				}
+				if (!raw && fallback) {
+					try { raw = fallback.getItem("dctc_guest_session"); } catch(e){}
+				}
+
+				let legacyToken = "";
+				try {
+					legacyToken = (primary && primary.getItem("dctc_guest_token")) || (fallback && fallback.getItem("dctc_guest_token")) || "";
+				} catch(e){}
+
+				const now = Date.now();
+				const durationMs = Math.max(1, timeoutMinutes || 5) * 60 * 1000;
+
+				if (raw) {
+					try {
+						const parsed = JSON.parse(raw);
+						if (parsed && parsed.token) {
+							if (parsed.expiresAt && now > parsed.expiresAt) {
+								clearAllGuestSessions();
+								return { token: "", expiresAt: 0, expired: true };
+							}
+							return {
+								token: parsed.token,
+								expiresAt: parsed.expiresAt || (now + durationMs),
+								expired: false
+							};
+						}
+					} catch(e){}
+				}
+
+				if (legacyToken) {
+					saveGuestSession(legacyToken, timeoutMinutes, mode);
+					return {
+						token: legacyToken,
+						expiresAt: now + durationMs,
+						expired: false
+					};
+				}
+
+				return { token: "", expiresAt: 0, expired: false };
+			}
+
+			function saveGuestSession(token, timeoutMinutes, mode) {
+				if (!token) return;
+				const durationMs = Math.max(1, timeoutMinutes || 5) * 60 * 1000;
+				const now = Date.now();
+				const sessionObj = {
+					token: token,
+					expiresAt: now + durationMs,
+					updatedAt: now
+				};
+				const primary = getGuestStorage(mode);
+				if (primary) {
+					try {
+						primary.setItem("dctc_guest_session", JSON.stringify(sessionObj));
+						primary.setItem("dctc_guest_token", token);
+					} catch(e){}
+				}
+				if (mode === "session" && window.localStorage) {
+					try {
+						window.localStorage.removeItem("dctc_guest_session");
+						window.localStorage.removeItem("dctc_guest_token");
+					} catch(e){}
+				}
+			}
+
+			function clearAllGuestSessions() {
+				try {
+					if (window.sessionStorage) {
+						window.sessionStorage.removeItem("dctc_guest_session");
+						window.sessionStorage.removeItem("dctc_guest_token");
+					}
+					if (window.localStorage) {
+						window.localStorage.removeItem("dctc_guest_session");
+						window.localStorage.removeItem("dctc_guest_token");
+					}
+				} catch(e){}
+			}
+
 			function getPortalEditorContent(id) {
 				if (window.tinymce && window.tinymce.get(id) && !window.tinymce.get(id).isHidden()) {
 					return window.tinymce.get(id).getContent();
@@ -1436,8 +1590,8 @@ class DCTC_Support_Portal {
 
 				let fieldsHtml = "";
 				activeSubTaxes.forEach(function(tax) {
-					const slug = tax.slug;
-					const taxName = tax.name || slug;
+					const slug = escapeHtml(tax.slug);
+					const taxName = escapeHtml(tax.name || slug);
 					const terms = tax.terms;
 
 					fieldsHtml += "<div class=\"dctc-form-group" + (activeSubTaxes.length === 1 ? " is-full-width" : "") + "\">";
@@ -1445,7 +1599,7 @@ class DCTC_Support_Portal {
 					fieldsHtml += "  <select class=\"dctc-portal-select dctc-dynamic-subfield-input\" data-tax-slug=\"" + slug + "\">";
 					fieldsHtml += "    <option value=\"\">-- Select " + taxName + " (Optional) --</option>";
 					terms.forEach(function(term) {
-						const termName = term.name || term.slug || "";
+						const termName = escapeHtml(term.name || term.slug || "");
 						fieldsHtml += "    <option value=\"" + termName + "\">" + termName + "</option>";
 					});
 					fieldsHtml += "  </select>";
@@ -1466,6 +1620,13 @@ class DCTC_Support_Portal {
 				const isLoggedIn = root.getAttribute("data-user-logged-in") === "1";
 				const guestEnabled = root.getAttribute("data-guest-enabled") === "1";
 				const perPage = parseInt(root.getAttribute("data-per-page") || "10", 10);
+
+				const guestTimeoutMinutes = parseInt(root.getAttribute("data-guest-timeout") || "5", 10) || 5;
+				const showExpiryTimer = root.getAttribute("data-guest-show-timer") === "1";
+				const showClearBtn = root.getAttribute("data-guest-show-clear-btn") === "1";
+				const clearBtnText = root.getAttribute("data-guest-clear-btn-text") || "End Guest Session";
+				const storageMode = root.getAttribute("data-guest-storage-mode") || "session";
+				const showNotice = root.getAttribute("data-guest-show-notice") === "1";
 
 				const emptyTitle = root.getAttribute("data-empty-title") || "No support requests found";
 				const emptyDesc = root.getAttribute("data-empty-desc") || "You have not submitted any support tickets yet.";
@@ -1494,7 +1655,9 @@ class DCTC_Support_Portal {
 				const closeBtn = root.querySelector(".dctc-detail-close-btn");
 
 				let currentTicketUuid = null;
-				let guestToken = localStorage.getItem("dctc_guest_token") || "";
+				let sessionData = !isLoggedIn ? loadGuestSession(guestTimeoutMinutes, storageMode) : { token: "", expiresAt: 0, expired: false };
+				let guestToken = sessionData.token;
+				let guestCountdownTimer = null;
 				let detailPollInterval = null;
 
 				let taxonomiesData = {};
@@ -1503,6 +1666,137 @@ class DCTC_Support_Portal {
 					taxonomiesData = rawTaxData ? JSON.parse(rawTaxData) : {};
 				} catch (e) {
 					taxonomiesData = {};
+				}
+
+				function renderGuestSessionBar() {
+					if (isLoggedIn || !guestToken) return;
+					const bars = root.querySelectorAll(".dctc-portal-guest-session-bar");
+					bars.forEach(function(bar) {
+						bar.style.display = "flex";
+						let timerBadgeHtml = "";
+						if (showExpiryTimer) {
+							timerBadgeHtml = \'<span class="dctc-guest-countdown-pill">\' +
+								\'<span class="dashicons dashicons-clock"></span>\' +
+								\'<span class="dctc-guest-timer-text">--:--</span>\' +
+								\'</span>\';
+						}
+
+						let clearBtnHtml = "";
+						if (showClearBtn) {
+							clearBtnHtml = \'<button type="button" class="dctc-portal-btn-clear-guest-session" title="Wipe session and history from this device">\' +
+								\'<span class="dashicons dashicons-trash"></span>\' +
+								\'<span>\' + escapeHtml(clearBtnText) + \'</span>\' +
+								\'</button>\';
+						}
+
+						bar.innerHTML = \'<div class="dctc-guest-session-info">\' +
+							\'<span class="dashicons dashicons-shield-alt dctc-guest-session-icon"></span>\' +
+							\'<span class="dctc-guest-session-title">Guest Session Active</span>\' +
+							timerBadgeHtml +
+							\'</div>\' +
+							\'<div class="dctc-guest-session-actions">\' +
+							clearBtnHtml +
+							\'</div>\';
+					});
+					bindClearSessionButtons();
+				}
+
+				function updateGuestCountdown() {
+					if (isLoggedIn || !guestToken) {
+						stopGuestCountdown();
+						return;
+					}
+					const now = Date.now();
+					const remainingSec = Math.max(0, Math.floor((sessionData.expiresAt - now) / 1000));
+					const m = String(Math.floor(remainingSec / 60)).padStart(2, "0");
+					const s = String(remainingSec % 60).padStart(2, "0");
+					const formatted = m + ":" + s;
+
+					root.querySelectorAll(".dctc-guest-timer-text").forEach(function(el) {
+						el.textContent = formatted;
+					});
+
+					root.querySelectorAll(".dctc-guest-countdown-pill").forEach(function(el) {
+						if (remainingSec <= 60) {
+							el.classList.add("dctc-timer-urgent");
+						} else {
+							el.classList.remove("dctc-timer-urgent");
+						}
+					});
+
+					if (remainingSec <= 0) {
+						stopGuestCountdown();
+						handleGuestSessionExpiry();
+					}
+				}
+
+				function startGuestCountdown() {
+					stopGuestCountdown();
+					if (isLoggedIn || !guestToken) return;
+					renderGuestSessionBar();
+					updateGuestCountdown();
+					guestCountdownTimer = setInterval(updateGuestCountdown, 1000);
+				}
+
+				function stopGuestCountdown() {
+					if (guestCountdownTimer) {
+						clearInterval(guestCountdownTimer);
+						guestCountdownTimer = null;
+					}
+				}
+
+				function handleGuestSessionExpiry() {
+					clearAllGuestSessions();
+					guestToken = "";
+					sessionData = { token: "", expiresAt: 0, expired: true };
+					if (detailPollInterval) {
+						clearInterval(detailPollInterval);
+						detailPollInterval = null;
+					}
+					showView(viewList);
+					if (guestRecentSection) {
+						guestRecentSection.style.display = "block";
+						guestRecentSection.innerHTML = \'<div class="dctc-portal-guest-expired-notice">\' +
+							\'<div class="dctc-guest-expired-icon-wrap">\' +
+							\'<span class="dashicons dashicons-lock"></span>\' +
+							\'</div>\' +
+							\'<h4>Guest Session Expired</h4>\' +
+							\'<p>To protect your conversation privacy on shared and public devices, your guest ticket session has expired and all local data was wiped.</p>\' +
+							\'<button type="button" class="dctc-portal-btn-primary dctc-portal-btn-guest-action-trigger">\' +
+							\'<span class="dashicons dashicons-edit"></span> Submit a New Ticket\' +
+							\'</button>\' +
+							\'</div>\';
+						const newActionBtn = guestRecentSection.querySelector(".dctc-portal-btn-guest-action-trigger");
+						if (newActionBtn) newActionBtn.addEventListener("click", openNewModal);
+					}
+				}
+
+				function bindClearSessionButtons() {
+					root.querySelectorAll(".dctc-portal-btn-clear-guest-session").forEach(function(btn) {
+						if (!btn.hasAttribute("data-clear-bound")) {
+							btn.setAttribute("data-clear-bound", "1");
+							btn.addEventListener("click", function(e) {
+								e.preventDefault();
+								if (!confirm("Are you sure you want to end your guest session?\\n\\nAll ticket conversation history and credentials will be permanently wiped from this browser to protect your privacy.")) {
+									return;
+								}
+								stopGuestCountdown();
+								clearAllGuestSessions();
+								guestToken = "";
+								sessionData = { token: "", expiresAt: 0, expired: false };
+								if (detailPollInterval) {
+									clearInterval(detailPollInterval);
+									detailPollInterval = null;
+								}
+								showView(viewList);
+								if (guestRecentSection) {
+									guestRecentSection.style.display = "none";
+									guestRecentSection.innerHTML = "";
+								}
+								alert("Your guest session has been ended and all ticket history was cleared from this device.");
+							});
+						}
+					});
 				}
 
 				function showView(view) {
@@ -1521,6 +1815,10 @@ class DCTC_Support_Portal {
 						if (btnBack) btnBack.style.display = "none";
 					} else {
 						if (btnBack) btnBack.style.display = "inline-flex";
+					}
+
+					if (!isLoggedIn && guestToken) {
+						renderGuestSessionBar();
 					}
 				}
 
@@ -1576,7 +1874,7 @@ class DCTC_Support_Portal {
 				// Load Tickets List
 				async function loadTickets() {
 					if (!ticketsContainer) return;
-					ticketsContainer.innerHTML = "<div class=\"dctc-portal-loading\">" + loadingText + "</div>";
+					ticketsContainer.innerHTML = "<div class=\"dctc-portal-loading\">" + escapeHtml(loadingText) + "</div>";
 					try {
 						const headers = { "X-WP-Nonce": nonce };
 						if (guestToken) headers["X-Guest-Token"] = guestToken;
@@ -1596,12 +1894,17 @@ class DCTC_Support_Portal {
 						if (data.success && data.tickets && data.tickets.length > 0) {
 							if (filterRow) filterRow.style.display = "";
 							if (guestRecentSection) guestRecentSection.style.display = "block";
+							renderGuestSessionBar();
 							let html = "";
 							data.tickets.forEach(function(t) {
 								const statusBadge = t.status === "open" ? "dctc-badge-open" : (t.status === "resolved" ? "dctc-badge-resolved" : "dctc-badge-closed");
-								const categoryName = t.category_name || "General";
+								const categoryName = escapeHtml(t.category_name || "General");
 								const chatCount = t.chat_count !== undefined ? t.chat_count : (t.message_count || 1);
-								const agentName = t.agent_name || "Assigned Agent";
+								const agentName = escapeHtml(t.agent_name || "Assigned Agent");
+								const safeSubject = escapeHtml(t.subject || "Support Ticket");
+								const safeId = escapeHtml(t.id);
+								const safeUuid = escapeHtml(t.uuid);
+								const safeDate = escapeHtml(t.created_at ? t.created_at.split(" ")[0] : "");
 								const tags = Array.isArray(t.tags) ? t.tags : [];
 
 								function getTagLabel(tag) {
@@ -1611,26 +1914,26 @@ class DCTC_Support_Portal {
 									return String(tag);
 								}
 
-								html += "<div class=\"dctc-portal-ticket-card\" data-uuid=\"" + t.uuid + "\">";
+								html += "<div class=\"dctc-portal-ticket-card\" data-uuid=\"" + safeUuid + "\">";
 								html += "  <div class=\"dctc-portal-card-left\" style=\"flex:1;\">";
 								html += "    <div class=\"dctc-portal-card-top\">";
-								html += "      <span class=\"dctc-portal-card-num\">#" + (t.id) + "</span>";
-								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + (t.status || "open").toUpperCase() + "</span>";
+								html += "      <span class=\"dctc-portal-card-num\">#" + safeId + "</span>";
+								html += "      <span class=\"dctc-badge " + statusBadge + "\">" + escapeHtml((t.status || "open").toUpperCase()) + "</span>";
 								html += "      <span class=\"dctc-portal-badge-cat\">" + categoryName + "</span>";
 								html += "      <span class=\"dctc-portal-badge-agent\">" + agentName + "</span>";
 								html += "      <span class=\"dctc-portal-badge-chats\">" + chatCount + " " + (chatCount === 1 ? "chat" : "chats") + "</span>";
 								html += "    </div>";
-								html += "    <h4 class=\"dctc-portal-card-title\">" + (t.subject || "Support Ticket") + "</h4>";
+								html += "    <h4 class=\"dctc-portal-card-title\">" + safeSubject + "</h4>";
 								const validTags = tags.map(getTagLabel).filter(function(l) { return l && l !== "[object Object]"; });
 								if (validTags.length > 0) {
 									html += "    <div class=\"dctc-portal-card-badges-row\">";
 									validTags.forEach(function(tagLabel) {
-										html += "      <span class=\"dctc-portal-badge-tag\">" + tagLabel + "</span>";
+										html += "      <span class=\"dctc-portal-badge-tag\">" + escapeHtml(tagLabel) + "</span>";
 									});
 									html += "    </div>";
 								}
 								html += "  </div>";
-								html += "  <span class=\"dctc-portal-card-date\">" + (t.created_at ? t.created_at.split(" ")[0] : "") + "</span>";
+								html += "  <span class=\"dctc-portal-card-date\">" + safeDate + "</span>";
 								html += "</div>";
 							});
 							ticketsContainer.innerHTML = html;
@@ -1647,7 +1950,7 @@ class DCTC_Support_Portal {
 								ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\">No tickets match your filters.</div>";
 							} else {
 								if (isLoggedIn) {
-									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\"><strong>" + emptyTitle + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + emptyDesc + "</p></div>";
+									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\"><strong>" + escapeHtml(emptyTitle) + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + escapeHtml(emptyDesc) + "</p></div>";
 								} else {
 									if (guestRecentSection) guestRecentSection.style.display = "none";
 									ticketsContainer.innerHTML = "";
@@ -1727,18 +2030,18 @@ class DCTC_Support_Portal {
 									return String(tg);
 								}).filter(function(l) { return l && l !== "[object Object]"; });
 								tagsRow.innerHTML = validTags.map(function(tag) {
-									return "<span class=\"dctc-portal-badge-tag\">" + tag + "</span>";
+									return "<span class=\"dctc-portal-badge-tag\">" + escapeHtml(tag) + "</span>";
 								}).join("");
 							}
 
 							let msgHtml = "";
 							(t.messages || []).forEach(function(m) {
 								const isCustomer = m.sender_type === "customer" || m.role === "user";
-								const senderLabel = isCustomer ? "You" : (m.sender_name ? m.sender_name : "Support Team");
+								const senderLabel = isCustomer ? "You" : escapeHtml(m.sender_name ? m.sender_name : "Support Team");
 								msgHtml += "<div class=\"dctc-portal-msg " + (isCustomer ? "dctc-portal-msg-customer" : "dctc-portal-msg-agent") + "\">";
 								msgHtml += "  <div class=\"dctc-portal-msg-header\">";
 								msgHtml += "    <span>" + senderLabel + "</span>";
-								msgHtml += "    <span class=\"dctc-portal-msg-time\">" + (m.created_at || "") + "</span>";
+								msgHtml += "    <span class=\"dctc-portal-msg-time\">" + escapeHtml(m.created_at || "") + "</span>";
 								msgHtml += "  </div>";
 								msgHtml += "  <div class=\"dctc-portal-msg-body\">" + m.content + "</div>";
 								msgHtml += "</div>";
@@ -1749,6 +2052,8 @@ class DCTC_Support_Portal {
 							if (!isSilentUpdate || previousScrollBottom) {
 								msgContainer.scrollTop = msgContainer.scrollHeight;
 							}
+
+							bindClearSessionButtons();
 						}
 					} catch (err) {
 						if (!isSilentUpdate) {
@@ -1761,11 +2066,6 @@ class DCTC_Support_Portal {
 				if (newForm) {
 					newForm.addEventListener("submit", async function(e) {
 						e.preventDefault();
-						const submitBtn = newForm.querySelector(".dctc-new-submit-btn");
-						if (submitBtn) {
-							submitBtn.disabled = true;
-							submitBtn.textContent = "Submitting...";
-						}
 
 						const nameInput = newForm.querySelector(".dctc-new-name");
 						const emailInput = newForm.querySelector(".dctc-new-email");
@@ -1781,10 +2081,6 @@ class DCTC_Support_Portal {
 
 						if (!msgContent) {
 							alert("Please enter a ticket message.");
-							if (submitBtn) {
-								submitBtn.disabled = false;
-								submitBtn.textContent = btnSubmitText;
-							}
 							return;
 						}
 
@@ -1802,6 +2098,22 @@ class DCTC_Support_Portal {
 
 						const customerName = nameInput ? nameInput.value.trim() : root.getAttribute("data-user-name");
 						const customerEmail = emailInput ? emailInput.value.trim() : root.getAttribute("data-user-email");
+
+						// Guest confirmation prompt for entered email
+						if (!isLoggedIn && customerEmail) {
+							const confirmTpl = root.getAttribute("data-guest-confirm-prompt") || "We will send a notification to this email address which you have entered:\n\n{email}\n\nIf this email is not correct, click Cancel to change it. Otherwise, click OK to continue.";
+							const confirmMsg = confirmTpl.replace("{email}", customerEmail);
+							if (!confirm(confirmMsg)) {
+								if (emailInput) emailInput.focus();
+								return;
+							}
+						}
+
+						const submitBtn = newForm.querySelector(".dctc-new-submit-btn");
+						if (submitBtn) {
+							submitBtn.disabled = true;
+							submitBtn.textContent = "Submitting...";
+						}
 
 						const payload = {
 							subject: subjectInput ? subjectInput.value.trim() : "",
@@ -1829,7 +2141,9 @@ class DCTC_Support_Portal {
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
 									guestToken = data.ticket.guest_access_token;
-									localStorage.setItem("dctc_guest_token", guestToken);
+									saveGuestSession(guestToken, guestTimeoutMinutes, storageMode);
+									sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
+									startGuestCountdown();
 								}
 								newForm.reset();
 								clearPortalEditorContent(editorId);
@@ -1885,6 +2199,11 @@ class DCTC_Support_Portal {
 
 							if (data.success) {
 								clearPortalEditorContent(replyEditorId);
+								if (!isLoggedIn && guestToken) {
+									saveGuestSession(guestToken, guestTimeoutMinutes, storageMode);
+									sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
+									startGuestCountdown();
+								}
 								loadTicketDetail(currentTicketUuid);
 							} else {
 								alert(data.message || "Could not send reply.");
@@ -1940,7 +2259,12 @@ class DCTC_Support_Portal {
 				}
 
 				// Initial tickets load
-				if (isLoggedIn || guestToken) {
+				if (!isLoggedIn && sessionData.expired) {
+					handleGuestSessionExpiry();
+				} else if (isLoggedIn || guestToken) {
+					if (!isLoggedIn && guestToken) {
+						startGuestCountdown();
+					}
 					loadTickets();
 				}
 			}
@@ -1952,6 +2276,9 @@ class DCTC_Support_Portal {
 
 				const restUrl = root.getAttribute("data-rest-url");
 				const nonce = root.getAttribute("data-nonce");
+				const isLoggedIn = root.getAttribute("data-user-logged-in") === "1";
+				const guestTimeoutMinutes = parseInt(root.getAttribute("data-guest-timeout") || "5", 10) || 5;
+				const storageMode = root.getAttribute("data-guest-storage-mode") || "session";
 				const isInline = root.getAttribute("data-is-inline") === "1";
 				const triggerSelector = root.getAttribute("data-trigger-selector") || "";
 				const editorId = root.getAttribute("data-editor-id");
@@ -2068,10 +2395,6 @@ class DCTC_Support_Portal {
 						e.preventDefault();
 						const submitBtn = form.querySelector(".dctc-new-submit-btn");
 						const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "Submit";
-						if (submitBtn) {
-							submitBtn.disabled = true;
-							submitBtn.textContent = "Submitting...";
-						}
 
 						const nameInput = form.querySelector(".dctc-new-name");
 						const emailInput = form.querySelector(".dctc-new-email");
@@ -2081,10 +2404,6 @@ class DCTC_Support_Portal {
 
 						if (!msgContent) {
 							alert("Please enter a ticket message.");
-							if (submitBtn) {
-								submitBtn.disabled = false;
-								submitBtn.innerHTML = originalBtnHtml;
-							}
 							return;
 						}
 
@@ -2102,6 +2421,21 @@ class DCTC_Support_Portal {
 						const customerName = nameInput ? nameInput.value.trim() : root.getAttribute("data-user-name");
 						const customerEmail = emailInput ? emailInput.value.trim() : root.getAttribute("data-user-email");
 
+						// Guest confirmation prompt for entered email
+						if (!isLoggedIn && customerEmail) {
+							const confirmTpl = root.getAttribute("data-guest-confirm-prompt") || "We will send a notification to this email address which you have entered:\n\n{email}\n\nIf this email is not correct, click Cancel to change it. Otherwise, click OK to continue.";
+							const confirmMsg = confirmTpl.replace("{email}", customerEmail);
+							if (!confirm(confirmMsg)) {
+								if (emailInput) emailInput.focus();
+								return;
+							}
+						}
+
+						if (submitBtn) {
+							submitBtn.disabled = true;
+							submitBtn.textContent = "Submitting...";
+						}
+
 						const payload = {
 							subject: subjectInput ? subjectInput.value.trim() : "",
 							category_id: catInput ? Number(catInput.value) : 0,
@@ -2116,7 +2450,8 @@ class DCTC_Support_Portal {
 								"Content-Type": "application/json",
 								"X-WP-Nonce": nonce
 							};
-							const existingGuestToken = localStorage.getItem("dctc_guest_token");
+							const existingSession = !isLoggedIn ? loadGuestSession(guestTimeoutMinutes, storageMode) : { token: "" };
+							const existingGuestToken = existingSession.token;
 							if (existingGuestToken) headers["X-Guest-Token"] = existingGuestToken;
 
 							const res = await fetch(restUrl + "/tickets", {
@@ -2128,7 +2463,7 @@ class DCTC_Support_Portal {
 
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
-									localStorage.setItem("dctc_guest_token", data.ticket.guest_access_token);
+									saveGuestSession(data.ticket.guest_access_token, guestTimeoutMinutes, storageMode);
 								}
 								form.reset();
 								if (editorId) clearPortalEditorContent(editorId);
@@ -2269,6 +2604,14 @@ class DCTC_Support_Portal {
 		$badge_tag_border = $is_dark ? 'rgba(148, 163, 184, 0.3)' : '#E2E8F0';
 		$badge_tag_text   = $is_dark ? '#E2E8F0' : '#334155';
 
+		// Guest Session Bar & Pill - Adapts seamlessly to all presets and themes
+		$guest_bar_bg      = $is_dark ? 'rgba(255, 255, 255, 0.04)' : '#FFFFFF';
+		$guest_bar_border  = $is_dark ? 'rgba(255, 255, 255, 0.12)' : $border_color;
+		$guest_bar_title   = $card_title_color;
+		$guest_pill_bg     = $is_dark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9';
+		$guest_pill_border = $is_dark ? 'rgba(255, 255, 255, 0.16)' : '#CBD5E1';
+		$guest_pill_text   = $is_dark ? '#E2E8F0' : '#1E293B';
+
 		return "
 			:root, .dctc-portal-root, .dctc-create-ticket-root {
 				--dctc-portal-primary: {$primary_color};
@@ -2324,6 +2667,12 @@ class DCTC_Support_Portal {
 				--dctc-portal-badge-tag-bg: {$badge_tag_bg};
 				--dctc-portal-badge-tag-border: {$badge_tag_border};
 				--dctc-portal-badge-tag-text: {$badge_tag_text};
+				--dctc-portal-guest-bar-bg: {$guest_bar_bg};
+				--dctc-portal-guest-bar-border: {$guest_bar_border};
+				--dctc-portal-guest-bar-title: {$guest_bar_title};
+				--dctc-portal-guest-pill-bg: {$guest_pill_bg};
+				--dctc-portal-guest-pill-border: {$guest_pill_border};
+				--dctc-portal-guest-pill-text: {$guest_pill_text};
 			}
 
 			.dctc-portal-root {
@@ -2918,6 +3267,154 @@ class DCTC_Support_Portal {
 			}
 			.dctc-portal-editor-wrapper .wp-media-buttons {
 				margin-bottom: 8px;
+			}
+
+			/* Guest Security: Strict Media Button & Upload Blocking */
+			.dctc-portal-root[data-user-logged-in=\"0\"] .wp-media-buttons,
+			.dctc-create-ticket-root[data-user-logged-in=\"0\"] .wp-media-buttons,
+			.dctc-portal-guest-mode .wp-media-buttons {
+				display: none !important;
+				visibility: hidden !important;
+				pointer-events: none !important;
+			}
+
+			/* Guest Session Bar & Live Expiry Timer (adapts cleanly to all presets) */
+			.dctc-portal-guest-session-bar {
+				align-items: center;
+				background: var(--dctc-portal-guest-bar-bg, var(--dctc-portal-card-bg, #FFFFFF));
+				border: 1px solid var(--dctc-portal-guest-bar-border, var(--dctc-portal-card-border, #E2E8F0));
+				border-radius: var(--dctc-portal-inner-radius, 8px);
+				box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				justify-content: space-between;
+				margin-bottom: 16px;
+				padding: 10px 16px;
+				transition: all 0.2s ease;
+			}
+			.dctc-guest-session-info {
+				align-items: center;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+			.dctc-guest-session-icon {
+				color: var(--dctc-portal-primary, #4F46E5);
+				font-size: 18px;
+				height: 18px;
+				line-height: 1;
+				width: 18px;
+			}
+			.dctc-guest-session-title {
+				color: var(--dctc-portal-guest-bar-title, var(--dctc-portal-card-title, #0F172A));
+				font-size: 13px;
+				font-weight: 700;
+				letter-spacing: -0.01em;
+			}
+			.dctc-guest-countdown-pill {
+				align-items: center;
+				background: var(--dctc-portal-guest-pill-bg, rgba(79, 70, 229, 0.08));
+				border: 1px solid var(--dctc-portal-guest-pill-border, rgba(79, 70, 229, 0.25));
+				border-radius: 999px;
+				color: var(--dctc-portal-guest-pill-text, var(--dctc-portal-primary, #4F46E5));
+				display: inline-flex;
+				font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+				font-size: 12px;
+				font-weight: 700;
+				gap: 5px;
+				padding: 2.5px 9px;
+				transition: all 0.2s ease;
+			}
+			.dctc-guest-countdown-pill .dashicons {
+				font-size: 13px;
+				height: 13px;
+				line-height: 1;
+				width: 13px;
+			}
+			.dctc-guest-countdown-pill.dctc-timer-urgent {
+				animation: dctcPulseUrgent 1.4s infinite;
+				background: #FEE2E2 !important;
+				border-color: #EF4444 !important;
+				color: #DC2626 !important;
+			}
+			@keyframes dctcPulseUrgent {
+				0%, 100% { opacity: 1; transform: scale(1); }
+				50% { opacity: 0.85; transform: scale(1.04); }
+			}
+			.dctc-guest-session-actions {
+				align-items: center;
+				display: flex;
+				gap: 8px;
+			}
+			/* High-Visibility End Guest Session Button - Single Button in Timer Notice */
+			.dctc-portal-guest-session-bar .dctc-portal-btn-clear-guest-session {
+				align-items: center;
+				background: #EF4444;
+				border: 1px solid #DC2626;
+				border-radius: var(--dctc-portal-btn-radius, 6px);
+				box-shadow: 0 1px 2px rgba(239, 68, 68, 0.2);
+				color: #FFFFFF !important;
+				cursor: pointer;
+				display: inline-flex;
+				font-size: 12px;
+				font-weight: 600;
+				gap: 6px;
+				line-height: 1.4;
+				padding: 6px 14px;
+				text-decoration: none;
+				transition: all 0.15s ease-in-out;
+			}
+			.dctc-portal-guest-session-bar .dctc-portal-btn-clear-guest-session:hover {
+				background: #DC2626;
+				border-color: #B91C1C;
+				box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+				transform: translateY(-1px);
+			}
+			.dctc-portal-guest-session-bar .dctc-portal-btn-clear-guest-session:active {
+				background: #B91C1C;
+				transform: translateY(0);
+			}
+			.dctc-portal-guest-session-bar .dctc-portal-btn-clear-guest-session .dashicons {
+				color: #FFFFFF !important;
+				font-size: 14px;
+				height: 14px;
+				line-height: 1;
+				width: 14px;
+			}
+
+			/* Expired Notice - Presets Adaptive Styling */
+			.dctc-portal-guest-expired-notice {
+				background: var(--dctc-portal-card-bg, #FFFFFF);
+				border: 1px solid var(--dctc-portal-card-border, #E2E8F0);
+				border-radius: var(--dctc-portal-radius, 12px);
+				box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+				color: var(--dctc-portal-body-text, #1E293B);
+				padding: 24px 20px;
+				text-align: center;
+			}
+			.dctc-portal-guest-expired-notice h4 {
+				color: var(--dctc-portal-card-title, #0F172A);
+				font-size: 15px;
+				font-weight: 700;
+				margin: 8px 0 6px;
+			}
+			.dctc-portal-guest-expired-notice p {
+				color: var(--dctc-portal-header-subtitle, #64748B);
+				font-size: 13px;
+				line-height: 1.5;
+				margin: 0 0 16px;
+			}
+			.dctc-guest-expired-icon-wrap {
+				align-items: center;
+				background: rgba(239, 68, 68, 0.1);
+				border-radius: 50%;
+				color: #DC2626;
+				display: inline-flex;
+				height: 40px;
+				justify-content: center;
+				margin-bottom: 6px;
+				width: 40px;
 			}
 			
 			/* Auth / Login Requirement Prompt */
