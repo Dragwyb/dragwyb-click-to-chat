@@ -599,7 +599,6 @@ export default function ChatWidget({ settings, inline }) {
 	// AI Lead Capture State
 	const loggedInUserEmail = window.dctc_ai_frontend_data?.user_email || window.dctc_ai_frontend_data?.page_context?.user_email || '';
 	const loggedInUserName = window.dctc_ai_frontend_data?.user_name || window.dctc_ai_frontend_data?.page_context?.user_name || '';
-	const pageProductOrTitle = window.dctc_ai_frontend_data?.page_context?.product?.name || (window.dctc_ai_frontend_data?.page_context?.is_single ? window.dctc_ai_frontend_data?.page_context?.title : '') || '';
 
 	const [leadFormSubmitted, setLeadFormSubmitted] = useState(false);
 	const [leadFormSubmitting, setLeadFormSubmitting] = useState(false);
@@ -2381,7 +2380,7 @@ export default function ChatWidget({ settings, inline }) {
 							company_size: '',
 							budget: '',
 							timeline: '',
-							interest: response.lead_data.interest || pageProductOrTitle,
+							interest: response.lead_data.interest || '',
 							requirement: response.lead_data.requirement || '',
 						},
 					}));
@@ -2553,7 +2552,7 @@ export default function ChatWidget({ settings, inline }) {
 			company_size: '',
 			budget: '',
 			timeline: '',
-			interest: pageProductOrTitle,
+			interest: '',
 			requirement: '',
 		};
 
