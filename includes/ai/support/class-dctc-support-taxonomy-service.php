@@ -582,6 +582,20 @@ class DCTC_Support_Taxonomy_Service {
 
 		$term_ids = array();
 		foreach ( $terms_input as $item ) {
+			if ( is_array( $item ) ) {
+				if ( ! empty( $item['id'] ) && is_numeric( $item['id'] ) && (int) $item['id'] > 0 ) {
+					$term_ids[] = absint( $item['id'] );
+					continue;
+				}
+				$item = isset( $item['name'] ) ? $item['name'] : ( isset( $item['slug'] ) ? $item['slug'] : '' );
+			} elseif ( is_object( $item ) ) {
+				if ( ! empty( $item->id ) && is_numeric( $item->id ) && (int) $item->id > 0 ) {
+					$term_ids[] = absint( $item->id );
+					continue;
+				}
+				$item = isset( $item->name ) ? $item->name : ( isset( $item->slug ) ? $item->slug : '' );
+			}
+
 			if ( is_numeric( $item ) && (int) $item > 0 ) {
 				$term_ids[] = absint( $item );
 			} elseif ( is_string( $item ) && '' !== trim( $item ) ) {

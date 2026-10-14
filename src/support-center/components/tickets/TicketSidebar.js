@@ -4,6 +4,8 @@ import apiFetch from '@wordpress/api-fetch';
 
 export default function TicketSidebar({
 	selectedTicket,
+	setSelectedTicket,
+	setTickets,
 	categories = [],
 	products = [],
 	agents = [],
@@ -54,72 +56,152 @@ export default function TicketSidebar({
 
 	const handleCategoryChange = async (val) => {
 		if (!selectedTicket?.id) return;
+		const prevCatId = selectedTicket?.category_id;
+		const nextCatId = Number(val);
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, category_id: nextCatId } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, category_id: nextCatId } : t)) : prev));
+		}
 		try {
-			await apiFetch({
+			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
 				method: 'PUT',
-				data: { category_id: val },
+				data: { category_id: nextCatId },
 			});
+			if (data?.ticket && setSelectedTicket) {
+				setSelectedTicket(data.ticket);
+			}
 			onRefreshTicketDetails(selectedTicket.id);
 			onRefreshTickets();
 			onShowNotice(__('Category updated.', 'dragwyb-click-to-chat'), 'success');
 		} catch (err) {
 			console.error(err);
+			if (setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, category_id: prevCatId } : prev));
+			}
+			if (setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, category_id: prevCatId } : t)) : prev));
+			}
 			onShowNotice(__('Failed to update category.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
 	const handleProductChange = async (val) => {
 		if (!selectedTicket?.id) return;
+		const prevProduct = selectedTicket?.product;
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, product: val, product_name: val } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, product: val, product_name: val } : t)) : prev));
+		}
 		try {
-			await apiFetch({
+			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
 				method: 'PUT',
 				data: { product: val },
 			});
+			if (data?.ticket && setSelectedTicket) {
+				setSelectedTicket(data.ticket);
+			}
 			onRefreshTicketDetails(selectedTicket.id);
 			onRefreshTickets();
 			onShowNotice(__('Product updated.', 'dragwyb-click-to-chat'), 'success');
 		} catch (err) {
 			console.error(err);
+			if (setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, product: prevProduct, product_name: prevProduct } : prev));
+			}
+			if (setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, product: prevProduct, product_name: prevProduct } : t)) : prev));
+			}
 			onShowNotice(__('Failed to update product.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
 	const handleRemoveTag = async (tagName) => {
-		const updatedTags = (selectedTicket.tags || []).filter((item) => (typeof item === 'object' ? item.name : item) !== tagName);
+		if (!selectedTicket?.id) return;
+		const prevTags = Array.isArray(selectedTicket?.tags) ? selectedTicket.tags : [];
+		const updatedTags = prevTags.filter((item) => (typeof item === 'object' && item !== null ? item.name : item) !== tagName);
+		const updatedTagNames = updatedTags.map((item) => (typeof item === 'object' && item !== null ? item.name : item));
+
+		// 1. Optimistic update (instantly removes tag from UI!)
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, tags: updatedTags } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, tags: updatedTags } : t)) : prev));
+		}
+
 		try {
-			await apiFetch({
+			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
 				method: 'PUT',
-				data: { tags: updatedTags },
+				data: { tags: updatedTagNames },
 			});
+			if (data?.ticket?.tags && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: data.ticket.tags } : prev));
+			} else if (data?.tags && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: data.tags } : prev));
+			}
 			onRefreshTicketDetails(selectedTicket.id);
 			onRefreshTickets();
 		} catch (err) {
 			console.error(err);
+			if (setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: prevTags } : prev));
+			}
+			if (setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, tags: prevTags } : t)) : prev));
+			}
+			onShowNotice(__('Failed to remove tag.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
 	const handleAddTag = async (selectedTag) => {
 		if (!selectedTag || !selectedTicket?.id) return;
-		const currentTags = Array.isArray(selectedTicket.tags)
-			? selectedTicket.tags.map((item) => (typeof item === 'object' ? item.name : item))
-			: [];
-		if (!currentTags.includes(selectedTag)) {
-			const updatedTags = [...currentTags, selectedTag];
-			try {
-				await apiFetch({
-					path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
-					method: 'PUT',
-					data: { tags: updatedTags },
-				});
-				onRefreshTicketDetails(selectedTicket.id);
-				onRefreshTickets();
-				onShowNotice(__('Tag added.', 'dragwyb-click-to-chat'), 'success');
-			} catch (err) {
-				console.error(err);
+		const prevTags = Array.isArray(selectedTicket?.tags) ? selectedTicket.tags : [];
+		const currentTagNames = prevTags.map((item) => (typeof item === 'object' && item !== null ? item.name : item));
+		if (currentTagNames.includes(selectedTag)) return;
+
+		const updatedTagNames = [...currentTagNames, selectedTag];
+		const foundTag = tags.find((t) => (t.name || t.slug) === selectedTag);
+		const newTagObj = foundTag ? foundTag : { id: Date.now(), name: selectedTag, slug: selectedTag };
+		const updatedTags = [...prevTags, newTagObj];
+
+		// 1. Optimistic update (instantly adds tag to UI!)
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, tags: updatedTags } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, tags: updatedTags } : t)) : prev));
+		}
+
+		try {
+			const data = await apiFetch({
+				path: `/dctc-ai/v1/support/tickets/${selectedTicket.id}`,
+				method: 'PUT',
+				data: { tags: updatedTagNames },
+			});
+			if (data?.ticket?.tags && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: data.ticket.tags } : prev));
+			} else if (data?.tags && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: data.tags } : prev));
 			}
+			onRefreshTicketDetails(selectedTicket.id);
+			onRefreshTickets();
+			onShowNotice(__('Tag added.', 'dragwyb-click-to-chat'), 'success');
+		} catch (err) {
+			console.error(err);
+			if (setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, tags: prevTags } : prev));
+			}
+			if (setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicket.id) ? { ...t, tags: prevTags } : t)) : prev));
+			}
+			onShowNotice(__('Failed to add tag.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
@@ -698,24 +780,25 @@ export default function TicketSidebar({
 										>
 											<polyline points="6 9 12 15 18 9"></polyline>
 										</svg>
-										<select
-											value=""
-											onChange={(e) => {
-												if (e.target.value) {
-													handleAddTag(e.target.value);
-												}
-											}}
-											className="dctc-sc-prop-select-native"
-											title={__('Add tag', 'dragwyb-click-to-chat')}
-										>
-											<option value="">{__('+ Add Tag...', 'dragwyb-click-to-chat')}</option>
-											{tags.map((tg) => (
-												<option key={tg.id || tg.name} value={tg.name}>
-													{tg.name}
-												</option>
-											))}
-										</select>
 									</div>
+									<select
+										value=""
+										onChange={(e) => {
+											if (e.target.value) {
+												handleAddTag(e.target.value);
+												e.target.value = '';
+											}
+										}}
+										className="dctc-sc-prop-select-native"
+										title={__('Add tag', 'dragwyb-click-to-chat')}
+									>
+										<option value="">{__('+ Add Tag...', 'dragwyb-click-to-chat')}</option>
+										{tags.map((tg) => (
+											<option key={tg.id || tg.name} value={tg.name}>
+												{tg.name}
+											</option>
+										))}
+									</select>
 								</div>
 							</div>
 

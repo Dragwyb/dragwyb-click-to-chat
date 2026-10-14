@@ -17,6 +17,7 @@ import {
 
 export default function TicketsView({
 	tickets = [],
+	setTickets,
 	totalTickets = 0,
 	folderCounts: propFolderCounts = null,
 	loading = false,
@@ -36,6 +37,7 @@ export default function TicketsView({
 	selectedTicketId,
 	setSelectedTicketId,
 	selectedTicket,
+	setSelectedTicket,
 	ticketLoading = false,
 	categories = [],
 	products = [],
@@ -468,9 +470,16 @@ export default function TicketsView({
 		}
 	};
 
-	// Action: Change Status
+	// Action: Change Status (Optimistic + Server Sync)
 	const handleStatusChange = async (newStatus) => {
 		if (!selectedTicketId) return;
+		const prevStatus = selectedTicket?.status;
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, status: newStatus } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, status: newStatus } : t)) : prev));
+		}
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicketId}/status`,
@@ -478,19 +487,37 @@ export default function TicketsView({
 				data: { status: newStatus },
 			});
 			if (data?.success) {
+				if (data?.ticket && setSelectedTicket) {
+					setSelectedTicket(data.ticket);
+				}
 				onRefreshTicketDetails(selectedTicketId);
 				onRefreshTickets();
 				onShowNotice(__('Ticket status updated.', 'dragwyb-click-to-chat'), 'success');
+			} else {
+				throw new Error('Status update returned failure');
 			}
 		} catch (err) {
 			console.error('Error updating status:', err);
+			if (prevStatus && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, status: prevStatus } : prev));
+			}
+			if (prevStatus && setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, status: prevStatus } : t)) : prev));
+			}
 			onShowNotice(__('Failed to update status.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
-	// Action: Change Priority
+	// Action: Change Priority (Optimistic + Server Sync)
 	const handlePriorityChange = async (newPriority) => {
 		if (!selectedTicketId) return;
+		const prevPriority = selectedTicket?.priority;
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, priority: newPriority } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, priority: newPriority } : t)) : prev));
+		}
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicketId}/priority`,
@@ -498,32 +525,62 @@ export default function TicketsView({
 				data: { priority: newPriority },
 			});
 			if (data?.success) {
+				if (data?.ticket && setSelectedTicket) {
+					setSelectedTicket(data.ticket);
+				}
 				onRefreshTicketDetails(selectedTicketId);
 				onRefreshTickets();
 				onShowNotice(__('Ticket priority updated.', 'dragwyb-click-to-chat'), 'success');
+			} else {
+				throw new Error('Priority update returned failure');
 			}
 		} catch (err) {
 			console.error('Error updating priority:', err);
+			if (prevPriority && setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, priority: prevPriority } : prev));
+			}
+			if (prevPriority && setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, priority: prevPriority } : t)) : prev));
+			}
 			onShowNotice(__('Failed to update priority.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
 
-	// Action: Assign Agent
+	// Action: Assign Agent (Optimistic + Server Sync)
 	const handleAssignAgent = async (agentId) => {
 		if (!selectedTicketId) return;
+		const prevAgentId = selectedTicket?.assigned_agent_id;
+		const nextAgentId = Number(agentId);
+		if (setSelectedTicket) {
+			setSelectedTicket((prev) => (prev ? { ...prev, assigned_agent_id: nextAgentId } : prev));
+		}
+		if (setTickets) {
+			setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, assigned_agent_id: nextAgentId } : t)) : prev));
+		}
 		try {
 			const data = await apiFetch({
 				path: `/dctc-ai/v1/support/tickets/${selectedTicketId}/assign`,
 				method: 'POST',
-				data: { agent_id: Number(agentId) },
+				data: { agent_id: nextAgentId },
 			});
 			if (data?.success) {
+				if (data?.ticket && setSelectedTicket) {
+					setSelectedTicket(data.ticket);
+				}
 				onRefreshTicketDetails(selectedTicketId);
 				onRefreshTickets();
 				onShowNotice(__('Agent assignment updated.', 'dragwyb-click-to-chat'), 'success');
+			} else {
+				throw new Error('Agent assignment returned failure');
 			}
 		} catch (err) {
 			console.error('Error assigning agent:', err);
+			if (setSelectedTicket) {
+				setSelectedTicket((prev) => (prev ? { ...prev, assigned_agent_id: prevAgentId } : prev));
+			}
+			if (setTickets) {
+				setTickets((prev) => (Array.isArray(prev) ? prev.map((t) => (String(t.id) === String(selectedTicketId) ? { ...t, assigned_agent_id: prevAgentId } : t)) : prev));
+			}
 			onShowNotice(__('Failed to assign agent.', 'dragwyb-click-to-chat'), 'error');
 		}
 	};
@@ -1024,6 +1081,8 @@ export default function TicketsView({
 						) : selectedTicket ? (
 							<TicketSidebar
 								selectedTicket={selectedTicket}
+								setSelectedTicket={setSelectedTicket}
+								setTickets={setTickets}
 								categories={categories}
 								products={products}
 								agents={agents}

@@ -7664,6 +7664,8 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
 }
 
 .dctc-sc-prop-tag-chip {
+  position: relative;
+  z-index: 20;
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -7678,6 +7680,8 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
 }
 
 .dctc-sc-prop-tag-close {
+  position: relative;
+  z-index: 21;
   border: none;
   background: transparent;
   color: #64748b;
@@ -7690,6 +7694,7 @@ body.support-center_page_dragwyb-support-tickets .dctc-sc-app-wrap.dctc-sc-view-
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease;
+  pointer-events: auto;
 }
 
 .dctc-sc-prop-tag-close:hover {
