@@ -368,7 +368,7 @@ function getInitialSupportSettings(feats) {
 		enabled: isEnabled,
 		default_category: supp.default_category || 'Product Support',
 		default_priority: supp.default_priority || 'normal',
-		support_email: supp.support_email || d?.admin_email || '',
+		ticket_notification_email: supp.ticket_notification_email || d?.admin_email || '',
 		customer_portal: supp.customer_portal !== false,
 		auto_create_portal_page: !d?.portal_url,
 	};
@@ -1355,8 +1355,8 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													type="email"
 													className="dctc-input"
 													placeholder="support@yourdomain.com"
-													value={supportSettings.support_email}
-													onChange={(e) => setSupportSettings((prev) => ({ ...prev, support_email: e.target.value }))}
+													value={supportSettings.ticket_notification_email}
+													onChange={(e) => setSupportSettings((prev) => ({ ...prev, ticket_notification_email: e.target.value }))}
 												/>
 												<p className="dctc-form-helper">
 													{__('Notifications will be sent to this email.', 'dragwyb-click-to-chat')}
@@ -1585,8 +1585,8 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													<td>{supportSettings.default_priority.charAt(0).toUpperCase() + supportSettings.default_priority.slice(1)}</td>
 												</tr>
 												<tr>
-													<td>Support Email</td>
-													<td>{supportSettings.support_email}</td>
+													<td>Admin Email for Notifications</td>
+													<td>{supportSettings.ticket_notification_email}</td>
 												</tr>
 												<tr>
 													<td>Customer Portal</td>

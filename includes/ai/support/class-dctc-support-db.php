@@ -487,17 +487,18 @@ class DCTC_Support_DB {
 
 		// Seed Default Support Settings
 		$default_support_settings = array(
-			'enabled'               => false,
-			'ticket_prefix'         => 'TCK-',
-			'default_status'        => 'open',
-			'default_priority'      => 'normal',
-			'auto_assign'           => true,
-			'assignment_algorithm'  => 'skill_match', // 'skill_match'
-			'respect_availability'  => true,
-			'respect_workload'      => true,
-			'human_request_trigger' => true,
-			'auto_pause_ai'         => true,
-			'notifications'         => array(
+			'enabled'                   => false,
+			'ticket_prefix'             => 'TCK-',
+			'default_status'            => 'open',
+			'default_priority'          => 'normal',
+			'auto_assign'               => true,
+			'assignment_algorithm'      => 'skill_match', // 'skill_match'
+			'respect_availability'      => true,
+			'respect_workload'          => true,
+			'human_request_trigger'     => true,
+			'auto_pause_ai'             => true,
+			'ticket_notification_email' => '',
+			'notifications'             => array(
 				'agent_assignment'        => true,
 				'agent_reassignment'      => true,
 				'agent_reply'             => true,

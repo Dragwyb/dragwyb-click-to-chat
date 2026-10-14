@@ -304,7 +304,7 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 				|| ! empty( $settings['display']['entire_site'] );
 
 			$has_support_setup = ! empty( $support_settings['enabled'] )
-				|| ! empty( $support_settings['support_email'] )
+				|| ! empty( $support_settings['ticket_notification_email'] )
 				|| ! empty( $portal_page_id );
 
 			$is_existing_user = $has_channels_setup || $has_ai_setup || $has_support_setup;

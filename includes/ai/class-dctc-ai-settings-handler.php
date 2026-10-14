@@ -1708,10 +1708,10 @@ class DCTC_AI_Settings_Handler {
 
 		$created_portal_url = '';
 		if ( $support_enabled ) {
-			$support_settings['enabled']          = true;
-			$support_settings['default_priority'] = ! empty( $support_data['default_priority'] ) ? sanitize_key( $support_data['default_priority'] ) : 'normal';
-			$support_settings['support_email']    = ! empty( $support_data['support_email'] ) ? sanitize_email( $support_data['support_email'] ) : get_option( 'admin_email' );
-			$support_settings['customer_portal']  = ! empty( $support_data['customer_portal'] );
+			$support_settings['enabled']                   = true;
+			$support_settings['default_priority']          = ! empty( $support_data['default_priority'] ) ? sanitize_key( $support_data['default_priority'] ) : 'normal';
+			$support_settings['ticket_notification_email'] = ! empty( $support_data['ticket_notification_email'] ) ? sanitize_email( $support_data['ticket_notification_email'] ) : get_option( 'admin_email' );
+			$support_settings['customer_portal']           = ! empty( $support_data['customer_portal'] );
 			if ( ! empty( $support_data['default_category'] ) ) {
 				$support_settings['default_category'] = sanitize_text_field( $support_data['default_category'] );
 			}
