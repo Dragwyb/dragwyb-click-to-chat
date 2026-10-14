@@ -489,7 +489,6 @@ class DCTC_Support_DB {
 		$default_support_settings = array(
 			'enabled'               => false,
 			'ticket_prefix'         => 'TCK-',
-			'allow_guest_tickets'   => true,
 			'default_status'        => 'open',
 			'default_priority'      => 'normal',
 			'auto_assign'           => true,

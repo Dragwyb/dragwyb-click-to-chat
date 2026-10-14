@@ -392,15 +392,6 @@ export default function SettingsView({
 								notifications: { ...(prev.notifications || {}), agent_assignment: val },
 							}))}
 						/>
-
-						{ /* Allow Guest Tickets */}
-						<SettingCard
-							id="dctc-sc-guest-tickets"
-							title={__('Allow Guest Ticket Submissions', 'dragwyb-click-to-chat')}
-							desc={__('Permit non-logged-in visitors to submit support tickets with their email.', 'dragwyb-click-to-chat')}
-							checked={supportSettings.allow_guest_tickets !== false}
-							onChange={(val) => setSupportSettings((prev) => ({ ...prev, allow_guest_tickets: val }))}
-						/>
 					</div>
 				</div>
 			</div>

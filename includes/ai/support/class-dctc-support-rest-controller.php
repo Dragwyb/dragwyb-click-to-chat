@@ -1843,9 +1843,8 @@ class DCTC_Support_REST_Controller {
 		// If user is logged out, verify that guest ticket submissions are enabled in BOTH portal and general support settings
 		if ( ! $user_id ) {
 			$guest_allowed_portal  = ! empty( $portal_settings['enable_guest_ticket_form'] );
-			$guest_allowed_support = ! isset( $support_settings['allow_guest_tickets'] ) || ! empty( $support_settings['allow_guest_tickets'] );
 
-			if ( ! $guest_allowed_portal || ! $guest_allowed_support ) {
+			if ( ! $guest_allowed_portal ) {
 				return new WP_REST_Response(
 					array(
 						'success' => false,
