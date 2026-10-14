@@ -52,9 +52,10 @@ interface DCTC_AI_Provider_Interface
 	/**
 	 * Get available models for this provider.
 	 *
+	 * @param string|null $api_key Optional API key to fetch/validate models with. Default null (use stored key).
 	 * @return array Map of model ID => Model Display Name.
 	 */
-	public function get_models();
+	public function get_models( $api_key = null );
 
 	/**
 	 * Validate an API key by making a test request or listing models.

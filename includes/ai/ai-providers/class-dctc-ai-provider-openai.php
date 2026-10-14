@@ -172,16 +172,45 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 		throw new \Exception( esc_html__( 'Failed to generate embeddings with OpenAI.', 'dragwyb-click-to-chat' ) );
 	}
 
-	public function get_models() {
-		$key = $this->get_api_key();
+	public function get_models( $api_key = null ) {
+		$key = null !== $api_key ? trim( (string) $api_key ) : $this->get_api_key();
 		if ( empty( $key ) ) {
 			return $this->get_static_models();
 		}
 
 		$cache_key = 'dctc_ai_models_openai_' . md5( $key );
-		$cached    = get_transient( $cache_key );
-		if ( false !== $cached && is_array( $cached ) ) {
-			return $cached;
+		if ( null === $api_key ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached && is_array( $cached ) ) {
+				return $cached;
+			}
+		}
+
+		if ( null !== $api_key ) {
+			try {
+				$response = $this->http_get(
+					'https://api.openai.com/v1/models', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
+					array(
+						'Authorization' => 'Bearer ' . $key,
+					),
+					15
+				);
+
+				if ( isset( $response['data'] ) && is_array( $response['data'] ) ) {
+					$models = array();
+					foreach ( $response['data'] as $m ) {
+						if ( isset( $m['id'] ) ) {
+							$models[ $m['id'] ] = $m['id'];
+						}
+					}
+					if ( ! empty( $models ) ) {
+						return $models;
+					}
+				}
+				throw new \Exception( esc_html__( 'Invalid OpenAI API key or unable to fetch models.', 'dragwyb-click-to-chat' ) );
+			} catch ( \Throwable $e ) {
+				throw $e;
+			}
 		}
 
 		if ( class_exists( '\WordPress\AiClient\AiClient' ) ) {
@@ -216,21 +245,10 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 		}
 
 		try {
-			$response = $this->http_get(
-				'https://api.openai.com/v1/models', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
-				array(
-					'Authorization' => 'Bearer ' . $api_key,
-				),
-				15
-			);
-
-			if ( isset( $response['data'] ) && is_array( $response['data'] ) ) {
-				return true;
-			}
-
-			return new \WP_Error( 'invalid_key', __( 'Invalid OpenAI API key.', 'dragwyb-click-to-chat' ) );
-		} catch ( \Exception $e ) {
-			return new \WP_Error( 'api_error', $e->getMessage() );
+			$this->get_models( $api_key );
+			return true;
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'invalid_key', $e->getMessage() );
 		}
 	}
 

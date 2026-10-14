@@ -91,17 +91,18 @@ class DCTC_AI_Key_Store
 	/**
 	 * Get the list of available models for an AI provider.
 	 *
-	 * @param string $provider Provider identifier (e.g. 'openai', 'google', 'anthropic', etc.).
+	 * @param string      $provider Provider identifier (e.g. 'openai', 'google', 'anthropic', etc.).
+	 * @param string|null $api_key Optional API key to validate / query models with.
 	 * @return array Map of model ID => model display name.
 	 */
-	public static function get_models($provider)
+	public static function get_models($provider, $api_key = null)
 	{
 		$provider = sanitize_key($provider);
 		$manager = DCTC_AI_Provider_Manager::get_instance();
 		$adapter = $manager->get_provider($provider);
 
 		if ($adapter) {
-			return $adapter->get_models();
+			return $adapter->get_models($api_key);
 		}
 
 		return [];
@@ -155,11 +156,9 @@ class DCTC_AI_Key_Store
 			$key_param = $p_id . '_key';
 			if (!empty($params[$key_param])) {
 				$raw_key = sanitize_text_field($params[$key_param]);
-				$valid = $this->validate_api_key($p_id, $raw_key);
-				if (is_wp_error($valid)) {
-					$errors[$p_id] = $valid->get_error_message();
-				} else {
-					$this->persist_key($p_id, $raw_key);
+				$saved   = $this->save_provider_key($p_id, $raw_key);
+				if (is_wp_error($saved)) {
+					$errors[$p_id] = $saved->get_error_message();
 				}
 			}
 		}
@@ -378,13 +377,62 @@ class DCTC_AI_Key_Store
 	/**
 	 * Public helper to save and persist an AI provider's API key.
 	 *
+	 * First checks if the API key already exists and is the same.
+	 * If not equal, first validates the API key by calling get_models($clean_val) on the provider class.
+	 *
 	 * @param string $provider Provider identifier.
 	 * @param string $value API key value.
-	 * @return void
+	 * @return bool|\WP_Error True on success, WP_Error on validation failure.
 	 */
 	public function save_provider_key($provider, $value)
 	{
-		$this->persist_key($provider, $value);
+		$provider  = sanitize_key($provider);
+		$clean_val = trim((string) $value);
+
+		if (empty($clean_val) || strpos($clean_val, '****') !== false) {
+			return true;
+		}
+
+		// 1. First check if API key already exists and is the same
+		$existing_key = self::get_provider_key($provider);
+		if (!empty($existing_key) && hash_equals($existing_key, $clean_val)) {
+			// Key already exists and matches exactly — no re-validation needed
+			return true;
+		}
+
+		// 2. If not equal, first validate API key by calling get_models($clean_val) on the provider class
+		$manager = DCTC_AI_Provider_Manager::get_instance();
+		$adapter = $manager->get_provider($provider);
+
+		if ($adapter) {
+			try {
+				$models = $adapter->get_models($clean_val);
+				if (empty($models) || !is_array($models)) {
+					return new \WP_Error(
+						'invalid_api_key',
+						sprintf(
+							/* translators: %s: Provider name */
+							esc_html__('Failed to validate API key for %s. No models returned.', 'dragwyb-click-to-chat'),
+							esc_html($adapter->get_name())
+						)
+					);
+				}
+			} catch (\Throwable $e) {
+				$err_msg = $e->getMessage();
+				return new \WP_Error(
+					'invalid_api_key',
+					!empty($err_msg) ? $err_msg : sprintf(
+						/* translators: %s: Provider name */
+						esc_html__('Invalid API key for %s.', 'dragwyb-click-to-chat'),
+						esc_html($adapter->get_name())
+					)
+				);
+			}
+		}
+
+		// Key validated successfully; persist the key
+		$this->persist_key($provider, $clean_val);
+		return true;
 	}
 
 	/**

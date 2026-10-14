@@ -209,16 +209,18 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 		throw new \Exception( esc_html__( 'Failed to generate embeddings with Google Gemini.', 'dragwyb-click-to-chat' ) );
 	}
 
-	public function get_models() {
-		$key = $this->get_api_key();
+	public function get_models( $api_key = null ) {
+		$key = null !== $api_key ? trim( (string) $api_key ) : $this->get_api_key();
 		if ( empty( $key ) ) {
 			return $this->get_static_models();
 		}
 
 		$cache_key = 'dctc_ai_models_google_' . md5( $key );
-		$cached    = get_transient( $cache_key );
-		if ( false !== $cached && is_array( $cached ) ) {
-			return $cached;
+		if ( null === $api_key ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached && is_array( $cached ) ) {
+				return $cached;
+			}
 		}
 
 		try {
@@ -236,12 +238,26 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 					}
 				}
 				if ( ! empty( $models ) ) {
-					set_transient( $cache_key, $models, HOUR_IN_SECONDS );
+					if ( ! isset( $models['gemini-3.5-flash-lite'] ) ) {
+						$models = array_merge(
+							array( 'gemini-3.5-flash-lite' => 'Gemini 3.5 Flash Lite (Recommended - Ultra Fast & Cost-Efficient)' ),
+							$models
+						);
+					}
+					if ( null === $api_key ) {
+						set_transient( $cache_key, $models, HOUR_IN_SECONDS );
+					}
 					return $models;
 				}
 			}
 		} catch ( \Throwable $e ) {
-			// Fall through
+			if ( null !== $api_key ) {
+				throw $e;
+			}
+		}
+
+		if ( null !== $api_key ) {
+			throw new \Exception( esc_html__( 'Invalid Google Gemini API key or unable to fetch models.', 'dragwyb-click-to-chat' ) );
 		}
 
 		$models = $this->get_static_models();
@@ -255,16 +271,10 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 		}
 
 		try {
-			$url      = sprintf( 'https://generativelanguage.googleapis.com/v1beta/models?key=%s', rawurlencode( $api_key ) ); // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
-			$response = $this->http_get( $url, array(), 15 );
-
-			if ( isset( $response['models'] ) && is_array( $response['models'] ) ) {
-				return true;
-			}
-
-			return new \WP_Error( 'invalid_key', __( 'Invalid Google Gemini API key.', 'dragwyb-click-to-chat' ) );
-		} catch ( \Exception $e ) {
-			return new \WP_Error( 'api_error', $e->getMessage() );
+			$this->get_models( $api_key );
+			return true;
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'invalid_key', $e->getMessage() );
 		}
 	}
 

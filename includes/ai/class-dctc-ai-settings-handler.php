@@ -1658,14 +1658,32 @@ class DCTC_AI_Settings_Handler {
 			if ( ! empty( $ai_data['api_key'] ) && ! empty( $ai_data['provider'] ) ) {
 				$raw_key = trim( (string) $ai_data['api_key'] );
 				if ( strpos( $raw_key, '****' ) === false && strlen( $raw_key ) > 3 ) {
-					$this->key_store->save_provider_key( sanitize_key( $ai_data['provider'] ), $raw_key );
+					$saved = $this->key_store->save_provider_key( sanitize_key( $ai_data['provider'] ), $raw_key );
+					if ( is_wp_error( $saved ) ) {
+						return new \WP_REST_Response(
+							array(
+								'success' => false,
+								'message' => $saved->get_error_message(),
+							),
+							400
+						);
+					}
 				}
 			}
 			if ( ! empty( $ai_data['provider_keys'] ) && is_array( $ai_data['provider_keys'] ) ) {
 				foreach ( $ai_data['provider_keys'] as $prov => $key_val ) {
 					$key_val = trim( (string) $key_val );
 					if ( ! empty( $key_val ) && strpos( $key_val, '****' ) === false && strlen( $key_val ) > 3 ) {
-						$this->key_store->save_provider_key( sanitize_key( $prov ), $key_val );
+						$saved = $this->key_store->save_provider_key( sanitize_key( $prov ), $key_val );
+						if ( is_wp_error( $saved ) ) {
+							return new \WP_REST_Response(
+								array(
+									'success' => false,
+									'message' => $saved->get_error_message(),
+								),
+								400
+							);
+						}
 					}
 				}
 			}

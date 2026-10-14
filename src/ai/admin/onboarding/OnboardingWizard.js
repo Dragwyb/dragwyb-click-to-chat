@@ -101,9 +101,11 @@ const DEFAULT_MODELS = {
 		{ id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' },
 	],
 	google: [
+		{ id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite (Recommended - Ultra Fast & Cost-Efficient)' },
+		{ id: 'gemini-2.0-flash-lite', name: 'Gemini 2.0 Flash Lite' },
+		{ id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
 		{ id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
 		{ id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-		{ id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash' },
 	],
 	anthropic: [
 		{ id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
@@ -310,6 +312,9 @@ function resolveActiveAiModel(activeProvider, currentProvider, currentModel) {
 	if (activeProvider === currentProvider && currentModel) {
 		return currentModel;
 	}
+	if (activeProvider === 'google') {
+		return 'gemini-3.5-flash-lite';
+	}
 	const rawModels = (typeof window !== 'undefined' ? window.dctc_ai_data?.models_list?.[activeProvider] : null) || DEFAULT_MODELS[activeProvider];
 	const modelList = normalizeModels(rawModels);
 	return modelList[0]?.id || (DEFAULT_MODELS[activeProvider] ? DEFAULT_MODELS[activeProvider][0].id : 'default');
@@ -326,7 +331,7 @@ function getInitialAiSettings(feats) {
 	const modelList = normalizeModels(rawModels);
 	const defaultModel = (ai.chatbot?.default_provider === provider && ai.chatbot?.default_model)
 		? ai.chatbot.default_model
-		: (modelList[0]?.id || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'default'));
+		: (provider === 'google' ? 'gemini-3.5-flash-lite' : (modelList[0]?.id || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'default')));
 
 	return {
 		enabled: isEnabled,
@@ -1151,11 +1156,12 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 														const p = e.target.value;
 														const mList = normalizeModels(window.dctc_ai_data?.models_list?.[p] || DEFAULT_MODELS[p]);
 														const currentTypedKey = aiSettings.provider_keys?.[p] || '';
+														const defModel = p === 'google' ? 'gemini-3.5-flash-lite' : (mList[0]?.id || 'default');
 														setAiSettings((prev) => ({
 															...prev,
 															provider: p,
 															api_key: currentTypedKey,
-															model: mList[0]?.id || 'default',
+															model: defModel,
 														}));
 													}}
 												>
