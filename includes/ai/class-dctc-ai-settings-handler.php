@@ -1646,6 +1646,12 @@ class DCTC_AI_Settings_Handler {
 			}
 			if ( ! empty( $ai_data['model'] ) ) {
 				$ai_settings['chatbot']['default_model'] = sanitize_text_field( $ai_data['model'] );
+				if ( ! isset( $ai_settings['models'] ) || ! is_array( $ai_settings['models'] ) ) {
+					$ai_settings['models'] = array();
+				}
+				if ( ! empty( $ai_data['provider'] ) ) {
+					$ai_settings['models'][ sanitize_key( $ai_data['provider'] ) ] = sanitize_text_field( $ai_data['model'] );
+				}
 			}
 			if ( ! empty( $ai_data['assistant_name'] ) ) {
 				$ai_settings['chatbot']['bot_name'] = sanitize_text_field( $ai_data['assistant_name'] );

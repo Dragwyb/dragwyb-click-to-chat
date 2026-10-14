@@ -308,16 +308,36 @@ function resolveActiveAiProvider(aiState) {
 	};
 }
 
+function getInitialModelForProvider(p, aiSettingsObj) {
+	const ai = aiSettingsObj || (typeof window !== 'undefined' ? window.dctc_ai_data?.settings : {}) || {};
+
+	// If this provider is currently the configured default and has a saved default model, use it
+	if (ai.chatbot?.default_provider === p && ai.chatbot?.default_model) {
+		return ai.chatbot.default_model;
+	}
+
+	// If this provider already has a saved model in the models map, use it
+	if (ai.models?.[p]) {
+		return ai.models[p];
+	}
+
+	// For Gemini (google), if not already set, default to gemini-3.5-flash-lite
+	if (p === 'google') {
+		return 'gemini-3.5-flash-lite';
+	}
+
+	// Otherwise, fallback to the first available model for this provider
+	const rawModels = (typeof window !== 'undefined' ? window.dctc_ai_data?.models_list?.[p] : null) || DEFAULT_MODELS[p];
+	const modelList = normalizeModels(rawModels);
+	return modelList[0]?.id || (DEFAULT_MODELS[p] ? DEFAULT_MODELS[p][0].id : 'default');
+}
+
 function resolveActiveAiModel(activeProvider, currentProvider, currentModel) {
+	// If activeProvider is the currently configured provider in the onboarding UI and user has a model selected, use that exact model
 	if (activeProvider === currentProvider && currentModel) {
 		return currentModel;
 	}
-	if (activeProvider === 'google') {
-		return 'gemini-3.5-flash-lite';
-	}
-	const rawModels = (typeof window !== 'undefined' ? window.dctc_ai_data?.models_list?.[activeProvider] : null) || DEFAULT_MODELS[activeProvider];
-	const modelList = normalizeModels(rawModels);
-	return modelList[0]?.id || (DEFAULT_MODELS[activeProvider] ? DEFAULT_MODELS[activeProvider][0].id : 'default');
+	return getInitialModelForProvider(activeProvider, typeof window !== 'undefined' ? window.dctc_ai_data?.settings : null);
 }
 
 function getInitialAiSettings(feats) {
@@ -326,12 +346,7 @@ function getInitialAiSettings(feats) {
 	const existingKeys = ai?.api_keys || {};
 	const isEnabled = feats ? feats.aiAssistant : (d?.is_ai_enabled !== undefined ? !!d.is_ai_enabled : true);
 	const provider = getInitialAiProvider(existingKeys, ai.chatbot?.default_provider);
-
-	const rawModels = d?.models_list?.[provider] || DEFAULT_MODELS[provider];
-	const modelList = normalizeModels(rawModels);
-	const defaultModel = (ai.chatbot?.default_provider === provider && ai.chatbot?.default_model)
-		? ai.chatbot.default_model
-		: (provider === 'google' ? 'gemini-3.5-flash-lite' : (modelList[0]?.id || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'default')));
+	const defaultModel = getInitialModelForProvider(provider, ai);
 
 	return {
 		enabled: isEnabled,
@@ -520,6 +535,9 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 	// Models for currently selected AI provider (normalized cleanly)
 	const rawProviderModels = window.dctc_ai_data?.models_list?.[aiSettings.provider] || DEFAULT_MODELS[aiSettings.provider];
 	const availableModels = normalizeModels(rawProviderModels);
+	if (aiSettings.model && !availableModels.some((m) => m.id === aiSettings.model)) {
+		availableModels.unshift({ id: aiSettings.model, name: aiSettings.model });
+	}
 	const savedApiKey = window.dctc_ai_data?.settings?.api_keys?.[aiSettings.provider];
 
 	return (
@@ -1154,9 +1172,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													value={aiSettings.provider}
 													onChange={(e) => {
 														const p = e.target.value;
-														const mList = normalizeModels(window.dctc_ai_data?.models_list?.[p] || DEFAULT_MODELS[p]);
-														const currentTypedKey = aiSettings.provider_keys?.[p] || '';
-														const defModel = p === 'google' ? 'gemini-3.5-flash-lite' : (mList[0]?.id || 'default');
+														const defModel = getInitialModelForProvider(p, window.dctc_ai_data?.settings);
 														setAiSettings((prev) => ({
 															...prev,
 															provider: p,
