@@ -1637,11 +1637,11 @@
   transform: translateY(-2px);
 }
 .dctc-ai-product-thumb-wrap {
-  aspect-ratio: 1;
   background: #f8fafc;
   overflow: hidden;
   position: relative;
   width: 100%;
+  line-height: 0;
 }
 .dctc-ai-product-thumb {
   height: 100%;
