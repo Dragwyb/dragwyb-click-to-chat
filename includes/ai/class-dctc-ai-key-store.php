@@ -29,7 +29,26 @@ class DCTC_AI_Key_Store
 	 */
 	public static function get_supported_providers()
 	{
-		return DCTC_AI_Provider_Manager::$supported_providers;
+		$manager_providers = (array) DCTC_AI_Provider_Manager::$supported_providers;
+		$all_known = array( 'openai', 'google', 'anthropic', 'groq', 'deepseek', 'openrouter', 'ollama' );
+		return array_values( array_unique( array_merge( $manager_providers, $all_known ) ) );
+	}
+
+	/**
+	 * Get all providers that currently have a configured API key.
+	 *
+	 * @return array List of provider IDs with configured keys.
+	 */
+	public static function get_configured_providers()
+	{
+		$configured = array();
+		foreach (self::get_supported_providers() as $provider) {
+			$key = self::get_provider_key($provider);
+			if (!empty($key)) {
+				$configured[] = $provider;
+			}
+		}
+		return $configured;
 	}
 
 	/**
@@ -39,13 +58,8 @@ class DCTC_AI_Key_Store
 	 */
 	public static function has_configured_provider()
 	{
-		foreach (self::get_supported_providers() as $provider) {
-			$key = self::get_provider_key($provider);
-			if (!empty($key)) {
-				return true;
-			}
-		}
-		return false;
+		$configured = self::get_configured_providers();
+		return !empty($configured);
 	}
 
 	/**
@@ -359,6 +373,18 @@ class DCTC_AI_Key_Store
 		$plaintext = openssl_decrypt($ciphertext, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
 
 		return false === $plaintext ? '' : $plaintext;
+	}
+
+	/**
+	 * Public helper to save and persist an AI provider's API key.
+	 *
+	 * @param string $provider Provider identifier.
+	 * @param string $value API key value.
+	 * @return void
+	 */
+	public function save_provider_key($provider, $value)
+	{
+		$this->persist_key($provider, $value);
 	}
 
 	/**

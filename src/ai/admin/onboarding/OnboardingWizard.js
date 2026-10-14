@@ -9,7 +9,7 @@
  * @package Dragwyb_Click_To_Chat
  */
 import { useState, useEffect } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import './onboarding.css';
 
@@ -199,17 +199,141 @@ function getInitialSocialSettings(feats) {
 	};
 }
 
+function getInitialAiProvider(existingKeys, savedDefault) {
+	// If the saved default provider already has a configured key, keep it
+	if (savedDefault && existingKeys[savedDefault]) {
+		return savedDefault;
+	}
+
+	// If any provider key already exists, activate that provider!
+	const supportedOrder = ['openai', 'google', 'anthropic', 'groq', 'deepseek', 'openrouter', 'ollama'];
+	for (const p of supportedOrder) {
+		if (existingKeys[p]) {
+			return p;
+		}
+	}
+
+	const anyKeyProvider = Object.keys(existingKeys).find((p) => !!existingKeys[p]);
+	if (anyKeyProvider) {
+		return anyKeyProvider;
+	}
+
+	return savedDefault || 'openai';
+}
+
+/**
+ * Determine which AI provider should be activated for the AI Assistant.
+ *
+ * Rules:
+ * 1. If user added an API key in any provider during onboarding setup:
+ *    - Check currently selected provider; if user typed a key, activate that provider.
+ *    - Otherwise check if user typed a key for another provider; activate that provider.
+ * 2. If no new key was entered, check if any provider key ALREADY exists:
+ *    - If the user-selected provider already has an existing key, activate that provider.
+ *    - Otherwise, if ANY other provider has an existing key, activate that provider.
+ * 3. Fallback to current provider or 'openai'.
+ */
+function resolveActiveAiProvider(aiState) {
+	const existingKeys = (typeof window !== 'undefined' ? window.dctc_ai_data?.settings?.api_keys : {}) || {};
+	const enteredKeys = {
+		...(aiState.provider_keys || {}),
+		...(aiState.api_key && aiState.provider ? { [aiState.provider]: aiState.api_key } : {}),
+	};
+
+	const validEnteredKeys = {};
+	Object.keys(enteredKeys).forEach((p) => {
+		const val = typeof enteredKeys[p] === 'string' ? enteredKeys[p].trim() : '';
+		if (val && !val.includes('****') && val.length > 3) {
+			validEnteredKeys[p] = val;
+		}
+	});
+
+	// Priority 1: User added an API key for the currently selected provider during onboarding
+	if (aiState.provider && validEnteredKeys[aiState.provider]) {
+		return {
+			activeProvider: aiState.provider,
+			activeKey: validEnteredKeys[aiState.provider],
+			allEnteredKeys: validEnteredKeys,
+		};
+	}
+
+	// Priority 2: User added an API key for any other provider during onboarding
+	const newlyKeyedProviders = Object.keys(validEnteredKeys);
+	if (newlyKeyedProviders.length > 0) {
+		const firstKeyed = newlyKeyedProviders[0];
+		return {
+			activeProvider: firstKeyed,
+			activeKey: validEnteredKeys[firstKeyed],
+			allEnteredKeys: validEnteredKeys,
+		};
+	}
+
+	// Priority 3: Current provider already has a stored key
+	if (aiState.provider && existingKeys[aiState.provider]) {
+		return {
+			activeProvider: aiState.provider,
+			activeKey: '',
+			allEnteredKeys: validEnteredKeys,
+		};
+	}
+
+	// Priority 4: Any other provider already has a stored key
+	const supportedOrder = ['openai', 'google', 'anthropic', 'groq', 'deepseek', 'openrouter', 'ollama'];
+	for (const p of supportedOrder) {
+		if (existingKeys[p]) {
+			return {
+				activeProvider: p,
+				activeKey: '',
+				allEnteredKeys: validEnteredKeys,
+			};
+		}
+	}
+
+	const anyExisting = Object.keys(existingKeys).find((p) => !!existingKeys[p]);
+	if (anyExisting) {
+		return {
+			activeProvider: anyExisting,
+			activeKey: '',
+			allEnteredKeys: validEnteredKeys,
+		};
+	}
+
+	// Priority 5: Fallback to current provider
+	return {
+		activeProvider: aiState.provider || 'openai',
+		activeKey: '',
+		allEnteredKeys: validEnteredKeys,
+	};
+}
+
+function resolveActiveAiModel(activeProvider, currentProvider, currentModel) {
+	if (activeProvider === currentProvider && currentModel) {
+		return currentModel;
+	}
+	const rawModels = (typeof window !== 'undefined' ? window.dctc_ai_data?.models_list?.[activeProvider] : null) || DEFAULT_MODELS[activeProvider];
+	const modelList = normalizeModels(rawModels);
+	return modelList[0]?.id || (DEFAULT_MODELS[activeProvider] ? DEFAULT_MODELS[activeProvider][0].id : 'default');
+}
+
 function getInitialAiSettings(feats) {
 	const d = typeof window !== 'undefined' ? window.dctc_ai_data : {};
 	const ai = d?.settings || {};
+	const existingKeys = ai?.api_keys || {};
 	const isEnabled = feats ? feats.aiAssistant : (d?.is_ai_enabled !== undefined ? !!d.is_ai_enabled : true);
-	const provider = ai.chatbot?.default_provider || 'openai';
+	const provider = getInitialAiProvider(existingKeys, ai.chatbot?.default_provider);
+
+	const rawModels = d?.models_list?.[provider] || DEFAULT_MODELS[provider];
+	const modelList = normalizeModels(rawModels);
+	const defaultModel = (ai.chatbot?.default_provider === provider && ai.chatbot?.default_model)
+		? ai.chatbot.default_model
+		: (modelList[0]?.id || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'default'));
 
 	return {
 		enabled: isEnabled,
 		provider: provider,
 		api_key: '',
-		model: ai.chatbot?.default_model || (DEFAULT_MODELS[provider] ? DEFAULT_MODELS[provider][0].id : 'gpt-4o-mini'),
+		provider_keys: {},
+		model: defaultModel,
 		assistant_name: ai.chatbot?.bot_name || 'Dragwyb Assistant',
 		welcome_message: ai.chatbot?.welcome_message || 'Hi! How can I help you today?',
 	};
@@ -316,6 +440,20 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 		removeOpenParamFromUrl();
 		setIsSaving(true);
 		try {
+			// Resolve active provider and model:
+			// If user added an API key in any provider OR if any provider key already exists, activate that provider!
+			const { activeProvider, activeKey, allEnteredKeys } = resolveActiveAiProvider(aiSettings);
+			const activeModel = resolveActiveAiModel(activeProvider, aiSettings.provider, aiSettings.model);
+
+			const finalAiAssistantSettings = {
+				...aiSettings,
+				enabled: features.aiAssistant && aiSettings.enabled,
+				provider: activeProvider,
+				model: activeModel,
+				api_key: activeKey || (allEnteredKeys[activeProvider] || ''),
+				provider_keys: allEnteredKeys,
+			};
+
 			const res = await apiFetch({
 				path: '/dctc-ai/v1/onboarding/complete',
 				method: 'POST',
@@ -325,10 +463,7 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 						widget_position: (features.socialChat && features.aiAssistant) ? 'left' : (socialChatSettings.widget_position || 'right'),
 						enabled: features.socialChat && socialChatSettings.enabled,
 					},
-					ai_assistant: {
-						...aiSettings,
-						enabled: features.aiAssistant && aiSettings.enabled,
-					},
+					ai_assistant: finalAiAssistantSettings,
 					support_center: {
 						...supportSettings,
 						enabled: features.supportCenter && supportSettings.enabled,
@@ -339,6 +474,30 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 			if (res.portal_url) {
 				setCreatedPortalUrl(res.portal_url);
 			}
+
+			// Synchronize local frontend settings object so dashboard reflects the activated provider immediately
+			if (typeof window !== 'undefined' && window.dctc_ai_data?.settings) {
+				if (!window.dctc_ai_data.settings.chatbot) {
+					window.dctc_ai_data.settings.chatbot = {};
+				}
+				window.dctc_ai_data.settings.chatbot.default_provider = activeProvider;
+				window.dctc_ai_data.settings.chatbot.default_model = activeModel;
+				if (activeKey) {
+					if (!window.dctc_ai_data.settings.api_keys) {
+						window.dctc_ai_data.settings.api_keys = {};
+					}
+					window.dctc_ai_data.settings.api_keys[activeProvider] = activeKey.length > 8
+						? activeKey.slice(0, 4) + '...' + activeKey.slice(-4)
+						: '********';
+				}
+			}
+
+			setAiSettings((prev) => ({
+				...prev,
+				provider: activeProvider,
+				model: activeModel,
+				api_key: activeKey || prev.api_key,
+			}));
 
 			setIsCompleted(true);
 			if (showNotice) {
@@ -389,7 +548,21 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 									)}
 									<div
 										className={`dctc-onboarding-step-node ${isActive ? 'is-active' : ''} ${isCompletedStep ? 'is-completed' : ''} ${isClickable ? 'is-clickable' : ''}`}
-										onClick={() => isClickable && setCurrentStep(s.num)}
+										onClick={() => {
+											if (isClickable) {
+												if (s.num === 4) {
+													const { activeProvider, activeKey } = resolveActiveAiProvider(aiSettings);
+													const activeModel = resolveActiveAiModel(activeProvider, aiSettings.provider, aiSettings.model);
+													setAiSettings((prev) => ({
+														...prev,
+														provider: activeProvider,
+														model: activeModel,
+														api_key: activeKey || prev.api_key,
+													}));
+												}
+												setCurrentStep(s.num);
+											}
+										}}
 									>
 										<div className="dctc-onboarding-step-circle">
 											{isCompletedStep ? Icons.check : s.num}
@@ -977,34 +1150,53 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													onChange={(e) => {
 														const p = e.target.value;
 														const mList = normalizeModels(window.dctc_ai_data?.models_list?.[p] || DEFAULT_MODELS[p]);
+														const currentTypedKey = aiSettings.provider_keys?.[p] || '';
 														setAiSettings((prev) => ({
 															...prev,
 															provider: p,
+															api_key: currentTypedKey,
 															model: mList[0]?.id || 'default',
 														}));
 													}}
 												>
-													<option value="openai">OpenAI</option>
-													<option value="google">Google Gemini</option>
-													<option value="anthropic">Anthropic Claude</option>
-													<option value="groq">Groq</option>
-													<option value="deepseek">DeepSeek</option>
-													<option value="openrouter">OpenRouter</option>
-													<option value="ollama">Ollama (Local)</option>
+													<option value="openai">OpenAI {window.dctc_ai_data?.settings?.api_keys?.openai ? '✓' : ''}</option>
+													<option value="google">Google Gemini {window.dctc_ai_data?.settings?.api_keys?.google ? '✓' : ''}</option>
+													<option value="anthropic">Anthropic Claude {window.dctc_ai_data?.settings?.api_keys?.anthropic ? '✓' : ''}</option>
+													<option value="groq">Groq {window.dctc_ai_data?.settings?.api_keys?.groq ? '✓' : ''}</option>
+													<option value="deepseek">DeepSeek {window.dctc_ai_data?.settings?.api_keys?.deepseek ? '✓' : ''}</option>
+													<option value="openrouter">OpenRouter {window.dctc_ai_data?.settings?.api_keys?.openrouter ? '✓' : ''}</option>
+													<option value="ollama">Ollama (Local) {window.dctc_ai_data?.settings?.api_keys?.ollama ? '✓' : ''}</option>
 												</select>
 											</div>
 
 											<div className="dctc-form-group">
-												<label className="dctc-form-label">
-													{__('API Key', 'dragwyb-click-to-chat')}
-												</label>
+												<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+													<label className="dctc-form-label" style={{ margin: 0 }}>
+														{__('API Key', 'dragwyb-click-to-chat')}
+													</label>
+													{(savedApiKey || aiSettings.api_key) && (
+														<span style={{ fontSize: '11.5px', fontWeight: 600, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '10px', border: '1px solid #a7f3d0' }}>
+															✓ {sprintf(__('Active Provider: %s', 'dragwyb-click-to-chat'), aiSettings.provider.toUpperCase())}
+														</span>
+													)}
+												</div>
 												<div className="dctc-password-wrap">
 													<input
 														type={showPassword ? 'text' : 'password'}
 														className="dctc-input"
 														placeholder={savedApiKey ? `${__('Configured:', 'dragwyb-click-to-chat')} ${savedApiKey}` : 'sk-...'}
 														value={aiSettings.api_key}
-														onChange={(e) => setAiSettings((prev) => ({ ...prev, api_key: e.target.value }))}
+														onChange={(e) => {
+															const val = e.target.value;
+															setAiSettings((prev) => ({
+																...prev,
+																api_key: val,
+																provider_keys: {
+																	...(prev.provider_keys || {}),
+																	[prev.provider]: val,
+																},
+															}));
+														}}
 													/>
 													<button
 														type="button"
@@ -1018,6 +1210,11 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 												{savedApiKey && !aiSettings.api_key && (
 													<p className="dctc-form-helper" style={{ color: '#059669', fontWeight: 600 }}>
 														✓ {__('Existing API key configured. Leave blank to keep using saved key.', 'dragwyb-click-to-chat')}
+													</p>
+												)}
+												{aiSettings.api_key && (
+													<p className="dctc-form-helper" style={{ color: '#059669', fontWeight: 600 }}>
+														✓ {sprintf(__('API key provided. %s will be activated for AI Assistant.', 'dragwyb-click-to-chat'), aiSettings.provider.toUpperCase())}
 													</p>
 												)}
 											</div>
@@ -1188,7 +1385,17 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 									<button
 										type="button"
 										className="dctc-btn-primary"
-										onClick={() => setCurrentStep(4)}
+										onClick={() => {
+											const { activeProvider, activeKey } = resolveActiveAiProvider(aiSettings);
+											const activeModel = resolveActiveAiModel(activeProvider, aiSettings.provider, aiSettings.model);
+											setAiSettings((prev) => ({
+												...prev,
+												provider: activeProvider,
+												model: activeModel,
+												api_key: activeKey || prev.api_key,
+											}));
+											setCurrentStep(4);
+										}}
 									>
 										{__('Continue →', 'dragwyb-click-to-chat')}
 									</button>
@@ -1288,19 +1495,34 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 										<table className="dctc-review-card__table">
 											<tbody>
 												<tr>
-													<td>Provider</td>
-													<td>{aiSettings.provider.toUpperCase()}</td>
+													<td>{__('Provider', 'dragwyb-click-to-chat')}</td>
+													<td>
+														<strong>{aiSettings.provider.toUpperCase()}</strong>
+														{(savedApiKey || aiSettings.api_key) && (
+															<span style={{ marginLeft: '8px', fontSize: '11px', color: '#059669', fontWeight: 600 }}>
+																(● {__('Active & Key Configured', 'dragwyb-click-to-chat')})
+															</span>
+														)}
+													</td>
 												</tr>
 												<tr>
-													<td>Model</td>
+													<td>{__('API Key', 'dragwyb-click-to-chat')}</td>
+													<td>
+														{aiSettings.api_key
+															? __('Newly configured in setup', 'dragwyb-click-to-chat')
+															: (savedApiKey ? sprintf(__('Saved key active (%s)', 'dragwyb-click-to-chat'), savedApiKey) : __('Not configured', 'dragwyb-click-to-chat'))}
+													</td>
+												</tr>
+												<tr>
+													<td>{__('Model', 'dragwyb-click-to-chat')}</td>
 													<td>{aiSettings.model}</td>
 												</tr>
 												<tr>
-													<td>Assistant Name</td>
+													<td>{__('Assistant Name', 'dragwyb-click-to-chat')}</td>
 													<td>{aiSettings.assistant_name}</td>
 												</tr>
 												<tr>
-													<td>Welcome Message</td>
+													<td>{__('Welcome Message', 'dragwyb-click-to-chat')}</td>
 													<td>{aiSettings.welcome_message}</td>
 												</tr>
 											</tbody>
