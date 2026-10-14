@@ -427,6 +427,10 @@ class DCTC_Support_Portal {
 		$user_name = $user ? $user->display_name : '';
 		$email     = $user ? $user->user_email : '';
 
+		if ( $user_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id, $email );
+		}
+
 		$tax_data     = self::get_portal_taxonomy_data();
 		$categories   = $tax_data['categories'];
 		$taxonomy_map = $tax_data['taxonomy_map'];
@@ -1112,6 +1116,10 @@ class DCTC_Support_Portal {
 		$user_name = $user ? $user->display_name : '';
 		$email     = $user ? $user->user_email : '';
 
+		if ( $user_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id, $email );
+		}
+
 		$tax_data     = self::get_portal_taxonomy_data();
 		$categories   = $tax_data['categories'];
 		$taxonomy_map = $tax_data['taxonomy_map'];
@@ -1453,7 +1461,59 @@ class DCTC_Support_Portal {
 				return null;
 			}
 
+			function markGuestSessionExpired() {
+				window.dragwybGuestExpired = true;
+				try {
+					if (window.sessionStorage) {
+						window.sessionStorage.setItem("dctc_guest_expired", "1");
+					}
+					if (window.localStorage) {
+						window.localStorage.setItem("dctc_guest_expired", "1");
+					}
+					document.cookie = "dragwyb_guest_expired=1; path=/; max-age=86400; SameSite=Lax";
+				} catch(e){}
+				try {
+					window.dispatchEvent(new CustomEvent("dragwyb_guest_session_expired"));
+				} catch(e){}
+				if (window.jQuery) {
+					try { window.jQuery(document).trigger("dragwyb_guest_session_expired"); } catch(e){}
+				}
+			}
+
+			function clearGuestSessionExpired(ticketData) {
+				window.dragwybGuestExpired = false;
+				try {
+					if (window.sessionStorage) {
+						window.sessionStorage.removeItem("dctc_guest_expired");
+					}
+					if (window.localStorage) {
+						window.localStorage.removeItem("dctc_guest_expired");
+					}
+					document.cookie = "dragwyb_guest_expired=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+				} catch(e){}
+				try {
+					window.dispatchEvent(new CustomEvent("dragwyb_guest_session_started", { detail: { ticket: ticketData || null } }));
+				} catch(e){}
+				if (window.jQuery) {
+					try { window.jQuery(document).trigger("dragwyb_guest_session_started", [ticketData || null]); } catch(e){}
+				}
+			}
+
+			function isGuestSessionCurrentlyExpired() {
+				if (window.dragwybGuestExpired === true) return true;
+				try {
+					if (window.sessionStorage && window.sessionStorage.getItem("dctc_guest_expired") === "1") return true;
+					if (window.localStorage && window.localStorage.getItem("dctc_guest_expired") === "1") return true;
+					const m = document.cookie.match("(^|;) ?dragwyb_guest_expired=([^;]*)(;|$)");
+					if (m && (m[2] === "1" || m[2] === "true")) return true;
+				} catch(e){}
+				return false;
+			}
+
 			function loadGuestSession(timeoutMinutes, mode) {
+				if (isGuestSessionCurrentlyExpired()) {
+					return { token: "", expiresAt: 0, expired: true };
+				}
 				const primary = getGuestStorage(mode);
 				const fallback = mode === "session" ? window.localStorage : window.sessionStorage;
 				let raw = null;
@@ -1478,6 +1538,7 @@ class DCTC_Support_Portal {
 						if (parsed && parsed.token) {
 							if (parsed.expiresAt && now > parsed.expiresAt) {
 								clearAllGuestSessions();
+								markGuestSessionExpired();
 								return { token: "", expiresAt: 0, expired: true };
 							}
 							return {
@@ -1503,6 +1564,7 @@ class DCTC_Support_Portal {
 
 			function saveGuestSession(token, timeoutMinutes, mode) {
 				if (!token) return;
+				clearGuestSessionExpired();
 				const durationMs = Math.max(1, timeoutMinutes || 5) * 60 * 1000;
 				const now = Date.now();
 				const sessionObj = {
@@ -1746,7 +1808,9 @@ class DCTC_Support_Portal {
 				}
 
 				function handleGuestSessionExpiry() {
+					stopGuestCountdown();
 					clearAllGuestSessions();
+					markGuestSessionExpired();
 					guestToken = "";
 					sessionData = { token: "", expiresAt: 0, expired: true };
 					if (detailPollInterval) {
@@ -1782,8 +1846,9 @@ class DCTC_Support_Portal {
 								}
 								stopGuestCountdown();
 								clearAllGuestSessions();
+								markGuestSessionExpired();
 								guestToken = "";
-								sessionData = { token: "", expiresAt: 0, expired: false };
+								sessionData = { token: "", expiresAt: 0, expired: true };
 								if (detailPollInterval) {
 									clearInterval(detailPollInterval);
 									detailPollInterval = null;
@@ -1865,7 +1930,7 @@ class DCTC_Support_Portal {
 				if (btnBack) {
 					btnBack.addEventListener("click", function() {
 						showView(viewList);
-						if (isLoggedIn || guestToken) {
+						if (isLoggedIn || (guestToken && !isGuestSessionCurrentlyExpired())) {
 							loadTickets();
 						}
 					});
@@ -1873,6 +1938,9 @@ class DCTC_Support_Portal {
 
 				// Load Tickets List
 				async function loadTickets() {
+					if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
+						return;
+					}
 					if (!ticketsContainer) return;
 					ticketsContainer.innerHTML = "<div class=\"dctc-portal-loading\">" + escapeHtml(loadingText) + "</div>";
 					try {
@@ -1964,12 +2032,27 @@ class DCTC_Support_Portal {
 
 				// Load Single Ticket Detail with Real-Time Active Polling
 				async function loadTicketDetail(uuid, isSilentUpdate) {
+					if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
+						if (detailPollInterval) {
+							clearInterval(detailPollInterval);
+							detailPollInterval = null;
+						}
+						return;
+					}
+
 					currentTicketUuid = uuid;
 					if (!isSilentUpdate) {
 						showView(viewDetail);
 						if (detailPollInterval) clearInterval(detailPollInterval);
 						detailPollInterval = setInterval(function() {
 							if (document.hidden) return;
+							if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
+								if (detailPollInterval) {
+									clearInterval(detailPollInterval);
+									detailPollInterval = null;
+								}
+								return;
+							}
 							if (currentTicketUuid) {
 								loadTicketDetail(currentTicketUuid, true);
 							}
@@ -1987,7 +2070,20 @@ class DCTC_Support_Portal {
 						if (guestToken) headers["X-Guest-Token"] = guestToken;
 
 						const res = await fetch(restUrl + "/tickets/" + uuid, { headers: headers });
+						if (!res.ok && (res.status === 401 || res.status === 403)) {
+							if (!isLoggedIn) {
+								handleGuestSessionExpiry();
+								return;
+							}
+						}
+
 						const data = await res.json();
+						if (!data.success && (data.code === "REST_FORBIDDEN" || res.status === 403)) {
+							if (!isLoggedIn) {
+								handleGuestSessionExpiry();
+								return;
+							}
+						}
 
 						if (data.success && data.ticket) {
 							const t = data.ticket;
@@ -2141,6 +2237,7 @@ class DCTC_Support_Portal {
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
 									guestToken = data.ticket.guest_access_token;
+									clearGuestSessionExpired(data.ticket);
 									saveGuestSession(guestToken, guestTimeoutMinutes, storageMode);
 									sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
 									startGuestCountdown();
@@ -2168,6 +2265,11 @@ class DCTC_Support_Portal {
 					replyForm.addEventListener("submit", async function(e) {
 						e.preventDefault();
 						if (!currentTicketUuid) return;
+						if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
+							alert("Your guest session has expired. Please submit a new ticket.");
+							handleGuestSessionExpiry();
+							return;
+						}
 
 						const replyBtn = replyForm.querySelector(".dctc-portal-send-reply-btn");
 						let replyEditorId = "dctcportalreplymessage";
@@ -2463,6 +2565,7 @@ class DCTC_Support_Portal {
 
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
+									clearGuestSessionExpired(data.ticket);
 									saveGuestSession(data.ticket.guest_access_token, guestTimeoutMinutes, storageMode);
 								}
 								form.reset();

@@ -75,6 +75,9 @@ class DCTC_Support_Manager {
 		DCTC_Support_Portal::init();
 		DCTC_Support_Notification_Service::init();
 
+		// Automatically link guest tickets when a user registers or logs in
+		add_action( 'user_register', array( 'DCTC_Support_Ticket_Service', 'on_user_register' ), 10, 1 );
+
 		// Admin Menu & Standalone Support Assets
 		add_action( 'admin_menu', array( $this, 'register_admin_menus' ), 25 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_assets' ) );

@@ -544,6 +544,82 @@ class DCTC_Support_Ticket_Service {
 	}
 
 	/**
+	 * Automatically link guest tickets to a registered WordPress user by matching email address.
+	 *
+	 * When a user creates a ticket in guest mode without being logged in, customer_wp_user_id
+	 * is saved as 0 in the dctc_support_tickets table. When that user creates an account or logs in
+	 * with that email address, during ticket fetch:
+	 * 1. Retrieve the logged-in user's email address.
+	 * 2. Check the ticket table for tickets where customer_email = user's email and customer_wp_user_id = 0.
+	 * 3. If count > 0, update customer_wp_user_id with the currently logged-in user's ID.
+	 *
+	 * @param int|null    $user_id    WordPress user ID (defaults to current user if logged in).
+	 * @param string|null $user_email WordPress user email (optional, fetched from user if omitted).
+	 * @return int Number of tickets updated.
+	 */
+	public static function link_guest_tickets_to_user( $user_id = null, $user_email = null ) {
+		global $wpdb;
+
+		if ( empty( $user_id ) && is_user_logged_in() ) {
+			$user_id = get_current_user_id();
+		}
+
+		$user_id = absint( $user_id );
+		if ( ! $user_id ) {
+			return 0;
+		}
+
+		if ( empty( $user_email ) ) {
+			$user = get_userdata( $user_id );
+			if ( $user && ! empty( $user->user_email ) ) {
+				$user_email = $user->user_email;
+			}
+		}
+
+		$user_email = sanitize_email( $user_email );
+		if ( empty( $user_email ) ) {
+			return 0;
+		}
+
+		$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$count = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM `$table_tickets` WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",
+				$user_email
+			)
+		);
+
+		if ( $count > 0 ) {
+			$updated = $wpdb->query(
+				$wpdb->prepare(
+					"UPDATE `$table_tickets` SET customer_wp_user_id = %d WHERE customer_email = %s AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",
+					$user_id,
+					$user_email
+				)
+			);
+
+			if ( false !== $updated && $updated > 0 ) {
+				self::invalidate_cache();
+				return (int) $updated;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Hook on user registration to link any existing guest tickets.
+	 *
+	 * @param int $user_id New user ID.
+	 * @return void
+	 */
+	public static function on_user_register( $user_id ) {
+		self::link_guest_tickets_to_user( $user_id );
+	}
+
+	/**
 	 * Get paginated tickets list with advanced filters.
 	 *
 	 * @param array $args Filter and pagination parameters.
@@ -556,6 +632,18 @@ class DCTC_Support_Ticket_Service {
 		$table_agents      = $wpdb->prefix . 'dctc_support_agents';
 		$table_terms       = $wpdb->prefix . 'dctc_support_terms';
 		$table_sessions    = $wpdb->prefix . 'dctc_ai_sessions';
+
+		// Automatically link unlinked guest tickets (customer_wp_user_id = 0) to logged-in user or customer requested
+		$link_user_id = ! empty( $args['customer_wp_user_id'] ) ? absint( $args['customer_wp_user_id'] ) : ( is_user_logged_in() ? get_current_user_id() : 0 );
+		if ( $link_user_id > 0 ) {
+			self::link_guest_tickets_to_user( $link_user_id );
+		}
+		if ( ! empty( $args['customer_email'] ) ) {
+			$email_user = get_user_by( 'email', sanitize_email( $args['customer_email'] ) );
+			if ( $email_user && ! empty( $email_user->ID ) ) {
+				self::link_guest_tickets_to_user( $email_user->ID, $email_user->user_email );
+			}
+		}
 
 		$page     = isset( $args['page'] ) ? max( 1, absint( $args['page'] ) ) : 1;
 		$per_page = isset( $args['per_page'] ) ? min( 100, max( 1, absint( $args['per_page'] ) ) ) : 20;
@@ -895,6 +983,21 @@ class DCTC_Support_Ticket_Service {
 
 		if ( ! $ticket ) {
 			return null;
+		}
+
+		// Link guest ticket to user if currently logged in and emails match
+		if ( is_user_logged_in() && ! empty( $ticket['customer_email'] ) && ( empty( $ticket['customer_wp_user_id'] ) || 0 === (int) $ticket['customer_wp_user_id'] ) ) {
+			$curr_user = wp_get_current_user();
+			if ( $curr_user && ! empty( $curr_user->user_email ) && strtolower( trim( $ticket['customer_email'] ) ) === strtolower( trim( $curr_user->user_email ) ) ) {
+				$wpdb->query(
+					$wpdb->prepare(
+						"UPDATE `$table_tickets` SET customer_wp_user_id = %d WHERE id = %d AND (customer_wp_user_id = 0 OR customer_wp_user_id IS NULL)",
+						$curr_user->ID,
+						$ticket['id']
+					)
+				);
+				$ticket['customer_wp_user_id'] = (int) $curr_user->ID;
+			}
 		}
 
 		$ticket_id = (int) $ticket['id'];

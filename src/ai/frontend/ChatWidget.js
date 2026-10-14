@@ -651,6 +651,7 @@ export default function ChatWidget({ settings, inline }) {
 	useEffect(() => {
 		if (!isOpen && !inline) return;
 		if (!sessionId) return;
+		if (typeof window !== 'undefined' && window.dragwybGuestExpired) return;
 
 		// Immediate initial heartbeat ping
 		apiFetch({
@@ -661,6 +662,7 @@ export default function ChatWidget({ settings, inline }) {
 
 		const interval = setInterval(() => {
 			if (typeof document !== 'undefined' && document.hidden) return;
+			if (typeof window !== 'undefined' && window.dragwybGuestExpired) return;
 			apiFetch({
 				path: '/dctc-ai/v1/support/session/heartbeat',
 				method: 'POST',
@@ -1313,6 +1315,9 @@ export default function ChatWidget({ settings, inline }) {
 			if ((typeof document !== 'undefined' && document.hidden) || pollSessionRunningRef.current) {
 				return;
 			}
+			if (typeof window !== 'undefined' && window.dragwybGuestExpired) {
+				return;
+			}
 
 			try {
 				pollSessionRunningRef.current = true;
@@ -1322,6 +1327,9 @@ export default function ChatWidget({ settings, inline }) {
 				});
 
 				if (isCancelled || !res || !res.success) {
+					if (res && (res.code === 'REST_FORBIDDEN' || res.status === 403)) {
+						setHasActiveTicket(false);
+					}
 					return;
 				}
 

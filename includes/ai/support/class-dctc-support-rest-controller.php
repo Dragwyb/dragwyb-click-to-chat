@@ -721,6 +721,10 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function get_tickets( $request ) {
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id );
+		}
 		$params = $request->get_params();
 		$result = DCTC_Support_Ticket_Service::get_tickets( $params );
 		return new WP_REST_Response( array_merge( array( 'success' => true ), $result ), 200 );
@@ -1766,6 +1770,7 @@ class DCTC_Support_REST_Controller {
 		$params  = $request->get_params();
 
 		if ( $user_id ) {
+			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id );
 			$params['customer_wp_user_id'] = $user_id;
 		} else {
 			$guest_token = $request->get_header( 'X-Guest-Token' );
@@ -1876,6 +1881,10 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function get_portal_ticket( $request ) {
+		$user_id = get_current_user_id();
+		if ( $user_id ) {
+			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id );
+		}
 		$uuid   = $request->get_param( 'uuid' );
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 
