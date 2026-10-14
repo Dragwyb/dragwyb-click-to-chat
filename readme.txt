@@ -270,16 +270,14 @@ This plugin connects to external third-party services only when configured and e
 
 == Screenshots ==
 
-1. Front-end AI Chatbot Window: Conversational AI answering customer queries with clickable source citations, interactive WooCommerce live product cards, and 1-click Add to Cart.
-2. Front-End Customer Support Portal: Self-service customer helpdesk (`[dctc_support_portal]`) showing Submit Ticket form, My Tickets list, and Guest Access session timer.
-3. Admin Support Ticket Workspace: Support ticket queue and thread view showing conversation history, status workflows, private staff notes, and WooCommerce customer order context.
-4. Multi-Channel Floating Contact Launcher: Omnichannel floating menu connecting WhatsApp (with dynamic `{title}` & `{url}` tags), Telegram, Messenger, Instagram, Phone, SMS, and Email.
-5. RAG Knowledge Base Manager: Automatic WordPress post, page, and product indexing, custom FAQ sources, and local SQLite or Pinecone vector database configuration.
-6. AI Engine & Provider Settings: Bring Your Own Key (BYOK) multi-provider setup for OpenAI and Google Gemini, model selection, system prompt customizer, and accuracy parameters.
-7. Conversational Lead Capture Dashboard: Captured visitor leads with automated 0–100 buying intent scoring, pipeline stages (New, Contacted, Qualified, Closed), transcript inspector, and CSV export.
-8. Dynamic Custom Taxonomies Hub: Ticket classification builder managing Categories, visual Tags, synced WooCommerce Products, and custom user-defined taxonomies with custom icons and colors.
-9. Staff Roles & Granular Capability Matrix: 5-tier staff hierarchy (Administrator, Support Manager, Senior Specialist, Support Agent, Junior) with permission toggles and agent availability controls.
-10. General Module Manager & Performance Settings: Settings > General panel showing independent switches for Channels, AI Assistant, and Support Center with asset unloading and quick shortcode drawers.
+1. AI chatbot live chat interface on the frontend.
+2. Configure your AI assistant and chatbot behavior.
+3. Manage customer support tickets from one dashboard.
+4. View ticket conversations and respond to customers.
+5. Give customers a dedicated support portal to manage their tickets.
+6. Capture and manage leads generated through AI conversations.
+7. Configure your AI chatbot knowledge base and storage provider.
+8. Configure social messaging channels for customer communication.
 
 == Changelog ==
 
