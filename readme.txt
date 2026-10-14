@@ -16,7 +16,7 @@ AI Chatbot, Customer Support Helpdesk, WooCommerce AI Sales Assistant, Lead Gene
 
 Turn your website into a 24/7 sales and customer support powerhouse. Answer visitor questions instantly using smart AI (OpenAI & Google Gemini), manage support tickets with a full-featured helpdesk, boost WooCommerce revenue with an interactive AI shopping assistant, capture and score high-intent leads, and connect visitors to WhatsApp, Telegram, Facebook Messenger, Instagram, Twitter (X), LinkedIn, Phone, SMS, and Email.
 
-[Live Demo](https://dragwyb.com/demo/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=chatbot_demo) | [Upgrade to Pro](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=buy_pro) | [Documentation](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=docs)
+[Live Demo](https://dragwyb.com/demo/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=chatbot_demo) | [Upgrade to Pro](https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=readme&utm_campaign=buy_pro) | [Documentation](https://dragwyb.com/docs/click-to-chat/?utm_source=dctc&utm_medium=readme&utm_campaign=docs)
 
 == Modular Feature Management ==
 
