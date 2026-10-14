@@ -488,8 +488,13 @@ class DCTC_Support_Notification_Service {
 	 * @return bool
 	 */
 	private static function send_email( $to, $subject, $body_content, $ticket_id, $recipient_type, $recipient_id, $event_type ) {
-		$site_name = get_bloginfo( 'name' );
-		$headers   = array( 'Content-Type: text/html; charset=UTF-8' );
+		$site_name   = get_bloginfo( 'name' );
+		$from_email  = self::get_admin_notification_email();
+		$headers     = array(
+			'Content-Type: text/html; charset=UTF-8',
+			'From: ' . $site_name . ' <' . $from_email . '>',
+			'Reply-To: ' . $site_name . ' <' . $from_email . '>',
+		);
 
 		$template  = '<!DOCTYPE html><html><head><meta charset="utf-8">';
 		$template .= '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#333;background:#F9FAFB;margin:0;padding:20px;}';

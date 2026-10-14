@@ -1697,7 +1697,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function save_permissions( $request ) {
-		$matrix  = $request->get_json_params();
+		$matrix = $request->get_json_params();
 		$success = DCTC_Support_Permission_Service::save_role_permissions( $matrix );
 		return new WP_REST_Response(
 			array(
@@ -1842,7 +1842,7 @@ class DCTC_Support_REST_Controller {
 
 		// If user is logged out, verify that guest ticket submissions are enabled in BOTH portal and general support settings
 		if ( ! $user_id ) {
-			$guest_allowed_portal  = ! empty( $portal_settings['enable_guest_ticket_form'] );
+			$guest_allowed_portal = ! empty( $portal_settings['enable_guest_ticket_form'] );
 
 			if ( ! $guest_allowed_portal ) {
 				return new WP_REST_Response(
@@ -2020,9 +2020,13 @@ class DCTC_Support_REST_Controller {
 					'blockquote' => array(),
 					'code'       => array(),
 					'pre'        => array(),
-					'a'          => array( 'href' => array(), 'title' => array(), 'target' => array() ),
+					'a'          => array(
+						'href'   => array(),
+						'title'  => array(),
+						'target' => array(),
+					),
 				);
-				$message = isset( $params['message'] ) ? wp_kses( $params['message'], $allowed_tags ) : '';
+				$message      = isset( $params['message'] ) ? wp_kses( $params['message'], $allowed_tags ) : '';
 			} else {
 				$message = isset( $params['message'] ) ? wp_kses_post( $params['message'] ) : '';
 			}

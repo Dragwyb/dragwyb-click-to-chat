@@ -35,79 +35,79 @@ class DCTC_Support_Portal {
 	public static function get_default_settings() {
 		return array(
 			// Preset Theme
-			'preset'                       => 'indigo', // indigo, blue, emerald, dark, purple, amber, rose, monochrome, custom
+			'preset'                              => 'indigo', // indigo, blue, emerald, dark, purple, amber, rose, monochrome, custom
 
 			// Styling & Colors
-			'primary_color'                => '#4F46E5',
-			'primary_hover_color'          => '#4338CA',
-			'primary_text_color'           => '#FFFFFF',
-			'secondary_btn_bg'             => '#FFFFFF',
-			'secondary_btn_text'           => '#374151',
-			'secondary_btn_border'         => '#D1D5DB',
-			'secondary_btn_hover_bg'       => '#F3F4F6',
-			'border_color'                 => '#E5E7EB',
-			'border_width'                 => 1,
-			'border_style'                 => 'solid', // solid, dashed, none
-			'border_radius'                => 12,
-			'container_bg_color'           => '#FFFFFF',
-			'header_bg_color'              => '#F9FAFB',
-			'header_border_color'          => '#E5E7EB',
-			'header_title_color'           => '#111827',
-			'header_subtitle_color'        => '#6B7280',
-			'card_bg_color'                => '#F9FAFB',
-			'card_hover_bg_color'          => '#F3F4F6',
-			'card_border_color'            => '#E5E7EB',
-			'input_bg_color'               => '#F8FAFC',
-			'input_border_color'           => '#CBD5E1',
-			'font_family'                  => 'inherit',
+			'primary_color'                       => '#4F46E5',
+			'primary_hover_color'                 => '#4338CA',
+			'primary_text_color'                  => '#FFFFFF',
+			'secondary_btn_bg'                    => '#FFFFFF',
+			'secondary_btn_text'                  => '#374151',
+			'secondary_btn_border'                => '#D1D5DB',
+			'secondary_btn_hover_bg'              => '#F3F4F6',
+			'border_color'                        => '#E5E7EB',
+			'border_width'                        => 1,
+			'border_style'                        => 'solid', // solid, dashed, none
+			'border_radius'                       => 12,
+			'container_bg_color'                  => '#FFFFFF',
+			'header_bg_color'                     => '#F9FAFB',
+			'header_border_color'                 => '#E5E7EB',
+			'header_title_color'                  => '#111827',
+			'header_subtitle_color'               => '#6B7280',
+			'card_bg_color'                       => '#F9FAFB',
+			'card_hover_bg_color'                 => '#F3F4F6',
+			'card_border_color'                   => '#E5E7EB',
+			'input_bg_color'                      => '#F8FAFC',
+			'input_border_color'                  => '#CBD5E1',
+			'font_family'                         => 'inherit',
 
 			// Titles & Descriptions
-			'portal_title'                 => __( 'Help & Support Center', 'dragwyb-click-to-chat' ),
-			'portal_subtitle'              => __( 'View your recent requests, check status updates, or start a new support conversation.', 'dragwyb-click-to-chat' ),
-			'btn_new_ticket_text'          => __( 'New Support Request', 'dragwyb-click-to-chat' ),
-			'btn_back_tickets_text'        => __( 'Back to My Tickets', 'dragwyb-click-to-chat' ),
-			'search_placeholder'           => __( 'Search your tickets by subject or number...', 'dragwyb-click-to-chat' ),
-			'loading_text'                 => __( 'Loading support tickets...', 'dragwyb-click-to-chat' ),
-			'empty_tickets_title'          => __( 'No support requests found', 'dragwyb-click-to-chat' ),
-			'empty_tickets_desc'           => __( 'You have not submitted any support tickets yet. Click "New Support Request" to start one.', 'dragwyb-click-to-chat' ),
+			'portal_title'                        => __( 'Help & Support Center', 'dragwyb-click-to-chat' ),
+			'portal_subtitle'                     => __( 'View your recent requests, check status updates, or start a new support conversation.', 'dragwyb-click-to-chat' ),
+			'btn_new_ticket_text'                 => __( 'New Support Request', 'dragwyb-click-to-chat' ),
+			'btn_back_tickets_text'               => __( 'Back to My Tickets', 'dragwyb-click-to-chat' ),
+			'search_placeholder'                  => __( 'Search your tickets by subject or number...', 'dragwyb-click-to-chat' ),
+			'loading_text'                        => __( 'Loading support tickets...', 'dragwyb-click-to-chat' ),
+			'empty_tickets_title'                 => __( 'No support requests found', 'dragwyb-click-to-chat' ),
+			'empty_tickets_desc'                  => __( 'You have not submitted any support tickets yet. Click "New Support Request" to start one.', 'dragwyb-click-to-chat' ),
 
 			// Create Ticket Form & Modal
-			'modal_title'                  => __( 'Create a New Support Request', 'dragwyb-click-to-chat' ),
-			'modal_subtitle'               => __( 'Submit your inquiry and our support team will assist you shortly.', 'dragwyb-click-to-chat' ),
-			'category_label'               => __( 'Category', 'dragwyb-click-to-chat' ),
-			'subject_label'                => __( 'Subject', 'dragwyb-click-to-chat' ),
-			'subject_placeholder'          => __( 'Enter a support issue title...', 'dragwyb-click-to-chat' ),
-			'message_label'                => __( 'Message', 'dragwyb-click-to-chat' ),
-			'btn_submit_ticket_text'       => __( 'Submit Support Request', 'dragwyb-click-to-chat' ),
-			'btn_cancel_text'              => __( 'Cancel', 'dragwyb-click-to-chat' ),
+			'modal_title'                         => __( 'Create a New Support Request', 'dragwyb-click-to-chat' ),
+			'modal_subtitle'                      => __( 'Submit your inquiry and our support team will assist you shortly.', 'dragwyb-click-to-chat' ),
+			'category_label'                      => __( 'Category', 'dragwyb-click-to-chat' ),
+			'subject_label'                       => __( 'Subject', 'dragwyb-click-to-chat' ),
+			'subject_placeholder'                 => __( 'Enter a support issue title...', 'dragwyb-click-to-chat' ),
+			'message_label'                       => __( 'Message', 'dragwyb-click-to-chat' ),
+			'btn_submit_ticket_text'              => __( 'Submit Support Request', 'dragwyb-click-to-chat' ),
+			'btn_cancel_text'                     => __( 'Cancel', 'dragwyb-click-to-chat' ),
 
 			// Single Ticket Detail
-			'btn_close_ticket_text'        => __( 'Close Ticket', 'dragwyb-click-to-chat' ),
-			'btn_send_reply_text'          => __( 'Send Reply', 'dragwyb-click-to-chat' ),
-			'reply_placeholder'            => __( 'Type your reply message...', 'dragwyb-click-to-chat' ),
+			'btn_close_ticket_text'               => __( 'Close Ticket', 'dragwyb-click-to-chat' ),
+			'btn_send_reply_text'                 => __( 'Send Reply', 'dragwyb-click-to-chat' ),
+			'reply_placeholder'                   => __( 'Type your reply message...', 'dragwyb-click-to-chat' ),
 
 			// Guest & Logged-out User Controls
-			'enable_guest_ticket_form'        => true,
-			'show_login_button'               => true,
-			'show_register_button'            => true,
-			'guest_auth_box_title'            => __( 'Customer Support Portal', 'dragwyb-click-to-chat' ),
-			'guest_auth_box_desc'             => __( 'Please log in to your account or submit a support request directly below as a guest.', 'dragwyb-click-to-chat' ),
-			'btn_login_text'                  => __( 'Log In to Submit Ticket', 'dragwyb-click-to-chat' ),
-			'btn_register_text'               => __( 'Register Account', 'dragwyb-click-to-chat' ),
-			'btn_guest_create_ticket_text'    => __( 'Submit Ticket as Guest', 'dragwyb-click-to-chat' ),
-			'guest_name_label'                => __( 'Your Name', 'dragwyb-click-to-chat' ),
-			'guest_name_placeholder'          => __( 'John Doe', 'dragwyb-click-to-chat' ),
-			'guest_email_label'               => __( 'Your Email Address', 'dragwyb-click-to-chat' ),
-			'guest_email_placeholder'         => __( 'you@example.com', 'dragwyb-click-to-chat' ),
+			'enable_guest_ticket_form'            => true,
+			'show_login_button'                   => true,
+			'show_register_button'                => true,
+			'guest_auth_box_title'                => __( 'Customer Support Portal', 'dragwyb-click-to-chat' ),
+			'guest_auth_box_desc'                 => __( 'Please log in to your account or submit a support request directly below as a guest.', 'dragwyb-click-to-chat' ),
+			'btn_login_text'                      => __( 'Log In to Submit Ticket', 'dragwyb-click-to-chat' ),
+			'btn_register_text'                   => __( 'Register Account', 'dragwyb-click-to-chat' ),
+			'btn_guest_create_ticket_text'        => __( 'Submit Ticket as Guest', 'dragwyb-click-to-chat' ),
+			'guest_name_label'                    => __( 'Your Name', 'dragwyb-click-to-chat' ),
+			'guest_name_placeholder'              => __( 'John Doe', 'dragwyb-click-to-chat' ),
+			'guest_email_label'                   => __( 'Your Email Address', 'dragwyb-click-to-chat' ),
+			'guest_email_placeholder'             => __( 'you@example.com', 'dragwyb-click-to-chat' ),
 
 			// Guest Session & Privacy Settings (Auto-Expiry & Public Device Protection)
-			'guest_session_timeout'           => 5, // Default timeout: 5 minutes only
-			'show_guest_expiry_timer'         => true, // Show live countdown expiry timer in guest mode
-			'show_guest_clear_session_btn'    => true, // Show "End Guest Session" button
-			'btn_guest_clear_session_text'    => __( 'End Guest Session', 'dragwyb-click-to-chat' ),
-			'guest_storage_mode'              => 'session', // 'session' (browser session only, clears on tab close) or 'local' (retains with timeout)
-			'show_guest_public_device_notice' => true,
-			'prevent_guest_media_upload'      => true, // Prevent file uploads & media button in guest session
+			'guest_session_timeout'               => 5, // Default timeout: 5 minutes only
+			'show_guest_expiry_timer'             => true, // Show live countdown expiry timer in guest mode
+			'show_guest_clear_session_btn'        => true, // Show "End Guest Session" button
+			'btn_guest_clear_session_text'        => __( 'End Guest Session', 'dragwyb-click-to-chat' ),
+			'guest_storage_mode'                  => 'session', // 'session' (browser session only, clears on tab close) or 'local' (retains with timeout)
+			'show_guest_public_device_notice'     => true,
+			'prevent_guest_media_upload'          => true, // Prevent file uploads & media button in guest session
 
 			// Guest Ticket Received Email Notification & Access Notice
 			'guest_ticket_received_email_enabled' => true,

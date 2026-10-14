@@ -191,7 +191,7 @@ class DCTC_Support_Permission_Service {
 		foreach ( $defaults as $role => $caps ) {
 			$sanitized[ $role ] = array();
 			foreach ( $caps as $cap => $val ) {
-				$sanitized[ $role ][ $cap ] = isset( $matrix[ $role ][ $cap ] ) ? (bool) $matrix[ $role ][ $cap ] : false;
+				$sanitized[ sanitize_text_field( $role ) ][ sanitize_text_field( $cap ) ] = isset( $matrix[ $role ][ $cap ] ) ? (bool) $matrix[ $role ][ $cap ] : false;
 			}
 		}
 

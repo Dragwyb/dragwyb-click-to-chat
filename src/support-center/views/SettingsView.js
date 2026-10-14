@@ -1,12 +1,11 @@
 /**
  * Support Center - Settings View
  */
-import { useState, useEffect } from '@wordpress/element';
+import { useState, useEffect, useRef } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 import {
 	SettingCard,
-	FormField,
 	NoticeBanner,
 } from '../components';
 
@@ -108,15 +107,18 @@ export default function SettingsView({
 	const [saving, setSaving] = useState(false);
 	const [localNotice, setLocalNotice] = useState(null);
 	const [matrix, setMatrix] = useState(initialMatrix || {});
+	const updatedMatrix = useRef(initialMatrix || {});
 
 	useEffect(() => {
 		if (initialMatrix) {
 			setMatrix(initialMatrix);
+			updatedMatrix.current = initialMatrix;
 		} else {
 			apiFetch({ path: '/dctc-ai/v1/support/permissions' })
 				.then((res) => {
 					if (res?.permissions_matrix) {
 						setMatrix(res.permissions_matrix);
+						updatedMatrix.current = res.permissions_matrix;
 						if (setParentMatrix) setParentMatrix(res.permissions_matrix);
 					}
 				})
@@ -143,25 +145,34 @@ export default function SettingsView({
 		if (e) e.preventDefault();
 		setSaving(true);
 		setLocalNotice(null);
-		try {
-			const [setRes, permRes] = await Promise.all([
-				apiFetch({
-					path: '/dctc-ai/v1/support/settings',
-					method: 'POST',
-					data: supportSettings,
-				}),
+		const sendRequest = [
+			apiFetch({
+				path: '/dctc-ai/v1/support/settings',
+				method: 'POST',
+				data: supportSettings,
+			}),
+		]
+
+		if (JSON.stringify(updatedMatrix.current) !== JSON.stringify(matrix)) {
+			sendRequest.push(
 				apiFetch({
 					path: '/dctc-ai/v1/support/permissions',
 					method: 'POST',
 					data: matrix,
 				}),
-			]);
+			);
+		}
+
+		try {
+			const [setRes, permRes] = await Promise.all(sendRequest);
 
 			if (setRes?.success) {
 				setSupportSettings(setRes.settings || supportSettings);
 			}
+
 			if (permRes?.success && permRes?.permissions_matrix) {
 				setMatrix(permRes.permissions_matrix);
+				updatedMatrix.current = permRes.permissions_matrix;
 				if (setParentMatrix) setParentMatrix(permRes.permissions_matrix);
 			}
 
@@ -190,7 +201,168 @@ export default function SettingsView({
 				/>
 			)}
 
-			{ /* Section 1: Staff Roles & Access Permissions Matrix */}
+			{/* Section 1: Email & Notification Policies (Row 1) */}
+			<div className="dctc-sc-panel-box">
+				<div className="dctc-sc-panel-header">
+					<div className="dctc-sc-panel-icon-wrap icon-amber">
+						<span className="dashicons dashicons-email-alt"></span>
+					</div>
+					<div>
+						<h3>{__('Email & Notification Policies', 'dragwyb-click-to-chat')}</h3>
+						<p className="dctc-sc-panel-sub">{__('Manage transactional notifications sent to staff agents and customers.', 'dragwyb-click-to-chat')}</p>
+					</div>
+				</div>
+
+				<div className="dctc-sc-settings-form-body">
+					<div className="dctc-sc-settings-grid">
+						{/* Customer Email Notifications */}
+						<div className="dctc-sc-setting-card-item">
+							<SettingCard
+								id="dctc-sc-customer-email"
+								title={__('Customer Email Notifications', 'dragwyb-click-to-chat')}
+								desc={__('Send email updates to customers when tickets are created, updated, or replied to.', 'dragwyb-click-to-chat')}
+								checked={supportSettings.notifications?.customer_email_enabled !== false}
+								onChange={(val) => setSupportSettings((prev) => ({
+									...prev,
+									notifications: { ...(prev.notifications || {}), customer_email_enabled: val },
+								}))}
+							/>
+						</div>
+
+						{/* Staff Agent Assignment Alerts */}
+						<div className="dctc-sc-setting-card-item">
+							<SettingCard
+								id="dctc-sc-agent-assignment-alert"
+								title={__('Staff Agent Assignment Alerts', 'dragwyb-click-to-chat')}
+								desc={__('Notify the agent via email when a new ticket is assigned to them.', 'dragwyb-click-to-chat')}
+								checked={supportSettings.notifications?.agent_assignment !== false}
+								onChange={(val) => setSupportSettings((prev) => ({
+									...prev,
+									notifications: { ...(prev.notifications || {}), agent_assignment: val },
+								}))}
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Section 2: General & Ticket Routing (Row 2 in Grid View) */}
+			<div className="dctc-sc-panel-box">
+				<div className="dctc-sc-panel-header">
+					<div className="dctc-sc-panel-icon-wrap icon-indigo">
+						<span className="dashicons dashicons-admin-settings"></span>
+					</div>
+					<div>
+						<h3>{__('General & Ticket Routing', 'dragwyb-click-to-chat')}</h3>
+						<p className="dctc-sc-panel-sub">{__('Configure support system state, assignment algorithms, and bot handoff policies.', 'dragwyb-click-to-chat')}</p>
+					</div>
+				</div>
+
+				<div className="dctc-sc-settings-form-body">
+					<div className="dctc-sc-settings-grid">
+						{/* Toggle: Enable Support Center */}
+						<SettingCard
+							id="dctc-sc-enable-support"
+							title={__('Enable Support Center', 'dragwyb-click-to-chat')}
+							desc={__('Activate hybrid ticketing, agent routing, customer portal, and bot takeover.', 'dragwyb-click-to-chat')}
+							checked={!!supportSettings.enabled}
+							onChange={(val) => setSupportSettings((prev) => ({ ...prev, enabled: val }))}
+						/>
+
+						{/* Toggle: Respect Availability */}
+						<SettingCard
+							id="dctc-sc-respect-availability"
+							title={__('Respect Agent Availability', 'dragwyb-click-to-chat')}
+							desc={__('Only assign new tickets to agents with status set to "Available" (skips Away & Offline).', 'dragwyb-click-to-chat')}
+							checked={supportSettings.respect_availability !== false}
+							onChange={(val) => setSupportSettings((prev) => ({ ...prev, respect_availability: val }))}
+						/>
+
+						{/* Toggle: Auto Pause AI on Staff Reply */}
+						<SettingCard
+							id="dctc-sc-auto-pause-ai"
+							title={__('Auto-Pause AI on Staff Reply', 'dragwyb-click-to-chat')}
+							desc={__('Automatically pause chatbot AI when a human agent replies to a ticket.', 'dragwyb-click-to-chat')}
+							checked={supportSettings.auto_pause_ai !== false}
+							onChange={(val) => setSupportSettings((prev) => ({ ...prev, auto_pause_ai: val }))}
+						/>
+
+						{/* Ticket Prefix */}
+						<div className="dctc-sc-setting-field-card">
+							<div className="dctc-sc-field-card-header">
+								<label htmlFor="dctc-sc-prefix" className="dctc-sc-field-card-label">
+									{__('Ticket Number Prefix', 'dragwyb-click-to-chat')}
+								</label>
+								<p className="dctc-sc-field-card-desc">
+									{__('Prefix added to generated ticket reference codes (e.g. TCK-1001, SUP-2045).', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+							<div className="dctc-sc-input-wrap">
+								<input
+									id="dctc-sc-prefix"
+									type="text"
+									className="dctc-sc-styled-input"
+									placeholder="TCK-"
+									value={supportSettings.ticket_prefix || 'TCK-'}
+									onChange={(e) => setSupportSettings((prev) => ({ ...prev, ticket_prefix: e.target.value }))}
+								/>
+							</div>
+						</div>
+
+						{/* Default Priority */}
+						<div className="dctc-sc-setting-field-card">
+							<div className="dctc-sc-field-card-header">
+								<label htmlFor="dctc-sc-default-priority" className="dctc-sc-field-card-label">
+									{__('Default Ticket Priority', 'dragwyb-click-to-chat')}
+								</label>
+								<p className="dctc-sc-field-card-desc">
+									{__('Urgency level assigned to new tickets submitted without a set priority.', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+							<div className="dctc-sc-select-wrap">
+								<select
+									id="dctc-sc-default-priority"
+									className="dctc-sc-styled-select"
+									value={supportSettings.default_priority || 'normal'}
+									onChange={(e) => setSupportSettings((prev) => ({ ...prev, default_priority: e.target.value }))}
+								>
+									<option value="low">{__('Low — Non-urgent inquiries', 'dragwyb-click-to-chat')}</option>
+									<option value="normal">{__('Normal (Recommended) — Standard support', 'dragwyb-click-to-chat')}</option>
+									<option value="high">{__('High — Expedited customer issues', 'dragwyb-click-to-chat')}</option>
+									<option value="urgent">{__('Urgent — Critical system or billing problems', 'dragwyb-click-to-chat')}</option>
+								</select>
+								<span className="dashicons dashicons-arrow-down-alt2 dctc-sc-select-chevron"></span>
+							</div>
+						</div>
+
+						{/* Assignment Algorithm */}
+						<div className="dctc-sc-setting-field-card">
+							<div className="dctc-sc-field-card-header">
+								<label htmlFor="dctc-sc-algorithm" className="dctc-sc-field-card-label">
+									{__('Auto-Assignment Strategy', 'dragwyb-click-to-chat')}
+								</label>
+								<p className="dctc-sc-field-card-desc">
+									{__('Routing algorithm used when incoming tickets are routed to active staff agents.', 'dragwyb-click-to-chat')}
+								</p>
+							</div>
+							<div className="dctc-sc-select-wrap">
+								<select
+									id="dctc-sc-algorithm"
+									className="dctc-sc-styled-select"
+									value={supportSettings.assignment_algorithm || 'skill_match'}
+									onChange={(e) => setSupportSettings((prev) => ({ ...prev, assignment_algorithm: e.target.value }))}
+								>
+									<option value="skill_match">{__('Skill & Category Matching Only (Automatic)', 'dragwyb-click-to-chat')}</option>
+									<option value="manual">{__('Manual Assignment Only (No Auto-Assign)', 'dragwyb-click-to-chat')}</option>
+								</select>
+								<span className="dashicons dashicons-arrow-down-alt2 dctc-sc-select-chevron"></span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Section 3: Staff Roles & Granular Permission Matrix (Row 3) */}
 			<div className="dctc-sc-panel-box">
 				<div className="dctc-sc-panel-header">
 					<div className="dctc-sc-panel-icon-wrap icon-purple">
@@ -204,200 +376,70 @@ export default function SettingsView({
 					</div>
 				</div>
 
-				<div style={{ padding: '16px 20px', overflowX: 'auto' }}>
-					<table className="wp-list-table widefat fixed striped dctc-sc-perm-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-						<thead>
-							<tr>
-								<th style={{ width: '38%', textAlign: 'left', padding: '12px 14px' }}>
-									{__('Capability / Action', 'dragwyb-click-to-chat')}
-								</th>
-								{ROLES.map((r) => (
-									<th key={r.key} style={{ textAlign: 'center', padding: '12px 8px', width: '12%' }}>
-										<div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
-											<span className={`dashicons ${r.icon}`} style={{ fontSize: '18px', width: '18px', height: '18px', color: '#4f46e5' }}></span>
-										</div>
-										<div style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>{r.label}</div>
-										<span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 500 }}>{r.badge}</span>
+				<div style={{ padding: '16px 20px' }}>
+					<div className="dctc-sc-perm-table-container">
+						<table className="wp-list-table widefat fixed striped dctc-sc-perm-table">
+							<thead>
+								<tr>
+									<th style={{ width: '38%', textAlign: 'left', padding: '12px 14px' }}>
+										{__('Capability / Action', 'dragwyb-click-to-chat')}
 									</th>
-								))}
-							</tr>
-						</thead>
-						<tbody>
-							{activePermissions.map((p) => (
-								<tr key={p.key}>
-									<td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
-										<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-											<span className={`dashicons ${p.icon}`} style={{ color: p.color, fontSize: '18px', width: '18px', height: '18px' }}></span>
-											<div>
-												<strong style={{ fontSize: '13px', color: '#0f172a' }}>{p.label}</strong>
-												<p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>{p.desc}</p>
+									{ROLES.map((r) => (
+										<th key={r.key} style={{ textAlign: 'center', padding: '12px 8px', width: '12%' }}>
+											<div style={{ display: 'flex', justifyContent: 'center', marginBottom: '4px' }}>
+												<span className={`dashicons ${r.icon}`} style={{ fontSize: '18px', width: '18px', height: '18px', color: '#4f46e5' }}></span>
 											</div>
-										</div>
-									</td>
-									{ROLES.map((r) => {
-										const isChecked = r.key === 'admin' ? true : !!(matrix[r.key] && matrix[r.key][p.key]);
-										const isDisabled = r.key === 'admin';
-										return (
-											<td key={r.key} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '10px 8px' }}>
-												<label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: isDisabled ? 'default' : 'pointer' }}>
-													<input
-														type="checkbox"
-														checked={isChecked}
-														disabled={isDisabled}
-														onChange={() => handleTogglePermission(r.key, p.key)}
-														style={{
-															width: '18px',
-															height: '18px',
-															borderRadius: '4px',
-															accentColor: '#4f46e5',
-															cursor: isDisabled ? 'default' : 'pointer',
-														}}
-													/>
-												</label>
-											</td>
-										);
-									})}
+											<div style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>{r.label}</div>
+											<span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 500 }}>{r.badge}</span>
+										</th>
+									))}
 								</tr>
-							))}
-						</tbody>
-					</table>
-				</div>
-			</div>
-
-			<div className="dctc-sc-settings-columns" style={{ marginTop: '24px' }}>
-				{ /* Section 2: General & Routing */}
-				<div className="dctc-sc-panel-box">
-					<div className="dctc-sc-panel-header">
-						<div className="dctc-sc-panel-icon-wrap icon-indigo">
-							<span className="dashicons dashicons-admin-settings"></span>
-						</div>
-						<div>
-							<h3>{__('General & Ticket Routing', 'dragwyb-click-to-chat')}</h3>
-							<p className="dctc-sc-panel-sub">{__('Configure support system state, assignment algorithms, and bot handoff policies.', 'dragwyb-click-to-chat')}</p>
-						</div>
-					</div>
-
-					<div className="dctc-sc-settings-form-body">
-						{ /* Toggle: Enable Support */}
-						<SettingCard
-							id="dctc-sc-enable-support"
-							title={__('Enable Support Center', 'dragwyb-click-to-chat')}
-							desc={__('Activate hybrid ticketing, agent routing, customer portal, and bot takeover.', 'dragwyb-click-to-chat')}
-							checked={!!supportSettings.enabled}
-							onChange={(val) => setSupportSettings((prev) => ({ ...prev, enabled: val }))}
-						/>
-
-						{ /* Ticket Prefix */}
-						<FormField
-							id="dctc-sc-prefix"
-							label={__('Ticket Number Prefix', 'dragwyb-click-to-chat')}
-							desc={__('Prefix added to generated ticket reference codes (e.g. TCK-1001, SUP-2045).', 'dragwyb-click-to-chat')}
-						>
-							<input
-								id="dctc-sc-prefix"
-								type="text"
-								className="regular-text"
-								placeholder="TCK-"
-								value={supportSettings.ticket_prefix || 'TCK-'}
-								onChange={(e) => setSupportSettings((prev) => ({ ...prev, ticket_prefix: e.target.value }))}
-							/>
-						</FormField>
-
-						{ /* Default Priority */}
-						<FormField
-							id="dctc-sc-default-priority"
-							label={__('Default Ticket Priority', 'dragwyb-click-to-chat')}
-						>
-							<select
-								id="dctc-sc-default-priority"
-								value={supportSettings.default_priority || 'normal'}
-								onChange={(e) => setSupportSettings((prev) => ({ ...prev, default_priority: e.target.value }))}
-							>
-								<option value="low">{__('Low', 'dragwyb-click-to-chat')}</option>
-								<option value="normal">{__('Normal (Recommended)', 'dragwyb-click-to-chat')}</option>
-								<option value="high">{__('High', 'dragwyb-click-to-chat')}</option>
-								<option value="urgent">{__('Urgent', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</FormField>
-
-						{ /* Assignment Algorithm */}
-						<FormField
-							id="dctc-sc-algorithm"
-							label={__('Auto-Assignment Strategy', 'dragwyb-click-to-chat')}
-							desc={__('Algorithm used when incoming tickets are routed to active staff agents.', 'dragwyb-click-to-chat')}
-						>
-							<select
-								id="dctc-sc-algorithm"
-								value={supportSettings.assignment_algorithm || 'skill_match'}
-								onChange={(e) => setSupportSettings((prev) => ({ ...prev, assignment_algorithm: e.target.value }))}
-							>
-								<option value="skill_match">{__('Skill & Category Matching Only', 'dragwyb-click-to-chat')}</option>
-								<option value="manual">{__('Manual Assignment Only (No Auto-Assign)', 'dragwyb-click-to-chat')}</option>
-							</select>
-						</FormField>
-
-						{ /* Toggle: Respect Availability */}
-						<SettingCard
-							id="dctc-sc-respect-availability"
-							title={__('Respect Agent Availability', 'dragwyb-click-to-chat')}
-							desc={__('Only assign new tickets to agents with status set to "Available" (skips Away & Offline).', 'dragwyb-click-to-chat')}
-							checked={supportSettings.respect_availability !== false}
-							onChange={(val) => setSupportSettings((prev) => ({ ...prev, respect_availability: val }))}
-						/>
-
-						{ /* Toggle: Auto Pause AI on Staff Reply */}
-						<SettingCard
-							id="dctc-sc-auto-pause-ai"
-							title={__('Auto-Pause AI on Staff Reply', 'dragwyb-click-to-chat')}
-							desc={__('Automatically pause chatbot AI when a human agent replies to a ticket.', 'dragwyb-click-to-chat')}
-							checked={supportSettings.auto_pause_ai !== false}
-							onChange={(val) => setSupportSettings((prev) => ({ ...prev, auto_pause_ai: val }))}
-						/>
-					</div>
-				</div>
-
-				{ /* Section 3: Email Notifications & Policies */}
-				<div className="dctc-sc-panel-box">
-					<div className="dctc-sc-panel-header">
-						<div className="dctc-sc-panel-icon-wrap icon-amber">
-							<span className="dashicons dashicons-email-alt"></span>
-						</div>
-						<div>
-							<h3>{__('Email & Notification Policies', 'dragwyb-click-to-chat')}</h3>
-							<p className="dctc-sc-panel-sub">{__('Manage transactional notifications sent to staff agents and customers.', 'dragwyb-click-to-chat')}</p>
-						</div>
-					</div>
-
-					<div className="dctc-sc-settings-form-body">
-						{ /* Customer Email Enabled */}
-						<SettingCard
-							id="dctc-sc-customer-email"
-							title={__('Customer Email Notifications', 'dragwyb-click-to-chat')}
-							desc={__('Send email updates to customers when tickets are created, updated, or replied to.', 'dragwyb-click-to-chat')}
-							checked={supportSettings.notifications?.customer_email_enabled !== false}
-							onChange={(val) => setSupportSettings((prev) => ({
-								...prev,
-								notifications: { ...(prev.notifications || {}), customer_email_enabled: val },
-							}))}
-						/>
-
-						{ /* Agent Assignment Notification */}
-						<SettingCard
-							id="dctc-sc-agent-assignment-alert"
-							title={__('Staff Agent Assignment Alerts', 'dragwyb-click-to-chat')}
-							desc={__('Notify the agent via email when a new ticket is assigned to them.', 'dragwyb-click-to-chat')}
-							checked={supportSettings.notifications?.agent_assignment !== false}
-							onChange={(val) => setSupportSettings((prev) => ({
-								...prev,
-								notifications: { ...(prev.notifications || {}), agent_assignment: val },
-							}))}
-						/>
+							</thead>
+							<tbody>
+								{activePermissions.map((p) => (
+									<tr key={p.key}>
+										<td style={{ padding: '12px 14px', verticalAlign: 'middle' }}>
+											<div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+												<span className={`dashicons ${p.icon}`} style={{ color: p.color, fontSize: '18px', width: '18px', height: '18px' }}></span>
+												<div>
+													<strong style={{ fontSize: '13px', color: '#0f172a' }}>{p.label}</strong>
+													<p style={{ margin: '2px 0 0', fontSize: '11.5px', color: '#64748b', lineHeight: 1.3 }}>{p.desc}</p>
+												</div>
+											</div>
+										</td>
+										{ROLES.map((r) => {
+											const isChecked = r.key === 'admin' ? true : !!(matrix[r.key] && matrix[r.key][p.key]);
+											const isDisabled = r.key === 'admin';
+											return (
+												<td key={r.key} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '10px 8px' }}>
+													<label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', cursor: isDisabled ? 'default' : 'pointer' }}>
+														<input
+															type="checkbox"
+															checked={isChecked}
+															disabled={isDisabled}
+															onChange={() => handleTogglePermission(r.key, p.key)}
+															style={{
+																width: '18px',
+																height: '18px',
+																borderRadius: '4px',
+																accentColor: '#4f46e5',
+																cursor: isDisabled ? 'default' : 'pointer',
+															}}
+														/>
+													</label>
+												</td>
+											);
+										})}
+									</tr>
+								))}
+							</tbody>
+						</table>
 					</div>
 				</div>
 			</div>
 
-			{ /* Save Footer Bar */}
-			<div className="dctc-sc-settings-save-bar" style={{ marginTop: '24px' }}>
+			{/* Save Footer Bar */}
+			<div className="dctc-sc-settings-save-bar">
 				<button
 					type="submit"
 					className="button button-primary button-hero dctc-sc-save-settings-btn"
