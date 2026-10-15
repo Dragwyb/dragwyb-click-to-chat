@@ -143,7 +143,7 @@ class DCTC_Support_Manager {
 			add_submenu_page(
 				'dragwyb-support-center',
 				esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
-				esc_html__( 'Agents & Staff', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Staff', 'dragwyb-click-to-chat' ),
 				$support_cap,
 				'dragwyb-support-agents',
 				array( $this, 'render_support_admin_page' )
@@ -167,7 +167,7 @@ class DCTC_Support_Manager {
 			add_submenu_page(
 				'dragwyb-support-center',
 				esc_html__( 'Support Portal', 'dragwyb-click-to-chat' ),
-				esc_html__( 'Support Portal', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Portal', 'dragwyb-click-to-chat' ),
 				$support_cap,
 				'dragwyb-support-portal',
 				array( $this, 'render_support_admin_page' )
@@ -179,7 +179,7 @@ class DCTC_Support_Manager {
 			add_submenu_page(
 				'dragwyb-support-center',
 				esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
-				esc_html__( 'Support Settings', 'dragwyb-click-to-chat' ),
+				esc_html__( 'Settings', 'dragwyb-click-to-chat' ),
 				$support_cap,
 				'dragwyb-support-settings',
 				array( $this, 'render_support_admin_page' )

@@ -229,7 +229,7 @@ export default function SettingsView({
 							/>
 
 							{/* Input when Customer Email Notifications is enabled */}
-							=								<div className="dctc-sc-nested-field">
+							<div className="dctc-sc-nested-field">
 								<label htmlFor="dctc-sc-notification-email" className="dctc-sc-field-card-label" style={{ fontSize: '12.5px', marginBottom: '4px' }}>
 									{__('Sender / Reply-To Notification Email', 'dragwyb-click-to-chat')}
 								</label>

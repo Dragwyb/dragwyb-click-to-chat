@@ -30,39 +30,39 @@ export default function SupportHeader({ activeTab, userPermissions, notice }) {
 		},
 		...(canManageAgents
 			? [
-					{
-						id: 'agents',
-						label: __('Agents & Staff', 'dragwyb-click-to-chat'),
-						icon: 'dashicons-groups',
-						href: 'admin.php?page=dragwyb-support-agents',
-					},
-			  ]
+				{
+					id: 'agents',
+					label: __('Staff', 'dragwyb-click-to-chat'),
+					icon: 'dashicons-groups',
+					href: 'admin.php?page=dragwyb-support-agents',
+				},
+			]
 			: []),
 		...(canManageTaxonomies
 			? [
-					{
-						id: 'taxonomies',
-						label: __('Categories & Tags', 'dragwyb-click-to-chat'),
-						icon: 'dashicons-tag',
-						href: 'admin.php?page=dragwyb-support-taxonomies',
-					},
-			  ]
+				{
+					id: 'taxonomies',
+					label: __('Categories & Tags', 'dragwyb-click-to-chat'),
+					icon: 'dashicons-tag',
+					href: 'admin.php?page=dragwyb-support-taxonomies',
+				},
+			]
 			: []),
 		...(canManageSettings
 			? [
-					{
-						id: 'portal',
-						label: __('Support Portal', 'dragwyb-click-to-chat'),
-						icon: 'dashicons-desktop',
-						href: 'admin.php?page=dragwyb-support-portal',
-					},
-					{
-						id: 'settings',
-						label: __('Support Settings', 'dragwyb-click-to-chat'),
-						icon: 'dashicons-admin-generic',
-						href: 'admin.php?page=dragwyb-support-settings',
-					},
-			  ]
+				{
+					id: 'portal',
+					label: __('Portal', 'dragwyb-click-to-chat'),
+					icon: 'dashicons-desktop',
+					href: 'admin.php?page=dragwyb-support-portal',
+				},
+				{
+					id: 'settings',
+					label: __('Settings', 'dragwyb-click-to-chat'),
+					icon: 'dashicons-admin-generic',
+					href: 'admin.php?page=dragwyb-support-settings',
+				},
+			]
 			: []),
 	];
 
@@ -98,13 +98,12 @@ export default function SupportHeader({ activeTab, userPermissions, notice }) {
 			{notice && (
 				<div className={`dctc-sc-global-toast ${notice.type}`}>
 					<span
-						className={`dashicons ${
-							notice.type === 'success'
-								? 'dashicons-yes-alt'
-								: notice.type === 'error'
+						className={`dashicons ${notice.type === 'success'
+							? 'dashicons-yes-alt'
+							: notice.type === 'error'
 								? 'dashicons-warning'
 								: 'dashicons-info'
-						}`}
+							}`}
 					/>
 					<span>{notice.message}</span>
 				</div>
