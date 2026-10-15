@@ -499,7 +499,7 @@ class DCTC_AI_Settings_Handler {
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $wc_controller, 'rest_lookup_order' ),
 				'permission_callback' => function ( $request ) {
-					return is_user_logged_in() || current_user_can( 'read' );
+					return is_user_logged_in();
 				},
 			)
 		);
@@ -541,6 +541,12 @@ class DCTC_AI_Settings_Handler {
 					return new \WP_REST_Response( $res, ! empty( $res['success'] ) ? 200 : 400 );
 				},
 				'permission_callback' => function ( $request ) {
+					if ( ! is_user_logged_in() && ! current_user_can( 'read' ) ) {
+						$nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
+						if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+							return false;
+						}
+					}
 					$params    = $request->get_json_params();
 					$tool_name = sanitize_key( $params['tool'] ?? '' );
 					if ( empty( $tool_name ) ) {
@@ -603,6 +609,12 @@ class DCTC_AI_Settings_Handler {
 					return new \WP_REST_Response( $result, ! empty( $result['success'] ) ? 200 : 400 );
 				},
 				'permission_callback' => function ( $request ) {
+					if ( ! is_user_logged_in() && ! current_user_can( 'read' ) ) {
+						$nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
+						if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+							return false;
+						}
+					}
 					$ability_name = sanitize_text_field( $request->get_param( 'ability' ) );
 					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
 					$ability = DCTC_AI_Abilities::get_ability( $ability_name );
@@ -650,6 +662,12 @@ class DCTC_AI_Settings_Handler {
 				'methods'             => \WP_REST_Server::CREATABLE,
 				'callback'            => array( $this->mcp_controller, 'execute_tool' ),
 				'permission_callback' => function ( $request ) {
+					if ( ! is_user_logged_in() && ! current_user_can( 'read' ) ) {
+						$nonce = $request->get_header( 'X-WP-Nonce' ) ?: $request->get_param( '_wpnonce' );
+						if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+							return false;
+						}
+					}
 					$tool_name = sanitize_text_field( $request->get_param( 'tool' ) );
 					require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-abilities.php';
 					$ability = DCTC_AI_Abilities::get_ability( $tool_name );

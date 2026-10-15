@@ -813,14 +813,36 @@ class DCTC_Support_REST_Controller {
 			return false;
 		}
 
-		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_uuid( $uuid );
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 		if ( ! $ticket || empty( $ticket['id'] ) ) {
 			return new WP_Error( 'dctc_ticket_not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ), array( 'status' => 404 ) );
 		}
 
+		if ( $this->is_authorized_portal_ticket_user( $ticket, $request ) ) {
+			return true;
+		}
+
+		// Default: Denied. No loopholes for random tokens or unauthorized users.
+		return new WP_Error( 'dctc_unauthorized', __( 'Unauthorized access to this ticket.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+	}
+
+	/**
+	 * Verify if current request is authorized to access / modify this portal ticket.
+	 *
+	 * Checks:
+	 * 1. Administrator or support staff with view permission
+	 * 2. Logged-in customer matching ticket customer_wp_user_id
+	 * 3. Logged-in customer matching ticket customer_email
+	 * 4. Guest visitor with valid guest access token matching ticket's token via hash_equals
+	 *
+	 * @param array           $ticket Ticket array.
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool True if authorized, false otherwise.
+	 */
+	private function is_authorized_portal_ticket_user( array $ticket, $request ) {
 		$user_id = get_current_user_id();
 
-		// Case 1: Staff member with view permission
+		// Case 1: Staff member or admin
 		if ( $user_id && ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) ) {
 			return true;
 		}
@@ -838,22 +860,24 @@ class DCTC_Support_REST_Controller {
 			}
 		}
 
-		// Case 4: Guest access token verification against saved ticket token
+		// Case 4: Guest access token matching saved ticket token
 		$guest_token = $request->get_header( 'X-Guest-Token' );
 		if ( empty( $guest_token ) ) {
 			$guest_token = $request->get_param( 'guest_token' );
 		}
+		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
 
-		if ( ! empty( $guest_token ) && is_string( $guest_token ) && preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $guest_token ) ) {
-			$stored_token = ! empty( $ticket['guest_access_token'] ) ? (string) $ticket['guest_access_token'] : (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'guest_access_token', true );
-
-			if ( ! empty( $stored_token ) && hash_equals( $stored_token, (string) $guest_token ) ) {
+		if ( ! empty( $guest_token ) && preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $guest_token ) ) {
+			$stored_token = ! empty( $ticket['guest_access_token'] ) ? (string) $ticket['guest_access_token'] : '';
+			if ( empty( $stored_token ) && ! empty( $ticket['id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				$stored_token = (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'guest_access_token', true );
+			}
+			if ( ! empty( $stored_token ) && hash_equals( $stored_token, $guest_token ) ) {
 				return true;
 			}
 		}
 
-		// Default: Denied. No loopholes for random tokens or unauthorized users.
-		return new WP_Error( 'dctc_unauthorized', __( 'Unauthorized access to this ticket.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+		return false;
 	}
 
 	/**
@@ -2467,7 +2491,7 @@ class DCTC_Support_REST_Controller {
 			$subject = __( 'Support Request', 'dragwyb-click-to-chat' );
 		}
 
-		$message = isset( $raw_params['message'] ) ? wp_kses_post( trim( (string) $raw_params['message'] ) ) : '';
+		$message = isset( $raw_params['initial_message'] ) ? wp_kses_post( trim( (string) $raw_params['initial_message'] ) ) : '';
 		if ( empty( $message ) || '' === trim( wp_strip_all_tags( $message ) ) ) {
 			return new WP_REST_Response(
 				array(
@@ -2552,24 +2576,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$user_id     = get_current_user_id();
-		$guest_token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $guest_token ) ) {
-			$guest_token = $request->get_param( 'guest_token' );
-		}
-		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
-
-		// Security (SEC-01, SEC-05): Customer authorization check with constant-time hash comparison
-		$is_owner = false;
-		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
-			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
-			$is_owner = true;
-		} elseif ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) {
-			$is_owner = true;
-		}
-
-		if ( ! $is_owner ) {
+		if ( ! $this->is_authorized_portal_ticket_user( $ticket, $request ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -2662,22 +2669,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$user_id     = get_current_user_id();
-		$guest_token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $guest_token ) ) {
-			$guest_token = $request->get_param( 'guest_token' );
-		}
-		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
-
-		// Security (SEC-01): Strict ownership check
-		$is_owner = false;
-		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
-			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
-			$is_owner = true;
-		}
-
-		if ( ! $is_owner ) {
+		if ( ! $this->is_authorized_portal_ticket_user( $ticket, $request ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -2723,22 +2715,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$user_id     = get_current_user_id();
-		$guest_token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $guest_token ) ) {
-			$guest_token = $request->get_param( 'guest_token' );
-		}
-		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
-
-		// Security (SEC-01): Strict ownership check
-		$is_owner = false;
-		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
-			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
-			$is_owner = true;
-		}
-
-		if ( ! $is_owner ) {
+		if ( ! $this->is_authorized_portal_ticket_user( $ticket, $request ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
@@ -2787,7 +2764,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_uuid( $uuid );
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $uuid );
 		if ( ! $ticket ) {
 			return new WP_REST_Response(
 				array(
@@ -2798,22 +2775,7 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		$user_id     = get_current_user_id();
-		$guest_token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $guest_token ) ) {
-			$guest_token = $request->get_param( 'guest_token' );
-		}
-		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
-
-		// Security (SEC-01): Strict ownership check
-		$is_owner = false;
-		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
-			$is_owner = true;
-		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
-			$is_owner = true;
-		}
-
-		if ( ! $is_owner ) {
+		if ( ! $this->is_authorized_portal_ticket_user( $ticket, $request ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,

@@ -1025,13 +1025,18 @@ class DCTC_Support_Ticket_Service {
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 
 		if ( is_numeric( $id_or_uuid ) ) {
-			$where = $wpdb->prepare( 't.id = %d', absint( $id_or_uuid ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ticket = $wpdb->get_row(
+				$wpdb->prepare( "SELECT t.* FROM `$table_tickets` t WHERE t.id = %d LIMIT 1", absint( $id_or_uuid ) ),
+				ARRAY_A
+			);
 		} else {
-			$where = $wpdb->prepare( 't.uuid = %s', sanitize_text_field( $id_or_uuid ) );
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$ticket = $wpdb->get_row(
+				$wpdb->prepare( "SELECT t.* FROM `$table_tickets` t WHERE t.uuid = %s LIMIT 1", sanitize_text_field( $id_or_uuid ) ),
+				ARRAY_A
+			);
 		}
-
-		// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$ticket = $wpdb->get_row( "SELECT t.* FROM `$table_tickets` t WHERE $where LIMIT 1", ARRAY_A );
 
 		if ( ! $ticket ) {
 			return null;
@@ -1224,6 +1229,21 @@ class DCTC_Support_Ticket_Service {
 			return DCTC_Support_Ticket::get( $id_or_uuid_or_session );
 		}
 		return null;
+	}
+
+	/**
+	 * Retrieve a ticket specifically by UUID.
+	 *
+	 * @param string $uuid Ticket UUID.
+	 * @param bool   $force_refresh Whether to bypass cache.
+	 * @return array<string, mixed>|null Ticket data or null if not found.
+	 */
+	public static function get_ticket_by_uuid( $uuid, $force_refresh = false ) {
+		$uuid = sanitize_text_field( (string) $uuid );
+		if ( empty( $uuid ) ) {
+			return null;
+		}
+		return self::get_ticket( $uuid, $force_refresh );
 	}
 
 	/**
@@ -1852,7 +1872,25 @@ class DCTC_Support_Ticket_Service {
 			);
 
 			if ( ! empty( $incoming['attachments'] ) && is_array( $incoming['attachments'] ) ) {
-				$normalized['attachments'] = $incoming['attachments'];
+				$sanitized_att = array();
+				$bounded_att   = array_slice( $incoming['attachments'], 0, 5 );
+				foreach ( $bounded_att as $att ) {
+					if ( is_array( $att ) && ! empty( $att['url'] ) ) {
+						$clean_url = esc_url_raw( $att['url'] );
+						$scheme    = wp_parse_url( $clean_url, PHP_URL_SCHEME );
+						if ( in_array( $scheme, array( 'http', 'https' ), true ) ) {
+							$sanitized_att[] = array(
+								'name' => ! empty( $att['name'] ) ? sanitize_file_name( $att['name'] ) : 'attachment',
+								'url'  => $clean_url,
+								'type' => ! empty( $att['type'] ) ? sanitize_mime_type( $att['type'] ) : '',
+								'size' => ! empty( $att['size'] ) ? absint( $att['size'] ) : 0,
+							);
+						}
+					}
+				}
+				if ( ! empty( $sanitized_att ) ) {
+					$normalized['attachments'] = $sanitized_att;
+				}
 			}
 			if ( ! empty( $incoming['sources'] ) && is_array( $incoming['sources'] ) ) {
 				$normalized['sources'] = $incoming['sources'];
