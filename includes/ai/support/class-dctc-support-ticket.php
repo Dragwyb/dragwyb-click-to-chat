@@ -119,20 +119,12 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$messages       = array();
 
-		// Backward compatibility: check session table by session_id or support_ticket_id
+		// Backward compatibility: check session table by session_id
 		$session_row = null;
 		if ( ! empty( $this->session_id ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_row = $wpdb->get_row(
 				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $this->session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				ARRAY_A
-			);
-		}
-
-		if ( ! $session_row ) {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$session_row = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content FROM `$table_sessions` WHERE support_ticket_id = %d LIMIT 1", $this->id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 		}
@@ -701,18 +693,6 @@ class DCTC_Support_Ticket extends DCTC_Support_Ticket_Base {
 					array( 'session_id' => $this->session_id ),
 					array( '%s', '%s' ),
 					array( '%s' )
-				);
-			} else {
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-				$wpdb->update(
-					$table_sessions,
-					array(
-						'content'    => $messages_json,
-						'updated_at' => $time,
-					),
-					array( 'support_ticket_id' => $this->id ),
-					array( '%s', '%s' ),
-					array( '%d' )
 				);
 			}
 		}

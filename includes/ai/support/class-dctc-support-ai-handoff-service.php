@@ -26,104 +26,76 @@ class DCTC_Support_AI_Handoff_Service {
 	public static function should_block_ai_response( $session_id ) {
 		global $wpdb;
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-		$table_tickets  = $wpdb->prefix . 'dctc_support_tickets';
-
-		$session_id = sanitize_text_field( $session_id );
+		$session_id     = sanitize_text_field( $session_id );
 		if ( empty( $session_id ) ) {
 			return false;
 		}
 
-		// Safely query session record using SELECT * to prevent MySQL unknown column errors
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$session = $wpdb->get_row(
-			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			ARRAY_A
-		);
+		$ticket = class_exists( 'DCTC_Support_Ticket_Service' )
+			? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id )
+			: null;
 
-		if ( $session ) {
-			if ( ! array_key_exists( 'control_mode', $session ) && class_exists( 'DCTC_AI_DB' ) ) {
-				DCTC_AI_DB::ensure_session_columns();
-			}
+		if ( ! $ticket ) {
+			return false;
+		}
 
-			$control_mode = ! empty( $session['control_mode'] ) ? $session['control_mode'] : 'ai';
-			$ticket       = null;
-			$ticket_id    = 0;
+		$ticket_id    = (int) $ticket['id'];
+		$control_mode = ! empty( $ticket['control_mode'] ) ? $ticket['control_mode'] : 'ai';
 
-			// If linked to a support ticket, check ticket control_mode & status
-			if ( ! empty( $session['support_ticket_id'] ) ) {
-				$ticket_id = absint( $session['support_ticket_id'] );
-				$ticket    = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket( $ticket_id ) : null;
-				if ( $ticket ) {
-					if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
-						return true;
-					}
-					if ( ! empty( $ticket['control_mode'] ) ) {
-						$control_mode = $ticket['control_mode'];
-					}
-				}
-			}
+		if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
+			return true;
+		}
 
-			// If in human mode, check agent viewing state and response wait time
-			if ( 'human' === $control_mode ) {
-				// 1. Check if agent is currently viewing this ticket
-				$is_agent_viewing = false;
-				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-					$viewing_meta   = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
-					$viewing_users  = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
-					$last_viewed_at = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
-					$now            = current_time( 'timestamp' );
+		// If in human mode, check agent viewing state and response wait time
+		if ( 'human' === $control_mode ) {
+			// 1. Check if agent is currently viewing this ticket
+			$is_agent_viewing = false;
+			if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				$viewing_meta   = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
+				$viewing_users  = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
+				$last_viewed_at = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
+				$now            = current_time( 'timestamp' );
 
-					if ( is_array( $viewing_users ) && ! empty( $viewing_users ) ) {
-						$active = array_filter(
-							$viewing_users,
-							function ( $v ) use ( $now ) {
-								return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
-							}
-						);
-						if ( ! empty( $active ) ) {
-							$is_agent_viewing = true;
+				if ( is_array( $viewing_users ) && ! empty( $viewing_users ) ) {
+					$active = array_filter(
+						$viewing_users,
+						function ( $v ) use ( $now ) {
+							return ! empty( $v['last_seen'] ) && ( $now - (int) $v['last_seen'] ) <= 35;
 						}
-					} elseif ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
+					);
+					if ( ! empty( $active ) ) {
 						$is_agent_viewing = true;
 					}
+				} elseif ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
+					$is_agent_viewing = true;
 				}
-
-				// If agent is actively viewing the ticket conversation, do not fallback to AI
-				if ( $is_agent_viewing ) {
-					return true;
-				}
-
-				// 2. Fetch configurable max wait time for human agent response (default 60s / 1 min)
-				$settings         = get_option( 'dctc_ai_settings', array() );
-				$chatbot_settings = ! empty( $settings['chatbot'] ) && is_array( $settings['chatbot'] ) ? $settings['chatbot'] : array();
-				$max_wait_time    = isset( $chatbot_settings['human_agent_max_wait_time'] ) ? max( 10, intval( $chatbot_settings['human_agent_max_wait_time'] ) ) : 60;
-
-				$last_activity = ! empty( $session['updated_at'] ) ? strtotime( $session['updated_at'] ) : 0;
-				$now           = current_time( 'timestamp' );
-				$elapsed       = $now - $last_activity;
-
-				// If within grace period, keep blocking AI response to give human agent time
-				if ( $elapsed >= 0 && $elapsed < $max_wait_time ) {
-					return true;
-				}
-
-				// If agent did not reply within max wait time and is not viewing, auto fallback to AI!
-				if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-					DCTC_Support_Ticket_Service::set_control_mode( $ticket_id, 'ai', 'system', 0, 'Auto-Fallback: Agent wait timeout' );
-				} else {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-					$wpdb->update(
-						$table_sessions,
-						array(
-							'control_mode' => 'ai',
-							'updated_at'   => current_time( 'mysql' ),
-						),
-						array( 'session_id' => $session_id )
-					);
-				}
-
-				return false;
 			}
+
+			// If agent is actively viewing the ticket conversation, do not fallback to AI
+			if ( $is_agent_viewing ) {
+				return true;
+			}
+
+			// 2. Fetch configurable max wait time for human agent response (default 60s / 1 min)
+			$settings         = get_option( 'dctc_ai_settings', array() );
+			$chatbot_settings = ! empty( $settings['chatbot'] ) && is_array( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+			$max_wait_time    = isset( $chatbot_settings['human_agent_max_wait_time'] ) ? max( 10, intval( $chatbot_settings['human_agent_max_wait_time'] ) ) : 60;
+
+			$last_activity = ! empty( $ticket['updated_at'] ) ? strtotime( $ticket['updated_at'] ) : 0;
+			$now           = current_time( 'timestamp' );
+			$elapsed       = $now - $last_activity;
+
+			// If within grace period, keep blocking AI response to give human agent time
+			if ( $elapsed >= 0 && $elapsed < $max_wait_time ) {
+				return true;
+			}
+
+			// If agent did not reply within max wait time and is not viewing, auto fallback to AI!
+			if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+				DCTC_Support_Ticket_Service::set_control_mode( $ticket_id, 'ai', 'system', 0, 'Auto-Fallback: Agent wait timeout' );
+			}
+
+			return false;
 		}
 
 		return false;
@@ -212,9 +184,7 @@ class DCTC_Support_AI_Handoff_Service {
 			ARRAY_A
 		);
 
-		if ( ! $ticket && $session && ! empty( $session['support_ticket_id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-			$ticket = DCTC_Support_Ticket_Service::get_ticket( absint( $session['support_ticket_id'] ) );
-		}
+
 
 		$user_id      = get_current_user_id();
 		$current_user = $user_id ? get_userdata( $user_id ) : null;
@@ -257,9 +227,8 @@ class DCTC_Support_AI_Handoff_Service {
 			$wpdb->update(
 				$table_sessions,
 				array(
-					'content'      => wp_json_encode( $session_messages ),
-					'unread_count' => isset( $session['unread_count'] ) ? ( (int) $session['unread_count'] + 1 ) : 1,
-					'updated_at'   => current_time( 'mysql', true ),
+					'content'    => wp_json_encode( $session_messages ),
+					'updated_at' => current_time( 'mysql', true ),
 				),
 				array( 'session_id' => $session_id )
 			);
@@ -268,20 +237,20 @@ class DCTC_Support_AI_Handoff_Service {
 		if ( $ticket && $ticket_id ) {
 
 				// If ticket was resolved/closed, reopen it
-				if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
-					DCTC_Support_Ticket_Service::change_status( $ticket_id, 'open', 'customer', $user_id, $sender_name );
-				} else {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-					$wpdb->update(
-						$table_tickets,
-						array(
-							'status'                => 'waiting_agent',
-							'customer_last_seen_at' => current_time( 'mysql' ),
-							'updated_at'            => current_time( 'mysql' ),
-						),
-						array( 'id' => $ticket_id )
-					);
-				}
+			if ( in_array( $ticket['status'], array( 'resolved', 'closed' ), true ) ) {
+				DCTC_Support_Ticket_Service::change_status( $ticket_id, 'open', 'customer', $user_id, $sender_name );
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_tickets,
+					array(
+						'status'                => 'waiting_agent',
+						'customer_last_seen_at' => current_time( 'mysql' ),
+						'updated_at'            => current_time( 'mysql' ),
+					),
+					array( 'id' => $ticket_id )
+				);
+			}
 
 				DCTC_Support_Event_Service::log_event(
 					$ticket_id,
@@ -294,10 +263,10 @@ class DCTC_Support_AI_Handoff_Service {
 				);
 
 				// Trigger delayed notification if agent doesn't view ticket within 1 minute
-				if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
-					DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $prompt );
-				}
+			if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+				DCTC_Support_Notification_Service::notify_customer_reply( $ticket_id, $prompt );
 			}
+		}
 
 		$ticket_info = array(
 			'id'           => (int) $ticket_id,

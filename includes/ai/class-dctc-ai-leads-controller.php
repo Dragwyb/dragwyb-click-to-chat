@@ -174,7 +174,6 @@ class DCTC_AI_Leads_Controller {
 
 			if ( $existing_session ) {
 				$update_data = array(
-					'lead_id'    => $lead_id,
 					'updated_at' => current_time( 'mysql', true ),
 				);
 				if ( ! empty( $email ) ) {
@@ -201,8 +200,6 @@ class DCTC_AI_Leads_Controller {
 						'provider'   => 'lead_form',
 						'content'    => ! empty( $session_messages ) ? wp_json_encode( $session_messages ) : wp_json_encode( array() ),
 						'intent_tag' => 'lead_generation',
-						'channel'    => 'chatbot',
-						'lead_id'    => $lead_id,
 						'status'     => 'active',
 						'created_at' => current_time( 'mysql', true ),
 						'updated_at' => current_time( 'mysql', true ),

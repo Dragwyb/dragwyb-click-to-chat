@@ -37,29 +37,14 @@ class DCTC_AI_DB {
 			provider varchar(100) NOT NULL,
 			content longtext NOT NULL,
 			summary text DEFAULT NULL,
-			sentiment varchar(30) DEFAULT 'neutral' NOT NULL,
 			intent_tag varchar(50) DEFAULT 'general' NOT NULL,
-			channel varchar(30) DEFAULT 'chatbot' NOT NULL,
-			assigned_to bigint(20) unsigned DEFAULT 0 NOT NULL,
-			unread_count int(11) DEFAULT 0 NOT NULL,
-			tags text DEFAULT NULL,
-			internal_notes longtext DEFAULT NULL,
-			lead_id bigint(20) unsigned DEFAULT 0 NOT NULL,
-			control_mode varchar(20) DEFAULT 'ai' NOT NULL,
-			reply_surface varchar(30) DEFAULT 'chatbot_widget' NOT NULL,
-			support_ticket_id bigint(20) unsigned DEFAULT 0 NOT NULL,
 			created_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
 			updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
 			status varchar(20) DEFAULT 'active' NOT NULL,
 			PRIMARY KEY  (id),
 			UNIQUE KEY session_id (session_id),
 			KEY status (status),
-			KEY channel (channel),
-			KEY assigned_to (assigned_to),
-			KEY sentiment (sentiment),
-			KEY intent_tag (intent_tag),
-			KEY control_mode (control_mode),
-			KEY support_ticket_id (support_ticket_id)
+			KEY intent_tag (intent_tag)
 		) $charset_collate;";
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -202,18 +187,8 @@ class DCTC_AI_DB {
 
 		if ( ! empty( $session_cols ) ) {
 			$sess_defs = array(
-				'summary'           => 'ADD COLUMN `summary` text DEFAULT NULL AFTER `content`',
-				'sentiment'         => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
-				'intent_tag'        => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
-				'channel'           => "ADD COLUMN `channel` varchar(30) DEFAULT 'chatbot' NOT NULL AFTER `intent_tag`",
-				'assigned_to'       => 'ADD COLUMN `assigned_to` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `channel`',
-				'unread_count'      => 'ADD COLUMN `unread_count` int(11) DEFAULT 0 NOT NULL AFTER `assigned_to`',
-				'tags'              => 'ADD COLUMN `tags` text DEFAULT NULL AFTER `unread_count`',
-				'internal_notes'    => 'ADD COLUMN `internal_notes` longtext DEFAULT NULL AFTER `tags`',
-				'lead_id'           => 'ADD COLUMN `lead_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `internal_notes`',
-				'control_mode'      => "ADD COLUMN `control_mode` varchar(20) DEFAULT 'ai' NOT NULL AFTER `lead_id`",
-				'reply_surface'     => "ADD COLUMN `reply_surface` varchar(30) DEFAULT 'chatbot_widget' NOT NULL AFTER `control_mode`",
-				'support_ticket_id' => 'ADD COLUMN `support_ticket_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `reply_surface`',
+				'summary'    => 'ADD COLUMN `summary` text DEFAULT NULL AFTER `content`',
+				'intent_tag' => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `summary`",
 			);
 			foreach ( $sess_defs as $col => $sql_part ) {
 				if ( ! in_array( $col, $session_cols, true ) ) {
@@ -289,18 +264,8 @@ class DCTC_AI_DB {
 
 		if ( ! empty( $session_cols ) ) {
 			$sess_defs = array(
-				'summary'           => 'ADD COLUMN `summary` text DEFAULT NULL AFTER `content`',
-				'sentiment'         => "ADD COLUMN `sentiment` varchar(30) DEFAULT 'neutral' NOT NULL AFTER `summary`",
-				'intent_tag'        => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `sentiment`",
-				'channel'           => "ADD COLUMN `channel` varchar(30) DEFAULT 'chatbot' NOT NULL AFTER `intent_tag`",
-				'assigned_to'       => 'ADD COLUMN `assigned_to` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `channel`',
-				'unread_count'      => 'ADD COLUMN `unread_count` int(11) DEFAULT 0 NOT NULL AFTER `assigned_to`',
-				'tags'              => 'ADD COLUMN `tags` text DEFAULT NULL AFTER `unread_count`',
-				'internal_notes'    => 'ADD COLUMN `internal_notes` longtext DEFAULT NULL AFTER `tags`',
-				'lead_id'           => 'ADD COLUMN `lead_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `internal_notes`',
-				'control_mode'      => "ADD COLUMN `control_mode` varchar(20) DEFAULT 'ai' NOT NULL AFTER `lead_id`",
-				'reply_surface'     => "ADD COLUMN `reply_surface` varchar(30) DEFAULT 'chatbot_widget' NOT NULL AFTER `control_mode`",
-				'support_ticket_id' => 'ADD COLUMN `support_ticket_id` bigint(20) unsigned DEFAULT 0 NOT NULL AFTER `reply_surface`',
+				'summary'    => 'ADD COLUMN `summary` text DEFAULT NULL AFTER `content`',
+				'intent_tag' => "ADD COLUMN `intent_tag` varchar(50) DEFAULT 'general' NOT NULL AFTER `summary`",
 			);
 			foreach ( $sess_defs as $col => $sql_part ) {
 				if ( ! in_array( $col, $session_cols, true ) ) {
@@ -825,7 +790,7 @@ class DCTC_AI_DB {
 			$placeholders    = implode( ',', array_fill( 0, count( $unique_sessions ), '%s' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$session_rows = $wpdb->get_results(
-				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE session_id IN ({$placeholders})", ...$unique_sessions ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+				$wpdb->prepare( "SELECT session_id, content FROM `{$table_sessions}` WHERE session_id IN ({$placeholders})", ...$unique_sessions ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 				ARRAY_A
 			);
 
@@ -835,41 +800,39 @@ class DCTC_AI_DB {
 					$decoded     = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
 					if ( is_array( $decoded ) ) {
 						$session_map[ $srow['session_id'] ] = array(
-							'messages'          => $decoded,
-							'support_ticket_id' => ! empty( $srow['support_ticket_id'] ) ? (int) $srow['support_ticket_id'] : 0,
+							'messages' => $decoded,
 						);
 					}
 				}
 			}
 		}
 
-		// Also check by lead_id in session table for sessions that didn't have session_id match
+		// Map tickets associated with these sessions or leads directly from ticket meta
+		$ticket_map          = array();
+		$table_ticket_meta   = $wpdb->prefix . 'dctc_support_ticket_meta';
+		$ticket_meta_lookups = array();
+		if ( ! empty( $session_ids ) ) {
+			foreach ( array_unique( $session_ids ) as $sid ) {
+				$ticket_meta_lookups[] = $sid;
+			}
+		}
 		if ( ! empty( $lead_ids ) ) {
-			$unique_leads = array_unique( $lead_ids );
-			$placeholders = implode( ',', array_fill( 0, count( $unique_leads ), '%d' ) );
+			foreach ( array_unique( $lead_ids ) as $lid ) {
+				$ticket_meta_lookups[] = (string) $lid;
+			}
+		}
+
+		if ( ! empty( $ticket_meta_lookups ) ) {
+			$meta_unique       = array_unique( $ticket_meta_lookups );
+			$meta_placeholders = implode( ',', array_fill( 0, count( $meta_unique ), '%s' ) );
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$lead_session_rows = $wpdb->get_results(
-				$wpdb->prepare( "SELECT session_id, lead_id, content, support_ticket_id FROM `{$table_sessions}` WHERE lead_id IN ({$placeholders})", ...$unique_leads ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+			$meta_rows = $wpdb->get_results(
+				$wpdb->prepare( "SELECT ticket_id, meta_key, meta_value FROM `{$table_ticket_meta}` WHERE meta_key IN ('session_id', 'lead_id') AND meta_value IN ({$meta_placeholders})", ...$meta_unique ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 				ARRAY_A
 			);
-
-			if ( is_array( $lead_session_rows ) ) {
-				foreach ( $lead_session_rows as $lsrow ) {
-					$lid         = (int) $lsrow['lead_id'];
-					$raw_content = $lsrow['content'] ?? '';
-					$decoded     = ! empty( $raw_content ) ? json_decode( $raw_content, true ) : array();
-					if ( is_array( $decoded ) && ! empty( $decoded ) ) {
-						if ( empty( $session_map[ $lsrow['session_id'] ] ) ) {
-							$session_map[ $lsrow['session_id'] ] = array(
-								'messages'          => $decoded,
-								'support_ticket_id' => ! empty( $lsrow['support_ticket_id'] ) ? (int) $lsrow['support_ticket_id'] : 0,
-							);
-						}
-						$session_map[ "lead_{$lid}" ] = array(
-							'messages'          => $decoded,
-							'support_ticket_id' => ! empty( $lsrow['support_ticket_id'] ) ? (int) $lsrow['support_ticket_id'] : 0,
-						);
-					}
+			if ( is_array( $meta_rows ) ) {
+				foreach ( $meta_rows as $mr ) {
+					$ticket_map[ $mr['meta_key'] . '_' . $mr['meta_value'] ] = (int) $mr['ticket_id'];
 				}
 			}
 		}
@@ -881,12 +844,15 @@ class DCTC_AI_DB {
 			$session_data = null;
 			if ( ! empty( $sid ) && isset( $session_map[ $sid ] ) ) {
 				$session_data = $session_map[ $sid ];
-			} elseif ( isset( $session_map[ "lead_{$lid}" ] ) ) {
-				$session_data = $session_map[ "lead_{$lid}" ];
 			}
 
 			$raw_messages = $session_data['messages'] ?? array();
-			$ticket_id    = $session_data['support_ticket_id'] ?? 0;
+			$ticket_id    = 0;
+			if ( ! empty( $sid ) && isset( $ticket_map[ 'session_id_' . $sid ] ) ) {
+				$ticket_id = $ticket_map[ 'session_id_' . $sid ];
+			} elseif ( $lid > 0 && isset( $ticket_map[ 'lead_id_' . $lid ] ) ) {
+				$ticket_id = $ticket_map[ 'lead_id_' . $lid ];
+			}
 
 			// If ticket exists and session table has empty messages, check ticket messages meta
 			if ( empty( $raw_messages ) && $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
@@ -1054,12 +1020,11 @@ class DCTC_AI_DB {
 			$table,
 			array(
 				'summary'    => sanitize_textarea_field( $summary ),
-				'sentiment'  => sanitize_key( $sentiment ),
 				'intent_tag' => sanitize_key( $intent_tag ),
 				'updated_at' => current_time( 'mysql' ),
 			),
 			array( 'session_id' => sanitize_text_field( $session_id ) ),
-			array( '%s', '%s', '%s', '%s' ),
+			array( '%s', '%s', '%s' ),
 			array( '%s' )
 		);
 	}
@@ -1084,19 +1049,12 @@ class DCTC_AI_DB {
 
 		$conversion_rate = $total_conversations > 0 ? round( ( $total_leads / $total_conversations ) * 100, 1 ) : 0;
 
-		// Sentiment Breakdown
-		$sentiment_rows = $wpdb->get_results( "SELECT sentiment, COUNT(*) as count FROM `{$sess_table}` GROUP BY sentiment", ARRAY_A );
-		$sentiments     = array(
+		// Sentiment Breakdown (default structure preserved for API compatibility)
+		$sentiments = array(
 			'positive'   => 0,
 			'neutral'    => 0,
 			'frustrated' => 0,
 		);
-		if ( is_array( $sentiment_rows ) ) {
-			foreach ( $sentiment_rows as $sr ) {
-				$key                = sanitize_key( $sr['sentiment'] ?: 'neutral' );
-				$sentiments[ $key ] = (int) $sr['count'];
-			}
-		}
 
 		// Intent Breakdown
 		$intent_rows = $wpdb->get_results( "SELECT intent_tag, COUNT(*) as count FROM `{$sess_table}` GROUP BY intent_tag ORDER BY count DESC LIMIT 6", ARRAY_A );
