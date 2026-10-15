@@ -1283,7 +1283,7 @@ class DCTC_AI_Chat_Controller {
 
 						if ( $can_ask_email ) {
 							if ( ! $has_email_prompt && ! $has_support_link ) {
-								if ( 'LEAD_GENERATION' === $effective_ticket_type ) {
+								if ( 'LEAD_GENERATION' === $effective_ticket_type && ! $enable_lead_capture ) {
 									if ( $has_support_url_escaped ) {
 										$ai_message .= "\n\n" . sprintf(
 											/* translators: %s: Support URL */
@@ -1359,36 +1359,6 @@ class DCTC_AI_Chat_Controller {
 		$show_sources = ! isset( $bot['show_sources'] ) || (bool) $bot['show_sources'];
 		$sources      = ( $show_sources && ! empty( $rag_links ) ) ? array_slice( $rag_links, 0, 3 ) : array();
 
-		$extra = array(
-			'show_form' => ! empty( $should_show_lead_form ) ? array(
-				'form_type'   => 'lead_generate',
-				'show'        => true,
-				'form_filled' => false,
-			) : null,
-		);
-
-		try {
-			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $detected_intent, $sources, $extra, $request_messages );
-		} catch ( Exception $e ) {
-			self::log_debug( 'Dragwyb AI AI Save Conversation Error: ' . $e->getMessage() );
-		}
-
-		try {
-			if ( class_exists( 'DCTC_AI_Usage_Tracker' ) ) {
-				$est_tokens = max( 10, intval( ( strlen( $prompt ) + strlen( $ai_message ) ) / 4 ) );
-				DCTC_AI_Usage_Tracker::record_usage( $session_id, $used_provider, $used_model, $est_tokens );
-			}
-		} catch ( Exception $e ) {
-			self::log_debug( 'Dragwyb AI AI Record Usage Error: ' . $e->getMessage() );
-		}
-
-		try {
-			$formatted_messages = $this->get_formatted_messages( $session_id, $is_save_chat_enabled, $request_messages, $prompt, $ai_message, $bot, $sources, $extra );
-		} catch ( Exception $e ) {
-			self::log_debug( 'Dragwyb AI AI Get Formatted Messages Error: ' . $e->getMessage() );
-			$formatted_messages = array();
-		}
-
 		// Extract structured lead fields for autofill
 		$detected_name     = ! empty( $intent_data['name'] ) ? $intent_data['name'] : ( is_user_logged_in() ? wp_get_current_user()->display_name : '' );
 		$detected_email    = ! empty( $intent_data['email'] ) ? $intent_data['email'] : ( ! empty( $email ) ? $email : ( is_user_logged_in() ? wp_get_current_user()->user_email : '' ) );
@@ -1418,6 +1388,42 @@ class DCTC_AI_Chat_Controller {
 					}
 				}
 			}
+		}
+
+		$extra = array(
+			'show_form' => ! empty( $should_show_lead_form ) && empty( $wc_products ) ? array(
+				'form_type'   => 'lead_generate',
+				'show'        => true,
+				'form_filled' => false,
+			) : null,
+		);
+
+		// remove Please fill out the form below. or Please fill out the form below
+		if ( is_string( $ai_message ) && ! empty( $ai_message ) && ! empty( $wc_products ) ) {
+			$ai_message = preg_replace( '/Please fill out the form below\./', '', $ai_message );
+			$ai_message = preg_replace( '/Please fill out the form below/', '', $ai_message );
+		}
+
+		try {
+			$this->save_conversation( $prompt, $ai_message, $session_id, $used_provider, $used_model, $bot, $email, $detected_intent, $sources, $extra, $request_messages );
+		} catch ( Exception $e ) {
+			self::log_debug( 'Dragwyb AI AI Save Conversation Error: ' . $e->getMessage() );
+		}
+
+		try {
+			if ( class_exists( 'DCTC_AI_Usage_Tracker' ) ) {
+				$est_tokens = max( 10, intval( ( strlen( $prompt ) + strlen( $ai_message ) ) / 4 ) );
+				DCTC_AI_Usage_Tracker::record_usage( $session_id, $used_provider, $used_model, $est_tokens );
+			}
+		} catch ( Exception $e ) {
+			self::log_debug( 'Dragwyb AI AI Record Usage Error: ' . $e->getMessage() );
+		}
+
+		try {
+			$formatted_messages = $this->get_formatted_messages( $session_id, $is_save_chat_enabled, $request_messages, $prompt, $ai_message, $bot, $sources, $extra );
+		} catch ( Exception $e ) {
+			self::log_debug( 'Dragwyb AI AI Get Formatted Messages Error: ' . $e->getMessage() );
+			$formatted_messages = array();
 		}
 
 		$this->set_ticket_ai_responding( $session_id, false );
@@ -1838,6 +1844,12 @@ class DCTC_AI_Chat_Controller {
 		&& $support_escalation_enabled
 		);
 
+		// Detect WooCommerce only when its core API is available.
+		$is_woocommerce_active = (
+		class_exists( 'WooCommerce' )
+		&& function_exists( 'wc_get_order' )
+		);
+
 		$sections = array();
 
 		/*
@@ -2006,14 +2018,17 @@ class DCTC_AI_Chat_Controller {
 		$sections[] = implode( "\n", $contact_rules );
 
 		/*
-		 * WooCommerce order enquiries.
+		 * WooCommerce order tracking.
+		 * Append only when WooCommerce is active and its core API is available.
 		 */
-		$sections[] =
-		"WOOCOMMERCE ORDER TRACKING:\n" .
-		"- When a user requests an order status or delivery update, classify the request as order_tracking.\n" .
-		"- Use an authorized order-lookup capability when available and verify that the user is permitted to access the order.\n" .
-		"- Never invent an order status, tracking number, or delivery estimate.\n" .
-		"- If order lookup is unavailable or authorization cannot be verified, explain the limitation and offer an appropriate support route.\n";
+		if ( $is_woocommerce_active ) {
+			$sections[] =
+			"WOOCOMMERCE ORDER TRACKING:\n" .
+			"- When a user requests an order status or delivery update, classify the request as order_tracking.\n" .
+			"- Use an authorized order-lookup capability when available and verify that the user is permitted to access the order.\n" .
+			"- Never invent an order status, tracking number, or delivery estimate.\n" .
+			"- If order lookup is unavailable or authorization cannot be verified, explain the limitation and offer an appropriate support route.\n";
+		}
 
 		/*
 		 * Intent allowlist.
