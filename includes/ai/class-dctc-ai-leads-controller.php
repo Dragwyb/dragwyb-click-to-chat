@@ -106,8 +106,9 @@ class DCTC_AI_Leads_Controller {
 			)
 		);
 
-		$settings              = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		$bot                   = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$bot      = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+
 		$threshold             = isset( $bot['lead_qualification_threshold'] ) ? intval( $bot['lead_qualification_threshold'] ) : 70;
 		$enable_support_ticket = false;
 		if ( class_exists( 'DCTC_Helper' ) && method_exists( 'DCTC_Helper', 'is_support_enabled' ) && DCTC_Helper::is_support_enabled() ) {
@@ -143,19 +144,71 @@ class DCTC_AI_Leads_Controller {
 
 		$lead_data['id'] = $lead_id;
 
-		// 1. Link lead to session in wp_dctc_ai_sessions table
+		// 1. Link lead to session and persist conversation in wp_dctc_ai_sessions table
+		$session_messages = array();
+		if ( ! empty( $params['messages'] ) && is_array( $params['messages'] ) ) {
+			foreach ( $params['messages'] as $m ) {
+				if ( ! is_array( $m ) || empty( $m['content'] ) ) {
+					continue;
+				}
+				$r                  = isset( $m['role'] ) && in_array( $m['role'], array( 'bot', 'assistant' ), true ) ? 'assistant' : 'user';
+				$session_messages[] = array(
+					'role'        => $r,
+					'sender_type' => isset( $m['sender_type'] ) ? sanitize_key( $m['sender_type'] ) : ( 'assistant' === $r ? 'ai_agent' : 'customer' ),
+					'sender_name' => isset( $m['sender_name'] ) ? sanitize_text_field( $m['sender_name'] ) : ( 'assistant' === $r ? 'AI Assistant' : 'Customer' ),
+					'content'     => wp_kses_post( is_string( $m['content'] ) ? $m['content'] : wp_json_encode( $m['content'] ) ),
+					'created_at'  => isset( $m['created_at'] ) ? sanitize_text_field( $m['created_at'] ) : current_time( 'mysql', true ),
+				);
+			}
+		}
+
 		if ( ! empty( $session_id ) ) {
 			global $wpdb;
 			$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-			$wpdb->update(
-				$table_sessions,
-				array(
-					'lead_id' => $lead_id,
-					'email'   => ! empty( $email ) ? $email : $wpdb->get_var( $wpdb->prepare( "SELECT email FROM `$table_sessions` WHERE session_id = %s", $session_id ) ), //phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				),
-				array( 'session_id' => $session_id )
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$existing_session = $wpdb->get_row(
+				$wpdb->prepare( "SELECT id, content FROM `{$table_sessions}` WHERE session_id = %s LIMIT 1", $session_id ),
+				ARRAY_A
 			);
+
+			if ( $existing_session ) {
+				$update_data = array(
+					'lead_id'    => $lead_id,
+					'updated_at' => current_time( 'mysql', true ),
+				);
+				if ( ! empty( $email ) ) {
+					$update_data['email'] = $email;
+				}
+				if ( ! empty( $session_messages ) && ( empty( $existing_session['content'] ) || '[]' === trim( (string) $existing_session['content'] ) ) ) {
+					$update_data['content'] = wp_json_encode( $session_messages );
+				}
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->update(
+					$table_sessions,
+					$update_data,
+					array( 'session_id' => $session_id )
+				);
+			} else {
+				// Save conversation to dctc_ai_sessions when save_chat was disabled
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+				$wpdb->insert(
+					$table_sessions,
+					array(
+						'session_id' => $session_id,
+						'email'      => ! empty( $email ) ? $email : '',
+						'model'      => 'lead_captured',
+						'provider'   => 'lead_form',
+						'content'    => ! empty( $session_messages ) ? wp_json_encode( $session_messages ) : wp_json_encode( array() ),
+						'intent_tag' => 'lead_generation',
+						'channel'    => 'chatbot',
+						'lead_id'    => $lead_id,
+						'status'     => 'active',
+						'created_at' => current_time( 'mysql', true ),
+						'updated_at' => current_time( 'mysql', true ),
+					)
+				);
+			}
 		}
 
 		// 2. Connect with Support Center if Support Center is enabled
@@ -424,38 +477,19 @@ class DCTC_AI_Leads_Controller {
 					),
 					array( 'session_id' => $session_id )
 				);
-			}
 
-			// 3b. Update linked ticket messages if ticket exists
-			$target_ticket_id = ! empty( $ticket_id ) ? $ticket_id : ( ! empty( $new_ticket_id ) ? $new_ticket_id : 0 );
-			if ( ! $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-				$linked = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
-				if ( $linked && ! empty( $linked['id'] ) ) {
-					$target_ticket_id = (int) $linked['id'];
-				}
-			}
-
-			if ( $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-				$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( $target_ticket_id, '_dctc_ticket_messages', true );
-				$ticket_meta_msgs = is_array( $ticket_meta_msgs ) ? $ticket_meta_msgs : array();
-				foreach ( $ticket_meta_msgs as &$t_msg ) {
-					if ( is_array( $t_msg ) ) {
-						if ( isset( $t_msg['show_form'] ) && is_array( $t_msg['show_form'] ) ) {
-							$t_msg['show_form']['show']        = false;
-							$t_msg['show_form']['form_filled'] = true;
-						} elseif ( ! empty( $t_msg['form_type'] ) || ( isset( $t_msg['content'] ) && false !== stripos( (string) $t_msg['content'], 'form below' ) ) ) {
-							$t_msg['show_form'] = array(
-								'form_type'   => 'lead_generate',
-								'show'        => false,
-								'form_filled' => true,
-							);
-						}
+				// 3b. Update linked ticket messages if ticket exists
+				$target_ticket_id = ! empty( $ticket_id ) ? $ticket_id : ( ! empty( $new_ticket_id ) ? $new_ticket_id : 0 );
+				if ( ! $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					$linked = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
+					if ( $linked && ! empty( $linked['id'] ) ) {
+						$target_ticket_id = (int) $linked['id'];
 					}
 				}
-				unset( $t_msg );
-				$ticket_meta_msgs[] = $confirm_entry;
-				$ticket_meta_msgs   = array_slice( $ticket_meta_msgs, -50 );
-				DCTC_Support_Ticket_Service::update_ticket_meta( $target_ticket_id, '_dctc_ticket_messages', $ticket_meta_msgs );
+
+				if ( $target_ticket_id && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+					DCTC_Support_Ticket_Service::update_ticket_meta( $target_ticket_id, '_dctc_ticket_messages', json_decode( $encoded_msgs ) );
+				}
 			}
 		}
 

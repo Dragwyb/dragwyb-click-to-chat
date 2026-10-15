@@ -2490,6 +2490,7 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		$meta_key = sanitize_key( $meta_key );
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		if ( $single ) {
 			$val = $wpdb->get_var(

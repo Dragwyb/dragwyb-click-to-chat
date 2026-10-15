@@ -2585,14 +2585,24 @@ export default function ChatWidget({ settings, inline }) {
 
 		setLeadFormSubmitting(true);
 		try {
+			const isSaveChatEnabled = !!chatbot.save_chat;
+			const leadPayload = {
+				...currentFormData,
+				session_id: sessionId,
+				source_url: window.location.href,
+			};
+
+			if (!isSaveChatEnabled) {
+				leadPayload.messages = formatConversationHistory(
+					messagesRef.current,
+					chatbot.bot_name
+				);
+			}
+
 			const res = await apiFetch({
 				path: '/dctc-ai/v1/leads/capture',
 				method: 'POST',
-				data: {
-					...currentFormData,
-					session_id: sessionId,
-					source_url: window.location.href,
-				},
+				data: leadPayload,
 			});
 
 			if (res && res.success) {

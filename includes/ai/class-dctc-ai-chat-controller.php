@@ -157,7 +157,7 @@ class DCTC_AI_Chat_Controller {
 
 		$bot                  = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
 		$models               = isset( $settings['models'] ) ? $settings['models'] : array();
-		$is_save_chat_enabled = ! empty( $bot['save_chat'] );
+		$is_save_chat_enabled = ! empty( $bot['save_chat'] ) || $this->session_has_lead( $session_id );
 
 		// Parse and normalize client-provided conversation history when save_chat is disabled
 		$request_messages = array();
@@ -2479,11 +2479,38 @@ class DCTC_AI_Chat_Controller {
 	}
 
 	/**
+	 * Check if a lead was generated/captured for the given session.
+	 *
+	 * @param string $session_id Session identifier.
+	 * @return bool True if lead exists for this session.
+	 */
+	private function session_has_lead( $session_id ) {
+		static $lead_cache = array();
+		if ( empty( $session_id ) ) {
+			return false;
+		}
+		if ( isset( $lead_cache[ $session_id ] ) ) {
+			return $lead_cache[ $session_id ];
+		}
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$has_lead = (bool) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT id FROM {$wpdb->prefix}dctc_ai_leads WHERE session_id = %s LIMIT 1",
+				$session_id
+			)
+		);
+
+		$lead_cache[ $session_id ] = $has_lead;
+		return $has_lead;
+	}
+
+	/**
 	 * Save conversation to database
 	 */
 	private function save_conversation( $prompt, $ai_message, $session_id, $provider, $model_id, $bot, $email, $intent_type, $sources = array(), $extra = array(), $request_messages = array() ) {
-		// Save to database only if save_chat is enabled
-		$save_enabled = ! empty( $bot['save_chat'] );
+		// Save to database only if save_chat is enabled or a lead exists for this session
+		$save_enabled = ! empty( $bot['save_chat'] ) || $this->session_has_lead( $session_id );
 		if ( $save_enabled ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db = new DCTC_AI_DB();
@@ -2865,7 +2892,7 @@ class DCTC_AI_Chat_Controller {
 	 * Save response and return
 	 */
 	private function save_and_respond( $message, $session_id, $bot, $email, $prompt, $action_buttons = array(), $is_handoff = false, $request_messages = array() ) {
-		$save_enabled = ! empty( $bot['save_chat'] );
+		$save_enabled = ! empty( $bot['save_chat'] ) || $this->session_has_lead( $session_id );
 		if ( $save_enabled ) {
 			if ( class_exists( 'DCTC_AI_DB' ) ) {
 				$db          = new DCTC_AI_DB();
@@ -3181,9 +3208,9 @@ class DCTC_AI_Chat_Controller {
 				}
 			}
 		} else {
-			// No ticket attached: check if save_chat is enabled before querying session table
+			// No ticket attached: check if save_chat is enabled or lead exists before querying session table
 			$settings     = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-			$save_enabled = ! empty( $settings['chatbot']['save_chat'] );
+			$save_enabled = ! empty( $settings['chatbot']['save_chat'] ) || $this->session_has_lead( $session_id );
 			if ( $save_enabled ) {
 				$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 				// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
