@@ -102,7 +102,9 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 			// Installation data
 			if ( ! get_option( 'dragwyb_ctc_installation_date' ) ) {
 				update_option( 'dragwyb_ctc_installation_date', gmdate( 'Y-m-d H:i:s' ) );
+				update_option( 'dragwyb_ctc_initial_version', DCTC_VERSION );
 			}
+
 			// Plugin version
 			update_option( 'dragwyb_ctc_version', DCTC_VERSION );
 
