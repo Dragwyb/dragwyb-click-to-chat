@@ -25,8 +25,7 @@ class DCTC_Support_AI_Handoff_Service {
 	 */
 	public static function should_block_ai_response( $session_id ) {
 		global $wpdb;
-		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-		$session_id     = sanitize_text_field( $session_id );
+		$session_id = sanitize_text_field( $session_id );
 		if ( empty( $session_id ) ) {
 			return false;
 		}
@@ -51,10 +50,9 @@ class DCTC_Support_AI_Handoff_Service {
 			// 1. Check if agent is currently viewing this ticket
 			$is_agent_viewing = false;
 			if ( $ticket_id > 0 && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
-				$viewing_meta   = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
-				$viewing_users  = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
-				$last_viewed_at = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
-				$now            = current_time( 'timestamp' );
+				$viewing_meta  = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing', true );
+				$viewing_users = DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_viewing_user_ids', true );
+				$now           = current_time( 'timestamp' );
 
 				if ( is_array( $viewing_users ) && ! empty( $viewing_users ) ) {
 					$active = array_filter(
@@ -66,7 +64,7 @@ class DCTC_Support_AI_Handoff_Service {
 					if ( ! empty( $active ) ) {
 						$is_agent_viewing = true;
 					}
-				} elseif ( ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) && ( $now - $last_viewed_at ) <= 35 ) {
+				} elseif ( '1' === (string) $viewing_meta || 1 === (int) $viewing_meta ) {
 					$is_agent_viewing = true;
 				}
 			}
@@ -80,10 +78,9 @@ class DCTC_Support_AI_Handoff_Service {
 			$settings         = get_option( 'dctc_ai_settings', array() );
 			$chatbot_settings = ! empty( $settings['chatbot'] ) && is_array( $settings['chatbot'] ) ? $settings['chatbot'] : array();
 			$max_wait_time    = isset( $chatbot_settings['human_agent_max_wait_time'] ) ? max( 10, intval( $chatbot_settings['human_agent_max_wait_time'] ) ) : 60;
-
-			$last_activity = ! empty( $ticket['updated_at'] ) ? strtotime( $ticket['updated_at'] ) : 0;
-			$now           = current_time( 'timestamp' );
-			$elapsed       = $now - $last_activity;
+			$last_viewed_at   = (int) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket_id, '_agent_last_viewed_at', true );
+			$now              = current_time( 'timestamp' );
+			$elapsed          = $now - $last_viewed_at;
 
 			// If within grace period, keep blocking AI response to give human agent time
 			if ( $elapsed >= 0 && $elapsed < $max_wait_time ) {
@@ -183,8 +180,6 @@ class DCTC_Support_AI_Handoff_Service {
 			$wpdb->prepare( "SELECT * FROM `$table_sessions` WHERE session_id = %s", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 			ARRAY_A
 		);
-
-
 
 		$user_id      = get_current_user_id();
 		$current_user = $user_id ? get_userdata( $user_id ) : null;

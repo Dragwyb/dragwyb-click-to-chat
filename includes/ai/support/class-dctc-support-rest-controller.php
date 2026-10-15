@@ -1062,11 +1062,6 @@ class DCTC_Support_REST_Controller {
 			);
 		}
 
-		// If viewed by support agent or admin, record last viewed timestamp
-		if ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) {
-			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', time() );
-		}
-
 		return new WP_REST_Response(
 			array(
 				'success' => true,
