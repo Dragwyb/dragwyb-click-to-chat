@@ -9,3 +9,5 @@ package.json
 webpack.config.js
 src/ai/admin/
 src/ai/frontend/
+src/common/components
+src/support-center

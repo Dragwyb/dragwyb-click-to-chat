@@ -9,3 +9,5 @@ webpack.config.js   export-ignore
 .wordpress-org  export-ignore
 src/ai/admin/    export-ignore
 src/ai/frontend/    export-ignore
+src/common/components    export-ignore
+src/support-center   export-ignore
