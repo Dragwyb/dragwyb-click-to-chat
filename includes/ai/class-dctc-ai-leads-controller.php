@@ -168,7 +168,7 @@ class DCTC_AI_Leads_Controller {
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$existing_session = $wpdb->get_row(
-				$wpdb->prepare( "SELECT id, content FROM `{$table_sessions}` WHERE session_id = %s LIMIT 1", $session_id ),
+				$wpdb->prepare( "SELECT id, content FROM `{$table_sessions}` WHERE session_id = %s LIMIT 1", $session_id ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				ARRAY_A
 			);
 
