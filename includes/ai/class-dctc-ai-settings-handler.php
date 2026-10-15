@@ -382,6 +382,28 @@ class DCTC_AI_Settings_Handler {
 
 		register_rest_route(
 			'dctc-ai/v1',
+			'/content',
+			array(
+				'methods'             => \WP_REST_Server::READABLE,
+				'callback'            => array( $this, 'dctc_ai_get_content' ),
+				'permission_callback' => array( $this, 'dctc_ai_permission_content' ),
+				'args'                => array(
+					'limit'  => array(
+						'type'              => 'integer',
+						'default'           => 300,
+						'sanitize_callback' => 'absint',
+					),
+					'search' => array(
+						'type'              => 'string',
+						'default'           => '',
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		register_rest_route(
+			'dctc-ai/v1',
 			'/usage-stats',
 			array(
 				'methods'             => \WP_REST_Server::READABLE,
@@ -713,7 +735,8 @@ class DCTC_AI_Settings_Handler {
 
 		$args = array(
 			'post_type'      => array_values( $post_types ),
-			'post_status'    => 'any',
+			'post_status'    => 'publish',
+			'has_password'   => false,
 			'posts_per_page' => 500,
 			'orderby'        => 'title',
 			'order'          => 'ASC',
@@ -722,15 +745,162 @@ class DCTC_AI_Settings_Handler {
 		$query = new \WP_Query( $args );
 		$items = array();
 		foreach ( $query->posts as $post ) {
+			if ( 'publish' !== $post->post_status || ! empty( $post->post_password ) ) {
+				continue;
+			}
 			$type_obj = get_post_type_object( $post->post_type );
 			$items[]  = array(
-				'id'    => $post->ID,
+				'id'    => (int) $post->ID,
 				'title' => $post->post_title ? $post->post_title : 'ID ' . $post->ID,
 				'type'  => $type_obj && isset( $type_obj->labels->singular_name ) ? $type_obj->labels->singular_name : ucfirst( $post->post_type ),
 			);
 		}
 
 		return new \WP_REST_Response( $items, 200 );
+	}
+
+	/**
+	 * Get public published content (pages, posts, public custom post types) for page exclusion search.
+	 *
+	 * Strictly filters out private, draft, trash, password-protected, and critical internal system content.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return \WP_REST_Response
+	 */
+	public function dctc_ai_get_content( $request ) {
+		// Retrieve public post types searchable on front-end
+		$post_types = get_post_types(
+			array(
+				'public'              => true,
+				'exclude_from_search' => false,
+			),
+			'names'
+		);
+
+		// Exclude attachments and internal, sensitive, or critical post types
+		$excluded_types = array(
+			'attachment',
+			'revision',
+			'nav_menu_item',
+			'custom_css',
+			'customize_changeset',
+			'oembed_cache',
+			'user_request',
+			'wp_block',
+			'wp_template',
+			'wp_template_part',
+			'wp_global_styles',
+			'wp_navigation',
+			'wp_font_family',
+			'wp_font_face',
+			'shop_order',
+			'shop_order_refund',
+			'shop_coupon',
+			'shop_order_placehold',
+			'action_monitor',
+			'scheduled-action',
+		);
+		foreach ( $excluded_types as $excluded_type ) {
+			unset( $post_types[ $excluded_type ] );
+		}
+
+		if ( empty( $post_types ) ) {
+			return new \WP_REST_Response(
+				array(
+					'success' => true,
+					'items'   => array(),
+					'total'   => 0,
+				),
+				200
+			);
+		}
+
+		$limit = absint( $request->get_param( 'limit' ) );
+		if ( $limit <= 0 ) {
+			$limit = 300;
+		}
+		$limit = min( $limit, 500 );
+
+		$search = sanitize_text_field( (string) $request->get_param( 'search' ) );
+
+		$query_args = array(
+			'post_type'              => array_values( $post_types ),
+			'post_status'            => 'publish', // Strictly publish: exclude private, draft, pending, future, trash
+			'has_password'           => false,     // Exclude password-protected content
+			'posts_per_page'         => $limit,
+			'orderby'                => 'title',
+			'order'                  => 'ASC',
+			'no_found_rows'          => true,
+			'update_post_meta_cache' => false,
+			'update_post_term_cache' => false,
+		);
+
+		if ( ! empty( $search ) ) {
+			$query_args['s'] = $search;
+		}
+
+		$query = new \WP_Query( $query_args );
+		$items = array();
+
+		foreach ( $query->posts as $post ) {
+			// Redundant security checks: prevent returning private, trash, draft, or password-protected content
+			if ( 'publish' !== $post->post_status || ! empty( $post->post_password ) ) {
+				continue;
+			}
+
+			$type_obj   = get_post_type_object( $post->post_type );
+			$type_label = ( $type_obj && isset( $type_obj->labels->singular_name ) )
+				? $type_obj->labels->singular_name
+				: ucfirst( $post->post_type );
+
+			$items[] = array(
+				'id'    => (int) $post->ID,
+				'title' => ! empty( $post->post_title ) ? $post->post_title : sprintf( __( 'ID %d (No Title)', 'dragwyb-click-to-chat' ), $post->ID ),
+				'type'  => $type_label,
+			);
+		}
+
+		return new \WP_REST_Response(
+			array(
+				'success' => true,
+				'items'   => $items,
+				'total'   => count( $items ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * Permission and nonce check for retrieving public content for page exclusion search.
+	 *
+	 * Requires manage_options capability and a valid WordPress REST API nonce.
+	 *
+	 * @param \WP_REST_Request $request The REST request object.
+	 * @return bool|\WP_Error True if authorized, WP_Error otherwise.
+	 */
+	public function dctc_ai_permission_content( $request ) {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return new \WP_Error(
+				'rest_forbidden',
+				__( 'Sorry, you are not allowed to access this resource.', 'dragwyb-click-to-chat' ),
+				array( 'status' => rest_authorization_required_code() )
+			);
+		}
+
+		$nonce = $request->get_header( 'X-WP-Nonce' );
+		if ( empty( $nonce ) ) {
+			$nonce = $request->get_param( '_wpnonce' );
+		}
+
+		if ( empty( $nonce ) || ! wp_verify_nonce( $nonce, 'wp_rest' ) ) {
+			return new \WP_Error(
+				'rest_cookie_invalid_nonce',
+				__( 'Invalid or missing security nonce.', 'dragwyb-click-to-chat' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		return true;
 	}
 
 	/**

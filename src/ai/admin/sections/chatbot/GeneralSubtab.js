@@ -19,6 +19,7 @@ export default function GeneralSubtab({
 	ids,
 	selectedIds,
 	content,
+	fetchContent,
 	addExclude,
 	toggleExclude,
 	onOpenMessages,
@@ -102,10 +103,25 @@ export default function GeneralSubtab({
 
 					{/* Exclusion Search Combobox */}
 					<div className="dctc-ai-bot-field">
-						<label htmlFor="exclude_search_input">
+						<label
+							htmlFor="exclude_search_input"
+							onClick={() => {
+								if (!content || content.length === 0) {
+									fetchContent?.();
+								}
+							}}
+						>
 							{__('Exclude Content (Pages, Posts, Custom Types)', 'dragwyb-click-to-chat')}
 						</label>
-						<div ref={comboRef} className="dctc-ai-combobox-wrapper">
+						<div
+							ref={comboRef}
+							className="dctc-ai-combobox-wrapper"
+							onClick={() => {
+								if (!content || content.length === 0) {
+									fetchContent?.();
+								}
+							}}
+						>
 							<div className="dctc-ai-combobox-input-wrap">
 								<span className="dashicons dashicons-search dctc-ai-combobox-search-icon" />
 								<input
@@ -113,11 +129,25 @@ export default function GeneralSubtab({
 									id="exclude_search_input"
 									className="dctc-ai-bot-input dctc-ai-combobox-input"
 									value={search}
+									onClick={() => {
+										setOpenSearch(true);
+										if (!content || content.length === 0) {
+											fetchContent?.();
+										}
+									}}
 									onChange={(e) => {
 										setSearch(e.target.value);
 										setOpenSearch(true);
+										if (!content || content.length === 0) {
+											fetchContent?.();
+										}
 									}}
-									onFocus={() => setOpenSearch(true)}
+									onFocus={() => {
+										setOpenSearch(true);
+										if (!content || content.length === 0) {
+											fetchContent?.();
+										}
+									}}
 									onKeyDown={(e) => {
 										if (e.key === 'Enter') {
 											e.preventDefault();
@@ -130,12 +160,28 @@ export default function GeneralSubtab({
 											: __('Search pages or posts to exclude by title or ID…', 'dragwyb-click-to-chat')
 									}
 								/>
-								<span className="dctc-ai-combobox-arrow">▼</span>
+								<span
+									className="dctc-ai-combobox-arrow"
+									onClick={(e) => {
+										e.stopPropagation();
+										setOpenSearch((prev) => !prev);
+										if (!content || content.length === 0) {
+											fetchContent?.();
+										}
+									}}
+								>
+									▼
+								</span>
 							</div>
 
 							{openSearch && (
 								<div className="dctc-ai-combobox-dropdown">
-									{filtered.length === 0 ? (
+									{loadingContent ? (
+										<div className="dctc-ai-combobox-empty" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '16px' }}>
+											<span className="dashicons dashicons-update" style={{ animation: 'rotation 2s infinite linear' }} />
+											<span>{__('Loading website content…', 'dragwyb-click-to-chat')}</span>
+										</div>
+									) : filtered.length === 0 ? (
 										<div className="dctc-ai-combobox-empty">
 											{search.trim() ? (
 												<div>

@@ -284,25 +284,25 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 
 	const dirty = JSON.stringify(form) !== JSON.stringify(saved);
 
-	// Fetch site content for page exclusion search
-	useEffect(() => {
-		let cancelled = false;
+	// Fetch site content for page exclusion search (triggered on demand when clicking the selector if content is empty)
+	const fetchContent = () => {
+		if (loadingContent || (Array.isArray(content) && content.length > 0)) {
+			return;
+		}
 		setLoadingContent(true);
 		apiFetch({ path: '/dctc-ai/v1/content?limit=300' })
 			.then((res) => {
-				if (!cancelled && res?.items) {
-					setContent(res.items);
-				}
+				const items = Array.isArray(res) ? res : (res?.items || []);
+				setContent(items);
 			})
-			.catch(() => { })
+			.catch((err) => {
+				// eslint-disable-next-line no-console
+				console.error('Failed to load content for page exclusions:', err);
+			})
 			.finally(() => {
-				if (!cancelled) setLoadingContent(false);
+				setLoadingContent(false);
 			});
-
-		return () => {
-			cancelled = true;
-		};
-	}, []);
+	};
 
 	// Fetch live usage meter stats
 	useEffect(() => {
@@ -854,6 +854,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 						ids={ids}
 						selectedIds={selectedIds}
 						content={content}
+						fetchContent={fetchContent}
 						addExclude={addExclude}
 						toggleExclude={toggleExclude}
 						onOpenMessages={() => setSubtab('messages')}

@@ -17,7 +17,6 @@ import {
 } from './ai-engine';
 
 export default function AiEngineSettings({ settings, onSave, showNotice }) {
-	const [saving, setSaving] = useState(false);
 	const [resetting, setResetting] = useState({});
 	const [confirmProvider, setConfirmProvider] = useState(null);
 	const [modelsList, setModelsList] = useState(
@@ -49,8 +48,6 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 	});
 
 	const [form, setForm] = useState(buildForm);
-	const [saved, setSaved] = useState(buildForm);
-	const dirty = JSON.stringify(form) !== JSON.stringify(saved);
 
 	const hasKey = (id) => !!settings?.api_keys?.[id];
 	const maskedKey = (id) => settings?.api_keys?.[id] || '';
@@ -59,24 +56,8 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 		setForm((prev) => ({ ...prev, [key]: value }));
 	};
 
-	const onSubmitRef = useRef();
-	onSubmitRef.current = onSubmit;
-
-	useEffect(() => {
-		const handleTriggerSave = () => {
-			if (onSubmitRef.current) {
-				onSubmitRef.current();
-			}
-		};
-		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
-		return () => {
-			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
-		};
-	}, []);
-
 	const onSubmit = async (e) => {
 		if (e) e.preventDefault();
-		setSaving(true);
 		window.dispatchEvent(new CustomEvent('dctc_ai_saving_start'));
 
 		try {
@@ -162,7 +143,6 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				fallback_provider: resApi.chatbot?.fallback_provider || prev.fallback_provider,
 				fallback_model: resApi.chatbot?.fallback_model || prev.fallback_model,
 			}));
-			setSaved(nextSaved);
 		} catch (err) {
 			console.error('Failed to save settings:', err);
 			showNotice(
@@ -170,10 +150,24 @@ export default function AiEngineSettings({ settings, onSave, showNotice }) {
 				'error'
 			);
 		} finally {
-			setSaving(false);
 			window.dispatchEvent(new CustomEvent('dctc_ai_saving_end'));
 		}
 	};
+
+	const onSubmitRef = useRef();
+	onSubmitRef.current = onSubmit;
+
+	useEffect(() => {
+		const handleTriggerSave = () => {
+			if (onSubmitRef.current) {
+				onSubmitRef.current();
+			}
+		};
+		window.addEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		return () => {
+			window.removeEventListener('dctc_ai_trigger_save', handleTriggerSave);
+		};
+	}, []);
 
 	const resetKey = async (provider) => {
 		setResetting((prev) => ({ ...prev, [provider]: true }));
