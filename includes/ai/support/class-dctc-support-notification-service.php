@@ -1179,7 +1179,6 @@ class DCTC_Support_Notification_Service {
 		$headers    = ! empty( $args['headers'] ) && is_array( $args['headers'] ) ? $args['headers'] : array(
 			'Content-Type: text/html; charset=UTF-8',
 			'From: ' . $site_name . ' <' . $from_email . '>',
-			'Reply-To: ' . $site_name . ' <' . $from_email . '>',
 		);
 
 		$sent        = false;
