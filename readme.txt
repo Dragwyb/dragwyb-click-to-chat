@@ -230,6 +230,13 @@ Enable only the modules your website needs under **Click to Chat → Settings �
 
 * `[dctc_ai]` – Embeds the AI Chatbot assistant window or launcher button.
 
+== Recommended Plugins ==
+
+* 🤖 **[AI Agent Workflows](https://wordpress.org/plugins/dragwyb-ai-agent-workflows)** – Build visual automation workflows in WordPress with webhooks, form triggers, WooCommerce events, and AI agent actions.
+* 🔄 **[Flipbox Addon for Elementor](https://wordpress.org/plugins/ultimate-flipbox-addon-for-elementor/)** – Design animated flip boxes and 3D cards inside Elementor.
+* 🧩 **[Smart Form Builder](https://wordpress.org/plugins/smart-form-builder-by-dragwyb/)** – A drag and drop form builder plugin for WordPress.
+* 🎨 **[Contact form 7 Addon](https://wordpress.org/plugins/enhanced-addon-for-contact-form-7/)** – Enhances the functionality of Contact Form 7.
+
 == Frequently Asked Questions ==
 
 = Is this plugin really free? =
@@ -267,6 +274,14 @@ This plugin connects to external third-party services only when configured and e
   * [Pinecone Terms of Service](https://www.pinecone.io/terms/)
   * [Pinecone Privacy Policy](https://www.pinecone.io/privacy/)
 * **Dragwyb Feedback API:** Optional diagnostic or deactivation feedback is sent to https://feedback.dragwyb.com only when explicitly submitted by an administrator.
+
+== Contribute ==
+
+Dragwyb Click to Chat is an open-source project, and we welcome contributions from the community. 
+
+* [GitHub Repository](https://github.com/dragwyb/dragwyb-click-to-chat)
+* [Submit Bug Reports & Feature Requests](https://github.com/dragwyb/dragwyb-click-to-chat/issues) Please report any issues or bugs on the [GitHub Issues page].
+* **Pull Requests:** Feel free to fork the repository and submit pull requests for review.
 
 == Screenshots ==
 
