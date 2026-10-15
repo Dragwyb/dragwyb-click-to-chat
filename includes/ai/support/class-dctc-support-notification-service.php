@@ -387,7 +387,7 @@ class DCTC_Support_Notification_Service {
 			$subject = sprintf( '[%s] %s', $site_name, $subject );
 		}
 
-		$content  = '<h2>' . esc_html__( 'We have received your support request', 'dragwyb-click-to-chat' ) . '</h2>';
+		$content = '<h2>' . esc_html__( 'We have received your support request', 'dragwyb-click-to-chat' ) . '</h2>';
 		/* translators: %s: Customer name */
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $cust_name ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
@@ -462,11 +462,6 @@ class DCTC_Support_Notification_Service {
 	 * @return string
 	 */
 	public static function get_admin_notification_email() {
-		$chatbot_settings = get_option( 'dctc_ai_chatbot', array() );
-		if ( ! empty( $chatbot_settings['ticket_notification_email'] ) ) {
-			return sanitize_email( $chatbot_settings['ticket_notification_email'] );
-		}
-
 		$support_settings = get_option( 'dctc_support_settings', array() );
 		if ( ! empty( $support_settings['ticket_notification_email'] ) ) {
 			return sanitize_email( $support_settings['ticket_notification_email'] );
@@ -488,9 +483,9 @@ class DCTC_Support_Notification_Service {
 	 * @return bool
 	 */
 	private static function send_email( $to, $subject, $body_content, $ticket_id, $recipient_type, $recipient_id, $event_type ) {
-		$site_name   = get_bloginfo( 'name' );
-		$from_email  = self::get_admin_notification_email();
-		$headers     = array(
+		$site_name  = get_bloginfo( 'name' );
+		$from_email = self::get_admin_notification_email();
+		$headers    = array(
 			'Content-Type: text/html; charset=UTF-8',
 			'From: ' . $site_name . ' <' . $from_email . '>',
 			'Reply-To: ' . $site_name . ' <' . $from_email . '>',

@@ -785,7 +785,7 @@ class DCTC_AI_Leads_Controller {
 			return;
 		}
 
-		$to = ! empty( $bot['lead_notification_email'] ) ? sanitize_email( $bot['lead_notification_email'] ) : get_option( 'admin_email' );
+		$to = ! empty( $bot['lead_notification_email'] ) ? sanitize_email( $bot['lead_notification_email'] ) : DCTC_Support_Notification_Service::get_admin_notification_email();
 		if ( empty( $to ) || ! is_email( $to ) ) {
 			return;
 		}
