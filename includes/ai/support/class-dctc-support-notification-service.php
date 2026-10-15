@@ -461,10 +461,14 @@ class DCTC_Support_Notification_Service {
 	 *
 	 * @return string
 	 */
-	public static function get_admin_notification_email() {
+	public static function get_admin_notification_email( $default_email = '' ) {
 		$support_settings = get_option( 'dctc_support_settings', array() );
 		if ( ! empty( $support_settings['ticket_notification_email'] ) ) {
 			return sanitize_email( $support_settings['ticket_notification_email'] );
+		}
+
+		if ( ! empty( $default_email ) && isset( $default_email ) ) {
+			return sanitize_email( $default_email );
 		}
 
 		return sanitize_email( get_option( 'admin_email' ) );
