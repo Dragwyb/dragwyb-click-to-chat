@@ -1887,6 +1887,11 @@ class DCTC_AI_Chat_Controller {
 			"- For out-of-scope requests, briefly explain your specialized role and offer the configured support route when appropriate.\n" .
 			"- Answer simple greetings naturally. Keep replies helpful, professional, concise, and in the user's language.\n\n" .
 
+			"RESPONSE FORMATTING AND HTML STRUCTURE RULES:\n" .
+			"- Structure your replies using clean HTML tags for formatting only: headings (<h3>, <h4>), emphasis (<strong>, <em>), links (<a href=\"URL\" target=\"_blank\" rel=\"noopener noreferrer\">text</a>), unordered lists (<ul><li>...</li></ul>), ordered lists (<ol><li>...</li></ol>), and code (<code>).\n" .
+			"- CRITICAL: NEVER wrap regular lines, sentences, or paragraphs in <p> or </p> tags.do not add line breaks ex between ul, li, table, hr tags etc.\n" .
+			"- Prefer HTML structure over markdown syntax.\n\n" .
+
 			"ACCURACY AND KNOWLEDGE GROUNDING:\n" .
 			"- Use relevant, trusted website context and available authorized tools.\n" .
 			"- Never invent product features, prices, discounts, policies, order statuses, delivery estimates, or technical claims.\n" .
@@ -2693,12 +2698,13 @@ class DCTC_AI_Chat_Controller {
 									'form_filled' => ! empty( $msg['show_form']['form_filled'] ),
 								);
 							}
+							$content              = $msg['content'];
 							$formatted_messages[] = array(
 								'role'               => ( $msg['role'] === 'assistant' ) ? 'bot' : 'user',
 								'sender_type'        => isset( $msg['sender_type'] ) ? $msg['sender_type'] : ( $msg['role'] === 'assistant' ? 'ai_agent' : 'customer' ),
 								'sender_name'        => isset( $msg['sender_name'] ) ? $msg['sender_name'] : ( $msg['role'] === 'assistant' ? 'AI Assistant' : 'Customer' ),
 								'created_at'         => isset( $msg['created_at'] ) ? $msg['created_at'] : '',
-								'content'            => $msg['content'],
+								'content'            => $content,
 								'sources'            => isset( $msg['sources'] ) && is_array( $msg['sources'] ) ? $msg['sources'] : array(),
 								'show_form'          => $show_form,
 								'show_order_tracker' => ! empty( $msg['show_order_tracker'] ) || ( ! empty( $show_form['form_type'] ) && 'order_track' === $show_form['form_type'] && ! empty( $show_form['show'] ) ),

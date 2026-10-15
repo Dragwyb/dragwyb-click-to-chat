@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
-import Markdown from 'react-markdown';
 
 /**
  * Safely decode HTML entities (e.g. &#8377; -> ₹) in strings for UI rendering.
@@ -26,38 +25,119 @@ function decodeHtmlEntities(str) {
 }
 
 /**
- * Auto-linkify bare URLs in markdown, leaving existing links/tags alone.
+ * Render message content as clean HTML structure for headings, strong, links, ul, ol lists etc.
+ * without paragraph wrap.
  *
- * @param {string} content Message content.
- * @return {string}
+ * @param {string} rawContent Message text or HTML.
+ * @return {string} Sanitized HTML string.
  */
-function linkifyContent(content) {
-	if (!content) {
+function renderMessageHtml(rawContent) {
+	if (!rawContent) {
 		return '';
 	}
 
-	const decoded = decodeHtmlEntities(content);
+	let content = decodeHtmlEntities(String(rawContent));
 
-	return decoded
-		.split(/(\[[^\]]+\]\([^)]+\)|<[^>]+>)/g)
+	// 1. Strip any <p> or </p> tags
+	content = content.replace(/<\/?p[^>]*>/gi, '<br />');
+
+	// 2. Headings: ### -> <h3>, #### -> <h4>
+	content = content.replace(/^#{1,3}\s+(.+)$/gm, '<h3>$1</h3>');
+	content = content.replace(/^#{4,6}\s+(.+)$/gm, '<h4>$1</h4>');
+
+	// 3. Bold / Strong: **text** or __text__
+	content = content.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+	content = content.replace(/__([^_\n]+)__/g, '<strong>$1</strong>');
+
+	// 4. Italic / Emphasis: *text* or _text_
+	content = content.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+	content = content.replace(/(?<![a-zA-Z0-9_])_([^_\n]+)_(?![a-zA-Z0-9_])/g, '<em>$1</em>');
+
+	// 5. Markdown links: [Anchor Text](URL) -> <a href="..." target="_blank" rel="noopener noreferrer">
+	content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, anchor, url) => {
+		const cleanUrl = url.trim();
+		return `<a href="${cleanUrl}" target="_blank" rel="noopener noreferrer">${anchor}</a>`;
+	});
+
+	// 6. Bare URLs (auto-link bare URLs not inside tags)
+	const parts = content.split(/(<[^>]+>)/g);
+	let inA = false;
+	content = parts
 		.map((part) => {
-			if (/^\[.+\]\(.+\)$/.test(part) || /^<.+>$/.test(part)) {
+			if (/^<a\b/i.test(part)) {
+				inA = true;
 				return part;
 			}
-
-			return part.replace(/(https?:\/\/[^\s\)<>"]+)/gi, (url) => {
+			if (/^<\/a>/i.test(part)) {
+				inA = false;
+				return part;
+			}
+			if (inA || /^<[^>]+>$/.test(part)) {
+				return part;
+			}
+			return part.replace(/(https?:\/\/[^\s<>"')]+)/gi, (url) => {
 				let clean = url;
 				let trailing = '';
-
-				if (/[.,;:!]$/.test(clean)) {
+				if (/[.,;:!?]$/.test(clean)) {
 					trailing = clean.slice(-1);
 					clean = clean.slice(0, -1);
 				}
-
-				return `[${clean}](${clean})${trailing}`;
+				return `<a href="${clean}" target="_blank" rel="noopener noreferrer">${clean}</a>${trailing}`;
 			});
 		})
 		.join('');
+
+	// 7. Lists (unordered * / - and ordered 1. 2.)
+	const lines = content.split('\n');
+	const out = [];
+	let listType = null;
+	let listItems = [];
+
+	const flushList = () => {
+		if (listItems.length > 0 && listType) {
+			out.push(`<${listType}>${listItems.map((li) => `<li>${li}</li>`).join('')}</${listType}>`);
+		}
+		listType = null;
+		listItems = [];
+	};
+
+	lines.forEach((line) => {
+		const trimmed = line.trim();
+		const ulMatch = trimmed.match(/^[*+-]\s+(.+)$/);
+		if (ulMatch) {
+			if (listType === 'ol') flushList();
+			listType = 'ul';
+			listItems.push(ulMatch[1].trim());
+			return;
+		}
+		const olMatch = trimmed.match(/^\d+\.\s+(.+)$/);
+		if (olMatch) {
+			if (listType === 'ul') flushList();
+			listType = 'ol';
+			listItems.push(olMatch[1].trim());
+			return;
+		}
+		if (listType) flushList();
+		out.push(line);
+	});
+	if (listType) flushList();
+	content = out.join('\n');
+
+	// 8. Line breaks: replace newlines with <br /> without wrapping in <p>
+	const blockTags = /^(<\/?(h[1-6]|ul|ol|li|pre|code|hr|blockquote)[^>]*>)/i;
+	content = content
+		.split('\n')
+		.map((l) => l.trim())
+		.filter((l, i, arr) => !(l === '' && arr[i - 1] === ''))
+		.map((l) => (blockTags.test(l) || l === '' ? l : `${l}<br />`))
+		.join('')
+		.replace(/(?:<br\s*\/?>){3,}/gi, '<br /><br />')
+		.replace(/<br\s*\/?>$/i, '');
+
+	// Ensure all existing <a> tags have target="_blank" and rel="noopener noreferrer"
+	content = content.replace(/<a\b(?![^>]*target=)([^>]*)>/gi, '<a target="_blank" rel="noopener noreferrer"$1>');
+
+	return content;
 }
 
 /**
@@ -1807,7 +1887,11 @@ export default function ChatWidget({ settings, inline }) {
 		}
 
 		window.speechSynthesis.cancel();
-		const cleanText = (text || '').replace(/[*_#`[\]()]/g, '');
+		const cleanText = (text || '')
+			.replace(/<[^>]+>/g, ' ')
+			.replace(/[*_#`[\]()]/g, '')
+			.replace(/\s+/g, ' ')
+			.trim();
 		const utterance = new SpeechSynthesisUtterance(cleanText);
 		if (chatbot?.voice_language && chatbot.voice_language !== 'auto') {
 			utterance.lang = chatbot.voice_language;
@@ -2792,22 +2876,6 @@ export default function ChatWidget({ settings, inline }) {
 		wrapperStyle.right = customSide === 'right' ? horizDist : 'auto';
 	}
 
-	const markdownComponents = {
-		a: ({ node, ...props }) => (
-			<a
-				{...props}
-				target="_blank"
-				rel="noopener noreferrer"
-			/>
-		),
-		p: ({ node, ...props }) => <p {...props} />,
-		h3: ({ node, ...props }) => <h3 {...props} />,
-		strong: ({ node, ...props }) => <strong {...props} />,
-		em: ({ node, ...props }) => <em {...props} />,
-		ul: ({ node, ...props }) => <ul {...props} />,
-		li: ({ node, ...props }) => <li {...props} />,
-		hr: ({ node, ...props }) => <hr {...props} />,
-	};
 
 	return (
 		<div
@@ -2882,13 +2950,16 @@ export default function ChatWidget({ settings, inline }) {
 										</div>
 									)}
 									<div className="dctc-ai-message dctc-ai-message-bot">
-										<div className="dctc-ai-message-content">
-											<Markdown components={markdownComponents}>
-												{!hasApiKey && isAdmin
-													? `👋 ${chatbot.greeting_msg}\n\n⚠️ **Action Required**: Please [configure your AI Provider API key](${settingsUrl}) in AI Assistant settings to enable responses.`
-													: linkifyContent(chatbot.greeting_msg)}
-											</Markdown>
-										</div>
+										<div
+											className="dctc-ai-message-content"
+											dangerouslySetInnerHTML={{
+												__html: renderMessageHtml(
+													!hasApiKey && isAdmin
+														? `👋 ${chatbot.greeting_msg}\n\n⚠️ **Action Required**: Please [configure your AI Provider API key](${settingsUrl}) in AI Assistant settings to enable responses.`
+														: (chatbot.greeting_msg || '')
+												),
+											}}
+										/>
 									</div>
 								</div>
 							)}
@@ -3040,11 +3111,12 @@ export default function ChatWidget({ settings, inline }) {
 										{/* 2. Text message bubble rendered directly below the attachments */}
 										{isBot ? (
 											<div className={'dctc-ai-message ' + roleClass}>
-												<div className="dctc-ai-message-content">
-													<Markdown components={markdownComponents}>
-														{linkifyContent(message.content)}
-													</Markdown>
-												</div>
+												<div
+													className="dctc-ai-message-content"
+													dangerouslySetInnerHTML={{
+														__html: renderMessageHtml(message.content),
+													}}
+												/>
 												{showSources &&
 													message.sources &&
 													message.sources.length > 0 && (
