@@ -15,10 +15,10 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 	 */
 	class DCTC_Error_Logger {
 
-		const TABLE_NAME        = 'dctc_error_logs';
-		const RETENTION_OPTION  = 'dctc_error_log_retention_days';
-		const CRON_HOOK         = 'dctc_cleanup_error_logs_cron';
-		const MAX_LOGS_LIMIT    = 500;
+		const TABLE_NAME       = 'dctc_error_logs';
+		const RETENTION_OPTION = 'dctc_error_log_retention_days';
+		const CRON_HOOK        = 'dctc_cleanup_error_logs_cron';
+		const MAX_LOGS_LIMIT   = 500;
 
 		/**
 		 * Prevent recursive writes while logging.
@@ -173,7 +173,7 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			if ( isset( $settings['chatbot']['enable_error_log'] ) ) {
 				return (bool) $settings['chatbot']['enable_error_log'];
 			}
-			return false;
+			return true;
 		}
 
 		/**
@@ -184,9 +184,19 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 		 * @param array  $context Optional context with provider, model, user_msg, file, line, code, etc.
 		 * @return bool True on success, false on failure.
 		 */
-		public static function log( $type, $message, $context = array() ) {
+		public static function log( $type, $message = '', $context = array() ) {
 			if ( self::$is_logging || ! self::is_enabled() ) {
 				return false;
+			}
+
+			// Support flexible calling patterns: log( $message, $context ) or log( $message ).
+			if ( is_array( $message ) && empty( $context ) ) {
+				$context = $message;
+				$message = $type;
+				$type    = 'Plugin Error';
+			} elseif ( empty( $message ) && ! empty( $type ) ) {
+				$message = $type;
+				$type    = 'Plugin Error';
 			}
 
 			self::$is_logging = true;
@@ -213,7 +223,10 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			$file = isset( $context['file'] ) ? self::relative_plugin_path( (string) $context['file'] ) : '';
 			$line = isset( $context['line'] ) ? absint( $context['line'] ) : 0;
 			$code = isset( $context['code'] ) ? sanitize_text_field( (string) $context['code'] ) : '';
-			$ctx  = isset( $context['context'] ) ? sanitize_text_field( (string) $context['context'] ) : '';
+
+			// Sanitize and limit context and user-agent string (SEC-014)
+			$raw_ctx = isset( $context['context'] ) ? (string) $context['context'] : ( isset( $context['user_agent'] ) ? (string) $context['user_agent'] : ( isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '' ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$ctx     = sanitize_text_field( substr( $raw_ctx, 0, 255 ) );
 
 			$data = array(
 				'error_type'   => sanitize_text_field( (string) $type ),
@@ -296,36 +309,36 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			$limit      = max( 1, min( absint( $limit ), self::MAX_LOGS_LIMIT ) );
 			$offset     = max( 0, absint( $offset ) );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching,  WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query = $wpdb->prepare(
-				"SELECT id, error_type, provider, model, user_message, model_error, file, line, code, context, created_at FROM {$table_name} ORDER BY id DESC LIMIT %d OFFSET %d",
+				"SELECT id, error_type, provider, model, user_message, model_error, file, line, code, context, created_at FROM {$table_name} ORDER BY id DESC LIMIT %d OFFSET %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$limit,
 				$offset
 			);
-			$rows = $wpdb->get_results( $query, ARRAY_A );
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+
+			$rows = $wpdb->get_results( $query, ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 			if ( ! is_array( $rows ) ) {
 				return array();
 			}
 
-			// Format rows for frontend compatibility.
+			// Format rows for frontend compatibility with strict output escaping.
 			return array_map(
 				static function ( $row ) {
 					return array(
 						'id'           => absint( $row['id'] ),
-						'type'         => $row['error_type'],
-						'error_type'   => $row['error_type'],
-						'provider'     => $row['provider'],
-						'model'        => $row['model'],
-						'user_message' => $row['user_message'] ? $row['user_message'] : '',
-						'model_error'  => $row['model_error'],
-						'message'      => $row['model_error'], // Backward compatibility alias.
-						'file'         => $row['file'],
+						'type'         => esc_html( $row['error_type'] ),
+						'error_type'   => esc_html( $row['error_type'] ),
+						'provider'     => esc_html( $row['provider'] ),
+						'model'        => esc_html( $row['model'] ),
+						'user_message' => $row['user_message'] ? esc_html( $row['user_message'] ) : '',
+						'model_error'  => esc_html( $row['model_error'] ),
+						'message'      => esc_html( $row['model_error'] ), // Backward compatibility alias.
+						'file'         => esc_html( $row['file'] ),
 						'line'         => absint( $row['line'] ),
-						'code'         => $row['code'],
-						'context'      => $row['context'] ? $row['context'] : '',
-						'created_at'   => $row['created_at'],
+						'code'         => esc_html( $row['code'] ),
+						'context'      => $row['context'] ? esc_html( $row['context'] ) : '',
+						'created_at'   => esc_html( $row['created_at'] ),
 					);
 				},
 				$rows
@@ -341,9 +354,8 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			global $wpdb;
 			$table_name = esc_sql( self::get_table_name() );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			$count = $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
 			return absint( $count );
 		}
@@ -357,9 +369,8 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			global $wpdb;
 			$table_name = esc_sql( self::get_table_name() );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$result = $wpdb->query( "TRUNCATE TABLE {$table_name}" );
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 			return false !== $result;
 		}
@@ -374,13 +385,12 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			global $wpdb;
 			$table_name = esc_sql( self::get_table_name() );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$result = $wpdb->delete(
 				$table_name,
 				array( 'id' => absint( $id ) ),
 				array( '%d' )
 			);
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 			return false !== $result;
 		}
@@ -406,7 +416,7 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 		 * @return bool
 		 */
 		public static function set_retention_days( $days ) {
-			$days = max( 0, absint( $days ) );
+			$days    = max( 0, absint( $days ) );
 			$updated = update_option( self::RETENTION_OPTION, $days );
 
 			// Keep chatbot settings in sync.
@@ -462,13 +472,13 @@ if ( ! class_exists( 'DCTC_Error_Logger' ) ) {
 			// Calculate cutoff date in MySQL format based on current site time.
 			$cutoff = gmdate( 'Y-m-d H:i:s', time() - ( $retention_days * DAY_IN_SECONDS ) );
 
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 			$query = $wpdb->prepare(
-				"DELETE FROM {$table_name} WHERE created_at < %s",
+				"DELETE FROM {$table_name} WHERE created_at < %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 				$cutoff
 			);
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
 			$deleted = $wpdb->query( $query );
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 			return is_numeric( $deleted ) ? absint( $deleted ) : 0;
 		}

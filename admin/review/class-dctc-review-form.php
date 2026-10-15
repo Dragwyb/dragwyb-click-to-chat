@@ -104,11 +104,15 @@ if ( ! class_exists( 'DCTC_Review_Form' ) ) {
 		public function dragwyb_ctc_review_dismiss() {
 			check_ajax_referer( 'dragwyb-ctc-review-nonce', 'nonce' );
 
+			if ( ! current_user_can( 'manage_options' ) ) {
+				wp_send_json_error( array( 'message' => esc_html__( 'Permission denied.', 'dragwyb-click-to-chat' ) ), 403 );
+			}
+
 			if ( isset( $_POST['dragwyb_ctc_review_dismiss'] ) ) {
 				update_option( 'dragwyb_ctc_already_reviewd', true );
 			}
 
-			exit;
+			wp_send_json_success();
 		}
 	}
 }

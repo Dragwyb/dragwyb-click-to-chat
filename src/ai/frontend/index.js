@@ -1,9 +1,11 @@
-/**
- * AI frontend chat widget bootstrap.
- */
-import { createElement, createRoot } from '@wordpress/element';
+import apiFetch from '@wordpress/api-fetch';
+import { createRoot } from '@wordpress/element';
 import ChatWidget from './ChatWidget';
 import './style.css';
+
+if ( window.dctc_ai_frontend_data?.nonce ) {
+	apiFetch.use( apiFetch.createNonceMiddleware( window.dctc_ai_frontend_data.nonce ) );
+}
 
 function mount() {
 	const root = document.getElementById( 'dctc-ai-frontend-root' );
@@ -15,10 +17,10 @@ function mount() {
 	const inline = root.getAttribute( 'data-inline' ) === 'true';
 
 	createRoot( root ).render(
-		createElement( ChatWidget, {
-			settings: window.dctc_ai_frontend_data?.settings,
-			inline,
-		} )
+		<ChatWidget
+			settings={ window.dctc_ai_frontend_data?.settings }
+			inline={ inline }
+		/>
 	);
 }
 

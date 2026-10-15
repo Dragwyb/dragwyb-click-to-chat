@@ -7,15 +7,15 @@
  * @package Dragwyb_Click_To_Chat
  */
 
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 /**
  * Class DCTC_AI_Indexer
  */
-class DCTC_AI_Indexer
-{
+class DCTC_AI_Indexer {
+
 
 	/**
 	 * Chunk Size (in characters)
@@ -48,17 +48,16 @@ class DCTC_AI_Indexer
 	/**
 	 * Constructor
 	 */
-	public function __construct()
-	{
+	public function __construct() {
 		$settings = $this->get_settings();
 
-		if (!empty($settings['indexing']['chunk_size'])) {
+		if ( ! empty( $settings['indexing']['chunk_size'] ) ) {
 			$this->chunk_size = intval(
 				$settings['indexing']['chunk_size']
 			);
 		}
 
-		if (!empty($settings['indexing']['chunk_overlap'])) {
+		if ( ! empty( $settings['indexing']['chunk_overlap'] ) ) {
 			$this->chunk_overlap = intval(
 				$settings['indexing']['chunk_overlap']
 			);
@@ -77,7 +76,7 @@ class DCTC_AI_Indexer
 
 		$config =
 			$settings['vector_db']
-			?? [];
+			?? array();
 
 		$this->vector_db =
 			DCTC_AI_Vector_DB_Factory::create(
@@ -91,244 +90,9 @@ class DCTC_AI_Indexer
 	 *
 	 * @return array
 	 */
-	private function get_settings()
-	{
+	private function get_settings() {
 		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		return isset($settings['rag']) ? $settings['rag'] : [];
-	}
-
-	/**
-	 * Index All Documents
-	 *
-	 * Indexes all configured post types.
-	 *
-	 * @return array Status of indexing operation
-	 */
-	public function index_all_documents()
-	{
-		$settings = $this->get_settings();
-		$sources = !empty($settings['post_types']) ? $settings['post_types'] : ['post', 'page'];
-
-		if (empty($sources)) {
-			return ['success' => false, 'message' => __('No indexing sources configured', 'dragwyb-click-to-chat')];
-		}
-
-		return $this->index_documents_by_type($sources);
-	}
-
-	/**
-	 * Index Documents by Specific Post Types
-	 *
-	 * @param array $post_types Array of post types to index.
-	 * @return array Status of indexing operation
-	 */
-	public function index_documents_by_type($post_types = [])
-	{
-		global $wpdb;
-
-		if (empty($post_types)) {
-			return [
-				'success' => false,
-				'message' => __('No post types specified', 'dragwyb-click-to-chat'),
-			];
-		}
-
-		$indexed = 0;
-		$failed = 0;
-		$errors = [];
-
-		$this->update_metadata(
-			'index_status',
-			'running'
-		);
-
-		$this->update_metadata(
-			'last_index_start',
-			current_time('mysql')
-		);
-
-		$registered_types = get_post_types();
-		$valid_post_types = array_filter(
-			array_intersect($post_types, $registered_types),
-			'post_type_exists'
-		);
-		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
-
-		/*
-		 * Clean up post types that are not selected or no longer registered
-		 */
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Direct query with safe dynamic table name.
-		$db_post_types = $wpdb->get_col("SELECT DISTINCT post_type FROM {$docs_table}");
-
-		if (!empty($db_post_types)) {
-			foreach ($db_post_types as $db_post_type) {
-				if (!in_array($db_post_type, $valid_post_types, true)) {
-					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
-					$doc_ids = $wpdb->get_col(
-						$wpdb->prepare(
-							"SELECT document_id FROM {$docs_table} WHERE post_type = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is dynamic but safe.
-							$db_post_type
-						)
-					);
-					if (!empty($doc_ids)) {
-						foreach ($doc_ids as $doc_id) {
-							$this->remove_document($doc_id);
-						}
-					}
-				}
-			}
-		}
-
-		foreach ($post_types as $post_type) {
-
-			if (!in_array($post_type, $registered_types, true) || !post_type_exists($post_type)) {
-				continue;
-			}
-
-			try {
-
-				$posts = get_posts(
-					[
-						'post_type' => sanitize_text_field(
-							$post_type
-						),
-						'post_status' => 'publish',
-						'posts_per_page' => -1,
-						'orderby' => 'ID',
-						'order' => 'ASC',
-						'suppress_filters' => false,
-					]
-				);
-
-				/*
-				 * Clean up stale or deleted/unpublished posts of this post type
-				 */
-				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database read.
-				$db_post_ids = $wpdb->get_col(
-					$wpdb->prepare(
-						"SELECT post_id FROM {$docs_table} WHERE post_type = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is dynamic but safe.
-						$post_type
-					)
-				);
-				$db_post_ids = array_map('intval', $db_post_ids);
-
-				$active_post_ids = [];
-				if (!empty($posts)) {
-					foreach ($posts as $post) {
-						if (!empty($post->ID)) {
-							$active_post_ids[] = intval($post->ID);
-						}
-					}
-				}
-
-				$posts_to_remove = array_diff($db_post_ids, $active_post_ids);
-				foreach ($posts_to_remove as $remove_post_id) {
-					$this->remove_document('post_' . $remove_post_id);
-				}
-
-				if (empty($posts)) {
-					continue;
-				}
-
-				foreach ($posts as $post) {
-
-					try {
-
-						if (
-							empty($post->ID)
-						) {
-							continue;
-						}
-
-						$result = $this->index_post(
-							$post
-						);
-
-						if ($result) {
-
-							$indexed++;
-
-						} else {
-
-							$failed++;
-
-							$errors[] =
-								'Failed Post ID: ' .
-								$post->ID;
-						}
-
-					} catch (Exception $e) {
-
-						$failed++;
-
-						$errors[] =
-							'Post ' .
-							$post->ID .
-							': ' .
-							$e->getMessage();
-					}
-				}
-
-			} catch (Exception $e) {
-
-				$failed++;
-
-				$errors[] =
-					'Post Type ' .
-					$post_type .
-					': ' .
-					$e->getMessage();
-
-			}
-		}
-
-		$this->update_metadata(
-			'last_index_time',
-			current_time('mysql')
-		);
-
-		$this->update_metadata(
-			'last_indexed_count',
-			$indexed
-		);
-
-		$this->update_metadata(
-			'last_failed_count',
-			$failed
-		);
-
-		$this->update_metadata(
-			'index_status',
-			'completed'
-		);
-
-		$message = sprintf(
-			'Indexed %d documents. Failed %d documents.',
-			$indexed,
-			$failed
-		);
-
-		if (!empty($errors)) {
-
-			$message .=
-				' First Errors: ' .
-				implode(
-					' | ',
-					array_slice(
-						$errors,
-						0,
-						3
-					)
-				);
-		}
-
-		return [
-			'success' => ($indexed > 0),
-			'indexed' => $indexed,
-			'failed' => $failed,
-			'errors' => $errors,
-			'message' => $message,
-		];
+		return isset( $settings['rag'] ) ? $settings['rag'] : array();
 	}
 
 	/**
@@ -337,27 +101,43 @@ class DCTC_AI_Indexer
 	 * @param WP_Post $post Post object.
 	 * @return bool Success status
 	 */
-	public function index_post($post)
-	{
+	public function index_post( $post ) {
 
-		if (!$post instanceof WP_Post) {
+		if ( ! $post instanceof WP_Post ) {
 			return false;
 		}
 
-		if ('publish' !== $post->post_status) {
+		if ( 'publish' !== $post->post_status ) {
+			return false;
+		}
+
+		// Security (SEC-008): Skip and purge password-protected posts from RAG index
+		if ( ! empty( $post->post_password ) ) {
+			$this->remove_document( 'post_' . $post->ID );
 			return false;
 		}
 
 		global $wpdb;
-		$chunks_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_chunks');
+		$chunks_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 
 		try {
 
 			$document_id = 'post_' . $post->ID;
 
+			$content_to_index  = $post->post_content;
+			$product_meta_text = '';
+
+			// If WooCommerce product, extract rich metadata (price, stock, SKU, attributes, categories)
+			if ( 'product' === $post->post_type && function_exists( 'wc_get_product' ) ) {
+				$product_meta_text = $this->get_product_metadata_text( $post->ID );
+				if ( ! empty( $product_meta_text ) ) {
+					$content_to_index .= "\n\n" . $product_meta_text;
+				}
+			}
+
 			$current_hash = md5(
 				$post->post_title .
-				$post->post_content
+				$content_to_index
 			);
 
 			$existing = $this->get_document(
@@ -366,38 +146,41 @@ class DCTC_AI_Indexer
 
 			if (
 				$existing &&
-				!empty($existing['hash']) &&
+				! empty( $existing['hash'] ) &&
 				$existing['hash'] === $current_hash
 			) {
 				return true;
 			}
 
+			// Clean up previous chunks and vectors to prevent obsolete/ghost chunks
+			$this->remove_document_chunks( $document_id );
+
 			/*
 			 * Store document
 			 */
 			$this->store_document(
-				[
+				array(
 					'document_id' => $document_id,
-					'post_id' => $post->ID,
-					'post_type' => $post->post_type,
-					'title' => $post->post_title,
-					'content' => $post->post_content,
-					'excerpt' => $post->post_excerpt,
-					'url' => get_permalink($post),
-					'hash' => $current_hash,
-					'indexed_at' => current_time('mysql'),
-				]
+					'post_id'     => $post->ID,
+					'post_type'   => $post->post_type,
+					'title'       => $post->post_title,
+					'content'     => $content_to_index,
+					'excerpt'     => $post->post_excerpt,
+					'url'         => get_permalink( $post ),
+					'hash'        => $current_hash,
+					'indexed_at'  => current_time( 'mysql' ),
+				)
 			);
 
 			/*
 			 * Create chunks
 			 */
 			$chunks = $this->chunk_content(
-				$post->post_content,
+				$content_to_index,
 				$post->post_title
 			);
 
-			if (empty($chunks)) {
+			if ( empty( $chunks ) ) {
 				return false;
 			}
 
@@ -407,7 +190,7 @@ class DCTC_AI_Indexer
 			$embedding_provider =
 				$this->embedding_provider;
 
-			if (!$embedding_provider) {
+			if ( ! $embedding_provider ) {
 
 				throw new Exception(
 					'Embedding provider missing.'
@@ -420,14 +203,14 @@ class DCTC_AI_Indexer
 			$vector_db =
 				$this->vector_db;
 
-			if (!$vector_db || is_wp_error($vector_db)) {
+			if ( ! $vector_db || is_wp_error( $vector_db ) ) {
 
 				throw new Exception(
 					'Vector DB missing.'
 				);
 			}
 
-			foreach ($chunks as $index => $chunk_data) {
+			foreach ( $chunks as $index => $chunk_data ) {
 
 				/*
 				 * Save chunk
@@ -438,15 +221,15 @@ class DCTC_AI_Indexer
 					$chunk_data
 				);
 
-				if (empty($chunk_id)) {
+				if ( empty( $chunk_id ) ) {
 					continue;
 				}
 
-				$content = is_array($chunk_data)
-					? ($chunk_data['content'] ?? '')
+				$content = is_array( $chunk_data )
+					? ( $chunk_data['content'] ?? '' )
 					: $chunk_data;
 
-				if (empty($content)) {
+				if ( empty( $content ) ) {
 					continue;
 				}
 
@@ -460,8 +243,8 @@ class DCTC_AI_Indexer
 						);
 
 				if (
-					empty($embedding) ||
-					!is_array($embedding)
+					empty( $embedding ) ||
+					! is_array( $embedding )
 				) {
 
 					throw new Exception(
@@ -480,7 +263,7 @@ class DCTC_AI_Indexer
 						$document_id
 					);
 
-				if (is_wp_error($result)) {
+				if ( is_wp_error( $result ) ) {
 
 					throw new Exception(
 						'Vector storage failed: ' .
@@ -495,19 +278,19 @@ class DCTC_AI_Indexer
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table status.
 				$wpdb->update(
 					$chunks_table,
-					[
+					array(
 						'embedding_status' => 'completed',
-						'vector_id' => (string) $chunk_id,
-					],
-					[
+						'vector_id'        => (string) $chunk_id,
+					),
+					array(
 						'id' => $chunk_id,
-					]
+					)
 				);
 			}
 
 			return true;
 
-		} catch (Exception $e) {
+		} catch ( Exception $e ) {
 			throw $e;
 		}
 	}
@@ -521,24 +304,23 @@ class DCTC_AI_Indexer
 	 * @param string $title   Document title (prepended to content).
 	 * @return array Array of chunks
 	 */
-	private function chunk_content($content, $title = '')
-	{
+	private function chunk_content( $content, $title = '' ) {
 		// Combine title and content
 		$full_content = $title . "\n\n" . $content;
-		$full_content = wp_strip_all_tags($full_content);
-		$full_content = preg_replace('/\s+/', ' ', $full_content); // Normalize whitespace
+		$full_content = wp_strip_all_tags( $full_content );
+		$full_content = preg_replace( '/\s+/', ' ', $full_content ); // Normalize whitespace
 
-		$chunks = [];
-		$length = mb_strlen($full_content);
+		$chunks = array();
+		$length = mb_strlen( $full_content );
 
-		if ($length <= $this->chunk_size) {
-			return [
-				[
-					'content' => $full_content,
-					'chunk_hash' => md5($full_content),
-					'tokens_count' => $this->estimate_tokens($full_content),
-				]
-			];
+		if ( $length <= $this->chunk_size ) {
+			return array(
+				array(
+					'content'      => $full_content,
+					'chunk_hash'   => md5( $full_content ),
+					'tokens_count' => $this->estimate_tokens( $full_content ),
+				),
+			);
 		}
 
 		$start = 0;
@@ -546,21 +328,21 @@ class DCTC_AI_Indexer
 
 		// Guard against a misconfigured chunk_overlap >= chunk_size, which
 		// would make $start never advance and loop forever.
-		$effective_overlap = min($this->chunk_overlap, max(0, $this->chunk_size - 1));
+		$effective_overlap = min( $this->chunk_overlap, max( 0, $this->chunk_size - 1 ) );
 
-		while ($start < $length) {
-			$end = min($start + $this->chunk_size, $length);
-			$chunk = mb_substr($full_content, $start, $this->chunk_size);
-			$chunks[] = [
-				'content' => trim($chunk),
-				'chunk_index' => $index,
-				'chunk_hash' => md5($chunk),
-				'tokens_count' => $this->estimate_tokens($chunk),
-			];
+		while ( $start < $length ) {
+			$end      = min( $start + $this->chunk_size, $length );
+			$chunk    = mb_substr( $full_content, $start, $this->chunk_size );
+			$chunks[] = array(
+				'content'      => trim( $chunk ),
+				'chunk_index'  => $index,
+				'chunk_hash'   => md5( $chunk ),
+				'tokens_count' => $this->estimate_tokens( $chunk ),
+			);
 
 			// Move start position with overlap
-			$start += ($this->chunk_size - $effective_overlap);
-			$index++;
+			$start += ( $this->chunk_size - $effective_overlap );
+			++$index;
 		}
 
 		return $chunks;
@@ -574,9 +356,8 @@ class DCTC_AI_Indexer
 	 * @param string $text Text to estimate.
 	 * @return int Estimated token count
 	 */
-	private function estimate_tokens($text)
-	{
-		return ceil(strlen($text) / 4);
+	private function estimate_tokens( $text ) {
+		return ceil( strlen( $text ) / 4 );
 	}
 
 	/**
@@ -587,12 +368,11 @@ class DCTC_AI_Indexer
 	 * @param array $data Document data.
 	 * @return bool|int Document ID on success
 	 */
-	private function store_document($data)
-	{
+	private function store_document( $data ) {
 		global $wpdb;
 
 		try {
-			$table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
+			$table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 			$existing = $wpdb->get_row(
@@ -604,26 +384,26 @@ class DCTC_AI_Indexer
 
 			// (Continue directly to insert_data, update/insert handles $existing check below)
 
-			$insert_data = [
+			$insert_data = array(
 				'document_id' => $data['document_id'],
-				'post_id' => $data['post_id'],
-				'post_type' => $data['post_type'],
-				'title' => $data['title'],
-				'content' => $data['content'],
-				'excerpt' => $data['excerpt'],
-				'url' => $data['url'],
-				'hash' => $data['hash'],
-				'indexed_at' => $data['indexed_at'],
-			];
+				'post_id'     => $data['post_id'],
+				'post_type'   => $data['post_type'],
+				'title'       => $data['title'],
+				'content'     => $data['content'],
+				'excerpt'     => $data['excerpt'],
+				'url'         => $data['url'],
+				'hash'        => $data['hash'],
+				'indexed_at'  => $data['indexed_at'],
+			);
 
-			if ($existing) {
+			if ( $existing ) {
 				// Update
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table.
 				$wpdb->update(
 					$table,
 					$insert_data,
-					['document_id' => $data['document_id']],
-					['%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+					array( 'document_id' => $data['document_id'] ),
+					array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 				);
 				return $existing->id;
 			} else {
@@ -632,16 +412,16 @@ class DCTC_AI_Indexer
 				$result = $wpdb->insert(
 					$table,
 					$insert_data,
-					['%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s']
+					array( '%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s' )
 				);
-				if (false === $result) {
+				if ( false === $result ) {
 					return false;
 				}
 				return $wpdb->insert_id;
 			}
-		} catch (Exception $e) {
-			if (defined('WP_DEBUG') && WP_DEBUG) {
-				error_log('Dragwyb AI AI Indexer Store Document Error: ' . $e->getMessage()); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
+		} catch ( Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Dragwyb AI AI Indexer Store Document Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
 			}
 			return false;
 		}
@@ -657,8 +437,7 @@ class DCTC_AI_Indexer
 	 * @param array  $chunk_data  Chunk data.
 	 * @return bool|int Chunk ID on success
 	 */
-	private function store_chunk($document_id, $index, $chunk_data)
-	{
+	private function store_chunk( $document_id, $index, $chunk_data ) {
 
 		global $wpdb;
 
@@ -680,45 +459,45 @@ class DCTC_AI_Indexer
 				)
 			);
 
-			$insert_data = [
-				'document_id' => $document_id,
-				'chunk_index' => $index,
-				'content' => $chunk_data['content'] ?? '',
-				'chunk_hash' => $chunk_data['chunk_hash']
-					?? md5($chunk_data['content'] ?? ''),
-				'tokens_count' => $chunk_data['tokens_count']
+			$insert_data = array(
+				'document_id'      => $document_id,
+				'chunk_index'      => $index,
+				'content'          => $chunk_data['content'] ?? '',
+				'chunk_hash'       => $chunk_data['chunk_hash']
+					?? md5( $chunk_data['content'] ?? '' ),
+				'tokens_count'     => $chunk_data['tokens_count']
 					?? $this->estimate_tokens(
 						$chunk_data['content'] ?? ''
 					),
 				'embedding_status' => 'pending',
-			];
+			);
 
 			/*
 			 * Update existing chunk
 			 */
-			if ($existing) {
+			if ( $existing ) {
 
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table.
 				$result = $wpdb->update(
 					$table,
 					$insert_data,
-					[
+					array(
 						'id' => $existing,
-					],
-					[
+					),
+					array(
 						'%s',
 						'%d',
 						'%s',
 						'%s',
 						'%d',
 						'%s',
-					],
-					[
+					),
+					array(
 						'%d',
-					]
+					)
 				);
 
-				if (false === $result) {
+				if ( false === $result ) {
 					return false;
 				}
 
@@ -732,25 +511,25 @@ class DCTC_AI_Indexer
 			$result = $wpdb->insert(
 				$table,
 				$insert_data,
-				[
+				array(
 					'%s',
 					'%d',
 					'%s',
 					'%s',
 					'%d',
 					'%s',
-				]
+				)
 			);
 
-			if (false === $result) {
+			if ( false === $result ) {
 				return false;
 			}
 
 			return (int) $wpdb->insert_id;
 
-		} catch (Exception $e) {
-			if (defined('WP_DEBUG') && WP_DEBUG) {
-				error_log('Dragwyb AI AI Indexer Store Chunk Error: ' . $e->getMessage()); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
+		} catch ( Exception $e ) {
+			if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+				error_log( 'Dragwyb AI AI Indexer Store Chunk Error: ' . $e->getMessage() ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Allowed under WP_DEBUG constraint.
 			}
 			return false;
 		}
@@ -762,11 +541,10 @@ class DCTC_AI_Indexer
 	 * @param string $document_id Document ID.
 	 * @return array|null Document data or null
 	 */
-	private function get_document($document_id)
-	{
+	private function get_document( $document_id ) {
 		global $wpdb;
 
-		$table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
+		$table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 		$result = $wpdb->get_row(
@@ -781,19 +559,15 @@ class DCTC_AI_Indexer
 	}
 
 	/**
-	 * Remove Document
-	 *
-	 * Removes a document and its chunks.
+	 * Remove document chunks and associated vectors.
 	 *
 	 * @param string $document_id Document ID.
-	 * @return bool Success status
+	 * @return bool
 	 */
-	public function remove_document($document_id)
-	{
+	public function remove_document_chunks( $document_id ) {
 		global $wpdb;
 
-		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
-		$chunks_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_chunks');
+		$chunks_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 
 		// Get all chunk IDs first to delete from vector DB
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read query from custom table.
@@ -804,27 +578,133 @@ class DCTC_AI_Indexer
 			)
 		);
 
-		if (!empty($chunk_ids) && $this->vector_db && !is_wp_error($this->vector_db)) {
-			$this->vector_db->bulk_delete(array_map('intval', $chunk_ids));
+		if ( ! empty( $chunk_ids ) && $this->vector_db && ! is_wp_error( $this->vector_db ) ) {
+			$this->vector_db->bulk_delete( array_map( 'intval', $chunk_ids ) );
 		}
 
 		// Remove chunks
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct deletion from custom table.
 		$wpdb->delete(
 			$chunks_table,
-			['document_id' => $document_id],
-			['%s']
+			array( 'document_id' => $document_id ),
+			array( '%s' )
 		);
+
+		return true;
+	}
+
+	/**
+	 * Remove Document
+	 *
+	 * Removes a document and its chunks.
+	 *
+	 * @param string $document_id Document ID.
+	 * @return bool Success status
+	 */
+	public function remove_document( $document_id ) {
+		global $wpdb;
+
+		$docs_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
+
+		$this->remove_document_chunks( $document_id );
 
 		// Remove document
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct deletion from custom table.
 		$wpdb->delete(
 			$docs_table,
-			['document_id' => $document_id],
-			['%s']
+			array( 'document_id' => $document_id ),
+			array( '%s' )
 		);
 
 		return true;
+	}
+
+	/**
+	 * Extract rich product metadata for WooCommerce products.
+	 *
+	 * @param int $post_id Post ID.
+	 * @return string Formatted metadata text.
+	 */
+	private function get_product_metadata_text( $post_id ) {
+		if ( ! function_exists( 'wc_get_product' ) ) {
+			return '';
+		}
+
+		$product = wc_get_product( $post_id );
+		if ( ! $product ) {
+			return '';
+		}
+
+		$details         = array();
+		$currency_symbol = function_exists( 'get_woocommerce_currency_symbol' ) ? get_woocommerce_currency_symbol() : '$';
+
+		// Pricing
+		$price         = $product->get_price();
+		$regular_price = $product->get_regular_price();
+		$sale_price    = $product->get_sale_price();
+
+		if ( $product->is_on_sale() && ! empty( $sale_price ) ) {
+			$details[] = sprintf( 'Price: %s%s (Regular: %s%s, On Sale)', $currency_symbol, $sale_price, $currency_symbol, $regular_price );
+		} elseif ( ! empty( $price ) ) {
+			$details[] = sprintf( 'Price: %s%s', $currency_symbol, $price );
+		}
+
+		// SKU
+		$sku = $product->get_sku();
+		if ( ! empty( $sku ) ) {
+			$details[] = 'SKU: ' . $sku;
+		}
+
+		// Stock
+		$stock_status = $product->get_stock_status();
+		$stock_label  = ( 'instock' === $stock_status ) ? 'In Stock' : ( ( 'outofstock' === $stock_status ) ? 'Out of Stock' : 'On Backorder' );
+		if ( $product->managing_stock() ) {
+			$qty          = $product->get_stock_quantity();
+			$stock_label .= " ({$qty} available)";
+		}
+		$details[] = 'Stock Status: ' . $stock_label;
+
+		// Categories
+		$categories = wp_get_post_terms( $post_id, 'product_cat', array( 'fields' => 'names' ) );
+		if ( ! empty( $categories ) && ! is_wp_error( $categories ) ) {
+			$details[] = 'Categories: ' . implode( ', ', $categories );
+		}
+
+		// Tags
+		$tags = wp_get_post_terms( $post_id, 'product_tag', array( 'fields' => 'names' ) );
+		if ( ! empty( $tags ) && ! is_wp_error( $tags ) ) {
+			$details[] = 'Tags: ' . implode( ', ', $tags );
+		}
+
+		// Attributes
+		$attributes = $product->get_attributes();
+		if ( ! empty( $attributes ) ) {
+			$attr_strings = array();
+			foreach ( $attributes as $attribute ) {
+				if ( is_object( $attribute ) && method_exists( $attribute, 'get_name' ) ) {
+					$name    = function_exists( 'wc_attribute_label' ) ? wc_attribute_label( $attribute->get_name() ) : $attribute->get_name();
+					$options = array();
+					if ( method_exists( $attribute, 'is_taxonomy' ) && $attribute->is_taxonomy() ) {
+						$terms   = function_exists( 'wc_get_product_terms' ) ? wc_get_product_terms( $product->get_id(), $attribute->get_name(), array( 'fields' => 'names' ) ) : array();
+						$options = ! is_wp_error( $terms ) ? $terms : array();
+					} elseif ( method_exists( $attribute, 'get_options' ) ) {
+						$options = $attribute->get_options();
+					}
+					if ( ! empty( $options ) ) {
+						$attr_strings[] = $name . ': ' . implode( ', ', (array) $options );
+					}
+				}
+			}
+			if ( ! empty( $attr_strings ) ) {
+				$details[] = 'Attributes: ' . implode( '; ', $attr_strings );
+			}
+		}
+
+		if ( empty( $details ) ) {
+			return '';
+		}
+
+		return "Product Specifications & Details:\n- " . implode( "\n- ", $details );
 	}
 
 	/**
@@ -837,8 +717,7 @@ class DCTC_AI_Indexer
 	 * @param int $batch_size Maximum chunks to embed this call.
 	 * @return array Status with count of processed chunks and how many remain.
 	 */
-	public function generate_pending_embeddings($batch_size = 50)
-	{
+	public function generate_pending_embeddings( $batch_size = 50 ) {
 
 		global $wpdb;
 
@@ -856,21 +735,21 @@ class DCTC_AI_Indexer
 		$pending_chunks = $wpdb->get_results(
 			$wpdb->prepare(
 				"SELECT * FROM {$chunks_table} WHERE embedding_status = 'pending' LIMIT %d", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is dynamic but safe.
-				max(1, (int) $batch_size)
+				max( 1, (int) $batch_size )
 			),
 			ARRAY_A
 		);
 
-		if (empty($pending_chunks)) {
+		if ( empty( $pending_chunks ) ) {
 
-			$this->update_metadata('index_status', 'completed');
+			$this->update_metadata( 'index_status', 'completed' );
 
-			return [
+			return array(
 				'processed' => 0,
-				'failed' => 0,
+				'failed'    => 0,
 				'remaining' => 0,
-				'message' => __('No pending chunks found', 'dragwyb-click-to-chat'),
-			];
+				'message'   => __( 'No pending chunks found', 'dragwyb-click-to-chat' ),
+			);
 		}
 
 		$embedding_manager =
@@ -882,7 +761,7 @@ class DCTC_AI_Indexer
 
 		$config =
 			$settings['vector_db']
-			?? [];
+			?? array();
 
 		$vector_db =
 			DCTC_AI_Vector_DB_Factory::create(
@@ -890,25 +769,25 @@ class DCTC_AI_Indexer
 				$config
 			);
 
-		if (!$vector_db || is_wp_error($vector_db)) {
+		if ( ! $vector_db || is_wp_error( $vector_db ) ) {
 
-			return [
+			return array(
 				'processed' => 0,
-				'failed' => count($pending_chunks),
-				'message' => __('Failed to initialize vector database', 'dragwyb-click-to-chat'),
-			];
+				'failed'    => count( $pending_chunks ),
+				'message'   => __( 'Failed to initialize vector database', 'dragwyb-click-to-chat' ),
+			);
 		}
 
 		$processed = 0;
-		$failed = 0;
+		$failed    = 0;
 
-		foreach ($pending_chunks as $chunk) {
+		foreach ( $pending_chunks as $chunk ) {
 
 			try {
 
-				if (empty($chunk['content'])) {
+				if ( empty( $chunk['content'] ) ) {
 
-					$failed++;
+					++$failed;
 
 					continue;
 				}
@@ -922,22 +801,22 @@ class DCTC_AI_Indexer
 					);
 
 				if (
-					empty($embedding) ||
-					!is_array($embedding)
+					empty( $embedding ) ||
+					! is_array( $embedding )
 				) {
 
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table status.
 					$wpdb->update(
 						$chunks_table,
-						[
+						array(
 							'embedding_status' => 'failed',
-						],
-						[
+						),
+						array(
 							'id' => $chunk['id'],
-						]
+						)
 					);
 
-					$failed++;
+					++$failed;
 
 					continue;
 				}
@@ -952,19 +831,19 @@ class DCTC_AI_Indexer
 						$chunk['document_id'] ?? ''
 					);
 
-				if (is_wp_error($result)) {
+				if ( is_wp_error( $result ) ) {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table status.
 					$wpdb->update(
 						$chunks_table,
-						[
+						array(
 							'embedding_status' => 'failed',
-						],
-						[
+						),
+						array(
 							'id' => $chunk['id'],
-						]
+						)
 					);
 
-					$failed++;
+					++$failed;
 
 					continue;
 				}
@@ -975,40 +854,40 @@ class DCTC_AI_Indexer
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table status.
 				$wpdb->update(
 					$chunks_table,
-					[
+					array(
 						'embedding_status' => 'completed',
-						'vector_id' => $chunk['id'],
-					],
-					[
+						'vector_id'        => $chunk['id'],
+					),
+					array(
 						'id' => $chunk['id'],
-					]
+					)
 				);
 
-				$processed++;
+				++$processed;
 
-			} catch (Exception $e) {
+			} catch ( Exception $e ) {
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct update to custom table status.
 				$wpdb->update(
 					$chunks_table,
-					[
+					array(
 						'embedding_status' => 'failed',
-					],
-					[
+					),
+					array(
 						'id' => $chunk['id'],
-					]
+					)
 				);
 
-				$failed++;
+				++$failed;
 			}
 		}
 
 		// Lock only the counter read-modify-write, not the embedding calls
 		// above — those can safely run concurrently across ticks since each
 		// chunk row is updated independently by its own ID.
-		if ($this->acquire_index_lock()) {
+		if ( $this->acquire_index_lock() ) {
 			try {
-				$this->update_metadata('embed_processed', (int) $this->get_metadata('embed_processed', 0) + $processed);
-				$this->update_metadata('embed_failed', (int) $this->get_metadata('embed_failed', 0) + $failed);
+				$this->update_metadata( 'embed_processed', (int) $this->get_metadata( 'embed_processed', 0 ) + $processed );
+				$this->update_metadata( 'embed_failed', (int) $this->get_metadata( 'embed_failed', 0 ) + $failed );
 			} finally {
 				$this->release_index_lock();
 			}
@@ -1016,21 +895,21 @@ class DCTC_AI_Indexer
 
 		$remaining = $this->count_pending_embeddings();
 
-		if (0 === $remaining) {
-			$this->update_metadata('index_status', 'completed');
-			$this->update_metadata('last_index_time', current_time('mysql'));
+		if ( 0 === $remaining ) {
+			$this->update_metadata( 'index_status', 'completed' );
+			$this->update_metadata( 'last_index_time', current_time( 'mysql' ) );
 		}
 
-		return [
+		return array(
 			'processed' => $processed,
-			'failed' => $failed,
+			'failed'    => $failed,
 			'remaining' => $remaining,
-			'message' => sprintf(
+			'message'   => sprintf(
 				'Processed %d embeddings, failed %d',
 				$processed,
 				$failed
 			),
-		];
+		);
 	}
 
 	/**
@@ -1040,11 +919,10 @@ class DCTC_AI_Indexer
 	 * @param string $value Metadata value.
 	 * @return void
 	 */
-	private function update_metadata($key, $value)
-	{
+	private function update_metadata( $key, $value ) {
 		global $wpdb;
 
-		$table = esc_sql($wpdb->prefix . 'dctc_ai_rag_metadata');
+		$table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_metadata' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 		$wpdb->query(
@@ -1063,11 +941,10 @@ class DCTC_AI_Indexer
 	 * @param mixed  $default Default value if the key has no stored value.
 	 * @return mixed
 	 */
-	public function get_metadata($key, $default = null)
-	{
+	public function get_metadata( $key, $default = null ) {
 		global $wpdb;
 
-		$table = esc_sql($wpdb->prefix . 'dctc_ai_rag_metadata');
+		$table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_metadata' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 		$value = $wpdb->get_var(
@@ -1085,11 +962,10 @@ class DCTC_AI_Indexer
 	 *
 	 * @return int
 	 */
-	private function count_pending_embeddings()
-	{
+	private function count_pending_embeddings() {
 		global $wpdb;
 
-		$chunks_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_chunks');
+		$chunks_table = esc_sql( $wpdb->prefix . 'dctc_ai_rag_chunks' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct count on custom table.
 		return (int) $wpdb->get_var(
@@ -1108,31 +984,30 @@ class DCTC_AI_Indexer
 	 * @param array $post_types Post types to index.
 	 * @return array Queue summary, e.g. ['total' => 42].
 	 */
-	public function queue_index_job($post_types = [])
-	{
+	public function queue_index_job( $post_types = array() ) {
 		global $wpdb;
 
-		if (empty($post_types)) {
-			return [
-				'total' => 0,
+		if ( empty( $post_types ) ) {
+			return array(
+				'total'      => 0,
 				'candidates' => 0,
-				'reason' => 'no_post_types',
-			];
+				'reason'     => 'no_post_types',
+			);
 		}
 
 		$registered_types = get_post_types();
-		$valid_post_types = array_values(array_intersect($post_types, $registered_types));
-		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
+		$valid_post_types = array_values( array_intersect( $post_types, $registered_types ) );
+		$docs_table       = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
 		/*
 		 * Clean up post types that are not selected or no longer registered
 		 */
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Direct query with safe dynamic table name.
-		$db_post_types = $wpdb->get_col("SELECT DISTINCT post_type FROM {$docs_table}");
+		$db_post_types = $wpdb->get_col( "SELECT DISTINCT post_type FROM {$docs_table}" );
 
-		if (!empty($db_post_types)) {
-			foreach ($db_post_types as $db_post_type) {
-				if (!in_array($db_post_type, $valid_post_types, true)) {
+		if ( ! empty( $db_post_types ) ) {
+			foreach ( $db_post_types as $db_post_type ) {
+				if ( ! in_array( $db_post_type, $valid_post_types, true ) ) {
 					// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database query on custom table.
 					$doc_ids = $wpdb->get_col(
 						$wpdb->prepare(
@@ -1140,53 +1015,52 @@ class DCTC_AI_Indexer
 							$db_post_type
 						)
 					);
-					foreach ($doc_ids as $doc_id) {
-						$this->remove_document($doc_id);
+					foreach ( $doc_ids as $doc_id ) {
+						$this->remove_document( $doc_id );
 					}
 				}
 			}
 		}
 
-		$post_ids = [];
+		$post_ids = array();
 
-		foreach ($valid_post_types as $post_type) {
+		foreach ( $valid_post_types as $post_type ) {
 
 			$active_ids = get_posts(
-				[
-					'post_type' => sanitize_text_field($post_type),
-					'post_status' => 'publish',
-					'posts_per_page' => -1,
-					'orderby' => 'ID',
-					'order' => 'ASC',
-					'fields' => 'ids',
+				array(
+					'post_type'        => sanitize_text_field( $post_type ),
+					'post_status'      => 'publish',
+					'has_password'     => false,
+					'posts_per_page'   => -1,
+					'orderby'          => 'ID',
+					'order'            => 'ASC',
+					'fields'           => 'ids',
 					'suppress_filters' => false,
-				]
+				)
 			);
 
 			/*
 			 * Clean up stale or deleted/unpublished posts of this post type
 			 */
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database read.
 			$db_post_ids = array_map(
 				'intval',
-				$wpdb->get_col(
+				$wpdb->get_col( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct database read.
 					$wpdb->prepare(
 						"SELECT post_id FROM {$docs_table} WHERE post_type = %s", // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is dynamic but safe.
 						$post_type
 					)
 				)
 			);
-			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 
-			foreach (array_diff($db_post_ids, $active_ids) as $stale_id) {
-				$this->remove_document('post_' . $stale_id);
+			foreach ( array_diff( $db_post_ids, $active_ids ) as $stale_id ) {
+				$this->remove_document( 'post_' . $stale_id );
 			}
 
-			$post_ids = array_merge($post_ids, $active_ids);
+			$post_ids = array_merge( $post_ids, $active_ids );
 		}
 
-		$post_ids = array_values(array_unique(array_map('intval', $post_ids)));
-		$candidates = count($post_ids);
+		$post_ids   = array_values( array_unique( array_map( 'intval', $post_ids ) ) );
+		$candidates = count( $post_ids );
 
 		/*
 		 * Only queue posts that are actually new or whose content changed
@@ -1195,36 +1069,36 @@ class DCTC_AI_Indexer
 		 * being counted toward the progress total, so re-indexing after
 		 * adding one more post type reports only the genuinely new items.
 		 */
-		$queue_ids = $this->filter_new_or_changed($post_ids);
+		$queue_ids = $this->filter_new_or_changed( $post_ids );
 
-		$this->update_metadata('index_queue', wp_json_encode($queue_ids));
-		$this->update_metadata('index_status', empty($queue_ids) ? 'embedding' : 'indexing');
-		$this->update_metadata('index_total', count($queue_ids));
-		$this->update_metadata('index_processed', 0);
-		$this->update_metadata('index_indexed', 0);
-		$this->update_metadata('index_failed', 0);
-		$this->update_metadata('last_index_start', current_time('mysql'));
+		$this->update_metadata( 'index_queue', wp_json_encode( $queue_ids ) );
+		$this->update_metadata( 'index_status', empty( $queue_ids ) ? 'embedding' : 'indexing' );
+		$this->update_metadata( 'index_total', count( $queue_ids ) );
+		$this->update_metadata( 'index_processed', 0 );
+		$this->update_metadata( 'index_indexed', 0 );
+		$this->update_metadata( 'index_failed', 0 );
+		$this->update_metadata( 'last_index_start', current_time( 'mysql' ) );
 
-		if (empty($queue_ids)) {
-			$this->update_metadata('embed_total', $this->count_pending_embeddings());
-			$this->update_metadata('embed_processed', 0);
-			$this->update_metadata('embed_failed', 0);
+		if ( empty( $queue_ids ) ) {
+			$this->update_metadata( 'embed_total', $this->count_pending_embeddings() );
+			$this->update_metadata( 'embed_processed', 0 );
+			$this->update_metadata( 'embed_failed', 0 );
 		}
 
 		$reason = 'queued';
-		if (empty($valid_post_types)) {
+		if ( empty( $valid_post_types ) ) {
 			$reason = 'invalid_post_types';
-		} elseif (0 === $candidates) {
+		} elseif ( 0 === $candidates ) {
 			$reason = 'no_published_posts';
-		} elseif (empty($queue_ids)) {
+		} elseif ( empty( $queue_ids ) ) {
 			$reason = 'already_up_to_date';
 		}
 
-		return [
-			'total' => count($queue_ids),
+		return array(
+			'total'      => count( $queue_ids ),
 			'candidates' => $candidates,
-			'reason' => $reason,
-		];
+			'reason'     => $reason,
+		);
 	}
 
 	/**
@@ -1238,15 +1112,14 @@ class DCTC_AI_Indexer
 	 * @param array $post_ids Candidate post IDs (already filtered to active/published).
 	 * @return array Post IDs that are new or whose content changed.
 	 */
-	private function filter_new_or_changed(array $post_ids)
-	{
+	private function filter_new_or_changed( array $post_ids ) {
 		global $wpdb;
 
-		if (empty($post_ids)) {
-			return [];
+		if ( empty( $post_ids ) ) {
+			return array();
 		}
 
-		$id_placeholders = implode(',', array_fill(0, count($post_ids), '%d'));
+		$id_placeholders = implode( ',', array_fill( 0, count( $post_ids ), '%d' ) );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read to compute content hashes for diffing; wp_posts is core.
 		$posts = $wpdb->get_results(
@@ -1257,18 +1130,18 @@ class DCTC_AI_Indexer
 			ARRAY_A
 		);
 
-		if (empty($posts)) {
-			return [];
+		if ( empty( $posts ) ) {
+			return array();
 		}
 
-		$current_hashes = [];
-		foreach ($posts as $post_row) {
-			$current_hashes['post_' . $post_row['ID']] = md5($post_row['post_title'] . $post_row['post_content']);
+		$current_hashes = array();
+		foreach ( $posts as $post_row ) {
+			$current_hashes[ 'post_' . $post_row['ID'] ] = md5( $post_row['post_title'] . $post_row['post_content'] );
 		}
 
-		$document_ids = array_keys($current_hashes);
-		$doc_placeholders = implode(',', array_fill(0, count($document_ids), '%s'));
-		$docs_table = esc_sql($wpdb->prefix . 'dctc_ai_rag_documents');
+		$document_ids     = array_keys( $current_hashes );
+		$doc_placeholders = implode( ',', array_fill( 0, count( $document_ids ), '%s' ) );
+		$docs_table       = esc_sql( $wpdb->prefix . 'dctc_ai_rag_documents' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Direct read on custom table.
 		$existing_rows = $wpdb->get_results(
@@ -1279,17 +1152,17 @@ class DCTC_AI_Indexer
 			ARRAY_A
 		);
 
-		$existing_hashes = [];
-		foreach ($existing_rows as $row) {
-			$existing_hashes[$row['document_id']] = $row['hash'];
+		$existing_hashes = array();
+		foreach ( $existing_rows as $row ) {
+			$existing_hashes[ $row['document_id'] ] = $row['hash'];
 		}
 
-		$new_or_changed = [];
-		foreach ($posts as $post_row) {
+		$new_or_changed = array();
+		foreach ( $posts as $post_row ) {
 			$document_id = 'post_' . $post_row['ID'];
 			if (
-				!isset($existing_hashes[$document_id]) ||
-				$existing_hashes[$document_id] !== $current_hashes[$document_id]
+				! isset( $existing_hashes[ $document_id ] ) ||
+				$existing_hashes[ $document_id ] !== $current_hashes[ $document_id ]
 			) {
 				$new_or_changed[] = (int) $post_row['ID'];
 			}
@@ -1310,13 +1183,12 @@ class DCTC_AI_Indexer
 	 *
 	 * @return bool True if the lock was acquired.
 	 */
-	private function acquire_index_lock()
-	{
-		if (false !== get_transient('dctc_ai_indexing_lock')) {
+	private function acquire_index_lock() {
+		if ( false !== get_transient( 'dctc_ai_indexing_lock' ) ) {
 			return false;
 		}
 
-		set_transient('dctc_ai_indexing_lock', time(), 30);
+		set_transient( 'dctc_ai_indexing_lock', time(), 30 );
 
 		return true;
 	}
@@ -1326,9 +1198,8 @@ class DCTC_AI_Indexer
 	 *
 	 * @return void
 	 */
-	private function release_index_lock()
-	{
-		delete_transient('dctc_ai_indexing_lock');
+	private function release_index_lock() {
+		delete_transient( 'dctc_ai_indexing_lock' );
 	}
 
 	/**
@@ -1343,70 +1214,69 @@ class DCTC_AI_Indexer
 	 * @param int $batch_size Number of posts to process this call.
 	 * @return array ['remaining' => int, 'indexed' => int, 'failed' => int]
 	 */
-	public function process_index_batch($batch_size = 5)
-	{
-		if (!$this->acquire_index_lock()) {
+	public function process_index_batch( $batch_size = 5 ) {
+		if ( ! $this->acquire_index_lock() ) {
 			// Another tick is actively writing the queue right now — skip
 			// this run untouched; the caller's existing "remaining > 0"
 			// reschedule logic will simply retry a few seconds later.
-			return [
-				'remaining' => count((array) json_decode((string) $this->get_metadata('index_queue', '[]'), true)),
-				'indexed' => 0,
-				'failed' => 0,
-			];
+			return array(
+				'remaining' => count( (array) json_decode( (string) $this->get_metadata( 'index_queue', '[]' ), true ) ),
+				'indexed'   => 0,
+				'failed'    => 0,
+			);
 		}
 
 		try {
-			$queue = json_decode((string) $this->get_metadata('index_queue', '[]'), true);
+			$queue = json_decode( (string) $this->get_metadata( 'index_queue', '[]' ), true );
 
-			if (!is_array($queue)) {
-				$queue = [];
+			if ( ! is_array( $queue ) ) {
+				$queue = array();
 			}
 
-			$batch = array_splice($queue, 0, max(1, (int) $batch_size));
+			$batch = array_splice( $queue, 0, max( 1, (int) $batch_size ) );
 
 			$indexed = 0;
-			$failed = 0;
+			$failed  = 0;
 
-			foreach ($batch as $post_id) {
+			foreach ( $batch as $post_id ) {
 
-				$post = get_post((int) $post_id);
+				$post = get_post( (int) $post_id );
 
-				if (!$post) {
+				if ( ! $post ) {
 					continue;
 				}
 
 				try {
-					if ($this->index_post($post)) {
-						$indexed++;
+					if ( $this->index_post( $post ) ) {
+						++$indexed;
 					} else {
-						$failed++;
+						++$failed;
 					}
-				} catch (Exception $e) {
-					$failed++;
+				} catch ( Exception $e ) {
+					++$failed;
 				}
 			}
 
-			$this->update_metadata('index_queue', wp_json_encode($queue));
-			$this->update_metadata('index_processed', (int) $this->get_metadata('index_processed', 0) + count($batch));
-			$this->update_metadata('index_indexed', (int) $this->get_metadata('index_indexed', 0) + $indexed);
-			$this->update_metadata('index_failed', (int) $this->get_metadata('index_failed', 0) + $failed);
+			$this->update_metadata( 'index_queue', wp_json_encode( $queue ) );
+			$this->update_metadata( 'index_processed', (int) $this->get_metadata( 'index_processed', 0 ) + count( $batch ) );
+			$this->update_metadata( 'index_indexed', (int) $this->get_metadata( 'index_indexed', 0 ) + $indexed );
+			$this->update_metadata( 'index_failed', (int) $this->get_metadata( 'index_failed', 0 ) + $failed );
 
-			$remaining = count($queue);
+			$remaining = count( $queue );
 
-			if (0 === $remaining) {
-				$this->update_metadata('index_status', 'embedding');
-				$this->update_metadata('embed_total', $this->count_pending_embeddings());
-				$this->update_metadata('embed_processed', 0);
-				$this->update_metadata('embed_failed', 0);
-				$this->update_metadata('last_index_time', current_time('mysql'));
+			if ( 0 === $remaining ) {
+				$this->update_metadata( 'index_status', 'embedding' );
+				$this->update_metadata( 'embed_total', $this->count_pending_embeddings() );
+				$this->update_metadata( 'embed_processed', 0 );
+				$this->update_metadata( 'embed_failed', 0 );
+				$this->update_metadata( 'last_index_time', current_time( 'mysql' ) );
 			}
 
-			return [
+			return array(
 				'remaining' => $remaining,
-				'indexed' => $indexed,
-				'failed' => $failed,
-			];
+				'indexed'   => $indexed,
+				'failed'    => $failed,
+			);
 		} finally {
 			$this->release_index_lock();
 		}
@@ -1420,19 +1290,18 @@ class DCTC_AI_Indexer
 	 *
 	 * @return array
 	 */
-	public function get_index_progress()
-	{
-		return [
-			'status' => (string) $this->get_metadata('index_status', 'idle'),
-			'docs_total' => (int) $this->get_metadata('index_total', 0),
-			'docs_processed' => (int) $this->get_metadata('index_processed', 0),
-			'docs_indexed' => (int) $this->get_metadata('index_indexed', 0),
-			'docs_failed' => (int) $this->get_metadata('index_failed', 0),
-			'embed_total' => (int) $this->get_metadata('embed_total', 0),
-			'embed_processed' => (int) $this->get_metadata('embed_processed', 0),
-			'embed_failed' => (int) $this->get_metadata('embed_failed', 0),
-			'last_index_start' => (string) $this->get_metadata('last_index_start', ''),
-			'last_index_time' => (string) $this->get_metadata('last_index_time', ''),
-		];
+	public function get_index_progress() {
+		return array(
+			'status'           => (string) $this->get_metadata( 'index_status', 'idle' ),
+			'docs_total'       => (int) $this->get_metadata( 'index_total', 0 ),
+			'docs_processed'   => (int) $this->get_metadata( 'index_processed', 0 ),
+			'docs_indexed'     => (int) $this->get_metadata( 'index_indexed', 0 ),
+			'docs_failed'      => (int) $this->get_metadata( 'index_failed', 0 ),
+			'embed_total'      => (int) $this->get_metadata( 'embed_total', 0 ),
+			'embed_processed'  => (int) $this->get_metadata( 'embed_processed', 0 ),
+			'embed_failed'     => (int) $this->get_metadata( 'embed_failed', 0 ),
+			'last_index_start' => (string) $this->get_metadata( 'last_index_start', '' ),
+			'last_index_time'  => (string) $this->get_metadata( 'last_index_time', '' ),
+		);
 	}
 }

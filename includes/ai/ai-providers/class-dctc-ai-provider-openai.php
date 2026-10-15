@@ -1,0 +1,264 @@
+<?php
+/**
+ * DCTC AI Provider: OpenAI
+ *
+ * Adapter for OpenAI Chat Completions & Embeddings APIs.
+ *
+ * @package Dragwyb_Click_To_Chat
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+require_once __DIR__ . '/class-dctc-ai-provider-base.php';
+
+class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
+
+	public function get_id() {
+		return 'openai';
+	}
+
+	public function get_name() {
+		return 'OpenAI';
+	}
+
+	public function chat( $prompt, $system_message, $model, array $options = array() ) {
+		$key = $this->get_api_key();
+		if ( empty( $key ) ) {
+			throw new \Exception( esc_html__( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$model       = ! empty( $model ) ? $model : 'gpt-4o-mini';
+		$temperature = isset( $options['temperature'] ) ? floatval( $options['temperature'] ) : 0.7;
+		$max_tokens  = isset( $options['max_tokens'] ) ? intval( $options['max_tokens'] ) : 500;
+
+		// Use WP AI Client if available, else direct HTTP.
+		if ( class_exists( '\WordPress\AiClient\AiClient' ) ) {
+			try {
+				$registry = \WordPress\AiClient\AiClient::defaultRegistry();
+				$auth     = new \WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication( $key );
+				$registry->setProviderRequestAuthentication( 'openai', $auth );
+
+				$model_obj = null;
+				try {
+					$model_obj = $registry->getProviderModel( 'openai', $model );
+				} catch ( \Throwable $t ) {
+					// Fallback if model not in directory
+				}
+
+				$builder = \WordPress\AiClient\AiClient::prompt( trim( $prompt ) );
+				$builder->usingRequestOptions(
+					\WordPress\AiClient\Providers\Http\DTO\RequestOptions::fromArray(
+						array(
+							\WordPress\AiClient\Providers\Http\DTO\RequestOptions::KEY_TIMEOUT => 60,
+						)
+					)
+				);
+
+				if ( $model_obj ) {
+					$builder->usingModel( $model_obj );
+				} else {
+					$builder->usingProvider( 'openai' );
+				}
+
+				$result = $builder
+					->usingSystemInstruction( $system_message )
+					->usingTemperature( $temperature )
+					->usingMaxTokens( $max_tokens )
+					->generateTextResult();
+
+				$text = trim( $result->toText() );
+				if ( ! empty( $text ) ) {
+					return $text;
+				}
+			} catch ( \Throwable $e ) {
+				$error_message = current_user_can( 'manage_options' ) ? $e->getMessage() : esc_html__( 'OpenAI API returned an empty response.', 'dragwyb-click-to-chat' );
+				throw new \Exception( esc_html( $error_message ) );
+			}
+		} else {
+			// Direct HTTP fallback
+			$messages = array();
+			if ( ! empty( $system_message ) ) {
+				$messages[] = array(
+					'role'    => 'system',
+					'content' => $system_message,
+				);
+			}
+
+			$attachments = isset( $options['attachments'] ) && is_array( $options['attachments'] ) ? $options['attachments'] : array();
+			if ( ! empty( $attachments ) ) {
+				$user_content = array();
+				if ( ! empty( $prompt ) ) {
+					$user_content[] = array(
+						'type' => 'text',
+						'text' => trim( $prompt ),
+					);
+				}
+				foreach ( $attachments as $att ) {
+					if ( ! empty( $att['type'] ) && $att['type'] === 'image' && ! empty( $att['url'] ) ) {
+						$user_content[] = array(
+							'type'      => 'image_url',
+							'image_url' => array( 'url' => esc_url_raw( $att['url'] ) ),
+						);
+					} elseif ( ! empty( $att['name'] ) ) {
+						$user_content[] = array(
+							'type' => 'text',
+							'text' => sprintf( '[Attached File: %s (%s) - %s]', sanitize_file_name( $att['name'] ), sanitize_text_field( $att['mime'] ?? '' ), esc_url_raw( $att['url'] ?? '' ) ),
+						);
+					}
+				}
+				$messages[] = array(
+					'role'    => 'user',
+					'content' => $user_content,
+				);
+			} else {
+				$messages[] = array(
+					'role'    => 'user',
+					'content' => trim( $prompt ),
+				);
+			}
+
+			$payload = array(
+				'model'       => $model,
+				'messages'    => $messages,
+				'temperature' => $temperature,
+				'max_tokens'  => $max_tokens,
+			);
+
+			$response = $this->http_post(
+				'https://api.openai.com/v1/chat/completions', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- fallback option If WP AI not available
+				$payload,
+				array( 'Authorization' => 'Bearer ' . $key )
+			);
+
+			if ( isset( $response['choices'][0]['message']['content'] ) ) {
+				return trim( $response['choices'][0]['message']['content'] );
+			}
+		}
+
+		throw new \Exception( esc_html__( 'OpenAI returned an empty response.', 'dragwyb-click-to-chat' ) );
+	}
+
+	public function embed( array $texts, $model = '' ) {
+		$key = $this->get_api_key();
+		if ( empty( $key ) ) {
+			throw new \Exception( esc_html__( 'OpenAI API key is missing.', 'dragwyb-click-to-chat' ) );
+		}
+
+		$model = ! empty( $model ) ? $model : 'text-embedding-3-small';
+
+		$payload = array(
+			'model' => $model,
+			'input' => $texts,
+		);
+
+		$response = $this->http_post(
+			'https://api.openai.com/v1/embeddings', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
+			$payload,
+			array( 'Authorization' => 'Bearer ' . $key )
+		);
+
+		if ( isset( $response['data'] ) && is_array( $response['data'] ) ) {
+			$vectors = array();
+			foreach ( $response['data'] as $item ) {
+				if ( isset( $item['embedding'] ) ) {
+					$vectors[] = $item['embedding'];
+				}
+			}
+			return $vectors;
+		}
+
+		throw new \Exception( esc_html__( 'Failed to generate embeddings with OpenAI.', 'dragwyb-click-to-chat' ) );
+	}
+
+	public function get_models( $api_key = null ) {
+		$key = null !== $api_key ? trim( (string) $api_key ) : $this->get_api_key();
+		if ( empty( $key ) ) {
+			return $this->get_static_models();
+		}
+
+		$cache_key = 'dctc_ai_models_openai_' . md5( $key );
+		if ( null === $api_key ) {
+			$cached = get_transient( $cache_key );
+			if ( false !== $cached && is_array( $cached ) ) {
+				return $cached;
+			}
+		}
+
+		if ( null !== $api_key ) {
+			try {
+				$response = $this->http_get(
+					'https://api.openai.com/v1/models', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint validate API key from dashboard
+					array(
+						'Authorization' => 'Bearer ' . $key,
+					),
+					15
+				);
+
+				if ( isset( $response['data'] ) && is_array( $response['data'] ) ) {
+					$models = array();
+					foreach ( $response['data'] as $m ) {
+						if ( isset( $m['id'] ) ) {
+							$models[ $m['id'] ] = $m['id'];
+						}
+					}
+					if ( ! empty( $models ) ) {
+						return $models;
+					}
+				}
+				throw new \Exception( esc_html__( 'Invalid OpenAI API key or unable to fetch models.', 'dragwyb-click-to-chat' ) );
+			} catch ( \Throwable $e ) {
+				throw $e;
+			}
+		}
+
+		if ( class_exists( '\WordPress\AiClient\AiClient' ) ) {
+			try {
+				$registry  = \WordPress\AiClient\AiClient::defaultRegistry();
+				$className = $registry->getProviderClassName( 'openai' );
+				$auth      = new \WordPress\AiClient\Providers\Http\DTO\ApiKeyRequestAuthentication( $key );
+				$registry->setProviderRequestAuthentication( 'openai', $auth );
+
+				$modelDirectory = $className::modelMetadataDirectory();
+				$models         = array();
+				foreach ( $modelDirectory->listModelMetadata() as $m ) {
+					$models[ $m->getId() ] = $m->getName();
+				}
+				if ( ! empty( $models ) ) {
+					set_transient( $cache_key, $models, HOUR_IN_SECONDS );
+					return $models;
+				}
+			} catch ( \Throwable $e ) {
+				// Fall through to static
+			}
+		}
+
+		$models = $this->get_static_models();
+		set_transient( $cache_key, $models, HOUR_IN_SECONDS );
+		return $models;
+	}
+
+	public function validate_key( $api_key ) {
+		if ( empty( $api_key ) ) {
+			return new \WP_Error( 'empty_key', __( 'OpenAI API key cannot be empty.', 'dragwyb-click-to-chat' ) );
+		}
+
+		try {
+			$this->get_models( $api_key );
+			return true;
+		} catch ( \Throwable $e ) {
+			return new \WP_Error( 'invalid_key', $e->getMessage() );
+		}
+	}
+
+	private function get_static_models() {
+		return array(
+			'gpt-4o-mini'   => 'GPT-4o Mini (Fast & Affordable)',
+			'gpt-4o'        => 'GPT-4o (Flagship Omni)',
+			'gpt-4.1-turbo' => 'GPT-4.1 Turbo',
+			'o3-mini'       => 'o3 Mini (High Reasoning)',
+			'gpt-3.5-turbo' => 'GPT-3.5 Turbo',
+		);
+	}
+}

@@ -6,7 +6,7 @@
     'use strict';
 
     let currentStep = 0;
-    const totalSteps = 4;
+    const totalSteps = 3;
 
     const DCTC_Admin = {
 
@@ -25,11 +25,10 @@
             $('#dctc-next-btn').on('click', this.nextStep.bind(this));
             $('#dctc-back-btn').on('click', this.prevStep.bind(this));
 
-            // Save button
-            $('#dctc-save-btn').on('click', this.saveSettings.bind(this));
+            // Save buttons (Footer and Header)
+            $('#dctc-save-btn, #dctc-header-save-btn').on('click', this.saveSettings.bind(this));
 
             // Listen for changes on all inputs that affect the preview
-            // Note: section-channels.php has its own click handler for cards, 
             $(document).on('change input',
                 'input[name^="dctc_"], select[name^="dctc_"]',
                 this.updatePreview.bind(this)
@@ -40,6 +39,7 @@
                 setTimeout(() => {
                     this.updatePreview();
                     this.updateShowWidgetHint();
+                    this.updateChannelsCountBadge();
                 }, 50);
             });
 
@@ -237,8 +237,8 @@
 
             currentStep = step;
 
-            // Update tabs
-            $('.dctc-tab').removeClass('active').eq(step).addClass('active');
+            // Update tabs and accessibility
+            $('.dctc-tab').removeClass('active').attr('aria-selected', 'false').eq(step).addClass('active').attr('aria-selected', 'true');
 
             // Update sections
             $('.dctc-section').removeClass('active').eq(step).addClass('active');
@@ -290,6 +290,11 @@
             } else {
                 $hint.hide();
             }
+        },
+
+        updateChannelsCountBadge: function () {
+            const count = $('.dctc-channel-card.active').length;
+            $('#dctc-active-channels-badge').text(count + ' Channels Enabled');
         },
 
         // Removed toggleChannel logic as it is handled in section-channels.php 
@@ -452,7 +457,7 @@
             }
 
             let btnHtml = '';
-            if (isSingleChannel || showLauncher) {
+            if ((isSingleChannel || showLauncher) && activeChannels.length > 0) {
                 btnHtml = `
                     <div class="dctc-widget-btn-preview${isSingleChannel ? ' dctc-single-channel-preview' : ''}" style="${btnCss}">
                         <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
@@ -473,7 +478,7 @@
                         overflow: hidden;
                         background-color: #fff; 
                         border: 1px solid #e5e7eb;
-                        height: 400px;
+                        height: 100%;
                     }
                     .dctc-widget-btn-preview svg { fill: currentColor; width: 100%; height: 100%; }
                     .dctc-widget-btn-preview.dctc-single-channel-preview svg { fill: #fff; width: 24px; height: 24px; }
@@ -514,11 +519,11 @@
         saveSettings: function (e) {
             e.preventDefault();
 
-            const $btn = $(e.currentTarget);
-            const originalText = $btn.html();
+            const $btns = $('#dctc-save-btn, #dctc-header-save-btn');
+            const originalHtml = $btns.first().html();
 
-            // Disable button and show loading
-            $btn.prop('disabled', true).addClass('loading');
+            // Disable buttons and show loading
+            $btns.prop('disabled', true).addClass('loading').html('<span class="dashicons dashicons-update spin" style="margin-right: 4px; font-size: 16px; width: 16px; height: 16px; display: inline-block; animation: dctcSpin 1s linear infinite;"></span> ' + (dctc_admin.saving_text || 'Saving...'));
 
             // Collect form data
             const formData = {
@@ -581,7 +586,6 @@
             // Triggers and targeting settings
             formData.show_on_desktop = $('#dctc_show_on_desktop').is(':checked') ? '1' : '0';
             formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
-            formData.show_on_mobile = $('#dctc_show_on_mobile').is(':checked') ? '1' : '0';
             formData.time_delay = $('#dctc_time_delay').val();
 
             // Display Rules
@@ -593,6 +597,7 @@
                 postTypes.push($(this).val());
             });
             formData['dctc_display_post_types[]'] = postTypes;
+
 
             // AJAX save
             $.ajax({
@@ -614,19 +619,55 @@
                     alert('Error saving settings. Please try again.');
                 },
                 complete: function () {
-                    // Re-enable button and remove loading state
-                    $btn.prop('disabled', false).removeClass('loading').html(originalText);
+                    // Re-enable buttons and restore original text
+                    $btns.prop('disabled', false).removeClass('loading').html(originalHtml);
                 }
             });
         },
 
-        showSuccessMessage: function (message) {
-            const $msg = $('.dctc-success-message');
-            $msg.text(message).addClass('show');
+        showSuccessMessage: function (message, type = 'success') {
+            let $msg = $('.dctc-success-message');
+            if ($msg.length === 0) {
+                $msg = $('<div class="dctc-success-message" role="alert"></div>');
+                $('body').append($msg);
+            }
 
-            setTimeout(function () {
-                $msg.removeClass('show');
-            }, 3000);
+            if ($msg.data('timer')) {
+                clearTimeout($msg.data('timer'));
+                $msg.removeData('timer');
+            }
+
+            const iconClass = type === 'error' ? 'dashicons-warning' : (type === 'info' ? 'dashicons-info' : 'dashicons-yes-alt');
+
+            $msg.removeClass('is-hiding')
+                .html(`
+                    <span class="dashicons ${iconClass}"></span>
+                    <span class="dctc-success-message-text">${message}</span>
+                    <button type="button" class="dctc-toast-close-btn" aria-label="Close">
+                        <span class="dashicons dashicons-no-alt"></span>
+                    </button>
+                `)
+                .addClass('show');
+
+            const dismissToast = function () {
+                if ($msg.data('timer')) {
+                    clearTimeout($msg.data('timer'));
+                    $msg.removeData('timer');
+                }
+                $msg.addClass('is-hiding');
+                setTimeout(function () {
+                    $msg.removeClass('show is-hiding').empty();
+                }, 250);
+            };
+
+            $msg.find('.dctc-toast-close-btn').off('click').on('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dismissToast();
+            });
+
+            const timer = setTimeout(dismissToast, 4000);
+            $msg.data('timer', timer);
         },
 
         loadCurrentStep: function () {

@@ -16,9 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class DCTC_Settings_Import_Export {
 
-	const OPTION_CHANNELS = 'dctc_settings';
-	const OPTION_AI       = 'dctc_ai_chat_assistant_settings';
-	const MAX_UPLOAD_BYTES = 2097152; // 2MB.
+	const OPTION_CHANNELS  = 'dctc_settings';
+	const OPTION_AI        = 'dctc_ai_chat_assistant_settings';
+	const OPTION_SUPPORT   = 'dctc_support_settings';
+	const MAX_UPLOAD_BYTES = 52428800; // 50MB for data exports.
 
 	/**
 	 * Allowed export / import formats.
@@ -35,7 +36,7 @@ class DCTC_Settings_Import_Export {
 	 * @return string[]
 	 */
 	public static function dctc_allowed_modules() {
-		return array( 'channels', 'ai' );
+		return array( 'channels', 'ai', 'support', 'ai_data', 'support_data' );
 	}
 
 	/**
@@ -69,7 +70,7 @@ class DCTC_Settings_Import_Export {
 		if ( empty( $modules ) ) {
 			return new WP_Error(
 				'dctc_ie_no_modules',
-				__( 'Select at least one module to export.', 'dragwyb-click-to-chat' )
+				__( 'Select at least one module or dataset to export.', 'dragwyb-click-to-chat' )
 			);
 		}
 
@@ -82,7 +83,7 @@ class DCTC_Settings_Import_Export {
 		);
 
 		if ( in_array( 'channels', $modules, true ) ) {
-			$channels = get_option( self::OPTION_CHANNELS, array() );
+			$channels            = get_option( self::OPTION_CHANNELS, array() );
 			$payload['channels'] = is_array( $channels ) ? $channels : array();
 		}
 
@@ -92,6 +93,69 @@ class DCTC_Settings_Import_Export {
 				$ai = array();
 			}
 			$payload['ai'] = self::dctc_redact_ai_settings( $ai );
+		}
+
+		if ( in_array( 'support', $modules, true ) ) {
+			$support            = get_option( self::OPTION_SUPPORT, array() );
+			$payload['support'] = is_array( $support ) ? $support : array();
+		}
+
+		if ( in_array( 'ai_data', $modules, true ) ) {
+			global $wpdb;
+			$sessions_table     = $wpdb->prefix . 'dctc_ai_sessions';
+			$leads_table        = $wpdb->prefix . 'dctc_ai_leads';
+			$payload['ai_data'] = array();
+
+			// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$sessions_table'" ) === $sessions_table ) {
+				$payload['ai_data']['sessions'] = $wpdb->get_results( "SELECT * FROM `$sessions_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$leads_table'" ) === $leads_table ) {
+				$payload['ai_data']['leads'] = $wpdb->get_results( "SELECT * FROM `$leads_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+
+			// phpcs:enable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+		}
+
+		if ( in_array( 'support_data', $modules, true ) ) {
+			global $wpdb;
+			$tickets_table           = $wpdb->prefix . 'dctc_support_tickets';
+			$ticket_meta_table       = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$taxonomies_table        = $wpdb->prefix . 'dctc_support_taxonomies';
+			$terms_table             = $wpdb->prefix . 'dctc_support_terms';
+			$term_meta_table         = $wpdb->prefix . 'dctc_support_term_meta';
+			$rel_table               = $wpdb->prefix . 'dctc_support_term_relationships';
+			$payload['support_data'] = array();
+
+			// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
+				$payload['support_data']['tickets'] = $wpdb->get_results( "SELECT * FROM `$tickets_table` ORDER BY id DESC LIMIT 5000", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$ticket_meta_table'" ) === $ticket_meta_table ) {
+				$payload['support_data']['ticket_meta'] = $wpdb->get_results( "SELECT * FROM `$ticket_meta_table` ORDER BY meta_id ASC", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$taxonomies_table'" ) === $taxonomies_table ) {
+				$payload['support_data']['taxonomies'] = $wpdb->get_results( "SELECT * FROM `$taxonomies_table` ORDER BY id ASC", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$terms_table'" ) === $terms_table ) {
+
+				$payload['support_data']['terms'] = $wpdb->get_results( "SELECT * FROM `$terms_table` ORDER BY id ASC", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$term_meta_table'" ) === $term_meta_table ) {
+
+				$payload['support_data']['term_meta'] = $wpdb->get_results( "SELECT * FROM `$term_meta_table` ORDER BY meta_id ASC", ARRAY_A );
+			}
+
+			if ( $wpdb->get_var( "SHOW TABLES LIKE '$rel_table'" ) === $rel_table ) {
+				$payload['support_data']['relationships'] = $wpdb->get_results( "SELECT * FROM `$rel_table` ORDER BY id ASC", ARRAY_A );
+			}
+
+			// phpcs:enable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
 		}
 
 		return $payload;
@@ -231,7 +295,7 @@ class DCTC_Settings_Import_Export {
 
 		return "INSERT INTO `{$table}` (`option_name`, `option_value`, `autoload`)\n"
 			. "VALUES ('{$esc_name}', '{$esc_value}', '{$autoload}')\n"
-			. "ON DUPLICATE KEY UPDATE `option_value` = VALUES(`option_value`);";
+			. 'ON DUPLICATE KEY UPDATE `option_value` = VALUES(`option_value`);';
 	}
 
 	/**
@@ -561,9 +625,9 @@ class DCTC_Settings_Import_Export {
 
 		if ( preg_match_all( $pattern, $contents, $matches, PREG_SET_ORDER ) ) {
 			foreach ( $matches as $match ) {
-				$name  = $match[1];
-				$value = self::dctc_sql_unescape_string( $match[2] );
-				$found[ $name ] = maybe_unserialize( $value );
+				$name           = $match[1];
+				$value          = self::dctc_sql_unescape_string( $match[2] );
+				$found[ $name ] = self::dctc_safe_unserialize( $value );
 			}
 		}
 
@@ -574,9 +638,9 @@ class DCTC_Settings_Import_Export {
 
 		if ( preg_match_all( $update_pattern, $contents, $umatches, PREG_SET_ORDER ) ) {
 			foreach ( $umatches as $match ) {
-				$value = self::dctc_sql_unescape_string( $match[1] );
-				$name  = $match[2];
-				$found[ $name ] = maybe_unserialize( $value );
+				$value          = self::dctc_sql_unescape_string( $match[1] );
+				$name           = $match[2];
+				$found[ $name ] = self::dctc_safe_unserialize( $value );
 			}
 		}
 
@@ -617,6 +681,22 @@ class DCTC_Settings_Import_Export {
 			array( "'", '"', '\\', "\n", "\r", "\0", "\x1a" ),
 			$value
 		);
+	}
+
+	/**
+	 * Safely unserialize data preventing PHP Object Injection (POP gadget chains).
+	 *
+	 * @param string $value Serialized or plain string.
+	 * @return mixed
+	 */
+	private static function dctc_safe_unserialize( $value ) {
+		if ( ! is_serialized( $value ) ) {
+			return $value;
+		}
+
+		// Strictly forbid object instantiation during deserialization.
+		$unserialized = @unserialize( $value, array( 'allowed_classes' => false ) );
+		return false !== $unserialized || 'b:0;' === $value ? $unserialized : $value;
 	}
 
 	/**
@@ -861,6 +941,131 @@ class DCTC_Settings_Import_Export {
 			} else {
 				update_option( self::OPTION_AI, $merged, false );
 			}
+			++$applied;
+		}
+
+		if ( in_array( 'support', $modules, true ) ) {
+			if ( empty( $payload['support'] ) || ! is_array( $payload['support'] ) ) {
+				return new WP_Error(
+					'dctc_ie_no_support',
+					__( 'The file does not contain Support Center settings.', 'dragwyb-click-to-chat' )
+				);
+			}
+			if ( ! class_exists( 'DCTC_Support_REST_Controller' ) && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-rest-controller.php' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-rest-controller.php';
+			}
+			$clean_support = class_exists( 'DCTC_Support_REST_Controller' )
+				? DCTC_Support_REST_Controller::sanitize_support_settings( $payload['support'] )
+				: ( is_array( $payload['support'] ) ? array_map( 'sanitize_text_field', $payload['support'] ) : array() );
+			update_option( self::OPTION_SUPPORT, $clean_support );
+			if ( ! empty( $clean_support['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::create_tables();
+			}
+			++$applied;
+		}
+
+		if ( in_array( 'ai_data', $modules, true ) && ! empty( $payload['ai_data'] ) ) {
+			global $wpdb;
+			$sessions_table = $wpdb->prefix . 'dctc_ai_sessions';
+			$leads_table    = $wpdb->prefix . 'dctc_ai_leads';
+
+			// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['ai_data']['sessions'] ) && is_array( $payload['ai_data']['sessions'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$sessions_table'" ) === $sessions_table ) {
+				foreach ( $payload['ai_data']['sessions'] as $session ) {
+					if ( is_array( $session ) && ! empty( $session['session_id'] ) ) {
+						unset( $session['id'] );
+
+						$wpdb->replace( $sessions_table, $session );
+					}
+				}
+			}
+
+			if ( ! empty( $payload['ai_data']['leads'] ) && is_array( $payload['ai_data']['leads'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$leads_table'" ) === $leads_table ) {
+				foreach ( $payload['ai_data']['leads'] as $lead ) {
+					if ( is_array( $lead ) && ! empty( $lead['session_id'] ) ) {
+						unset( $lead['id'] );
+
+						$wpdb->replace( $leads_table, $lead );
+					}
+				}
+			}
+
+			// phpcs:enable WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+
+			++$applied;
+		}
+		if ( in_array( 'support_data', $modules, true ) && ! empty( $payload['support_data'] ) ) {
+			global $wpdb;
+			$tickets_table     = $wpdb->prefix . 'dctc_support_tickets';
+			$ticket_meta_table = $wpdb->prefix . 'dctc_support_ticket_meta';
+			$taxonomies_table  = $wpdb->prefix . 'dctc_support_taxonomies';
+			$terms_table       = $wpdb->prefix . 'dctc_support_terms';
+			$term_meta_table   = $wpdb->prefix . 'dctc_support_term_meta';
+			$rel_table         = $wpdb->prefix . 'dctc_support_term_relationships';
+
+			// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+			if ( ! empty( $payload['support_data']['taxonomies'] ) && is_array( $payload['support_data']['taxonomies'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$taxonomies_table'" ) === $taxonomies_table ) {
+				foreach ( $payload['support_data']['taxonomies'] as $tax ) {
+					if ( is_array( $tax ) && ! empty( $tax['slug'] ) ) {
+						unset( $tax['id'] );
+
+						$wpdb->replace( $taxonomies_table, $tax ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+					}
+				}
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['support_data']['terms'] ) && is_array( $payload['support_data']['terms'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$terms_table'" ) === $terms_table ) {
+				foreach ( $payload['support_data']['terms'] as $term ) {
+					if ( is_array( $term ) && ! empty( $term['slug'] ) ) {
+
+						$wpdb->replace( $terms_table, $term ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+					}
+				}
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['support_data']['term_meta'] ) && is_array( $payload['support_data']['term_meta'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$term_meta_table'" ) === $term_meta_table ) {
+				foreach ( $payload['support_data']['term_meta'] as $tmeta ) {
+					if ( is_array( $tmeta ) && ! empty( $tmeta['term_id'] ) ) {
+
+						$wpdb->replace( $term_meta_table, $tmeta ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+					}
+				}
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['support_data']['relationships'] ) && is_array( $payload['support_data']['relationships'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$rel_table'" ) === $rel_table ) {
+				foreach ( $payload['support_data']['relationships'] as $rel ) {
+					if ( is_array( $rel ) && ! empty( $rel['object_id'] ) ) {
+						unset( $rel['id'] );
+
+						$wpdb->replace( $rel_table, $rel ); //phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+					}
+				}
+			}
+
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['support_data']['tickets'] ) && is_array( $payload['support_data']['tickets'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$tickets_table'" ) === $tickets_table ) {
+				foreach ( $payload['support_data']['tickets'] as $ticket ) {
+					if ( is_array( $ticket ) && ! empty( $ticket['uuid'] ) ) {
+						unset( $ticket['id'] );
+
+						$wpdb->replace( $tickets_table, $ticket );
+					}
+				}
+			}
+			// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+			if ( ! empty( $payload['support_data']['ticket_meta'] ) && is_array( $payload['support_data']['ticket_meta'] ) && $wpdb->get_var( "SHOW TABLES LIKE '$ticket_meta_table'" ) === $ticket_meta_table ) {
+				foreach ( $payload['support_data']['ticket_meta'] as $tkm ) {
+					if ( is_array( $tkm ) && ! empty( $tkm['ticket_id'] ) ) {
+
+						$wpdb->replace( $ticket_meta_table, $tkm );
+					}
+				}
+			}
+
+			// phpcs:enable PluginCheck.Security.DirectDB.UnescapedDBParameter
 			++$applied;
 		}
 

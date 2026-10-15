@@ -1,13 +1,13 @@
 <?php
 
 /**
- * Plugin Name: Dragwyb Click to Chat - AI Chatbot & Social Messaging
- * Description: AI Chatbot plus multi-channel social chat widget with floating button.
- * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=wpplugin&utm_medium=plugin_uri&utm_campaign=chatbot_demo
+ * Plugin Name: Dragwyb Click to Chat – AI Chatbot, Helpdesk & Lead Generation
+ * Description: AI chatbot, live helpdesk, lead generation, WooCommerce AI assistant, and multi-channel social chat widget with a customizable floating button. Connect with visitors through WhatsApp, Messenger, Telegram, and more.
+ * Plugin URI: https://dragwyb.com/product/ai-chatbot/?utm_source=dctc&utm_medium=plugin_uri&utm_campaign=chatbot_demo
  * Author: Dragwyb
- * Author URI: https://dragwyb.com/?utm_source=wpplugin&utm_medium=author_uri&utm_campaign=chatbot_demo
- * Version: 1.1.4
- * Requires at least: 5.0
+ * Author URI: https://dragwyb.com/?utm_source=dctc&utm_medium=author_uri&utm_campaign=chatbot_demo
+ * Version: 1.2.0
+ * Requires at least: 5.9
  * Requires PHP: 7.4
  * Text Domain: dragwyb-click-to-chat
  * License: GPLv2 or later
@@ -22,7 +22,7 @@ use DRAGWYB_CTC\Admin\Review\DCTC_Review_Form;
 ! defined( 'DCTC_FILE' ) && define( 'DCTC_FILE', __FILE__ );
 ! defined( 'DCTC_PLUGIN_DIR' ) && define( 'DCTC_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 ! defined( 'DCTC_PLUGIN_URL' ) && define( 'DCTC_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.1.4' );
+! defined( 'DCTC_VERSION' ) && define( 'DCTC_VERSION', '1.2.0' );
 ! defined( 'DCTC_BASENAME' ) && define( 'DCTC_BASENAME', plugin_basename( __FILE__ ) );
 
 if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
@@ -42,6 +42,9 @@ if ( ! class_exists( 'DCTC_Click_To_Chat' ) ) {
 		public function __construct() {
 			require_once DCTC_PLUGIN_DIR . 'includes/class-dctc-error-logger.php';
 			DCTC_Error_Logger::init();
+
+			require_once DCTC_PLUGIN_DIR . 'includes/class-dctc-helper.php';
+			DCTC_Helper::init();
 
 			$this->required_files();
 			add_action( 'plugins_loaded', array( $this, 'init' ) );

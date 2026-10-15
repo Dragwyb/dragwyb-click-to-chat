@@ -11,27 +11,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 require_once DCTC_PLUGIN_DIR . 'includes/class-dctc-settings-import-export.php';
 
-add_action( 'admin_menu', 'dctc_add_import_export_page', 25 );
+// Note: Submenu registration is managed centrally in admin/settings.php.
 add_action( 'admin_enqueue_scripts', 'dctc_import_export_scripts' );
 add_action( 'admin_post_dctc_export_settings', 'dctc_handle_export_settings' );
 add_action( 'admin_post_dctc_import_settings', 'dctc_handle_import_settings' );
 add_action( 'admin_notices', 'dctc_import_export_admin_notices' );
-
-/**
- * Register Settings submenu under Click to Chat.
- *
- * @return void
- */
-function dctc_add_import_export_page() {
-	add_submenu_page(
-		'dragwyb-click-to-chat',
-		__( 'Settings', 'dragwyb-click-to-chat' ),
-		__( 'Settings', 'dragwyb-click-to-chat' ),
-		'manage_options',
-		'dragwyb-click-to-chat-settings',
-		'dctc_import_export_page_html'
-	);
-}
 
 /**
  * Enqueue assets on the Settings page only.
@@ -41,7 +25,7 @@ function dctc_add_import_export_page() {
  */
 function dctc_import_export_scripts( $hook ) {
 	// phpcs:ignore WordPress.Security.NonceVerification.Recommended
-	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	$page        = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	$is_settings = ( 'dragwyb-click-to-chat-settings' === $page )
 		|| false !== strpos( (string) $hook, 'dragwyb-click-to-chat-settings' );
 
@@ -65,19 +49,6 @@ function dctc_import_export_scripts( $hook ) {
 		DCTC_VERSION,
 		true
 	);
-}
-
-/**
- * Render Settings (Import / Export) page.
- *
- * @return void
- */
-function dctc_import_export_page_html() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'You do not have permission to access this page.', 'dragwyb-click-to-chat' ) );
-	}
-
-	include DCTC_PLUGIN_DIR . 'admin/views/import-export-page.php';
 }
 
 /**
@@ -192,6 +163,7 @@ function dctc_handle_import_settings() {
 	$redirect = add_query_arg(
 		array(
 			'page'          => 'dragwyb-click-to-chat-settings',
+			'tab'           => 'import-export',
 			'dctc_imported' => '1',
 		),
 		admin_url( 'admin.php' )
@@ -214,8 +186,9 @@ function dctc_ie_redirect_with_error( $message ) {
 	);
 	$redirect = add_query_arg(
 		array(
-			'page'            => 'dragwyb-click-to-chat-settings',
-			'dctc_ie_failed'  => '1',
+			'page'           => 'dragwyb-click-to-chat-settings',
+			'tab'            => 'import-export',
+			'dctc_ie_failed' => '1',
 		),
 		admin_url( 'admin.php' )
 	);
@@ -229,7 +202,8 @@ function dctc_ie_redirect_with_error( $message ) {
  * @return void
  */
 function dctc_import_export_admin_notices() {
-	if ( ! isset( $_GET['page'] ) || 'dragwyb-click-to-chat-settings' !== $_GET['page'] ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+	if ( ! in_array( $page, array( 'dragwyb-click-to-chat-settings', 'dragwyb-click-to-chat-import-export', 'dragwyb-click-to-chat-channels' ), true ) ) {
 		return;
 	}
 

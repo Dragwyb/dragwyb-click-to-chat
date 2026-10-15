@@ -32,13 +32,14 @@ class DCTC_AI_Memory_Optimizer {
 	/**
 	 * Build optimized conversation context
 	 *
-	 * @param string $session_id Session ID.
-	 * @param string $current_question Current user question.
-	 * @param string $rag_context RAG-retrieved context.
+	 * @param string     $session_id Session ID.
+	 * @param string     $current_question Current user question.
+	 * @param string     $rag_context RAG-retrieved context.
+	 * @param array|null $provided_messages Optional pre-provided messages (used when save_chat is disabled).
 	 * @return array Optimized context structure.
 	 */
-	public function build_optimized_context( $session_id, $current_question, $rag_context = '' ) {
-		$messages = $this->get_session_messages( $session_id );
+	public function build_optimized_context( $session_id, $current_question, $rag_context = '', $provided_messages = null ) {
+		$messages = is_array( $provided_messages ) ? $provided_messages : $this->get_session_messages( $session_id );
 		$recent_messages = $this->format_recent_messages( $messages, $this->messages_limit );
 		$conversation_summary = $this->get_conversation_summary( $session_id, $messages );
 

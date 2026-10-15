@@ -1,192 +1,853 @@
+/* =========================================================
+ * Wrapper
+ * ========================================================= */
+
 .dctc-deactivate-feedback-form-wrapper {
-  -webkit-transition: opacity 0.5s ease;
-  transition: opacity 0.5s ease;
+	position: fixed;
+	inset: 0;
+	z-index: 99999;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	padding: 20px;
+	box-sizing: border-box;
+
+	background: rgba(29, 35, 39, 0.45);
+
+	opacity: 1;
+	visibility: visible;
+
+	transition:
+		opacity 0.18s ease,
+		visibility 0.18s ease;
 }
 
 .dctc-deactivate-feedback-form-wrapper.dctc-form-hide {
-  opacity: 0;
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form {
-  position: fixed;
-  z-index: 9999;
-  background-color: #f9f9f9;
-  border-radius: 5px;
-  -webkit-box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-          box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  top: 50%;
-  left: 50%;
-  -webkit-transform: translate(-50%, -50%);
-          transform: translate(-50%, -50%);
-  width: clamp(500px, 900px, 70vw);
+
+/* =========================================================
+ * Modal
+ * ========================================================= */
+
+.dctc-deactivate-feedback-form-wrapper
+.dctc-deactivate-feedback-form {
+	position: relative;
+
+	width: min(680px, 100%);
+	max-height: calc(100vh - 40px);
+
+	display: flex;
+	flex-direction: column;
+
+	overflow: hidden;
+
+	background: #fff;
+
+	border: 1px solid #dcdcde;
+	border-radius: 8px;
+
+	box-shadow:
+		0 12px 35px rgba(0, 0, 0, 0.16),
+		0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form h2 {
-  color: #333;
-  font-size: 24px;
-  margin: 0px;
-  padding: 1rem;
+
+/* =========================================================
+ * Header
+ * ========================================================= */
+
+.dctc-feedback-header {
+	position: relative;
+
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+
+	padding: 16px 19px 13px;
+
+	border-bottom: 1px solid #e2e4e7;
+
+	background: #fff;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form span.dctc-deactivate-close {
-  position: absolute;
-  top: 0.4rem;
-  right: 0.4rem;
-  font-size: 1.8rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: center;
-      -ms-flex-pack: center;
-          justify-content: center;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  background: #00000017;
-  border-radius: 50%;
-  opacity: 0.5;
+.dctc-feedback-header-content {
+	min-width: 0;
+	padding-right: 35px;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-orient: vertical;
-  -webkit-box-direction: normal;
-      -ms-flex-direction: column;
-          flex-direction: column;
+.dctc-feedback-header h2 {
+	margin: 0 0 4px;
+
+	color: #1d2327;
+
+	font-size: 18px;
+	line-height: 1.35;
+	font-weight: 600;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form hr {
-  margin: 0px;
-  border-color: #00000014;
+.dctc-feedback-header p {
+	margin: 0;
+
+	color: #646970;
+
+	font-size: 13px;
+	line-height: 1.45;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body {
-  margin: 0px;
-  padding: 1rem;
+
+/* =========================================================
+ * Close Button
+ * ========================================================= */
+
+.dctc-deactivate-close {
+	position: absolute;
+	top: 11px;
+	right: 13px;
+
+	width: 30px;
+	height: 30px;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	padding: 0;
+
+	border: 0;
+	border-radius: 5px;
+
+	background: transparent;
+	color: #646970;
+
+	cursor: pointer;
+
+	transition:
+		background-color 0.15s ease,
+		color 0.15s ease;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body h4 {
-  margin: 0px;
-  font-size: 15px;
-  margin-bottom: 1.4rem;
+.dctc-deactivate-close:hover {
+	background: #f0f0f1;
+	color: #1d2327;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body #empty-field-msg {
-  display: none;
+.dctc-deactivate-close:focus-visible {
+	outline: 2px solid #2271b1;
+	outline-offset: 2px;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body #empty-field-msg p {
-  padding: 0;
-  margin: 0;
-  margin-bottom: 10px;
-  font-size: 16px;
-  color: red;
+.dctc-deactivate-close .dashicons {
+	font-size: 20px;
+	width: 20px;
+	height: 20px;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group {
-  padding: 0.5rem;
-  display: -ms-grid;
-  display: grid;
-  -ms-grid-columns: 0fr 1fr;
-      grid-template-columns: 0fr 1fr;
-  -webkit-box-align: center;
-      -ms-flex-align: center;
-          align-items: center;
-  -webkit-column-gap: 0.8rem;
-          column-gap: 0.8rem;
+
+/* =========================================================
+ * Form
+ * ========================================================= */
+
+.dctc-feedback-form {
+	display: flex;
+	flex-direction: column;
+
+	min-height: 0;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group:last-child {
-  margin-bottom: 0px;
+.dctc-feedback-body {
+	padding: 15px 19px 14px;
+
+	overflow-y: auto;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group label {
-  font-size: 15px;
-  color: #333;
-  display: block;
+
+/* =========================================================
+ * Section Label
+ * ========================================================= */
+
+.dctc-section-label {
+	margin-bottom: 8px;
+
+	color: #2c3338;
+
+	font-size: 13px;
+	line-height: 1.4;
+	font-weight: 600;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group textarea {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  -ms-grid-column: 1;
-  -ms-grid-column-span: 2;
-  grid-column: 1 / 3;
-  margin: 0px;
-  margin-top: 0.3rem;
-  display: none;
+.dctc-optional {
+	color: #646970;
+	font-size: 12px;
+	font-weight: 400;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group input[type="radio"],
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group input[type="checkbox"] {
-  margin: 0px;
+
+/* =========================================================
+ * Validation
+ * ========================================================= */
+
+.dctc-message {
+	display: none;
+
+	margin: 0 0 9px;
+	padding: 8px 10px;
+
+	border-left: 3px solid #d63638;
+	border-radius: 4px;
+
+	background: #fcf0f1;
+
+	color: #8a2424;
+
+	font-size: 12px;
+	line-height: 1.45;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group input[type="radio"]:checked ~ textarea {
-  display: block;
+.dctc-reasons.dctc-has-error {
+	animation: dctc-shake 0.25s ease;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group:last-child {
-  margin-top: .9rem;
+.dctc-reasons.dctc-has-error .dctc-reason {
+	border-color: #d63638;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group:last-child label {
-  -webkit-transition: color .2s ease-in-out;
-  transition: color .2s ease-in-out;
-  line-height: 1.5;
+@keyframes dctc-shake {
+
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+
+	25% {
+		transform: translateX(-3px);
+	}
+
+	75% {
+		transform: translateX(3px);
+	}
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .form-body .form-group:last-child label.alert {
-  color: red;
+
+/* =========================================================
+ * Reasons
+ * ========================================================= */
+
+.dctc-reasons {
+	display: grid;
+
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+
+	gap: 7px;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .dctc-button-wrapper {
-  display: -webkit-box;
-  display: -ms-flexbox;
-  display: flex;
-  -webkit-box-pack: end;
-      -ms-flex-pack: end;
-          justify-content: end;
-  -webkit-column-gap: 1rem;
-          column-gap: 1rem;
-  padding: 1rem;
+.dctc-reason {
+	position: relative;
+
+	min-height: 42px;
+
+	display: flex;
+	align-items: center;
+
+	padding: 8px 10px;
+
+	box-sizing: border-box;
+
+	border: 1px solid #c3c4c7;
+	border-radius: 6px;
+
+	background: #fff;
+
+	cursor: pointer;
+
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease,
+		box-shadow 0.15s ease;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .dctc-button-wrapper .button {
-  border: none;
-  font-size: 15px;
-  font-weight: bold;
-  cursor: pointer;
-  -webkit-transition: background-color 0.3s ease;
-  transition: background-color 0.3s ease;
+.dctc-reason:hover {
+	border-color: #787c82;
+	background: #f6f7f7;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .dctc-button-wrapper .button-feedback {
-  background-color: transparent;
-  color: white;
-  border: 1px solid #4e4683;
-  background-color: #7b70c1;
-  opacity: 0.5;
-  -webkit-transition: all 0.3s ease;
-  transition: all 0.3s ease;
+.dctc-reason input {
+	position: absolute;
+
+	width: 1px;
+	height: 1px;
+
+	margin: -1px;
+
+	opacity: 0;
+	pointer-events: none;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .dctc-button-wrapper .button-feedback.active {
-  opacity: 0.8;
+
+/* =========================================================
+ * Radio
+ * ========================================================= */
+
+.dctc-radio-ui {
+	position: relative;
+
+	flex: 0 0 auto;
+
+	width: 17px;
+	height: 17px;
+
+	margin-right: 9px;
+
+	box-sizing: border-box;
+
+	border: 1.5px solid #8c8f94;
+	border-radius: 50%;
+
+	background: #fff;
+
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease;
 }
 
-.dctc-deactivate-feedback-form-wrapper .dctc-deactivate-feedback-form form .dctc-button-wrapper .button-feedback:hover {
-  opacity: 1;
+.dctc-reason input:checked + .dctc-radio-ui {
+	border-color: #2271b1;
+
+	box-shadow: inset 0 0 0 3.5px #fff;
+
+	background: #2271b1;
 }
 
-.dctc-deactivate-feedback-form-wrapper:not(.dctc-form-hide) ~ #wpwrap {
-  opacity: 0.2;
-  pointer-events: none;
+.dctc-reason:has(input:checked) {
+	border-color: #2271b1;
+
+	background: #f5faff;
+
+	box-shadow:
+		0 0 0 1px rgba(34, 113, 177, 0.08);
 }
-/*# sourceMappingURL=dctc-feedback-form.css.map */
+
+.dctc-reason:has(input:focus-visible) {
+	border-color: #2271b1;
+
+	box-shadow:
+		0 0 0 1px #2271b1;
+}
+
+
+/* =========================================================
+ * Reason Text
+ * ========================================================= */
+
+.dctc-reason-label {
+	color: #1d2327;
+
+	font-size: 13px;
+	line-height: 1.4;
+	font-weight: 400;
+}
+
+
+/* =========================================================
+ * Tell Us More
+ * ========================================================= */
+
+.dctc-message-section {
+	margin-top: 12px;
+}
+
+.dctc-message-section[hidden] {
+	display: none;
+}
+
+.dctc-message-section .dctc-section-label {
+	margin-bottom: 7px;
+}
+
+.dctc-feedback-form textarea {
+	display: block;
+
+	width: 100%;
+	height: 78px;
+	min-height: 78px;
+	max-height: 130px;
+
+	margin: 0;
+
+	padding: 9px 10px;
+
+	box-sizing: border-box;
+
+	border: 1px solid #8c8f94;
+	border-radius: 6px;
+
+	background: #fff;
+	color: #2c3338;
+
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1.5;
+
+	resize: vertical;
+
+	outline: none;
+
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.dctc-feedback-form textarea::placeholder {
+	color: #6b7075;
+	opacity: 1;
+}
+
+.dctc-feedback-form textarea:focus {
+	border-color: #2271b1;
+
+	box-shadow:
+		0 0 0 1px #2271b1;
+}
+
+.dctc-character-count {
+	margin-top: 3px;
+
+	text-align: right;
+
+	color: #646970;
+
+	font-size: 11px;
+	line-height: 1.3;
+}
+
+
+/* =========================================================
+ * Technical Details
+ * ========================================================= */
+
+.dctc-diagnostics {
+	margin-top: 12px;
+
+	padding: 10px 11px;
+
+	border: 1px solid #c3c4c7;
+	border-radius: 7px;
+
+	background: #f6f7f7;
+}
+
+.dctc-diagnostics-label {
+	display: flex;
+	align-items: flex-start;
+
+	gap: 9px;
+
+	cursor: pointer;
+}
+
+
+/* =========================================================
+ * Hidden Checkbox
+ * ========================================================= */
+
+.dctc-diagnostics-label input {
+	position: absolute;
+
+	width: 1px;
+	height: 1px;
+
+	margin: -1px;
+
+	opacity: 0;
+
+	pointer-events: none;
+}
+
+
+/* =========================================================
+ * Custom Checkbox
+ * ========================================================= */
+
+.dctc-checkbox-ui {
+	position: relative;
+
+	flex: 0 0 auto;
+
+	width: 18px;
+	height: 18px;
+
+	margin-top: 1px;
+
+	box-sizing: border-box;
+
+	border: 1.5px solid #8c8f94;
+	border-radius: 4px;
+
+	background: #fff;
+
+	transition:
+		border-color 0.15s ease,
+		background-color 0.15s ease;
+}
+
+.dctc-diagnostics-label:hover .dctc-checkbox-ui {
+	border-color: #2271b1;
+}
+
+.dctc-diagnostics-label
+input:checked
++ .dctc-checkbox-ui {
+	border-color: #2271b1;
+
+	background: #2271b1;
+}
+
+.dctc-diagnostics-label
+input:checked
++ .dctc-checkbox-ui::after {
+	content: "";
+
+	position: absolute;
+
+	left: 5px;
+	top: 1px;
+
+	width: 5px;
+	height: 10px;
+
+	border: solid #fff;
+	border-width: 0 2px 2px 0;
+
+	transform: rotate(45deg);
+}
+
+.dctc-diagnostics-label
+input:focus-visible
++ .dctc-checkbox-ui {
+	box-shadow:
+		0 0 0 2px rgba(34, 113, 177, 0.25);
+}
+
+
+/* =========================================================
+ * Technical Details Content
+ * ========================================================= */
+
+.dctc-diagnostics-content {
+	display: flex;
+	flex-direction: column;
+
+	gap: 3px;
+
+	min-width: 0;
+}
+
+.dctc-diagnostics-content strong {
+	display: block;
+
+	color: #2c3338;
+
+	font-size: 13px;
+	line-height: 1.4;
+	font-weight: 600;
+}
+
+.dctc-diagnostics-content strong .dctc-optional {
+	margin-left: 2px;
+
+	color: #646970;
+
+	font-size: 12px;
+	font-weight: 400;
+}
+
+.dctc-diagnostics-content small {
+	display: block;
+
+	color: #50575e;
+
+	font-size: 12px;
+	line-height: 1.5;
+	font-weight: 400;
+}
+
+.dctc-diagnostics-content a {
+	display: inline-block;
+
+	margin-left: 3px;
+
+	color: #2271b1;
+
+	font-size: 12px;
+	font-weight: 600;
+
+	text-decoration: none;
+}
+
+.dctc-diagnostics-content a:hover {
+	color: #135e96;
+	text-decoration: underline;
+}
+
+
+/* =========================================================
+ * Footer
+ * ========================================================= */
+
+.dctc-feedback-footer {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+
+	gap: 8px;
+
+	flex: 0 0 auto;
+
+	padding: 10px 19px;
+
+	border-top: 1px solid #e2e4e7;
+
+	background: #fff;
+}
+
+.dctc-feedback-footer .button {
+	min-height: 34px;
+
+	padding: 0 13px;
+
+	border-radius: 5px;
+
+	font-size: 13px;
+	line-height: 1.4;
+	font-weight: 500;
+
+	cursor: pointer;
+}
+
+
+/* =========================================================
+ * Skip Button
+ * ========================================================= */
+
+.dctc-button-skip {
+	color: #50575e !important;
+
+	background: #fff !important;
+
+	border-color: #8c8f94 !important;
+}
+
+.dctc-button-skip:hover {
+	color: #1d2327 !important;
+
+	background: #f6f7f7 !important;
+
+	border-color: #646970 !important;
+}
+
+
+/* =========================================================
+ * Submit Button
+ * ========================================================= */
+
+.dctc-button-feedback {
+	position: relative;
+
+	display: inline-flex !important;
+	align-items: center;
+	justify-content: center;
+
+	min-width: 122px;
+
+	border-color: #2271b1 !important;
+
+	background: #2271b1 !important;
+
+	color: #fff !important;
+
+	transition:
+		background-color 0.15s ease,
+		border-color 0.15s ease,
+		transform 0.1s ease;
+}
+
+.dctc-button-feedback:hover {
+	border-color: #135e96 !important;
+
+	background: #135e96 !important;
+}
+
+.dctc-button-feedback:active {
+	transform: translateY(1px);
+}
+
+.dctc-button-feedback:focus-visible {
+	outline: 2px solid #2271b1;
+
+	outline-offset: 2px;
+}
+
+
+/* =========================================================
+ * Submit Loading Animation
+ * ========================================================= */
+
+.dctc-button-feedback.is-loading {
+	pointer-events: none;
+
+	opacity: 0.85;
+}
+
+.dctc-button-feedback.is-loading
+.dctc-button-text {
+	opacity: 0.75;
+}
+
+.dctc-button-spinner {
+	display: none;
+
+	width: 13px;
+	height: 13px;
+
+	margin-left: 7px;
+
+	border: 2px solid rgba(255, 255, 255, 0.35);
+
+	border-top-color: #fff;
+
+	border-radius: 50%;
+
+	animation:
+		dctc-spinner 0.65s linear infinite;
+}
+
+.dctc-button-feedback.is-loading
+.dctc-button-spinner {
+	display: inline-block;
+}
+
+@keyframes dctc-spinner {
+
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+
+/* =========================================================
+ * Admin Compatibility
+ * ========================================================= */
+
+.dctc-deactivate-feedback-form button,
+.dctc-deactivate-feedback-form input,
+.dctc-deactivate-feedback-form textarea {
+	font-family: inherit;
+}
+
+
+/* =========================================================
+ * Prevent Admin Page Interaction
+ * ========================================================= */
+
+body.dctc-feedback-open #wpwrap {
+	pointer-events: none;
+}
+
+body.dctc-feedback-open
+.dctc-deactivate-feedback-form-wrapper {
+	pointer-events: auto;
+}
+
+
+/* =========================================================
+ * Mobile
+ * ========================================================= */
+
+@media (max-width: 600px) {
+
+	.dctc-deactivate-feedback-form-wrapper {
+		padding: 10px;
+	}
+
+	.dctc-deactivate-feedback-form {
+		width: 100%;
+		max-height: calc(100vh - 20px);
+	}
+
+	.dctc-feedback-header {
+		padding: 14px 15px 12px;
+	}
+
+	.dctc-feedback-header h2 {
+		font-size: 17px;
+	}
+
+	.dctc-feedback-header p {
+		font-size: 12.5px;
+	}
+
+	.dctc-feedback-body {
+		padding: 14px 15px 12px;
+	}
+
+	.dctc-reasons {
+		grid-template-columns: 1fr;
+		gap: 6px;
+	}
+
+	.dctc-reason {
+		min-height: 41px;
+		padding: 8px 10px;
+	}
+
+	.dctc-reason-label {
+		font-size: 13px;
+	}
+
+	.dctc-feedback-form textarea {
+		height: 78px;
+		min-height: 78px;
+	}
+
+	.dctc-diagnostics {
+		padding: 10px;
+	}
+
+	.dctc-diagnostics-content strong {
+		font-size: 12.5px;
+	}
+
+	.dctc-diagnostics-content small {
+		font-size: 11.5px;
+	}
+
+	.dctc-feedback-footer {
+		padding: 10px 15px;
+	}
+
+	.dctc-feedback-footer .button {
+		flex: 1;
+		justify-content: center;
+	}
+}
+
+
+/* =========================================================
+ * Reduced Motion
+ * ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+	.dctc-deactivate-feedback-form,
+	.dctc-reason,
+	.dctc-button-feedback,
+	.dctc-button-spinner {
+		animation: none !important;
+		transition: none !important;
+	}
+}

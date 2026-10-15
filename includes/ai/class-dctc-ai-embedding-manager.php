@@ -22,11 +22,11 @@ class DCTC_AI_Embedding_Manager {
 	 * @return array
 	 */
 	private function get_settings() {
-		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		$rag_settings = isset( $settings['rag'] ) ? $settings['rag'] : [];
+		$settings     = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$rag_settings = isset( $settings['rag'] ) ? $settings['rag'] : array();
 
 		if ( empty( $rag_settings['embeddings'] ) ) {
-			$rag_settings['embeddings'] = [];
+			$rag_settings['embeddings'] = array();
 		}
 
 		if ( empty( $rag_settings['embeddings']['provider'] ) ) {
@@ -108,25 +108,24 @@ class DCTC_AI_Embedding_Manager {
 		}
 
 		$settings = $this->get_settings();
-		$model = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : 'text-embedding-3-small';
+		$model    = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : 'text-embedding-3-small';
 
 		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
-		// phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- Fallback for WordPress < 7.0 where wp_ai_client_prompt() is unavailable.
 		$response = wp_remote_post(
-			'https://api.openai.com/v1/embeddings',
-			[
-				'headers' => [
+			'https://api.openai.com/v1/embeddings', // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
+			array(
+				'headers' => array(
 					'Authorization' => 'Bearer ' . $api_key,
 					'Content-Type'  => 'application/json',
-				],
+				),
 				'body'    => wp_json_encode(
-					[
+					array(
 						'input' => $text,
 						'model' => $model,
-					]
+					)
 				),
 				'timeout' => 30,
-			]
+			)
 		);
 
 		if ( is_wp_error( $response ) ) {
@@ -136,7 +135,7 @@ class DCTC_AI_Embedding_Manager {
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );
 
 		if ( ! empty( $data['error'] ) ) {
-			$error_msg = isset($data['error']['message']) ? $data['error']['message'] : wp_json_encode($data['error']);
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : wp_json_encode( $data['error'] );
 			throw new Exception( 'OpenAI API Error: ' . esc_html( $error_msg ) );
 		}
 
@@ -161,38 +160,37 @@ class DCTC_AI_Embedding_Manager {
 		}
 
 		$settings = $this->get_settings();
-		$model = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : 'gemini-embedding-001';
-		
+		$model    = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : 'gemini-embedding-001';
+
 		// Map legacy/discontinued models to the active gemini-embedding-001
-		if ( in_array( $model, [ 'embedding-001', 'models/embedding-001', 'text-embedding-004', 'models/text-embedding-004' ], true ) ) {
+		if ( in_array( $model, array( 'embedding-001', 'models/embedding-001', 'text-embedding-004', 'models/text-embedding-004' ), true ) ) {
 			$model = 'gemini-embedding-001';
 		}
-		
+
 		$model_path = strpos( $model, 'models/' ) === 0 ? $model : 'models/' . $model;
 
 		// Direct embeddings API for older WordPress: wp_ai_client_prompt() exists only in WP 7.0+.
-		// phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- Fallback for WordPress < 7.0 where wp_ai_client_prompt() is unavailable.
 		$response = wp_remote_post(
-			'https://generativelanguage.googleapis.com/v1beta/' . $model_path . ':embedContent?key=' . $api_key,
-			[
-				'headers' => [
+			'https://generativelanguage.googleapis.com/v1beta/' . $model_path . ':embedContent?key=' . $api_key, // phpcs:ignore PluginCheck.CodeAnalysis.AIProvider.DirectIntegration -- this endpoint is specifically for embeddings
+			array(
+				'headers' => array(
 					'Content-Type' => 'application/json',
-				],
+				),
 				'body'    => wp_json_encode(
-					[
-						'model'   => $model_path,
-						'content' => [
-							'parts' => [
-								[
+					array(
+						'model'                => $model_path,
+						'content'              => array(
+							'parts' => array(
+								array(
 									'text' => $text,
-								],
-							],
-						],
+								),
+							),
+						),
 						'outputDimensionality' => 768,
-					]
+					)
 				),
 				'timeout' => 30,
-			]
+			)
 		);
 
 		if ( is_wp_error( $response ) ) {
@@ -203,7 +201,7 @@ class DCTC_AI_Embedding_Manager {
 		$data = json_decode( $body, true );
 
 		if ( ! empty( $data['error'] ) ) {
-			$error_msg = isset($data['error']['message']) ? $data['error']['message'] : wp_json_encode($data['error']);
+			$error_msg = isset( $data['error']['message'] ) ? $data['error']['message'] : wp_json_encode( $data['error'] );
 			throw new Exception( 'Google API Error: ' . esc_html( $error_msg ) );
 		}
 
@@ -225,13 +223,13 @@ class DCTC_AI_Embedding_Manager {
 	 */
 	private function embed_local( $text ) {
 		// Simple hash-based mock embedding (would use actual ML model in production)
-		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
+		$settings   = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
 		$dimensions = ! empty( $settings['rag']['embeddings']['dimensions'] ) ? (int) $settings['rag']['embeddings']['dimensions'] : 768;
 
-		$hash = md5( $text );
-		$values = [];
+		$hash   = md5( $text );
+		$values = array();
 		for ( $i = 0; $i < $dimensions; $i++ ) {
-			$chunk = substr( $hash, $i % strlen( $hash ), 2 );
+			$chunk    = substr( $hash, $i % strlen( $hash ), 2 );
 			$values[] = ( hexdec( $chunk ) - 128 ) / 256; // Normalize to -0.5 to 0.5
 		}
 		return $values;
@@ -247,10 +245,10 @@ class DCTC_AI_Embedding_Manager {
 		$provider = ! empty( $settings['embeddings']['provider'] ) ? $settings['embeddings']['provider'] : 'openai';
 		$model    = ! empty( $settings['embeddings']['model'] ) ? $settings['embeddings']['model'] : '';
 
-		$info = [
+		$info = array(
 			'provider' => $provider,
 			'model'    => $model,
-		];
+		);
 
 		// Add dimension info based on model
 		switch ( $provider ) {
