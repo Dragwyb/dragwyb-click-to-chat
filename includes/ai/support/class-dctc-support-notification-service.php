@@ -18,23 +18,265 @@ if ( ! defined( 'ABSPATH' ) ) {
 class DCTC_Support_Notification_Service {
 
 	/**
-	 * Hook delayed cron actions.
+	 * Hook delayed cron actions, async notifications, and transient fallbacks.
 	 *
 	 * @return void
 	 */
 	public static function init() {
 		add_action( 'dctc_support_delayed_customer_reply_notif', array( __CLASS__, 'process_delayed_customer_reply' ), 10, 3 );
 		add_action( 'dctc_support_delayed_agent_reply_notif', array( __CLASS__, 'process_delayed_agent_reply' ), 10, 3 );
+
+		// Asynchronous notification cron handler
+		add_action( 'dctc_support_async_dispatch_notification', array( __CLASS__, 'cron_dispatch_notification' ), 10, 2 );
+
+		// Fallback check on request lifecycle (init and shutdown) for environments where WP-Cron is blocked
+		add_action( 'init', array( __CLASS__, 'check_pending_transient_notifications' ) );
+		add_action( 'shutdown', array( __CLASS__, 'check_pending_transient_notifications' ) );
+	}
+
+	/**
+	 * Schedule an email notification asynchronously using WP-Cron with a transient callback fallback.
+	 *
+	 * Prevents HTTP request blocking during chat and ticket workflows.
+	 * Sets a transient callback; if WP-Cron executes, it clears the transient first before sending.
+	 * If WP-Cron is blocked on the server, the transient fallback executes after a 30-second delay gap.
+	 *
+	 * @param string $event_type Notification event type slug.
+	 * @param array  $payload    Arguments required for sending.
+	 * @return bool
+	 */
+	public static function schedule_async_notification( $event_type, array $payload ) {
+		$notif_id      = 'dctc_notif_' . sanitize_key( $event_type ) . '_' . wp_generate_password( 8, false, false );
+		$transient_key = 'dctc_ntf_' . md5( $notif_id );
+		$now           = time();
+
+		$data = array(
+			'notif_id'      => $notif_id,
+			'transient_key' => $transient_key,
+			'event_type'    => $event_type,
+			'payload'       => $payload,
+			'created_at'    => $now,
+		);
+
+		// Store notification payload in transient with 1-hour expiration
+		set_transient( $transient_key, $data, HOUR_IN_SECONDS );
+
+		// Register in persistent queue registry
+		$queue              = get_option( 'dctc_pending_notification_queue', array() );
+		$queue[ $notif_id ] = array(
+			'transient_key' => $transient_key,
+			'created_at'    => $now,
+		);
+		update_option( 'dctc_pending_notification_queue', $queue, false );
+
+		// Schedule single event immediately via WP-Cron
+		wp_schedule_single_event(
+			$now,
+			'dctc_support_async_dispatch_notification',
+			array( $notif_id, $transient_key )
+		);
+
+		return true;
+	}
+
+	/**
+	 * Process async notification triggered via WP-Cron.
+	 *
+	 * Clears transient first before sending to prevent duplicate dispatch.
+	 *
+	 * @param string $notif_id      Unique notification ID.
+	 * @param string $transient_key Transient key.
+	 * @return bool
+	 */
+	public static function cron_dispatch_notification( $notif_id, $transient_key ) {
+		$data = get_transient( $transient_key );
+		if ( empty( $data ) || ! is_array( $data ) ) {
+			// Transient was already cleared/processed by fallback or cancelled
+			self::remove_from_pending_queue( $notif_id );
+			return false;
+		}
+
+		// Prevent race condition across concurrent processes
+		$lock_key = 'dctc_lck_' . md5( $notif_id );
+		if ( get_transient( $lock_key ) ) {
+			return false;
+		}
+		set_transient( $lock_key, 1, 60 );
+
+		// Clear transient FIRST before sending mail
+		delete_transient( $transient_key );
+		self::remove_from_pending_queue( $notif_id );
+
+		// Now send mail
+		return self::dispatch_notification_payload( $data['event_type'], $data['payload'] );
+	}
+
+	/**
+	 * Transient fallback processor.
+	 *
+	 * Checks for any pending notifications where WP-Cron may have failed or been blocked.
+	 * Enforces at least a 30-second delay gap so WP-Cron has time to trigger first.
+	 * If the 30-second gap has elapsed and transient still exists, clears transient first then dispatches mail.
+	 *
+	 * @return void
+	 */
+	public static function check_pending_transient_notifications() {
+		static $already_checked = false;
+		if ( $already_checked ) {
+			return;
+		}
+		$already_checked = true;
+
+		$queue = get_option( 'dctc_pending_notification_queue', array() );
+		if ( empty( $queue ) || ! is_array( $queue ) ) {
+			return;
+		}
+
+		$now         = time();
+		$has_changes = false;
+
+		foreach ( $queue as $notif_id => $item ) {
+			$created_at = isset( $item['created_at'] ) ? (int) $item['created_at'] : 0;
+
+			// Enforce 30-second delay gap: WP-Cron is allowed 30 seconds to trigger first
+			if ( ( $now - $created_at ) < 30 ) {
+				continue;
+			}
+
+			// Drop stale items older than 24 hours to prevent memory leaks or ancient email spam
+			if ( ( $now - $created_at ) > ( DAY_IN_SECONDS ) ) {
+				if ( ! empty( $item['transient_key'] ) ) {
+					delete_transient( $item['transient_key'] );
+				}
+				unset( $queue[ $notif_id ] );
+				$has_changes = true;
+				continue;
+			}
+
+			$transient_key = isset( $item['transient_key'] ) ? $item['transient_key'] : '';
+			if ( ! $transient_key ) {
+				unset( $queue[ $notif_id ] );
+				$has_changes = true;
+				continue;
+			}
+
+			// Atomic lock check to prevent race conditions
+			$lock_key = 'dctc_lck_' . md5( $notif_id );
+			if ( get_transient( $lock_key ) ) {
+				continue;
+			}
+
+			$data = get_transient( $transient_key );
+			if ( empty( $data ) || ! is_array( $data ) ) {
+				// Transient already cleared by cron
+				unset( $queue[ $notif_id ] );
+				$has_changes = true;
+				continue;
+			}
+
+			// Acquire processing lock
+			set_transient( $lock_key, 1, 60 );
+
+			// Clear transient FIRST before sending mail
+			delete_transient( $transient_key );
+			unset( $queue[ $notif_id ] );
+			$has_changes = true;
+
+			// Send mail from fallback transient
+			if ( ! empty( $data['event_type'] ) && isset( $data['payload'] ) ) {
+				self::dispatch_notification_payload( $data['event_type'], $data['payload'] );
+			}
+		}
+
+		if ( $has_changes ) {
+			update_option( 'dctc_pending_notification_queue', $queue, false );
+		}
+	}
+
+	/**
+	 * Dispatch email based on event type.
+	 *
+	 * @param string $event_type Event slug.
+	 * @param array  $payload    Event arguments.
+	 * @return bool
+	 */
+	public static function dispatch_notification_payload( $event_type, array $payload ) {
+		switch ( $event_type ) {
+			case 'ticket_assigned':
+				$ticket_id = isset( $payload['ticket_id'] ) ? (int) $payload['ticket_id'] : 0;
+				$agent_id  = isset( $payload['agent_id'] ) ? (int) $payload['agent_id'] : 0;
+				return self::process_ticket_assigned( $ticket_id, $agent_id );
+
+			case 'guest_ticket_created':
+				$ticket_id = isset( $payload['ticket_id'] ) ? (int) $payload['ticket_id'] : 0;
+				return self::process_guest_ticket_created( $ticket_id );
+
+			case 'lead_email':
+				$lead = isset( $payload['lead'] ) && is_array( $payload['lead'] ) ? $payload['lead'] : array();
+				return self::process_lead_email( $lead );
+
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Remove notification item from pending queue option.
+	 *
+	 * @param string $notif_id Notification ID.
+	 * @return void
+	 */
+	private static function remove_from_pending_queue( $notif_id ) {
+		$queue = get_option( 'dctc_pending_notification_queue', array() );
+		if ( is_array( $queue ) && isset( $queue[ $notif_id ] ) ) {
+			unset( $queue[ $notif_id ] );
+			update_option( 'dctc_pending_notification_queue', $queue, false );
+		}
 	}
 
 	/**
 	 * Send notification when a ticket is assigned to an agent.
 	 *
+	 * Scheduled asynchronously via WP-Cron with a transient callback fallback to prevent blocking chat/API response.
+	 *
+	 * @param int  $ticket_id Ticket ID.
+	 * @param int  $agent_id  Support Agent ID.
+	 * @param bool $immediate Whether to send immediately without scheduling.
+	 * @return bool
+	 */
+	public static function notify_ticket_assigned( $ticket_id, $agent_id, $immediate = false ) {
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		$agent  = DCTC_Support_Agent_Service::get_agent_by_id( $agent_id );
+
+		if ( ! $ticket || ! $agent || empty( $agent['user_email'] ) ) {
+			return false;
+		}
+
+		if ( ! self::should_notify( 'agent', 'agent_assignment', $ticket, array( 'agent' => $agent ) ) ) {
+			return false;
+		}
+
+		if ( $immediate ) {
+			return self::process_ticket_assigned( $ticket_id, $agent_id );
+		}
+
+		return self::schedule_async_notification(
+			'ticket_assigned',
+			array(
+				'ticket_id' => (int) $ticket_id,
+				'agent_id'  => (int) $agent_id,
+			)
+		);
+	}
+
+	/**
+	 * Process and dispatch agent ticket assignment email.
+	 *
 	 * @param int $ticket_id Ticket ID.
 	 * @param int $agent_id  Support Agent ID.
 	 * @return bool
 	 */
-	public static function notify_ticket_assigned( $ticket_id, $agent_id ) {
+	public static function process_ticket_assigned( $ticket_id, $agent_id ) {
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
 		$agent  = DCTC_Support_Agent_Service::get_agent_by_id( $agent_id );
 
@@ -323,13 +565,55 @@ class DCTC_Support_Notification_Service {
 	/**
 	 * Send confirmation notification when a support ticket is created in guest mode.
 	 *
-	 * Notifies the customer of receipt and informs them how to manage their ticket
-	 * from the support portal with their email account when the guest session expires or closes.
+	 * Scheduled asynchronously via WP-Cron with a transient callback fallback to prevent blocking chat/API response.
+	 *
+	 * @param int  $ticket_id Ticket ID.
+	 * @param bool $immediate Whether to send immediately without scheduling.
+	 * @return bool
+	 */
+	public static function notify_guest_ticket_created( $ticket_id, $immediate = false ) {
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
+		if ( ! $ticket || empty( $ticket['customer_email'] ) ) {
+			return false;
+		}
+
+		// Only applicable for guest visitors (no authenticated WP user)
+		if ( ! empty( $ticket['customer_wp_user_id'] ) ) {
+			return false;
+		}
+
+		// Check global Customer Email Notifications policy
+		$support_settings = get_option( 'dctc_support_settings', array() );
+		$notifs           = ! empty( $support_settings['notifications'] ) ? $support_settings['notifications'] : array();
+		if ( isset( $notifs['customer_email_enabled'] ) && ! $notifs['customer_email_enabled'] ) {
+			return false;
+		}
+
+		// Check portal specific guest confirmation setting
+		$portal_settings = class_exists( 'DCTC_Support_Portal' ) ? DCTC_Support_Portal::get_settings() : array();
+		if ( isset( $portal_settings['guest_ticket_received_email_enabled'] ) && ! $portal_settings['guest_ticket_received_email_enabled'] ) {
+			return false;
+		}
+
+		if ( $immediate ) {
+			return self::process_guest_ticket_created( $ticket_id );
+		}
+
+		return self::schedule_async_notification(
+			'guest_ticket_created',
+			array(
+				'ticket_id' => (int) $ticket_id,
+			)
+		);
+	}
+
+	/**
+	 * Process and dispatch guest ticket created confirmation email.
 	 *
 	 * @param int $ticket_id Ticket ID.
 	 * @return bool
 	 */
-	public static function notify_guest_ticket_created( $ticket_id ) {
+	public static function process_guest_ticket_created( $ticket_id ) {
 		$ticket = DCTC_Support_Ticket_Service::get_ticket( $ticket_id );
 		if ( ! $ticket || empty( $ticket['customer_email'] ) ) {
 			return false;
@@ -413,6 +697,109 @@ class DCTC_Support_Notification_Service {
 		}
 
 		return self::send_email( $cust_email, $subject, $content, $ticket['id'], 'customer', 0, 'guest_ticket_created' );
+	}
+
+	/**
+	 * Send email notification to admin when a new lead is captured by AI Chatbot.
+	 *
+	 * Scheduled asynchronously via WP-Cron with a transient callback fallback to prevent blocking chat/API response.
+	 *
+	 * @param array $lead      Lead data.
+	 * @param bool  $immediate Whether to send immediately without scheduling.
+	 * @return bool
+	 */
+	public static function maybe_send_lead_email( array $lead, $immediate = false ) {
+		$settings = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : array();
+		$bot      = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+
+		$send_email = ! isset( $bot['enable_lead_email_alerts'] ) || (bool) $bot['enable_lead_email_alerts'];
+		if ( ! $send_email ) {
+			return false;
+		}
+
+		$to = ! empty( $bot['lead_notification_email'] ) ? sanitize_email( $bot['lead_notification_email'] ) : get_option( 'admin_email' );
+		$to = self::get_admin_notification_email( $to );
+
+		if ( empty( $to ) || ! is_email( $to ) ) {
+			return false;
+		}
+
+		if ( $immediate ) {
+			return self::process_lead_email( $lead );
+		}
+
+		return self::schedule_async_notification(
+			'lead_email',
+			array(
+				'lead' => $lead,
+			)
+		);
+	}
+
+	/**
+	 * Alias for maybe_send_lead_email.
+	 *
+	 * @param array $lead      Lead data.
+	 * @param bool  $immediate Whether to send immediately without scheduling.
+	 * @return bool
+	 */
+	public static function notify_lead_captured( array $lead, $immediate = false ) {
+		return self::maybe_send_lead_email( $lead, $immediate );
+	}
+
+	/**
+	 * Process and dispatch lead email notification.
+	 *
+	 * @param array $lead Lead data.
+	 * @return bool
+	 */
+	public static function process_lead_email( array $lead ) {
+		$settings = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : array();
+		$bot      = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
+
+		$send_email = ! isset( $bot['enable_lead_email_alerts'] ) || (bool) $bot['enable_lead_email_alerts'];
+		if ( ! $send_email ) {
+			return false;
+		}
+
+		$to = ! empty( $bot['lead_notification_email'] ) ? sanitize_email( $bot['lead_notification_email'] ) : get_option( 'admin_email' );
+		$to = self::get_admin_notification_email( $to );
+
+		if ( empty( $to ) || ! is_email( $to ) ) {
+			return false;
+		}
+
+		$site_name = get_bloginfo( 'name' );
+		$lead_name = ! empty( $lead['name'] ) ? $lead['name'] : ( ! empty( $lead['email'] ) ? $lead['email'] : __( 'Visitor', 'dragwyb-click-to-chat' ) );
+		$subject   = sprintf(
+			/* translators: 1: Site name, 2: Lead name/email */
+			__( '[%1$s] New AI Chat Lead: %2$s', 'dragwyb-click-to-chat' ),
+			$site_name,
+			$lead_name
+		);
+
+		$ticket_id = ! empty( $lead['ticket_id'] ) ? (int) $lead['ticket_id'] : ( ! empty( $lead['id'] ) ? (int) $lead['id'] : 0 );
+
+		$content  = '<h2>' . esc_html__( 'New Lead Captured by AI Chatbot', 'dragwyb-click-to-chat' ) . '</h2>';
+		$content .= '<p>' . esc_html__( 'A new prospective lead has been captured by your AI Chatbot:', 'dragwyb-click-to-chat' ) . '</p>';
+
+		$content .= '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:16px;margin:18px 0;font-size:13.5px;color:#334155;">';
+		$content .= '<table style="width:100%;border-collapse:collapse;line-height:1.8;">';
+		$content .= '<tr><td style="font-weight:700;width:35%;color:#0F172A;padding:4px 0;">' . esc_html__( 'Name:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['name'] ) ? $lead['name'] : '-' ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Email:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['email'] ) ? $lead['email'] : '-' ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Phone:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['phone'] ) ? $lead['phone'] : '-' ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Company:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['company'] ) ? $lead['company'] : '-' ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Lead Score:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;"><strong>' . intval( $lead['score'] ?? 0 ) . ' / 100</strong></td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Requirement:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . nl2br( esc_html( ! empty( $lead['requirement'] ) ? $lead['requirement'] : '-' ) ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Source URL:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['source_url'] ) ? $lead['source_url'] : '-' ) . '</td></tr>';
+		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Captured At:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
+		$content .= '</table>';
+		$content .= '</div>';
+
+		$admin_url = admin_url( 'admin.php?page=dragwyb-click-to-chat' );
+		$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">' . esc_html__( 'View Leads in Dashboard', 'dragwyb-click-to-chat' ) . '</a></p>';
+
+		return self::send_email( $to, $subject, $content, $ticket_id, 'admin', 0, 'ai_lead_captured' );
 	}
 
 	/**

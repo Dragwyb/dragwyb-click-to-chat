@@ -1204,19 +1204,20 @@ class DCTC_AI_Chat_Controller {
 								)
 							);
 
-							if ( $lead_id && class_exists( 'DCTC_AI_Leads_Controller' ) ) {
-								$leads_controller = new DCTC_AI_Leads_Controller();
-								$leads_controller->maybe_send_lead_email(
-									array(
-										'id'          => $lead_id,
-										'name'        => $effective_name,
-										'email'       => $effective_email,
-										'phone'       => $detected_phone,
-										'requirement' => $prompt,
-										'score'       => min( 100, $score ),
-										'status'      => 'new',
-									)
+							if ( $lead_id ) {
+								$lead_notification_payload = array(
+									'id'          => $lead_id,
+									'name'        => $effective_name,
+									'email'       => $effective_email,
+									'phone'       => $detected_phone,
+									'requirement' => $prompt,
+									'score'       => min( 100, $score ),
+									'status'      => 'new',
 								);
+
+								if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+									DCTC_Support_Notification_Service::maybe_send_lead_email( $lead_notification_payload );
+								}
 							}
 						}
 					}

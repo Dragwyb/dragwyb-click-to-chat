@@ -494,7 +494,9 @@ class DCTC_AI_Leads_Controller {
 		}
 
 		// 4. Dispatch Email Notification
-		$this->maybe_send_lead_email( $lead_data );
+		if ( class_exists( 'DCTC_Support_Notification_Service' ) ) {
+			DCTC_Support_Notification_Service::maybe_send_lead_email( $lead_data );
+		}
 
 		// 5. Dispatch Webhook
 		$this->maybe_dispatch_webhook( $lead_data );
@@ -802,53 +804,6 @@ class DCTC_AI_Leads_Controller {
 			),
 			200
 		);
-	}
-
-	/**
-	 * Send email notification to admin when new lead arrives.
-	 *
-	 * @param array $lead
-	 * @return void
-	 */
-	public function maybe_send_lead_email( array $lead ) {
-		$settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-		$bot      = isset( $settings['chatbot'] ) ? $settings['chatbot'] : array();
-
-		$send_email = ! isset( $bot['enable_lead_email_alerts'] ) || (bool) $bot['enable_lead_email_alerts'];
-		if ( ! $send_email ) {
-			return;
-		}
-
-		$to = ! empty( $bot['lead_notification_email'] ) ? sanitize_email( $bot['lead_notification_email'] ) : get_option( 'admin_email' );
-		$to = DCTC_Support_Notification_Service::get_admin_notification_email( $to );
-
-		if ( empty( $to ) || ! is_email( $to ) ) {
-			return;
-		}
-
-		$site_name = get_bloginfo( 'name' );
-		$subject   = sprintf(
-			/* translators: 1: Site name, 2: Lead name/email */
-			__( '[%1$s] New AI Chat Lead: %2$s', 'dragwyb-click-to-chat' ),
-			$site_name,
-			! empty( $lead['name'] ) ? $lead['name'] : ( ! empty( $lead['email'] ) ? $lead['email'] : __( 'Visitor', 'dragwyb-click-to-chat' ) )
-		);
-
-		/* translators: 1: Name, 2: Email, 3: Phone, 4: Company, 5: Lead score, 6: Requirement, 7: Source URL, 8: Captured timestamp, 9: Admin URL */
-		$body = sprintf(
-			__( "A new prospective lead has been captured by your AI Chatbot!\n\n• Name: %1\$s\n• Email: %2\$s\n• Phone: %3\$s\n• Company: %4\$s\n• Lead Score: %5\$d / 100\n• Requirement: %6\$s\n• Source Page: %7\$s\n• Captured At: %8\$s\n\nView and manage all leads in your WordPress dashboard:\n%9\$s\n", 'dragwyb-click-to-chat' ),
-			! empty( $lead['name'] ) ? $lead['name'] : '-',
-			! empty( $lead['email'] ) ? $lead['email'] : '-',
-			! empty( $lead['phone'] ) ? $lead['phone'] : '-',
-			! empty( $lead['company'] ) ? $lead['company'] : '-',
-			intval( $lead['score'] ?? 0 ),
-			! empty( $lead['requirement'] ) ? $lead['requirement'] : '-',
-			! empty( $lead['source_url'] ) ? $lead['source_url'] : '-',
-			current_time( 'mysql' ),
-			admin_url( 'admin.php?page=dragwyb-click-to-chat' )
-		);
-
-		wp_mail( $to, $subject, $body );
 	}
 
 	/**
