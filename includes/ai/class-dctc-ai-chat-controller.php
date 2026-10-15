@@ -1274,9 +1274,9 @@ class DCTC_AI_Chat_Controller {
 					$ai_message = preg_replace( '/\bat your account email\b/i', 'directly', $ai_message );
 					$ai_message = preg_replace( '/\bat your registered email\b/i', 'directly', $ai_message );
 
-					$can_ask_email = ( 'LEAD_GENERATION' === $effective_ticket_type )
+					$can_ask_email = $should_show_lead_form === true ? false : ( ( 'LEAD_GENERATION' === $effective_ticket_type )
 						? $ask_lead_email
-						: $ask_support_email;
+						: $ask_support_email );
 
 					if ( ( $contains_support_referral || $is_actionable_connect ) && ! $existing_ticket ) {
 						$has_email_prompt = ( false !== stripos( $ai_message, 'email address' ) || false !== stripos( $ai_message, 'share your email' ) || false !== stripos( $ai_message, 'provide your email' ) );
@@ -1284,7 +1284,7 @@ class DCTC_AI_Chat_Controller {
 
 						if ( $can_ask_email ) {
 							if ( ! $has_email_prompt && ! $has_support_link ) {
-								if ( 'LEAD_GENERATION' === $effective_ticket_type && ! $enable_lead_capture ) {
+								if ( 'LEAD_GENERATION' === $effective_ticket_type ) {
 									if ( $has_support_url_escaped ) {
 										$ai_message .= "\n\n" . sprintf(
 											/* translators: %s: Support URL */
