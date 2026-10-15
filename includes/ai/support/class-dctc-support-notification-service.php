@@ -298,9 +298,10 @@ class DCTC_Support_Notification_Service {
 		$content .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Priority:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( $ticket['priority'] ) ) . '</p>';
 		$content .= '<p><strong>' . esc_html__( 'Origin:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['origin_type'] ) . '</p>';
-		$content .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'View Ticket in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
+		$content .= '<p><a href="' . esc_url( $admin_url ) . '" class="btn">' . esc_html__( 'View Ticket in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
 
-		return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'agent_assignment' );
+		$heading = sprintf( esc_html__( 'Ticket Assigned (#%d)', 'dragwyb-click-to-chat' ), $ticket_no );
+		return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'agent_assignment', $heading );
 	}
 
 	/**
@@ -416,10 +417,11 @@ class DCTC_Support_Notification_Service {
 				$content   = '<h2>' . esc_html__( 'Customer has sent a new reply', 'dragwyb-click-to-chat' ) . '</h2>';
 				$content  .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket_no ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
 				$content  .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
-				$content  .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
-				$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
+				$content  .= '<blockquote>' . nl2br( esc_html( $reply_text ) ) . '</blockquote>';
+				$content  .= '<p><a href="' . esc_url( $admin_url ) . '" class="btn">' . esc_html__( 'Open Ticket & Reply', 'dragwyb-click-to-chat' ) . '</a></p>';
 
-				return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'customer_reply' );
+				$heading = sprintf( esc_html__( 'New Customer Reply (#%d)', 'dragwyb-click-to-chat' ), $ticket_no );
+				return self::send_email( $agent['user_email'], $subject, $content, $ticket['id'], 'agent', $agent['id'], 'customer_reply', $heading );
 			}
 		}
 
@@ -439,10 +441,11 @@ class DCTC_Support_Notification_Service {
 		$content  .= '<p><strong>' . esc_html__( 'Ticket:', 'dragwyb-click-to-chat' ) . '</strong> #' . esc_html( $ticket_no ) . ' - ' . esc_html( $ticket['subject'] ) . '</p>';
 		$content  .= '<p><strong>' . esc_html__( 'Customer:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : $ticket['customer_email'] ) . '</p>';
 		$content  .= '<p><strong>' . esc_html__( 'Status:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( ucfirst( str_replace( '_', ' ', $ticket['status'] ) ) ) . ' (' . esc_html__( 'Unassigned', 'dragwyb-click-to-chat' ) . ')</p>';
-		$content  .= '<div style="background:#F3F4F6;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;font-style:italic;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
-		$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;">' . esc_html__( 'Assign & Reply in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
+		$content  .= '<blockquote>' . nl2br( esc_html( $reply_text ) ) . '</blockquote>';
+		$content  .= '<p><a href="' . esc_url( $admin_url ) . '" class="btn">' . esc_html__( 'Assign & Reply in Support Center', 'dragwyb-click-to-chat' ) . '</a></p>';
 
-		return self::send_email( $admin_email, $subject, $content, $ticket['id'], 'admin', 0, 'customer_reply_unassigned' );
+		$heading = sprintf( esc_html__( 'Unassigned Ticket Message (#%d)', 'dragwyb-click-to-chat' ), $ticket_no );
+		return self::send_email( $admin_email, $subject, $content, $ticket['id'], 'admin', 0, 'customer_reply_unassigned', $heading );
 	}
 
 	/**
@@ -526,10 +529,11 @@ class DCTC_Support_Notification_Service {
 		$content .= '<p>' . sprintf( esc_html__( 'Hi %s,', 'dragwyb-click-to-chat' ), esc_html( $ticket['customer_name'] ? $ticket['customer_name'] : 'there' ) ) . '</p>';
 		/* translators: 1: Ticket number, 2: Ticket subject */
 		$content .= '<p>' . sprintf( esc_html__( 'Our support agent has responded to your ticket #%1$d (%2$s):', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket['subject'] ) ) . '</p>';
-		$content .= '<div style="background:#EEF2FF;border-left:4px solid #4F46E5;padding:12px;margin:15px 0;">' . nl2br( esc_html( $reply_text ) ) . '</div>';
+		$content .= '<blockquote>' . nl2br( esc_html( $reply_text ) ) . '</blockquote>';
 		$content .= '<p>' . esc_html__( 'You can reply to this message directly in our support portal or website chatbot widget.', 'dragwyb-click-to-chat' ) . '</p>';
 
-		return self::send_email( $ticket['customer_email'], $subject, $content, $ticket['id'], 'customer', $ticket['customer_wp_user_id'], 'agent_reply' );
+		$heading = sprintf( esc_html__( 'Support Ticket Update (#%d)', 'dragwyb-click-to-chat' ), $ticket_no );
+		return self::send_email( $ticket['customer_email'], $subject, $content, $ticket['id'], 'customer', $ticket['customer_wp_user_id'], 'agent_reply', $heading );
 	}
 
 	/**
@@ -559,7 +563,8 @@ class DCTC_Support_Notification_Service {
 		$content .= '<p>' . sprintf( esc_html__( 'Your ticket #%1$d (%2$s) has been marked as resolved by our team.', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket['subject'] ) ) . '</p>';
 		$content .= '<p>' . esc_html__( 'If you still need help or have further questions, simply send another reply and the ticket will automatically reopen.', 'dragwyb-click-to-chat' ) . '</p>';
 
-		return self::send_email( $ticket['customer_email'], $subject, $content, $ticket['id'], 'customer', $ticket['customer_wp_user_id'], 'ticket_resolved' );
+		$heading = sprintf( esc_html__( 'Ticket Resolved (#%d)', 'dragwyb-click-to-chat' ), $ticket_no );
+		return self::send_email( $ticket['customer_email'], $subject, $content, $ticket['id'], 'customer', $ticket['customer_wp_user_id'], 'ticket_resolved', $heading );
 	}
 
 	/**
@@ -678,14 +683,12 @@ class DCTC_Support_Notification_Service {
 		$content .= '<p>' . sprintf( esc_html__( 'Thank you for reaching out to us. Your ticket #%1$d (%2$s) has been successfully created in guest mode.', 'dragwyb-click-to-chat' ), esc_html( $ticket_no ), esc_html( $ticket_subj ) ) . '</p>';
 
 		// Configured guidance card
-		$content .= '<div style="background:#EEF2FF;border-left:4px solid #4F46E5;border-radius:4px;padding:14px 16px;margin:18px 0;color:#1E1B4B;font-size:13.5px;line-height:1.6;">';
-		$content .= nl2br( esc_html( $message ) );
-		$content .= '</div>';
+		$content .= '<blockquote>' . nl2br( esc_html( $message ) ) . '</blockquote>';
 
 		// Helpful details box
-		$content .= '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:14px 16px;margin:18px 0;font-size:13px;color:#334155;">';
-		$content .= '<p style="margin:0 0 6px 0;font-weight:700;color:#0F172A;">' . esc_html__( 'Ticket Details:', 'dragwyb-click-to-chat' ) . '</p>';
-		$content .= '<ul style="margin:0;padding-left:18px;line-height:1.6;">';
+		$content .= '<div class="info-card">';
+		$content .= '<p><strong>' . esc_html__( 'Ticket Details:', 'dragwyb-click-to-chat' ) . '</strong></p>';
+		$content .= '<ul>';
 		$content .= '<li><strong>' . esc_html__( 'Registered Email:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $cust_email ) . '</li>';
 		$content .= '<li><strong>' . esc_html__( 'Subject:', 'dragwyb-click-to-chat' ) . '</strong> ' . esc_html( $ticket_subj ) . '</li>';
 		$content .= '<li>' . esc_html__( 'Whenever your guest browser session expires or closes, you can access and track all tickets associated with this email directly from our support portal.', 'dragwyb-click-to-chat' ) . '</li>';
@@ -693,10 +696,11 @@ class DCTC_Support_Notification_Service {
 		$content .= '</div>';
 
 		if ( ! empty( $portal_url ) ) {
-			$content .= '<p style="margin-top:24px;text-align:center;"><a href="' . esc_url( $portal_url ) . '" style="background:#4F46E5;color:#ffffff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">' . esc_html__( 'View in Support Portal', 'dragwyb-click-to-chat' ) . '</a></p>';
+			$content .= '<p><a href="' . esc_url( $portal_url ) . '" class="btn">' . esc_html__( 'View in Support Portal', 'dragwyb-click-to-chat' ) . '</a></p>';
 		}
 
-		return self::send_email( $cust_email, $subject, $content, $ticket['id'], 'customer', 0, 'guest_ticket_created' );
+		$heading = sprintf( esc_html__( 'Support Ticket Confirmation (#%d)', 'dragwyb-click-to-chat' ), $ticket['id'] );
+		return self::send_email( $cust_email, $subject, $content, $ticket['id'], 'customer', 0, 'guest_ticket_created', $heading );
 	}
 
 	/**
@@ -783,23 +787,22 @@ class DCTC_Support_Notification_Service {
 		$content  = '<h2>' . esc_html__( 'New Lead Captured by AI Chatbot', 'dragwyb-click-to-chat' ) . '</h2>';
 		$content .= '<p>' . esc_html__( 'A new prospective lead has been captured by your AI Chatbot:', 'dragwyb-click-to-chat' ) . '</p>';
 
-		$content .= '<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:16px;margin:18px 0;font-size:13.5px;color:#334155;">';
-		$content .= '<table style="width:100%;border-collapse:collapse;line-height:1.8;">';
-		$content .= '<tr><td style="font-weight:700;width:35%;color:#0F172A;padding:4px 0;">' . esc_html__( 'Name:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['name'] ) ? $lead['name'] : '-' ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Email:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['email'] ) ? $lead['email'] : '-' ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Phone:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['phone'] ) ? $lead['phone'] : '-' ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Company:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['company'] ) ? $lead['company'] : '-' ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Lead Score:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;"><strong>' . intval( $lead['score'] ?? 0 ) . ' / 100</strong></td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Requirement:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . nl2br( esc_html( ! empty( $lead['requirement'] ) ? $lead['requirement'] : '-' ) ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Source URL:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( ! empty( $lead['source_url'] ) ? $lead['source_url'] : '-' ) . '</td></tr>';
-		$content .= '<tr><td style="font-weight:700;color:#0F172A;padding:4px 0;">' . esc_html__( 'Captured At:', 'dragwyb-click-to-chat' ) . '</td><td style="padding:4px 0;">' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
+		$content .= '<table>';
+		$content .= '<tr><th>' . esc_html__( 'Name:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( ! empty( $lead['name'] ) ? $lead['name'] : '-' ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Email:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( ! empty( $lead['email'] ) ? $lead['email'] : '-' ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Phone:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( ! empty( $lead['phone'] ) ? $lead['phone'] : '-' ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Company:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( ! empty( $lead['company'] ) ? $lead['company'] : '-' ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Lead Score:', 'dragwyb-click-to-chat' ) . '</th><td><strong>' . intval( $lead['score'] ?? 0 ) . ' / 100</strong></td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Requirement:', 'dragwyb-click-to-chat' ) . '</th><td>' . nl2br( esc_html( ! empty( $lead['requirement'] ) ? $lead['requirement'] : '-' ) ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Source URL:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( ! empty( $lead['source_url'] ) ? $lead['source_url'] : '-' ) . '</td></tr>';
+		$content .= '<tr><th>' . esc_html__( 'Captured At:', 'dragwyb-click-to-chat' ) . '</th><td>' . esc_html( current_time( 'mysql' ) ) . '</td></tr>';
 		$content .= '</table>';
-		$content .= '</div>';
 
 		$admin_url = admin_url( 'admin.php?page=dragwyb-click-to-chat' );
-		$content  .= '<p style="margin-top:20px;"><a href="' . esc_url( $admin_url ) . '" style="background:#4F46E5;color:#fff;padding:10px 18px;text-decoration:none;border-radius:6px;font-weight:bold;display:inline-block;">' . esc_html__( 'View Leads in Dashboard', 'dragwyb-click-to-chat' ) . '</a></p>';
+		$content  .= '<p><a href="' . esc_url( $admin_url ) . '" class="btn">' . esc_html__( 'View Leads in Dashboard', 'dragwyb-click-to-chat' ) . '</a></p>';
 
-		return self::send_email( $to, $subject, $content, $ticket_id, 'admin', 0, 'ai_lead_captured' );
+		$heading = esc_html__( 'New Lead Captured', 'dragwyb-click-to-chat' );
+		return self::send_email( $to, $subject, $content, $ticket_id, 'admin', 0, 'ai_lead_captured', $heading );
 	}
 
 	/**
@@ -862,7 +865,382 @@ class DCTC_Support_Notification_Service {
 	}
 
 	/**
+	 * Whitelist of allowed HTML tags and attributes for notification emails.
+	 *
+	 * Uses wp_kses with a custom email-safe array of tags and attributes to sanitize
+	 * email content before sending, preventing XSS and layout breakage while preserving
+	 * clean typography, styling, tables, links, and buttons.
+	 *
+	 * @return array Whitelisted HTML tags and attributes.
+	 */
+	public static function get_allowed_email_html() {
+		$common_attributes = array(
+			'style' => true,
+			'class' => true,
+			'id'    => true,
+		);
+
+		$allowed = array(
+			'a'          => array_merge(
+				$common_attributes,
+				array(
+					'href'   => true,
+					'title'  => true,
+					'target' => true,
+					'rel'    => true,
+				)
+			),
+			'b'          => $common_attributes,
+			'strong'     => $common_attributes,
+			'i'          => $common_attributes,
+			'em'         => $common_attributes,
+			'u'          => $common_attributes,
+			'small'      => $common_attributes,
+			'span'       => $common_attributes,
+			'p'          => array_merge( $common_attributes, array( 'align' => true ) ),
+			'div'        => array_merge( $common_attributes, array( 'align' => true ) ),
+			'br'         => array( 'class' => true ),
+			'hr'         => $common_attributes,
+			'h1'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'h2'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'h3'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'h4'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'h5'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'h6'         => array_merge( $common_attributes, array( 'align' => true ) ),
+			'ul'         => $common_attributes,
+			'ol'         => array_merge(
+				$common_attributes,
+				array(
+					'start' => true,
+					'type'  => true,
+				)
+			),
+			'li'         => $common_attributes,
+			'blockquote' => $common_attributes,
+			'pre'        => $common_attributes,
+			'code'       => $common_attributes,
+			'table'      => array_merge(
+				$common_attributes,
+				array(
+					'width'       => true,
+					'cellpadding' => true,
+					'cellspacing' => true,
+					'border'      => true,
+					'align'       => true,
+					'role'        => true,
+				)
+			),
+			'thead'      => $common_attributes,
+			'tbody'      => $common_attributes,
+			'tfoot'      => $common_attributes,
+			'tr'         => array_merge(
+				$common_attributes,
+				array(
+					'align'  => true,
+					'valign' => true,
+				)
+			),
+			'td'         => array_merge(
+				$common_attributes,
+				array(
+					'width'   => true,
+					'height'  => true,
+					'align'   => true,
+					'valign'  => true,
+					'colspan' => true,
+					'rowspan' => true,
+				)
+			),
+			'th'         => array_merge(
+				$common_attributes,
+				array(
+					'width'   => true,
+					'height'  => true,
+					'align'   => true,
+					'valign'  => true,
+					'colspan' => true,
+					'rowspan' => true,
+				)
+			),
+			'img'        => array_merge(
+				$common_attributes,
+				array(
+					'src'    => true,
+					'alt'    => true,
+					'title'  => true,
+					'width'  => true,
+					'height' => true,
+					'border' => true,
+				)
+			),
+		);
+
+		// Merge with wp_kses_allowed_html( 'post' ) baseline for additional harmless typography tags
+		if ( function_exists( 'wp_kses_allowed_html' ) ) {
+			$post_allowed = wp_kses_allowed_html( 'post' );
+			if ( is_array( $post_allowed ) ) {
+				foreach ( array( 'sub', 'sup', 'del', 'ins', 'mark', 'kbd', 'abbr' ) as $extra_tag ) {
+					if ( isset( $post_allowed[ $extra_tag ] ) ) {
+						$allowed[ $extra_tag ] = $common_attributes;
+					}
+				}
+			}
+		}
+
+		/**
+		 * Filter allowed HTML tags and attributes for email templates.
+		 *
+		 * @param array $allowed Whitelisted HTML tags and attributes.
+		 */
+		return apply_filters( 'dctc_allowed_email_html', $allowed );
+	}
+
+	/**
+	 * Build and return a standardized HTML email template with default header, border, and footer.
+	 *
+	 * Sanitizes all dynamic markup using wp_kses with a strict whitelist of email-safe tags and attributes.
+	 *
+	 * @param string|array $body_content   Inner HTML body content, or associative array with all arguments.
+	 * @param string       $header_heading Optional custom heading for header. Default: '{Site Name} Support'.
+	 * @param string       $footer_content Optional custom footer content. Default: 'This email was sent automatically by {Site Name} Support Center.'.
+	 * @param array        $args           Optional parameters for styling and metadata:
+	 *                                     - 'site_name'    (string) Site title override.
+	 *                                     - 'header_bg'    (string) Background color for header band (default '#4F46E5').
+	 *                                     - 'header_color' (string) Text color for header (default '#FFFFFF').
+	 *                                     - 'border_color' (string) Border color for card & dividers (default '#E5E7EB').
+	 *                                     - 'card_bg'      (string) Background color for card (default '#FFFFFF').
+	 *                                     - 'page_bg'      (string) Outer page background color (default '#F3F4F6').
+	 * @return string Fully assembled, sanitized, and responsive HTML email document.
+	 */
+	public static function render_email_template( $body_content = '', $header_heading = '', $footer_content = '', $args = array() ) {
+		// Support passing associative array as first parameter
+		if ( is_array( $body_content ) && empty( $header_heading ) && empty( $footer_content ) ) {
+			$args           = $body_content;
+			$body_content   = isset( $args['body_content'] ) ? $args['body_content'] : ( isset( $args['body'] ) ? $args['body'] : ( isset( $args['content'] ) ? $args['content'] : '' ) );
+			$header_heading = isset( $args['header_heading'] ) ? $args['header_heading'] : ( isset( $args['heading'] ) ? $args['heading'] : ( isset( $args['header'] ) ? $args['header'] : '' ) );
+			$footer_content = isset( $args['footer_content'] ) ? $args['footer_content'] : ( isset( $args['footer'] ) ? $args['footer'] : '' );
+		}
+
+		$site_name = ! empty( $args['site_name'] ) ? sanitize_text_field( $args['site_name'] ) : get_bloginfo( 'name' );
+
+		// 1. Default Header Heading
+		if ( empty( $header_heading ) ) {
+			$header_heading = $site_name . ' ' . esc_html__( 'Support', 'dragwyb-click-to-chat' );
+		}
+
+		// 2. Default Footer Content
+		if ( empty( $footer_content ) ) {
+			/* translators: %s: Site name */
+			$footer_content = sprintf( esc_html__( 'This email was sent automatically by %s Support Center.', 'dragwyb-click-to-chat' ), esc_html( $site_name ) );
+		}
+
+		// 3. Styling Tokens with clean defaults
+		$header_bg = ! empty( $args['header_bg'] ) ? sanitize_hex_color( $args['header_bg'] ) : '#4F46E5';
+		if ( ! $header_bg ) {
+			$header_bg = '#4F46E5';
+		}
+		$header_color = ! empty( $args['header_color'] ) ? sanitize_hex_color( $args['header_color'] ) : '#FFFFFF';
+		if ( ! $header_color ) {
+			$header_color = '#FFFFFF';
+		}
+		$border_color = ! empty( $args['border_color'] ) ? sanitize_hex_color( $args['border_color'] ) : '#E5E7EB';
+		if ( ! $border_color ) {
+			$border_color = '#E5E7EB';
+		}
+		$card_bg = ! empty( $args['card_bg'] ) ? sanitize_hex_color( $args['card_bg'] ) : '#FFFFFF';
+		if ( ! $card_bg ) {
+			$card_bg = '#FFFFFF';
+		}
+		$page_bg = ! empty( $args['page_bg'] ) ? sanitize_hex_color( $args['page_bg'] ) : '#F3F4F6';
+		if ( ! $page_bg ) {
+			$page_bg = '#F3F4F6';
+		}
+
+		// 4. Strict Sanitization
+		$allowed_html  = self::get_allowed_email_html();
+		$clean_heading = wp_kses( (string) $header_heading, $allowed_html );
+		$clean_body    = wp_kses( (string) $body_content, $allowed_html );
+		$clean_footer  = wp_kses( (string) $footer_content, $allowed_html );
+
+		// Automatically normalize semantic elements with clean email styling for universal client support
+		$search_tags  = array(
+			'<blockquote>',
+			'<table>',
+			'<th>',
+			'<td>',
+			'class="btn"',
+			'class="info-card"',
+		);
+		$replace_tags = array(
+			'<blockquote style="margin: 16px 0; padding: 12px 16px; background-color: #F8FAFC; border-left: 4px solid ' . esc_attr( $header_bg ) . '; border-radius: 4px; color: #1E293B; font-style: normal;">',
+			'<table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px;">',
+			'<th style="text-align: left; vertical-align: top; width: 32%; padding: 8px 10px 8px 0; color: #0F172A; font-weight: 600; border-bottom: 1px solid #F1F5F9;">',
+			'<td style="text-align: left; vertical-align: top; padding: 8px 0; color: #334155; border-bottom: 1px solid #F1F5F9;">',
+			'class="btn" style="display: inline-block; background-color: ' . esc_attr( $header_bg ) . '; color: #FFFFFF !important; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13.5px; margin-top: 8px;"',
+			'class="info-card" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 14px 16px; margin: 16px 0; font-size: 13px; color: #334155;"',
+		);
+		$clean_body   = str_replace( $search_tags, $replace_tags, $clean_body );
+
+		$page_title = wp_strip_all_tags( $clean_heading );
+		$locale     = get_locale();
+
+		// 5. Clean, minimal, email-client resilient HTML structure
+		$html  = '<!DOCTYPE html>' . "\n";
+		$html .= '<html lang="' . esc_attr( $locale ) . '">' . "\n";
+		$html .= '<head>' . "\n";
+		$html .= '<meta charset="utf-8">' . "\n";
+		$html .= '<meta name="viewport" content="width=device-width, initial-scale=1.0">' . "\n";
+		$html .= '<title>' . esc_html( $page_title ) . '</title>' . "\n";
+		$html .= '<style>' . "\n";
+		$html .= 'body { margin: 0; padding: 0; background-color: ' . esc_attr( $page_bg ) . '; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; line-height: 1.6; color: #1F2937; }' . "\n";
+		$html .= 'table { border-collapse: collapse; }' . "\n";
+		$html .= 'a { color: ' . esc_attr( $header_bg ) . '; text-decoration: none; }' . "\n";
+		$html .= 'a:hover { text-decoration: underline; }' . "\n";
+		$html .= '.email-body-cell h2 { margin: 0 0 16px 0; font-size: 17px; font-weight: 600; color: #111827; line-height: 1.4; }' . "\n";
+		$html .= '.email-body-cell p { margin: 0 0 14px 0; font-size: 14px; line-height: 1.6; color: #374151; }' . "\n";
+		$html .= '.email-body-cell p:last-child { margin-bottom: 0; }' . "\n";
+		$html .= '.email-body-cell table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }' . "\n";
+		$html .= '.email-body-cell th { text-align: left; vertical-align: top; width: 32%; padding: 8px 10px 8px 0; color: #0F172A; font-weight: 600; border-bottom: 1px solid #F1F5F9; }' . "\n";
+		$html .= '.email-body-cell td { text-align: left; vertical-align: top; padding: 8px 0; color: #334155; border-bottom: 1px solid #F1F5F9; }' . "\n";
+		$html .= '.email-body-cell blockquote { margin: 16px 0; padding: 12px 16px; background-color: #F8FAFC; border-left: 4px solid ' . esc_attr( $header_bg ) . '; border-radius: 4px; color: #1E293B; font-style: normal; }' . "\n";
+		$html .= '.email-body-cell ul, .email-body-cell ol { margin: 0 0 14px 0; padding-left: 20px; line-height: 1.6; }' . "\n";
+		$html .= '.email-body-cell li { margin-bottom: 6px; }' . "\n";
+		$html .= '.email-body-cell .btn, .email-body-cell .button, .email-body-cell a.btn { display: inline-block; background-color: ' . esc_attr( $header_bg ) . '; color: #FFFFFF !important; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13.5px; margin-top: 8px; }' . "\n";
+		$html .= '.email-body-cell .info-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 14px 16px; margin: 16px 0; font-size: 13px; color: #334155; }' . "\n";
+		$html .= '@media only screen and (max-width: 620px) {' . "\n";
+		$html .= '  .email-wrapper { width: 100% !important; border-radius: 0 !important; }' . "\n";
+		$html .= '  .email-header-cell { padding: 16px 20px !important; }' . "\n";
+		$html .= '  .email-body-cell { padding: 20px 16px !important; }' . "\n";
+		$html .= '  .email-footer-cell { padding: 16px !important; }' . "\n";
+		$html .= '}' . "\n";
+		$html .= '</style>' . "\n";
+		$html .= '</head>' . "\n";
+		$html .= '<body style="margin: 0; padding: 24px 12px; background-color: ' . esc_attr( $page_bg ) . '; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%;">' . "\n";
+		$html .= '  <center>' . "\n";
+		$html .= '    <table role="presentation" class="email-wrapper" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 580px; margin: 0 auto; background-color: ' . esc_attr( $card_bg ) . '; border: 1px solid ' . esc_attr( $border_color ) . '; border-radius: 8px; overflow: hidden; text-align: left; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);">' . "\n";
+
+		// Default Header
+		$html .= '      <tr>' . "\n";
+		$html .= '        <td class="email-header-cell" style="background-color: ' . esc_attr( $header_bg ) . '; padding: 20px 24px; border-bottom: 1px solid ' . esc_attr( $border_color ) . ';">' . "\n";
+		$html .= '          <div style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.3; color: ' . esc_attr( $header_color ) . '; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">' . $clean_heading . '</div>' . "\n";
+		$html .= '        </td>' . "\n";
+		$html .= '      </tr>' . "\n";
+
+		// Body Content
+		$html .= '      <tr>' . "\n";
+		$html .= '        <td class="email-body-cell" style="padding: 24px; font-size: 14px; line-height: 1.6; color: #1F2937; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">' . "\n";
+		$html .= '          ' . $clean_body . "\n";
+		$html .= '        </td>' . "\n";
+		$html .= '      </tr>' . "\n";
+
+		// Default Border & Footer
+		$html .= '      <tr>' . "\n";
+		$html .= '        <td class="email-footer-cell" style="background-color: #F9FAFB; border-top: 1px solid ' . esc_attr( $border_color ) . '; padding: 16px 24px; font-size: 12px; line-height: 1.5; color: #6B7280; text-align: center; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, Helvetica, Arial, sans-serif;">' . "\n";
+		$html .= '          ' . $clean_footer . "\n";
+		$html .= '        </td>' . "\n";
+		$html .= '      </tr>' . "\n";
+
+		$html .= '    </table>' . "\n";
+		$html .= '  </center>' . "\n";
+		$html .= '</body>' . "\n";
+		$html .= '</html>';
+
+		return $html;
+	}
+
+	/**
+	 * Common function to render a standardized email template and send it via wp_mail.
+	 *
+	 * Allows easily managing email design at one place with default header, border, and footer.
+	 * Accepts heading, body content, and footer content, applies wp_kses sanitization with allowed
+	 * HTML tags, dispatches the email, and returns the final rendered email template HTML.
+	 *
+	 * @param string $to             Recipient email address.
+	 * @param string $subject        Subject line.
+	 * @param string $body_content   HTML or text body content.
+	 * @param string $header_heading Optional custom heading for header. Default empty (falls back to site name + Support).
+	 * @param string $footer_content Optional custom footer content. Default empty (falls back to default footer).
+	 * @param array  $args           Optional extra arguments:
+	 *                               - 'ticket_id'      (int)
+	 *                               - 'recipient_type' (string) 'admin'|'agent'|'customer'
+	 *                               - 'recipient_id'   (int)
+	 *                               - 'event_type'     (string)
+	 *                               - 'headers'        (array) Custom email headers.
+	 *                               - 'send_mail'      (bool) Whether to actually send via wp_mail (default true).
+	 *                               - 'return_status'  (bool) If true, returns boolean sent status instead of template.
+	 * @return string|bool The final rendered email template HTML string, or bool if 'return_status' is true.
+	 */
+	public static function send_email_template( $to, $subject, $body_content, $header_heading = '', $footer_content = '', $args = array() ) {
+		// Render final template with default header, border, and footer + sanitization
+		$template = self::render_email_template( $body_content, $header_heading, $footer_content, $args );
+
+		$site_name  = ! empty( $args['site_name'] ) ? sanitize_text_field( $args['site_name'] ) : get_bloginfo( 'name' );
+		$from_email = self::get_admin_notification_email();
+		$headers    = ! empty( $args['headers'] ) && is_array( $args['headers'] ) ? $args['headers'] : array(
+			'Content-Type: text/html; charset=UTF-8',
+			'From: ' . $site_name . ' <' . $from_email . '>',
+			'Reply-To: ' . $site_name . ' <' . $from_email . '>',
+		);
+
+		$sent        = false;
+		$should_send = ! isset( $args['send_mail'] ) || (bool) $args['send_mail'];
+		if ( $should_send && ! empty( $to ) && is_email( $to ) ) {
+			$sent = wp_mail( $to, $subject, $template, $headers );
+		}
+
+		// Log into notification log table if context is provided
+		$ticket_id      = isset( $args['ticket_id'] ) ? absint( $args['ticket_id'] ) : 0;
+		$event_type     = isset( $args['event_type'] ) ? sanitize_key( $args['event_type'] ) : '';
+		$recipient_type = isset( $args['recipient_type'] ) ? sanitize_key( $args['recipient_type'] ) : '';
+		$recipient_id   = isset( $args['recipient_id'] ) ? absint( $args['recipient_id'] ) : 0;
+
+		if ( $ticket_id || $event_type ) {
+			global $wpdb;
+			$table_log = $wpdb->prefix . 'dctc_support_notification_log';
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
+			$wpdb->insert(
+				$table_log,
+				array(
+					'event_type'      => $event_type ? $event_type : 'custom_notification',
+					'recipient_type'  => $recipient_type ? $recipient_type : 'customer',
+					'recipient_id'    => $recipient_id,
+					'email'           => sanitize_email( $to ),
+					'ticket_id'       => $ticket_id,
+					'status'          => $sent ? 'sent' : 'failed',
+					'suppress_reason' => '',
+					'error_message'   => $sent ? '' : 'wp_mail returned false',
+					'created_at'      => current_time( 'mysql' ),
+				),
+				array( '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
+			);
+		}
+
+		if ( ! empty( $args['return_status'] ) ) {
+			return $sent;
+		}
+
+		return $template;
+	}
+
+	/**
+	 * Alias for send_email_template.
+	 *
+	 * @param string $to             Recipient email.
+	 * @param string $subject        Subject line.
+	 * @param string $body_content   HTML body inner content.
+	 * @param string $header_heading Optional custom heading.
+	 * @param string $footer_content Optional custom footer.
+	 * @param array  $args           Extra parameters.
+	 * @return string|bool
+	 */
+	public static function send_templated_email( $to, $subject, $body_content, $header_heading = '', $footer_content = '', $args = array() ) {
+		return self::send_email_template( $to, $subject, $body_content, $header_heading, $footer_content, $args );
+	}
+
+	/**
 	 * Render HTML email template and send via wp_mail.
+	 *
+	 * Backwards-compatible wrapper delegating to send_email_template and render_email_template.
 	 *
 	 * @param string $to             Recipient email.
 	 * @param string $subject        Subject line.
@@ -871,54 +1249,24 @@ class DCTC_Support_Notification_Service {
 	 * @param string $recipient_type 'agent', 'admin', or 'customer'.
 	 * @param int    $recipient_id   User ID.
 	 * @param string $event_type     Event slug.
-	 * @return bool
+	 * @param string $header_heading Optional header heading.
+	 * @param string $footer_content Optional footer content.
+	 * @param array  $extra_args     Optional extra options.
+	 * @return bool|string True or rendered template on success, false on failure.
 	 */
-	private static function send_email( $to, $subject, $body_content, $ticket_id, $recipient_type, $recipient_id, $event_type ) {
-		$site_name  = get_bloginfo( 'name' );
-		$from_email = self::get_admin_notification_email();
-		$headers    = array(
-			'Content-Type: text/html; charset=UTF-8',
-			'From: ' . $site_name . ' <' . $from_email . '>',
-			'Reply-To: ' . $site_name . ' <' . $from_email . '>',
-		);
-
-		$template  = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-		$template .= '<style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.6;color:#333;background:#F9FAFB;margin:0;padding:20px;}';
-		$template .= '.email-card{background:#fff;max-width:580px;margin:0 auto;border-radius:10px;border:1px solid #E5E7EB;overflow:hidden;}';
-		$template .= '.email-header{background:#4F46E5;color:#fff;padding:20px 24px;font-size:18px;font-weight:bold;}';
-		$template .= '.email-body{padding:24px;font-size:14px;}';
-		$template .= '.email-footer{background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 24px;font-size:12px;color:#6B7280;text-align:center;}';
-		$template .= '</style></head><body>';
-		$template .= '<div class="email-card">';
-		$template .= '<div class="email-header">' . esc_html( $site_name ) . ' ' . esc_html__( 'Support', 'dragwyb-click-to-chat' ) . '</div>';
-		$template .= '<div class="email-body">' . $body_content . '</div>';
-		/* translators: %s: Site name */
-		$template .= '<div class="email-footer">' . sprintf( esc_html__( 'This email was sent automatically by %s Support Center.', 'dragwyb-click-to-chat' ), esc_html( $site_name ) ) . '</div>';
-		$template .= '</div></body></html>';
-
-		$sent = wp_mail( $to, $subject, $template, $headers );
-
-		// Log into notification log table
-		global $wpdb;
-		$table_log = $wpdb->prefix . 'dctc_support_notification_log';
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery
-		$wpdb->insert(
-			$table_log,
+	public static function send_email( $to, $subject, $body_content, $ticket_id = 0, $recipient_type = '', $recipient_id = 0, $event_type = '', $header_heading = '', $footer_content = '', $extra_args = array() ) {
+		$args = array_merge(
+			is_array( $extra_args ) ? $extra_args : array(),
 			array(
-				'event_type'      => sanitize_key( $event_type ),
-				'recipient_type'  => sanitize_key( $recipient_type ),
-				'recipient_id'    => absint( $recipient_id ),
-				'email'           => sanitize_email( $to ),
-				'ticket_id'       => absint( $ticket_id ),
-				'status'          => $sent ? 'sent' : 'failed',
-				'suppress_reason' => '',
-				'error_message'   => $sent ? '' : 'wp_mail returned false',
-				'created_at'      => current_time( 'mysql' ),
-			),
-			array( '%s', '%s', '%d', '%s', '%d', '%s', '%s', '%s', '%s' )
+				'ticket_id'      => absint( $ticket_id ),
+				'recipient_type' => sanitize_key( $recipient_type ),
+				'recipient_id'   => absint( $recipient_id ),
+				'event_type'     => sanitize_key( $event_type ),
+				'return_status'  => isset( $extra_args['return_status'] ) ? (bool) $extra_args['return_status'] : true,
+			)
 		);
 
-		return $sent;
+		return self::send_email_template( $to, $subject, $body_content, $header_heading, $footer_content, $args );
 	}
 
 	/**
@@ -956,3 +1304,44 @@ class DCTC_Support_Notification_Service {
 
 // Hook notification service actions
 DCTC_Support_Notification_Service::init();
+
+if ( ! function_exists( 'dctc_render_email_template' ) ) {
+	/**
+	 * Common helper to render standardized HTML email template.
+	 *
+	 * @param string|array $body_content   Body content or args array.
+	 * @param string       $header_heading Header heading.
+	 * @param string       $footer_content Footer content.
+	 * @param array        $args           Additional options.
+	 * @return string Rendered HTML template.
+	 */
+	function dctc_render_email_template( $body_content, $header_heading = '', $footer_content = '', $args = array() ) {
+		return DCTC_Support_Notification_Service::render_email_template( $body_content, $header_heading, $footer_content, $args );
+	}
+}
+
+if ( ! function_exists( 'dctc_send_email_template' ) ) {
+	/**
+	 * Common helper to render and send a templated notification email.
+	 *
+	 * @param string $to             Recipient email address.
+	 * @param string $subject        Email subject.
+	 * @param string $body_content   Email body content.
+	 * @param string $header_heading Header heading.
+	 * @param string $footer_content Footer content.
+	 * @param array  $args           Additional options.
+	 * @return string|bool Rendered template HTML or status.
+	 */
+	function dctc_send_email_template( $to, $subject, $body_content, $header_heading = '', $footer_content = '', $args = array() ) {
+		return DCTC_Support_Notification_Service::send_email_template( $to, $subject, $body_content, $header_heading, $footer_content, $args );
+	}
+}
+
+if ( ! function_exists( 'dctc_send_templated_email' ) ) {
+	/**
+	 * Alias for dctc_send_email_template.
+	 */
+	function dctc_send_templated_email( $to, $subject, $body_content, $header_heading = '', $footer_content = '', $args = array() ) {
+		return DCTC_Support_Notification_Service::send_email_template( $to, $subject, $body_content, $header_heading, $footer_content, $args );
+	}
+}
