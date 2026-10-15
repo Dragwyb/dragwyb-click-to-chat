@@ -187,9 +187,11 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		 */
 		public static function is_channels_enabled() {
 			$settings = get_option( 'dctc_settings', array() );
-			if ( ! is_array( $settings ) ) {
+
+			if ( empty( $settings ) ) {
 				return false;
 			}
+
 			return ! isset( $settings['channels_enabled'] ) || '1' === (string) $settings['channels_enabled'] || true === $settings['channels_enabled'];
 		}
 
