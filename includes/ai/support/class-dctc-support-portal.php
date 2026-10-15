@@ -1721,6 +1721,8 @@ class DCTC_Support_Portal {
 				let guestToken = sessionData.token;
 				let guestCountdownTimer = null;
 				let detailPollInterval = null;
+				let portalReadTimer = 0;
+				let portalLastReadSent = "";
 
 				let taxonomiesData = {};
 				try {
@@ -1875,6 +1877,7 @@ class DCTC_Support_Portal {
 							detailPollInterval = null;
 						}
 						currentTicketUuid = null;
+						portalReadTimer = 0;
 						if (btnNew) btnNew.style.display = "inline-flex";
 						if (btnGuestHeader) btnGuestHeader.style.display = "inline-flex";
 						if (btnBack) btnBack.style.display = "none";
@@ -2042,6 +2045,7 @@ class DCTC_Support_Portal {
 
 					currentTicketUuid = uuid;
 					if (!isSilentUpdate) {
+						portalReadTimer = 0;
 						showView(viewDetail);
 						if (detailPollInterval) clearInterval(detailPollInterval);
 						detailPollInterval = setInterval(function() {
@@ -2131,10 +2135,11 @@ class DCTC_Support_Portal {
 							}
 
 							let msgHtml = "";
-							(t.messages || []).forEach(function(m) {
+							(t.messages || []).forEach(function(m, mIdx) {
 								const isCustomer = m.sender_type === "customer" || m.role === "user";
 								const senderLabel = isCustomer ? "You" : escapeHtml(m.sender_name ? m.sender_name : "Support Team");
-								msgHtml += "<div class=\"dctc-portal-msg " + (isCustomer ? "dctc-portal-msg-customer" : "dctc-portal-msg-agent") + "\">";
+								const msgId = m.id || m.uuid || m.created_at || ("msg-" + mIdx);
+								msgHtml += "<div class=\"dctc-portal-msg " + (isCustomer ? "dctc-portal-msg-customer" : "dctc-portal-msg-agent") + "\" data-msg-id=\"" + escapeHtml(msgId) + "\">";
 								msgHtml += "  <div class=\"dctc-portal-msg-header\">";
 								msgHtml += "    <span>" + senderLabel + "</span>";
 								msgHtml += "    <span class=\"dctc-portal-msg-time\">" + escapeHtml(m.created_at || "") + "</span>";
@@ -2359,6 +2364,69 @@ class DCTC_Support_Portal {
 				if (categoryFilter) {
 					categoryFilter.addEventListener("change", loadTickets);
 				}
+
+				// 30-second Active Tab & Last Message Visible Tracker for Support Portal Read Receipts
+				function isPortalLastMsgVisible() {
+					if (!viewDetail || !viewDetail.classList.contains("active") || !currentTicketUuid) {
+						return false;
+					}
+					const msgContainer = root.querySelector(".dctc-portal-detail-messages");
+					if (!msgContainer) return false;
+
+					const lastEl = msgContainer.querySelector(".dctc-portal-msg:last-child");
+					if (!lastEl) return false;
+
+					const rect = lastEl.getBoundingClientRect();
+					if (rect.width === 0 || rect.height === 0) return false;
+
+					const winHeight = window.innerHeight || document.documentElement.clientHeight;
+					const winWidth = window.innerWidth || document.documentElement.clientWidth;
+					if (rect.bottom <= 0 || rect.top >= winHeight || rect.right <= 0 || rect.left >= winWidth) {
+						return false;
+					}
+
+					const cRect = msgContainer.getBoundingClientRect();
+					return rect.bottom > cRect.top && rect.top < cRect.bottom;
+				}
+
+				const portalReadInterval = setInterval(function() {
+					const isTabActive = !document.hidden && document.visibilityState === "visible";
+					if (!isTabActive || !isPortalLastMsgVisible() || !currentTicketUuid) {
+						portalReadTimer = 0;
+						return;
+					}
+
+					portalReadTimer++;
+
+					if (portalReadTimer >= 30) {
+						const msgContainer = root.querySelector(".dctc-portal-detail-messages");
+						const lastEl = msgContainer ? msgContainer.querySelector(".dctc-portal-msg:last-child") : null;
+						const lastMsgId = lastEl ? lastEl.getAttribute("data-msg-id") : "";
+
+						portalReadTimer = 0;
+
+						if (lastMsgId && portalLastReadSent !== (currentTicketUuid + "_" + lastMsgId)) {
+							portalLastReadSent = currentTicketUuid + "_" + lastMsgId;
+							const headers = {
+								"Content-Type": "application/json",
+								"X-WP-Nonce": nonce
+							};
+							if (guestToken) headers["X-Guest-Token"] = guestToken;
+
+							fetch(restUrl + "/tickets/" + currentTicketUuid + "/read", {
+								method: "POST",
+								headers: headers,
+								body: JSON.stringify({ message_id: lastMsgId })
+							}).catch(function() {});
+						}
+					}
+				}, 1000);
+
+				document.addEventListener("visibilitychange", function() {
+					if (document.hidden) {
+						portalReadTimer = 0;
+					}
+				});
 
 				// Initial tickets load
 				if (!isLoggedIn && sessionData.expired) {

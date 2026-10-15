@@ -327,6 +327,12 @@ class DCTC_Support_Ticket_Service {
 		);
 		if ( ! empty( $session_id ) ) {
 			$meta_batch['session_id'] = $session_id;
+
+			$buffered_read_id = get_transient( 'dctc_last_read_' . md5( $session_id ) );
+			if ( ! empty( $buffered_read_id ) ) {
+				$meta_batch['customer_last_read_message_id'] = sanitize_text_field( (string) $buffered_read_id );
+				delete_transient( 'dctc_last_read_' . md5( $session_id ) );
+			}
 		}
 		if ( ! empty( $guest_token ) ) {
 			$meta_batch['guest_access_token'] = $guest_token;
@@ -1123,9 +1129,16 @@ class DCTC_Support_Ticket_Service {
 			$ticket['customer_phone'] = (string) $ticket_meta['phone'];
 		}
 
-		$session_updated             = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
-		$now                         = current_time( 'timestamp' );
-		$ticket['is_session_active'] = $session_row && ( ( $now - $session_updated ) < 90 );
+		$chatbot_last_msg_time = ! empty( $ticket_meta['chatbot_last_message_time'] ) ? (int) $ticket_meta['chatbot_last_message_time'] : 0;
+		$session_updated       = ( $session_row && ! empty( $session_row['updated_at'] ) ) ? strtotime( $session_row['updated_at'] ) : 0;
+		$now                   = current_time( 'timestamp' );
+		$is_session_active     = ( $session_row && ( ( $now - $session_updated ) < 90 ) ) || ( $chatbot_last_msg_time && ( ( $now - $chatbot_last_msg_time ) < 90 ) );
+
+		$ticket['chatbot_last_message_time']     = $chatbot_last_msg_time;
+		$ticket['is_session_active']             = $is_session_active;
+		$ticket['session_active']                = $is_session_active;
+		$ticket['customer_last_read_message_id'] = (string) ( $ticket_meta['customer_last_read_message_id'] ?? '' );
+		$ticket['agent_last_read_message_id']    = (string) ( $ticket_meta['agent_last_read_message_id'] ?? '' );
 
 		// Active agent viewers list
 		$viewing_users              = ! empty( $ticket_meta['_agent_viewing_user_ids'] ) && is_array( $ticket_meta['_agent_viewing_user_ids'] ) ? $ticket_meta['_agent_viewing_user_ids'] : array();
@@ -1717,6 +1730,31 @@ class DCTC_Support_Ticket_Service {
 	}
 
 	/**
+	 * Check if a guest access token exists and is valid in saved ticket meta.
+	 *
+	 * @param string $token Guest access token.
+	 * @return bool True if valid and exists in ticket meta, false otherwise.
+	 */
+	public static function is_valid_guest_token( $token ) {
+		global $wpdb;
+
+		if ( empty( $token ) || ! is_string( $token ) || ! preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $token ) ) {
+			return false;
+		}
+
+		$table = $wpdb->prefix . 'dctc_support_ticket_meta';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+		$exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT 1 FROM `$table` WHERE meta_key = 'guest_access_token' AND meta_value = %s LIMIT 1",
+				sanitize_text_field( $token )
+			)
+		);
+
+		return ! empty( $exists );
+	}
+
+	/**
 	 * Append a customer or agent reply to the linked session conversation.
 	 *
 	 * @param int      $ticket_id   Ticket ID.
@@ -1856,6 +1894,7 @@ class DCTC_Support_Ticket_Service {
 
 		$merged = self::deduplicate_and_merge_messages( $existing, $incoming_messages );
 		self::update_ticket_meta( $ticket_id, '_dctc_ticket_messages', $merged );
+		self::update_ticket_meta( $ticket_id, 'chatbot_last_message_time', current_time( 'timestamp' ) );
 
 		// Touch ticket updated_at
 		global $wpdb;
@@ -1890,6 +1929,25 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		return $merged;
+	}
+
+	/**
+	 * Update customer or agent last read message ID in ticket meta.
+	 *
+	 * @param int    $ticket_id  Ticket ID.
+	 * @param string $message_id Message ID or UUID.
+	 * @param string $type       'customer' or 'agent'.
+	 * @return bool
+	 */
+	public static function update_last_read_message( $ticket_id, $message_id, $type = 'agent' ) {
+		if ( ! $ticket_id || empty( $message_id ) ) {
+			return false;
+		}
+
+		$clean_msg_id = sanitize_text_field( $message_id );
+		$meta_key     = 'customer' === $type ? 'customer_last_read_message_id' : 'agent_last_read_message_id';
+
+		return self::update_ticket_meta( (int) $ticket_id, $meta_key, $clean_msg_id );
 	}
 
 	/**

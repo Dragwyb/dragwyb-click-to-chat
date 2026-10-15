@@ -242,6 +242,7 @@ class DCTC_Support_AI_Handoff_Service {
 
 			// Append to ticket messages (Primary source of truth)
 			DCTC_Support_Ticket_Service::append_ticket_messages( $ticket_id, array( $new_user_msg ) );
+			DCTC_Support_Ticket_Service::update_ticket_meta( $ticket_id, 'chatbot_last_message_time', current_time( 'timestamp' ) );
 		}
 
 		// Persist to session table ONLY if save_chat is enabled

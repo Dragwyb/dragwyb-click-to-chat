@@ -259,18 +259,20 @@ class DCTC_AI_Chat_Controller {
 			$_COOKIE['dctc_ai_session_id'] = $session_id;
 		}
 
-		// Once a ticket is created, the client does not need to send conversation history in /chat.
-		// If request_messages is empty and a ticket exists for this session, retrieve history directly from _dctc_ticket_messages.
-		if ( empty( $request_messages ) && class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
+		// Once a ticket is created, update chatbot_last_message_time and retrieve history if needed.
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
 			$session_ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 			if ( $session_ticket && ! empty( $session_ticket['id'] ) ) {
-				$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $session_ticket['id'], '_dctc_ticket_messages', true );
-				if ( ! empty( $ticket_meta_msgs ) ) {
-					if ( is_string( $ticket_meta_msgs ) ) {
-						$ticket_meta_msgs = json_decode( $ticket_meta_msgs, true );
-					}
-					if ( is_array( $ticket_meta_msgs ) ) {
-						$request_messages = $ticket_meta_msgs;
+				DCTC_Support_Ticket_Service::update_ticket_meta( (int) $session_ticket['id'], 'chatbot_last_message_time', current_time( 'timestamp' ) );
+				if ( empty( $request_messages ) ) {
+					$ticket_meta_msgs = DCTC_Support_Ticket_Service::get_ticket_meta( (int) $session_ticket['id'], '_dctc_ticket_messages', true );
+					if ( ! empty( $ticket_meta_msgs ) ) {
+						if ( is_string( $ticket_meta_msgs ) ) {
+							$ticket_meta_msgs = json_decode( $ticket_meta_msgs, true );
+						}
+						if ( is_array( $ticket_meta_msgs ) ) {
+							$request_messages = $ticket_meta_msgs;
+						}
 					}
 				}
 			}
@@ -2538,6 +2540,7 @@ class DCTC_AI_Chat_Controller {
 		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && ! empty( $session_id ) ) {
 			$ticket = DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id );
 			if ( $ticket && ! empty( $ticket['id'] ) ) {
+				DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'chatbot_last_message_time', current_time( 'timestamp' ) );
 				global $wpdb;
 				$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
 

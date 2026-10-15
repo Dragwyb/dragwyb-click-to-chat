@@ -282,6 +282,95 @@ export default function TicketDetailWorkspace({
 	const rawMessages = selectedTicket?.messages || [];
 	const messagesNewToOld = [...rawMessages].reverse();
 
+	// 30-second Active Tab & Last Message Visible Tracker for Agent Read Receipts
+	const lastReadSentRef = useRef(null);
+	const activeSecondsRef = useRef(0);
+
+	useEffect(() => {
+		const ticketId = selectedTicket?.id;
+		if (!ticketId || workspaceTab !== 'conversation') {
+			activeSecondsRef.current = 0;
+			return;
+		}
+
+		const messages = selectedTicket?.messages || [];
+		if (messages.length === 0) {
+			activeSecondsRef.current = 0;
+			return;
+		}
+
+		const lastMsg = messages[messages.length - 1];
+		const lastMsgId = String(lastMsg?.id || lastMsg?.uuid || lastMsg?.created_at || (messages.length - 1));
+
+		// If this message was already marked as read on server or in this session, no need to track
+		if (selectedTicket?.agent_last_read_message_id === lastMsgId || lastReadSentRef.current === `${ticketId}_${lastMsgId}`) {
+			return;
+		}
+
+		activeSecondsRef.current = 0;
+
+		const isLastMsgVisible = () => {
+			const container = document.querySelector('.dctc-sc-conversation-scroll');
+			if (!container) return false;
+			// In messagesNewToOld, the latest message is rendered with data-index="0"
+			const el = container.querySelector(`[data-msg-id="${lastMsgId}"]`) || container.querySelector('[data-index="0"]');
+			if (!el) return false;
+
+			const rect = el.getBoundingClientRect();
+			if (rect.width === 0 || rect.height === 0) return false;
+
+			const winHeight = window.innerHeight || document.documentElement.clientHeight;
+			const winWidth = window.innerWidth || document.documentElement.clientWidth;
+			if (rect.bottom <= 0 || rect.top >= winHeight || rect.right <= 0 || rect.left >= winWidth) {
+				return false;
+			}
+
+			const cRect = container.getBoundingClientRect();
+			return rect.bottom > cRect.top && rect.top < cRect.bottom;
+		};
+
+		const interval = setInterval(() => {
+			const isTabActive = typeof document !== 'undefined' && !document.hidden && document.visibilityState === 'visible';
+			if (!isTabActive || !isLastMsgVisible()) {
+				activeSecondsRef.current = 0;
+				return;
+			}
+
+			activeSecondsRef.current += 1;
+
+			if (activeSecondsRef.current >= 30) {
+				lastReadSentRef.current = `${ticketId}_${lastMsgId}`;
+				activeSecondsRef.current = 0;
+
+				apiFetch({
+					path: `/dctc-ai/v1/support/tickets/${ticketId}/read`,
+					method: 'POST',
+					data: {
+						message_id: lastMsgId,
+						type: 'agent',
+					},
+				}).then(() => {
+					if (selectedTicket) {
+						selectedTicket.agent_last_read_message_id = lastMsgId;
+					}
+				}).catch(() => {});
+			}
+		}, 1000);
+
+		const handleVisibilityChange = () => {
+			if (document.hidden) {
+				activeSecondsRef.current = 0;
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			clearInterval(interval);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [selectedTicket?.id, selectedTicket?.messages, workspaceTab]);
+
 	return (
 		<>
 			{/* MAIN WORKSPACE */}
@@ -310,7 +399,7 @@ export default function TicketDetailWorkspace({
 							</div>
 
 							<div className="dctc-sc-ws-header-actions">
-								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'ai_chatbot') && (selectedTicket?.is_session_active || selectedTicket?.session_active) && (
+								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'chatbot' || selectedTicket?.origin_type === 'ai_chatbot') && (selectedTicket?.is_session_active || selectedTicket?.session_active) && (
 									<button
 										type="button"
 										className="dctc-sc-control-ai-btn"

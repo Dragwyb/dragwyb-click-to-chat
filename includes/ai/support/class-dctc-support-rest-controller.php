@@ -55,7 +55,55 @@ class DCTC_Support_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'session_heartbeat' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'permission_session_access' ),
+				'args'                => array(
+					'session_id'                    => array(
+						'description'       => __( 'Active chatbot session identifier.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $param );
+						},
+					),
+					'customer_last_read_message_id' => array(
+						'description'       => __( 'Optional customer last read message ID.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_text_field',
+					),
+				),
+			)
+		);
+
+		// AI Chatbot Session Mark Read Receipt
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/session/read',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'session_read' ),
+				'permission_callback' => array( $this, 'permission_session_access' ),
+				'args'                => array(
+					'session_id' => array(
+						'description'       => __( 'Active chatbot session identifier.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $param );
+						},
+					),
+					'message_id' => array(
+						'description'       => __( 'Message ID or UUID to mark as last read.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && '' !== trim( $param );
+						},
+					),
+				),
 			)
 		);
 
@@ -166,6 +214,46 @@ class DCTC_Support_REST_Controller {
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'update_viewing_presence' ),
 				'permission_callback' => array( $this, 'permission_staff_view' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/tickets/(?P<id>[a-zA-Z0-9\-]+)/read',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'update_ticket_read_receipt' ),
+				'permission_callback' => array( $this, 'permission_staff_view' ),
+				'args'                => array(
+					'id'         => array(
+						'description'       => __( 'Ticket ID or UUID.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && '' !== trim( $param );
+						},
+					),
+					'message_id' => array(
+						'description'       => __( 'Message ID or UUID to mark as last read.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && '' !== trim( $param );
+						},
+					),
+					'type'       => array(
+						'description'       => __( 'Reader role (agent or customer).', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => false,
+						'default'           => 'agent',
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => function ( $param ) {
+							return in_array( $param, array( 'agent', 'customer' ), true );
+						},
+					),
+				),
 			)
 		);
 
@@ -498,7 +586,7 @@ class DCTC_Support_REST_Controller {
 				array(
 					'methods'             => WP_REST_Server::CREATABLE,
 					'callback'            => array( $this, 'create_portal_ticket' ),
-					'permission_callback' => '__return_true',
+					'permission_callback' => array( $this, 'permission_portal_create' ),
 				),
 			)
 		);
@@ -509,7 +597,7 @@ class DCTC_Support_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( $this, 'get_portal_ticket' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'permission_portal_ticket_access' ),
 			)
 		);
 
@@ -519,7 +607,7 @@ class DCTC_Support_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'portal_reply' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'permission_portal_ticket_access' ),
 			)
 		);
 
@@ -529,7 +617,37 @@ class DCTC_Support_REST_Controller {
 			array(
 				'methods'             => WP_REST_Server::CREATABLE,
 				'callback'            => array( $this, 'portal_close_ticket' ),
-				'permission_callback' => '__return_true',
+				'permission_callback' => array( $this, 'permission_portal_ticket_access' ),
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/support/portal/tickets/(?P<uuid>[a-zA-Z0-9\-]+)/read',
+			array(
+				'methods'             => WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'portal_ticket_read' ),
+				'permission_callback' => array( $this, 'permission_portal_ticket_access' ),
+				'args'                => array(
+					'uuid'       => array(
+						'description'       => __( 'Unique ticket UUID.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && preg_match( '/^[a-zA-Z0-9\-]{8,64}$/', $param );
+						},
+					),
+					'message_id' => array(
+						'description'       => __( 'Message ID or UUID to mark as last read.', 'dragwyb-click-to-chat' ),
+						'type'              => 'string',
+						'required'          => true,
+						'sanitize_callback' => 'sanitize_text_field',
+						'validate_callback' => function ( $param ) {
+							return is_string( $param ) && '' !== trim( $param );
+						},
+					),
+				),
 			)
 		);
 
@@ -611,6 +729,132 @@ class DCTC_Support_REST_Controller {
 	public function permission_staff_settings() {
 		return DCTC_Support_Permission_Service::current_user_can_support( 'manage_settings' ) || current_user_can( 'manage_options' );
 	}
+	public function permission_session_access( $request ) {
+		if ( ! class_exists( 'DCTC_Helper' ) || ! method_exists( 'DCTC_Helper', 'is_support_enabled' ) || ! DCTC_Helper::is_support_enabled() ) {
+			return new WP_Error( 'dctc_support_disabled', __( 'Support system is currently disabled.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+		}
+		$session_id = $request->get_param( 'session_id' );
+		if ( empty( $session_id ) || ! is_string( $session_id ) || ! preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $session_id ) ) {
+			return new WP_Error( 'dctc_invalid_session', __( 'Invalid or missing session identifier.', 'dragwyb-click-to-chat' ), array( 'status' => 400 ) );
+		}
+		return true;
+	}
+
+	/**
+	 * Permission check for creating a portal ticket.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool|WP_Error
+	 */
+	public function permission_portal_create( $request ) {
+		if ( ! class_exists( 'DCTC_Helper' ) || ! method_exists( 'DCTC_Helper', 'is_support_enabled' ) || ! DCTC_Helper::is_support_enabled() ) {
+			return new WP_Error( 'dctc_support_disabled', __( 'Support system is currently disabled.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+		}
+		return true;
+	}
+
+	/**
+	 * Permission check for listing portal tickets.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool|WP_Error
+	 */
+	public function permission_portal_access( $request ) {
+		if ( ! class_exists( 'DCTC_Helper' ) || ! method_exists( 'DCTC_Helper', 'is_support_enabled' ) || ! DCTC_Helper::is_support_enabled() ) {
+			return new WP_Error( 'dctc_support_disabled', __( 'Support system is currently disabled.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+		}
+
+		// Logged-in users are allowed to query their own tickets
+		if ( get_current_user_id() ) {
+			return true;
+		}
+
+		$token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $token ) ) {
+			$token = $request->get_param( 'guest_token' );
+		}
+
+		// Initial empty listing for visitors without token
+		if ( empty( $token ) ) {
+			return true;
+		}
+
+		if ( ! is_string( $token ) || ! preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $token ) ) {
+			return new WP_Error( 'dctc_unauthorized', __( 'Invalid guest access token format.', 'dragwyb-click-to-chat' ), array( 'status' => 401 ) );
+		}
+
+		// Strict validation: Token must exist in saved ticket metadata
+		if ( class_exists( 'DCTC_Support_Ticket_Service' ) && DCTC_Support_Ticket_Service::is_valid_guest_token( $token ) ) {
+			return true;
+		}
+
+		// Default: Denied
+		return new WP_Error( 'dctc_unauthorized', __( 'Invalid or expired guest access token.', 'dragwyb-click-to-chat' ), array( 'status' => 401 ) );
+	}
+
+	/**
+	 * Permission check for accessing a specific portal ticket.
+	 * Returns false/WP_Error by default, and only returns true when authorization is strictly verified.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return bool|WP_Error
+	 */
+	public function permission_portal_ticket_access( $request ) {
+		if ( ! class_exists( 'DCTC_Helper' ) || ! method_exists( 'DCTC_Helper', 'is_support_enabled' ) || ! DCTC_Helper::is_support_enabled() ) {
+			return new WP_Error( 'dctc_support_disabled', __( 'Support system is currently disabled.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+		}
+
+		$uuid = $request->get_param( 'uuid' );
+		if ( empty( $uuid ) || ! is_string( $uuid ) || ! preg_match( '/^[a-zA-Z0-9\-]{8,64}$/', $uuid ) ) {
+			return new WP_Error( 'dctc_invalid_ticket', __( 'Invalid ticket identifier.', 'dragwyb-click-to-chat' ), array( 'status' => 400 ) );
+		}
+
+		if ( ! class_exists( 'DCTC_Support_Ticket_Service' ) ) {
+			return false;
+		}
+
+		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_uuid( $uuid );
+		if ( ! $ticket || empty( $ticket['id'] ) ) {
+			return new WP_Error( 'dctc_ticket_not_found', __( 'Ticket not found.', 'dragwyb-click-to-chat' ), array( 'status' => 404 ) );
+		}
+
+		$user_id = get_current_user_id();
+
+		// Case 1: Staff member with view permission
+		if ( $user_id && ( current_user_can( 'manage_options' ) || ( class_exists( 'DCTC_Support_Permission_Service' ) && DCTC_Support_Permission_Service::current_user_can_support( 'view_tickets' ) ) ) ) {
+			return true;
+		}
+
+		// Case 2: Logged-in customer matching ticket customer_wp_user_id
+		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
+			return true;
+		}
+
+		// Case 3: Logged-in customer matching customer_email
+		if ( $user_id && ! empty( $ticket['customer_email'] ) ) {
+			$user_obj = get_userdata( $user_id );
+			if ( $user_obj && ! empty( $user_obj->user_email ) && strtolower( trim( $user_obj->user_email ) ) === strtolower( trim( $ticket['customer_email'] ) ) ) {
+				return true;
+			}
+		}
+
+		// Case 4: Guest access token verification against saved ticket token
+		$guest_token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $guest_token ) ) {
+			$guest_token = $request->get_param( 'guest_token' );
+		}
+
+		if ( ! empty( $guest_token ) && is_string( $guest_token ) && preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $guest_token ) ) {
+			$stored_token = ! empty( $ticket['guest_access_token'] ) ? (string) $ticket['guest_access_token'] : (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'guest_access_token', true );
+
+			if ( ! empty( $stored_token ) && hash_equals( $stored_token, (string) $guest_token ) ) {
+				return true;
+			}
+		}
+
+		// Default: Denied. No loopholes for random tokens or unauthorized users.
+		return new WP_Error( 'dctc_unauthorized', __( 'Unauthorized access to this ticket.', 'dragwyb-click-to-chat' ), array( 'status' => 403 ) );
+	}
 
 	/**
 	 * AI Chatbot Session Keepalive / Heartbeat handler.
@@ -621,47 +865,122 @@ class DCTC_Support_REST_Controller {
 	public function session_heartbeat( $request ) {
 		global $wpdb;
 
-		$session_id = sanitize_text_field( $request->get_param( 'session_id' ) );
-		if ( empty( $session_id ) ) {
+		$raw_session_id = $request->get_param( 'session_id' );
+		$session_id     = sanitize_text_field( (string) $raw_session_id );
+		if ( empty( $session_id ) || ! preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $session_id ) ) {
 			return new WP_REST_Response(
 				array(
 					'success' => false,
-					'message' => 'Missing session_id',
+					'message' => __( 'Invalid or missing session_id.', 'dragwyb-click-to-chat' ),
 				),
 				400
+			);
+		}
+
+		// Security: Rate limit session heartbeats (max 60 per minute per session)
+		if ( ! $this->check_rate_limit( 'session_heartbeat_' . md5( $session_id ), 60, 60 ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Too many requests. Please wait a moment.', 'dragwyb-click-to-chat' ),
+				),
+				429
 			);
 		}
 
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
 		$now_time       = current_time( 'mysql' );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-		$wpdb->update(
-			$table_sessions,
-			array( 'updated_at' => $now_time ),
-			array( 'session_id' => $session_id )
-		);
-
-		// Touch ticket customer_last_seen_at
-		$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
-		if ( $ticket && ! empty( $ticket['id'] ) ) {
-			$table_tickets = $wpdb->prefix . 'dctc_support_tickets';
+		$session_row = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id ) );
+		if ( $session_row ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 			$wpdb->update(
-				$table_tickets,
-				array( 'customer_last_seen_at' => $now_time ),
-				array( 'id' => (int) $ticket['id'] )
+				$table_sessions,
+				array( 'updated_at' => $now_time ),
+				array( 'session_id' => $session_id )
 			);
 		}
 
+		// Touch ticket customer_last_seen_at & chatbot_last_message_time if ticket exists
+		$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
+		if ( $ticket && ! empty( $ticket['id'] ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+			$wpdb->update(
+				$wpdb->prefix . 'dctc_support_tickets',
+				array( 'customer_last_seen_at' => $now_time ),
+				array( 'id' => (int) $ticket['id'] )
+			);
+
+			DCTC_Support_Ticket_Service::update_ticket_meta( (int) $ticket['id'], 'chatbot_last_message_time', current_time( 'timestamp' ) );
+
+			$raw_msg_id  = $request->get_param( 'customer_last_read_message_id' ) ?? ( $request->get_param( 'last_read_message_id' ) ?? '' );
+			$read_msg_id = sanitize_text_field( (string) $raw_msg_id );
+			if ( ! empty( $read_msg_id ) ) {
+				DCTC_Support_Ticket_Service::update_last_read_message( (int) $ticket['id'], $read_msg_id, 'customer' );
+			}
+		}
+
+		// Always return success for valid active session heartbeat (even before ticket is created or when save_chat is disabled)
 		return new WP_REST_Response( array( 'success' => true ), 200 );
 	}
 
-	public function permission_portal_access( $request ) {
-		if ( get_current_user_id() ) {
-			return true;
+	/**
+	 * Mark last read message ID from AI Chatbot session.
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 * @return WP_REST_Response
+	 */
+	public function session_read( $request ) {
+		$raw_session_id = $request->get_param( 'session_id' );
+		$session_id     = sanitize_text_field( (string) $raw_session_id );
+		$raw_msg_id     = $request->get_param( 'message_id' ) ?? ( $request->get_param( 'last_read_message_id' ) ?? '' );
+		$message_id     = sanitize_text_field( (string) $raw_msg_id );
+
+		if ( empty( $session_id ) || ! preg_match( '/^[a-zA-Z0-9_\-]{3,100}$/', $session_id ) || empty( $message_id ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Missing or invalid session_id or message_id.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
 		}
-		$token = $request->get_header( 'X-Guest-Token' );
-		return ! empty( $token );
+
+		// Security: Rate limit read receipts (max 60 per minute per session)
+		if ( ! $this->check_rate_limit( 'session_read_' . md5( $session_id ), 60, 60 ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Too many requests. Please wait a moment.', 'dragwyb-click-to-chat' ),
+				),
+				429
+			);
+		}
+
+		$ticket = class_exists( 'DCTC_Support_Ticket_Service' ) ? DCTC_Support_Ticket_Service::get_ticket_by_session_id( $session_id ) : null;
+		if ( $ticket && ! empty( $ticket['id'] ) ) {
+			DCTC_Support_Ticket_Service::update_last_read_message( (int) $ticket['id'], $message_id, 'customer' );
+			return new WP_REST_Response(
+				array(
+					'success'    => true,
+					'ticket_id'  => absint( $ticket['id'] ),
+					'message_id' => esc_attr( $message_id ),
+				),
+				200
+			);
+		}
+
+		// Before a ticket is created (e.g. initial AI conversation or when save_chat/leads is disabled),
+		// buffer the last read ID in a transient so it can be seamlessly attached if a ticket is later created.
+		set_transient( 'dctc_last_read_' . md5( $session_id ), $message_id, HOUR_IN_SECONDS );
+
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'message_id' => esc_attr( $message_id ),
+			),
+			200
+		);
 	}
 
 	// -------------------------------------------------------------
@@ -1298,6 +1617,16 @@ class DCTC_Support_REST_Controller {
 		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_last_viewed_at', $now );
 		DCTC_Support_Ticket_Service::update_ticket_meta( $ticket['id'], '_agent_viewing_user_ids', $viewers_list );
 
+		// Optional read receipt update
+		$raw_read_msg_id = ! empty( $params['agent_last_read_message_id'] )
+			? $params['agent_last_read_message_id']
+			: ( ! empty( $params['last_read_message_id'] ) ? $params['last_read_message_id'] : '' );
+		$read_msg_id     = sanitize_text_field( (string) $raw_read_msg_id );
+
+		if ( ! empty( $read_msg_id ) ) {
+			DCTC_Support_Ticket_Service::update_last_read_message( (int) $ticket['id'], $read_msg_id, 'agent' );
+		}
+
 		return new WP_REST_Response(
 			array(
 				'success'       => true,
@@ -1305,6 +1634,67 @@ class DCTC_Support_REST_Controller {
 				'viewing'       => $is_anyone_viewing,
 				'viewing_users' => $viewers_list,
 				'updated_at'    => $now,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Update ticket read receipt for staff/agent.
+	 *
+	 * @param WP_REST_Request $request Request instance.
+	 * @return WP_REST_Response
+	 */
+	public function update_ticket_read_receipt( $request ) {
+		$id     = sanitize_text_field( (string) $request->get_param( 'id' ) );
+		$ticket = DCTC_Support_Ticket_Service::get_ticket( $id );
+		if ( ! $ticket ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
+		}
+
+		// Security: Enforce object-level ticket authorization for staff member
+		if ( ! DCTC_Support_Permission_Service::can_agent_access_ticket( $ticket ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'You do not have permission to access this ticket.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
+		}
+
+		$raw_msg_id = $request->get_param( 'message_id' ) ?? ( $request->get_param( 'last_read_message_id' ) ?? '' );
+		$message_id = sanitize_text_field( (string) $raw_msg_id );
+		$raw_type   = $request->get_param( 'type' ) ?: 'agent';
+		$type       = sanitize_key( (string) $raw_type );
+		if ( ! in_array( $type, array( 'agent', 'customer' ), true ) ) {
+			$type = 'agent';
+		}
+
+		if ( empty( $message_id ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Message ID cannot be empty.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		DCTC_Support_Ticket_Service::update_last_read_message( (int) $ticket['id'], $message_id, $type );
+
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'ticket_id'  => absint( $ticket['id'] ),
+				'message_id' => esc_attr( $message_id ),
+				'type'       => esc_attr( $type ),
 			),
 			200
 		);
@@ -2003,10 +2393,10 @@ class DCTC_Support_REST_Controller {
 				$guest_token = $request->get_param( 'guest_token' );
 			}
 			$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
-			if ( ! empty( $guest_token ) ) {
+			if ( ! empty( $guest_token ) && class_exists( 'DCTC_Support_Ticket_Service' ) && DCTC_Support_Ticket_Service::is_valid_guest_token( $guest_token ) ) {
 				$query_args['guest_access_token'] = $guest_token;
 			} else {
-				// Logged-out visitor with no guest token has no tickets
+				// Logged-out visitor with no guest token or an invalid token has no tickets
 				return new WP_REST_Response(
 					array(
 						'success' => true,
@@ -2048,8 +2438,7 @@ class DCTC_Support_REST_Controller {
 		}
 
 		require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
-		$portal_settings  = DCTC_Support_Portal::get_settings();
-		$support_settings = get_option( 'dctc_support_settings', array() );
+		$portal_settings = DCTC_Support_Portal::get_settings();
 
 		// If user is logged out, verify that guest ticket submissions are enabled in BOTH portal and general support settings
 		if ( ! $user_id ) {
@@ -2369,6 +2758,96 @@ class DCTC_Support_REST_Controller {
 			array(
 				'success' => true,
 				'status'  => 'closed',
+			),
+			200
+		);
+	}
+
+	/**
+	 * Mark last read message ID for a ticket viewed via support portal.
+	 *
+	 * @param WP_REST_Request $request Request object.
+	 * @return WP_REST_Response
+	 */
+	public function portal_ticket_read( $request ) {
+		$uuid = sanitize_text_field( (string) $request->get_param( 'uuid' ) );
+		if ( empty( $uuid ) || ! preg_match( '/^[a-zA-Z0-9\-]{8,64}$/', $uuid ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Invalid ticket identifier.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		// Security: Rate limit portal read requests (max 60 per minute per ticket)
+		if ( ! $this->check_rate_limit( 'portal_read_' . md5( $uuid ), 60, 60 ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Too many requests. Please wait a moment.', 'dragwyb-click-to-chat' ),
+				),
+				429
+			);
+		}
+
+		$ticket = DCTC_Support_Ticket_Service::get_ticket_by_uuid( $uuid );
+		if ( ! $ticket ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Ticket not found.', 'dragwyb-click-to-chat' ),
+				),
+				404
+			);
+		}
+
+		$user_id     = get_current_user_id();
+		$guest_token = $request->get_header( 'X-Guest-Token' );
+		if ( empty( $guest_token ) ) {
+			$guest_token = $request->get_param( 'guest_token' );
+		}
+		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
+
+		// Security (SEC-01): Strict ownership check
+		$is_owner = false;
+		if ( $user_id && ! empty( $ticket['customer_wp_user_id'] ) && (int) $ticket['customer_wp_user_id'] === $user_id ) {
+			$is_owner = true;
+		} elseif ( ! empty( $ticket['guest_access_token'] ) && ! empty( $guest_token ) && hash_equals( (string) $ticket['guest_access_token'], (string) $guest_token ) ) {
+			$is_owner = true;
+		}
+
+		if ( ! $is_owner ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Unauthorized ticket access.', 'dragwyb-click-to-chat' ),
+				),
+				403
+			);
+		}
+
+		$raw_msg_id = $request->get_param( 'message_id' ) ?? ( $request->get_param( 'last_read_message_id' ) ?? '' );
+		$message_id = sanitize_text_field( (string) $raw_msg_id );
+
+		if ( empty( $message_id ) ) {
+			return new WP_REST_Response(
+				array(
+					'success' => false,
+					'message' => __( 'Message ID cannot be empty.', 'dragwyb-click-to-chat' ),
+				),
+				400
+			);
+		}
+
+		DCTC_Support_Ticket_Service::update_last_read_message( (int) $ticket['id'], $message_id, 'customer' );
+
+		return new WP_REST_Response(
+			array(
+				'success'    => true,
+				'ticket_id'  => absint( $ticket['id'] ),
+				'message_id' => esc_attr( $message_id ),
 			),
 			200
 		);

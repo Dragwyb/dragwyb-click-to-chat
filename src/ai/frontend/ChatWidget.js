@@ -467,6 +467,8 @@ export default function ChatWidget({ settings, inline }) {
 	const aiResponseWaiting = useRef(false);
 	const wait30sTimerRef = useRef(null);
 	const maxWaitTimeoutRef = useRef(null);
+	const lastChatReadSentRef = useRef(null);
+	const chatActiveSecondsRef = useRef(0);
 
 	const clearAgentWaitTimers = useCallback(() => {
 		if (wait30sTimerRef.current) {
@@ -671,6 +673,92 @@ export default function ChatWidget({ settings, inline }) {
 
 		return () => clearInterval(interval);
 	}, [isOpen, inline, sessionId]);
+
+	// 30-second Active Tab & Last Message Visible Tracker for AI Chatbot Read Receipts
+	useEffect(() => {
+		if (!isOpen && !inline) {
+			chatActiveSecondsRef.current = 0;
+			return;
+		}
+		if (!sessionId) {
+			chatActiveSecondsRef.current = 0;
+			return;
+		}
+		if (typeof window !== 'undefined' && window.dragwybGuestExpired) {
+			chatActiveSecondsRef.current = 0;
+			return;
+		}
+		if (!messages || messages.length === 0) {
+			chatActiveSecondsRef.current = 0;
+			return;
+		}
+
+		const lastMsg = messages[messages.length - 1];
+		const lastMsgId = String(lastMsg?.id || lastMsg?.uuid || lastMsg?.created_at || (messages.length - 1));
+
+		if (lastChatReadSentRef.current === `${sessionId}_${lastMsgId}`) {
+			return;
+		}
+
+		chatActiveSecondsRef.current = 0;
+
+		const isLastMsgVisible = () => {
+			const container = document.getElementById('dctc-ai-messages');
+			if (!container) return false;
+
+			const el = container.querySelector(`[data-msg-id="${lastMsgId}"]`) || container.lastElementChild;
+			if (!el) return false;
+
+			const rect = el.getBoundingClientRect();
+			if (rect.width === 0 || rect.height === 0) return false;
+
+			const winHeight = window.innerHeight || document.documentElement.clientHeight;
+			const winWidth = window.innerWidth || document.documentElement.clientWidth;
+			if (rect.bottom <= 0 || rect.top >= winHeight || rect.right <= 0 || rect.left >= winWidth) {
+				return false;
+			}
+
+			const cRect = container.getBoundingClientRect();
+			return rect.bottom > cRect.top && rect.top < cRect.bottom;
+		};
+
+		const interval = setInterval(() => {
+			const isTabActive = typeof document !== 'undefined' && !document.hidden && document.visibilityState === 'visible';
+			if (!isTabActive || !isLastMsgVisible()) {
+				chatActiveSecondsRef.current = 0;
+				return;
+			}
+
+			chatActiveSecondsRef.current += 1;
+
+			if (chatActiveSecondsRef.current >= 30) {
+				lastChatReadSentRef.current = `${sessionId}_${lastMsgId}`;
+				chatActiveSecondsRef.current = 0;
+
+				apiFetch({
+					path: '/dctc-ai/v1/support/session/read',
+					method: 'POST',
+					data: {
+						session_id: sessionId,
+						message_id: lastMsgId,
+					},
+				}).catch(() => { });
+			}
+		}, 1000);
+
+		const handleVisibilityChange = () => {
+			if (document.hidden) {
+				chatActiveSecondsRef.current = 0;
+			}
+		};
+
+		document.addEventListener('visibilitychange', handleVisibilityChange);
+
+		return () => {
+			clearInterval(interval);
+			document.removeEventListener('visibilitychange', handleVisibilityChange);
+		};
+	}, [isOpen, inline, sessionId, messages]);
 
 	const handleOrderLookup = async (e) => {
 		if (e && e.preventDefault) {
@@ -2860,6 +2948,8 @@ export default function ChatWidget({ settings, inline }) {
 							return (
 								<div
 									key={index}
+									data-msg-index={index}
+									data-msg-id={message.id || message.uuid || message.created_at || index}
 									className={`dctc-ai-message-row ${isBot ? 'dctc-ai-message-row--bot' : 'dctc-ai-message-row--user'}`}
 								>
 									{isBot && showBotAvatarInChat && (
