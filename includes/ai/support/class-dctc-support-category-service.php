@@ -81,7 +81,7 @@ class DCTC_Support_Category_Service {
 				$placeholders = implode( ',', array_fill( 0, count( $clean_ids ), '%d' ) );
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$meta_rows = $wpdb->get_results(
-					$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($placeholders)", $clean_ids ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($placeholders)", $clean_ids ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					ARRAY_A
 				);
 				if ( is_array( $meta_rows ) ) {
@@ -98,7 +98,6 @@ class DCTC_Support_Category_Service {
 
 			$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 			$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
-
 
 			$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 			$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );
@@ -141,7 +140,6 @@ class DCTC_Support_Category_Service {
 
 		$row['default_priority'] = ! empty( $meta['default_priority'] ) ? $meta['default_priority'] : 'normal';
 		$row['default_team_id']  = ! empty( $meta['default_team_id'] ) ? absint( $meta['default_team_id'] ) : 0;
-
 
 		$sub_tax               = ! empty( $meta['sub_taxonomies'] ) ? json_decode( $meta['sub_taxonomies'], true ) : array();
 		$row['sub_taxonomies'] = is_array( $sub_tax ) ? $sub_tax : ( array_filter( array( ! empty( $meta['show_product'] ) ? 'product' : '', ! empty( $meta['show_tags'] ) ? 'tag' : '' ) ) );

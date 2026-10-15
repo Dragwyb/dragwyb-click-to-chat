@@ -74,7 +74,7 @@ class DCTC_AI_Provider_OpenAI extends DCTC_AI_Provider_Base {
 				}
 			} catch ( \Throwable $e ) {
 				$error_message = current_user_can( 'manage_options' ) ? $e->getMessage() : esc_html__( 'OpenAI API returned an empty response.', 'dragwyb-click-to-chat' );
-				throw new \Exception( $error_message );
+				throw new \Exception( esc_html( $error_message ) );
 			}
 		} else {
 			// Direct HTTP fallback

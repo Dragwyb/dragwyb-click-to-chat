@@ -90,7 +90,7 @@ class DCTC_Support_Product_Service {
 				$placeholders = implode( ',', array_fill( 0, count( $clean_ids ), '%d' ) );
 				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
 				$meta_rows = $wpdb->get_results(
-					$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($placeholders)", $clean_ids ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($placeholders)", $clean_ids ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
 					ARRAY_A
 				);
 				if ( is_array( $meta_rows ) ) {

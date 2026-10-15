@@ -88,7 +88,7 @@ class DCTC_AI_Provider_Google extends DCTC_AI_Provider_Base {
 				}
 			} catch ( \Throwable $e ) {
 				$error_message = current_user_can( 'manage_options' ) ? $e->getMessage() : esc_html__( 'Google Gemini returned an empty response.', 'dragwyb-click-to-chat' );
-				throw new \Exception( $error_message );
+				throw new \Exception( esc_html( $error_message ) );
 			}
 		} else {
 			// Direct Google Generative Language REST API
