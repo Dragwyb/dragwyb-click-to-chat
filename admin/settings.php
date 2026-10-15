@@ -297,8 +297,8 @@ function dctc_save_settings() {
 		// Device visibility
 		$desktop_key                    = $slug . '_desktop';
 		$mobile_key                     = $slug . '_mobile';
-		$settings[ $slug . '_desktop' ] = isset( $_POST[ $desktop_key ] ) && $_POST[ $desktop_key ] === '1' ? '1' : '1';
-		$settings[ $slug . '_mobile' ]  = isset( $_POST[ $mobile_key ] ) && $_POST[ $mobile_key ] === '1' ? '1' : '1';
+		$settings[ $slug . '_desktop' ] = ( isset( $_POST[ $desktop_key ] ) && '1' === (string) $_POST[ $desktop_key ] ) ? '1' : '0';
+		$settings[ $slug . '_mobile' ]  = ( isset( $_POST[ $mobile_key ] ) && '1' === (string) $_POST[ $mobile_key ] ) ? '1' : '0';
 
 		// Custom Icon
 		$icon_key = $slug . '_custom_icon';
@@ -380,10 +380,10 @@ function dctc_save_settings() {
 
 	// Triggers and Targeting
 	if ( isset( $_POST['show_on_desktop'] ) ) {
-		$settings['show_on_desktop'] = $_POST['show_on_desktop'] === '1' ? '1' : '1';
+		$settings['show_on_desktop'] = ( '1' === (string) $_POST['show_on_desktop'] ) ? '1' : '0';
 	}
 	if ( isset( $_POST['show_on_mobile'] ) ) {
-		$settings['show_on_mobile'] = $_POST['show_on_mobile'] === '1' ? '1' : '1';
+		$settings['show_on_mobile'] = ( '1' === (string) $_POST['show_on_mobile'] ) ? '1' : '0';
 	}
 	if ( isset( $_POST['time_delay'] ) ) {
 		$delay = intval( $_POST['time_delay'] );
@@ -429,6 +429,9 @@ function dctc_save_settings() {
 			}
 			$enabled                     = ( '1' === $_POST['support_center_enabled'] );
 			$support_settings['enabled'] = $enabled;
+			if ( class_exists( 'DCTC_Support_REST_Controller' ) ) {
+				$support_settings = DCTC_Support_REST_Controller::sanitize_support_settings( $support_settings );
+			}
 			update_option( 'dctc_support_settings', $support_settings );
 			$settings['support_center_enabled'] = $enabled ? '1' : '0';
 

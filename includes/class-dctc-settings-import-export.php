@@ -727,10 +727,10 @@ class DCTC_Settings_Import_Export {
 				}
 			}
 			if ( isset( $raw[ $slug . '_desktop' ] ) ) {
-				$out[ $slug . '_desktop' ] = ( '1' === (string) $raw[ $slug . '_desktop' ] ) ? '1' : '1';
+				$out[ $slug . '_desktop' ] = ( '1' === (string) $raw[ $slug . '_desktop' ] ) ? '1' : '0';
 			}
 			if ( isset( $raw[ $slug . '_mobile' ] ) ) {
-				$out[ $slug . '_mobile' ] = ( '1' === (string) $raw[ $slug . '_mobile' ] ) ? '1' : '1';
+				$out[ $slug . '_mobile' ] = ( '1' === (string) $raw[ $slug . '_mobile' ] ) ? '1' : '0';
 			}
 			if ( isset( $raw[ $slug . '_custom_icon' ] ) ) {
 				$out[ $slug . '_custom_icon' ] = esc_url_raw( $raw[ $slug . '_custom_icon' ] );
@@ -951,8 +951,16 @@ class DCTC_Settings_Import_Export {
 					__( 'The file does not contain Support Center settings.', 'dragwyb-click-to-chat' )
 				);
 			}
-			$clean_support = is_array( $payload['support'] ) ? $payload['support'] : array();
+			if ( ! class_exists( 'DCTC_Support_REST_Controller' ) && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-rest-controller.php' ) ) {
+				require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-rest-controller.php';
+			}
+			$clean_support = class_exists( 'DCTC_Support_REST_Controller' )
+				? DCTC_Support_REST_Controller::sanitize_support_settings( $payload['support'] )
+				: ( is_array( $payload['support'] ) ? array_map( 'sanitize_text_field', $payload['support'] ) : array() );
 			update_option( self::OPTION_SUPPORT, $clean_support );
+			if ( ! empty( $clean_support['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
+				DCTC_Support_DB::create_tables();
+			}
 			++$applied;
 		}
 

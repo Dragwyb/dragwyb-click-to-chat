@@ -1469,7 +1469,7 @@ class DCTC_AI_Chat_Controller {
 		// Handle user-specific loading limit.
 		$limit = $request->get_param( 'limit' );
 		if ( ! is_null( $limit ) ) {
-			$limit = sanitize_text_field( $limit );
+			$limit = 'all' === $limit ? 'all' : (string) max( 1, absint( $limit ) );
 			update_user_meta( $user_id, 'dctc_ai_sessions_load_limit', $limit );
 		} else {
 			$limit = get_user_meta( $user_id, 'dctc_ai_sessions_load_limit', true );
@@ -1481,7 +1481,8 @@ class DCTC_AI_Chat_Controller {
 		// Handle user-specific sorting order.
 		$order = $request->get_param( 'order' );
 		if ( ! is_null( $order ) ) {
-			$order = sanitize_text_field( $order );
+			$order_clean = strtolower( sanitize_key( $order ) );
+			$order       = in_array( $order_clean, array( 'asc', 'desc' ), true ) ? $order_clean : 'desc';
 			update_user_meta( $user_id, 'dctc_ai_sessions_sort_order', $order );
 		} else {
 			$order = get_user_meta( $user_id, 'dctc_ai_sessions_sort_order', true );

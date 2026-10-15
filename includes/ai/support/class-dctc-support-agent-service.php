@@ -157,32 +157,50 @@ class DCTC_Support_Agent_Service {
 
 		$id           = ! empty( $data['id'] ) ? absint( $data['id'] ) : 0;
 		$wp_user_id   = ! empty( $data['wp_user_id'] ) ? absint( $data['wp_user_id'] ) : 0;
-		$support_role = ! empty( $data['support_role'] ) ? sanitize_key( $data['support_role'] ) : 'support';
-		$seniority    = ! empty( $data['seniority'] ) ? sanitize_key( $data['seniority'] ) : 'support';
-		$color        = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '';
+		$allowed_roles = array( 'admin', 'manager', 'senior', 'support', 'fresher' );
+		$support_role  = ! empty( $data['support_role'] ) && in_array( sanitize_key( $data['support_role'] ), $allowed_roles, true )
+			? sanitize_key( $data['support_role'] )
+			: 'support';
+
+		$allowed_seniorities = array( 'admin', 'manager', 'senior', 'support', 'fresher' );
+		$seniority           = ! empty( $data['seniority'] ) && in_array( sanitize_key( $data['seniority'] ), $allowed_seniorities, true )
+			? sanitize_key( $data['seniority'] )
+			: 'support';
+
+		$color = ! empty( $data['color'] ) ? sanitize_hex_color( $data['color'] ) : '';
 		if ( empty( $color ) && ! empty( $data['color'] ) ) {
 			$color = sanitize_text_field( $data['color'] );
 		}
 		if ( empty( $color ) ) {
 			$color = '#4f46e5';
 		}
-		$active                     = isset( $data['active'] ) ? ( $data['active'] ? 1 : 0 ) : 1;
-		$assignment_enabled         = isset( $data['assignment_enabled'] ) ? ( $data['assignment_enabled'] ? 1 : 0 ) : 1;
-		$availability_status        = ! empty( $data['availability_status'] ) ? sanitize_key( $data['availability_status'] ) : 'available';
+		$active              = isset( $data['active'] ) ? ( $data['active'] ? 1 : 0 ) : 1;
+		$assignment_enabled  = isset( $data['assignment_enabled'] ) ? ( $data['assignment_enabled'] ? 1 : 0 ) : 1;
+		$allowed_statuses    = array( 'available', 'away', 'offline' );
+		$availability_status = ! empty( $data['availability_status'] ) && in_array( sanitize_key( $data['availability_status'] ), $allowed_statuses, true )
+			? sanitize_key( $data['availability_status'] )
+			: 'available';
 		$max_active_tickets         = isset( $data['max_active_tickets'] ) ? max( 1, absint( $data['max_active_tickets'] ) ) : 10;
 		$notification_email_enabled = isset( $data['notification_email_enabled'] ) ? ( $data['notification_email_enabled'] ? 1 : 0 ) : 1;
 
 		$skills = isset( $data['skills'] ) && is_array( $data['skills'] )
-			? wp_json_encode( array_map( 'sanitize_key', $data['skills'] ) )
+			? wp_json_encode( array_values( array_map( 'sanitize_key', $data['skills'] ) ) )
 			: wp_json_encode( array() );
 
 		$allowed_categories = isset( $data['allowed_categories'] ) && is_array( $data['allowed_categories'] )
-			? wp_json_encode( array_values( array_map( 'absint', $data['allowed_categories'] ) ) )
+			? wp_json_encode( array_values( array_filter( array_map( 'absint', $data['allowed_categories'] ) ) ) )
 			: wp_json_encode( array() );
 
-		$allowed_subtaxonomies = isset( $data['allowed_subtaxonomies'] ) && is_array( $data['allowed_subtaxonomies'] )
-			? wp_json_encode( $data['allowed_subtaxonomies'] )
-			: wp_json_encode( array() );
+		$clean_subtax = array();
+		if ( isset( $data['allowed_subtaxonomies'] ) && is_array( $data['allowed_subtaxonomies'] ) ) {
+			foreach ( $data['allowed_subtaxonomies'] as $tax_slug => $terms ) {
+				$clean_tax_slug = sanitize_key( $tax_slug );
+				if ( is_array( $terms ) ) {
+					$clean_subtax[ $clean_tax_slug ] = array_values( array_filter( array_map( 'absint', $terms ) ) );
+				}
+			}
+		}
+		$allowed_subtaxonomies = wp_json_encode( $clean_subtax );
 
 		if ( ! $id && ! $wp_user_id ) {
 			return false;

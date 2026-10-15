@@ -85,15 +85,18 @@ class DCTC_Support_Product_Service {
 		$meta_map = array();
 
 		if ( ! empty( $term_ids ) ) {
-			$ids_in = implode( ',', array_map( 'absint', $term_ids ) );
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
-			$meta_rows = $wpdb->get_results(
-				$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN (%s)", $ids_in ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
-				ARRAY_A
-			);
-			if ( is_array( $meta_rows ) ) {
-				foreach ( $meta_rows as $mr ) {
-					$meta_map[ (int) $mr['term_id'] ][ $mr['meta_key'] ] = $mr['meta_value'];
+			$clean_ids = array_values( array_filter( array_map( 'absint', $term_ids ) ) );
+			if ( ! empty( $clean_ids ) ) {
+				$placeholders = implode( ',', array_fill( 0, count( $clean_ids ), '%d' ) );
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+				$meta_rows = $wpdb->get_results(
+					$wpdb->prepare( "SELECT term_id, meta_key, meta_value FROM `$table_meta` WHERE term_id IN ($placeholders)", $clean_ids ), // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+					ARRAY_A
+				);
+				if ( is_array( $meta_rows ) ) {
+					foreach ( $meta_rows as $mr ) {
+						$meta_map[ (int) $mr['term_id'] ][ $mr['meta_key'] ] = $mr['meta_value'];
+					}
 				}
 			}
 		}

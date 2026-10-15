@@ -1753,6 +1753,9 @@ class DCTC_AI_Settings_Handler {
 			$support_settings['enabled'] = false;
 		}
 
+		if ( class_exists( 'DCTC_Support_REST_Controller' ) ) {
+			$support_settings = \DCTC_Support_REST_Controller::sanitize_support_settings( $support_settings );
+		}
 		update_option( 'dctc_support_settings', $support_settings );
 
 		return new \WP_REST_Response(

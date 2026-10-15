@@ -1612,8 +1612,206 @@ class DCTC_Support_REST_Controller {
 		);
 	}
 
+	/**
+	 * Get default Support Center settings schema.
+	 *
+	 * @return array
+	 */
+	public static function get_default_support_settings() {
+		return array(
+			'enabled'                   => false,
+			'ticket_prefix'             => 'TCK-',
+			'default_status'            => 'open',
+			'default_priority'          => 'normal',
+			'auto_assign'               => true,
+			'assignment_algorithm'      => 'skill_match',
+			'respect_availability'      => true,
+			'respect_workload'          => true,
+			'human_request_trigger'     => true,
+			'auto_pause_ai'             => true,
+			'ticket_notification_email' => '',
+			'customer_portal'           => false,
+			'default_category'          => '',
+			'fallback_agent_id'         => 0,
+			'notifications'             => array(
+				'agent_assignment'       => true,
+				'customer_email_enabled' => true,
+			),
+		);
+	}
+
+	/**
+	 * Sanitize and validate Support Center settings against strict schema.
+	 *
+	 * @param mixed      $data     Input settings data.
+	 * @param array|null $existing Existing settings if available.
+	 * @return array Sanitized settings.
+	 */
+	public static function sanitize_support_settings( $data, $existing = null ) {
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
+
+		if ( null === $existing ) {
+			$saved    = get_option( 'dctc_support_settings', array() );
+			$existing = is_array( $saved ) ? $saved : array();
+		}
+
+		$defaults = self::get_default_support_settings();
+
+		$sanitized = array();
+
+		// 1. Module master toggle
+		$sanitized['enabled'] = isset( $data['enabled'] )
+			? rest_sanitize_boolean( $data['enabled'] )
+			: ( isset( $existing['enabled'] ) ? rest_sanitize_boolean( $existing['enabled'] ) : $defaults['enabled'] );
+
+		// 2. Ticket Number Prefix: Alphanumeric and hyphens/underscores only, max 20 chars
+		if ( isset( $data['ticket_prefix'] ) ) {
+			$clean_prefix               = preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $data['ticket_prefix'] );
+			$clean_prefix               = substr( trim( $clean_prefix ), 0, 20 );
+			$sanitized['ticket_prefix'] = ! empty( $clean_prefix ) ? $clean_prefix : 'TCK-';
+		} elseif ( isset( $existing['ticket_prefix'] ) ) {
+			$clean_prefix               = preg_replace( '/[^A-Za-z0-9_\-]/', '', (string) $existing['ticket_prefix'] );
+			$clean_prefix               = substr( trim( $clean_prefix ), 0, 20 );
+			$sanitized['ticket_prefix'] = ! empty( $clean_prefix ) ? $clean_prefix : 'TCK-';
+		} else {
+			$sanitized['ticket_prefix'] = $defaults['ticket_prefix'];
+		}
+
+		// 3. Default Ticket Status (Whitelist)
+		$allowed_statuses = array( 'open', 'pending', 'waiting_customer', 'resolved', 'closed' );
+		if ( isset( $data['default_status'] ) ) {
+			$status                      = sanitize_key( $data['default_status'] );
+			$sanitized['default_status'] = in_array( $status, $allowed_statuses, true ) ? $status : 'open';
+		} elseif ( isset( $existing['default_status'] ) ) {
+			$status                      = sanitize_key( $existing['default_status'] );
+			$sanitized['default_status'] = in_array( $status, $allowed_statuses, true ) ? $status : 'open';
+		} else {
+			$sanitized['default_status'] = $defaults['default_status'];
+		}
+
+		// 4. Default Ticket Priority (Whitelist)
+		$allowed_priorities = array( 'low', 'normal', 'high', 'urgent' );
+		if ( isset( $data['default_priority'] ) ) {
+			$prio                          = sanitize_key( $data['default_priority'] );
+			$sanitized['default_priority'] = in_array( $prio, $allowed_priorities, true ) ? $prio : 'normal';
+		} elseif ( isset( $existing['default_priority'] ) ) {
+			$prio                          = sanitize_key( $existing['default_priority'] );
+			$sanitized['default_priority'] = in_array( $prio, $allowed_priorities, true ) ? $prio : 'normal';
+		} else {
+			$sanitized['default_priority'] = $defaults['default_priority'];
+		}
+
+		// 5. Auto-assignment toggle
+		$sanitized['auto_assign'] = isset( $data['auto_assign'] )
+			? rest_sanitize_boolean( $data['auto_assign'] )
+			: ( isset( $existing['auto_assign'] ) ? rest_sanitize_boolean( $existing['auto_assign'] ) : $defaults['auto_assign'] );
+
+		// 6. Assignment Algorithm (Whitelist)
+		$allowed_algorithms = array( 'skill_match', 'manual', 'round_robin', 'least_loaded' );
+		if ( isset( $data['assignment_algorithm'] ) ) {
+			$algo                              = sanitize_key( $data['assignment_algorithm'] );
+			$sanitized['assignment_algorithm'] = in_array( $algo, $allowed_algorithms, true ) ? $algo : 'skill_match';
+		} elseif ( isset( $existing['assignment_algorithm'] ) ) {
+			$algo                              = sanitize_key( $existing['assignment_algorithm'] );
+			$sanitized['assignment_algorithm'] = in_array( $algo, $allowed_algorithms, true ) ? $algo : 'skill_match';
+		} else {
+			$sanitized['assignment_algorithm'] = $defaults['assignment_algorithm'];
+		}
+
+		// 7. Respect Agent Availability toggle
+		$sanitized['respect_availability'] = isset( $data['respect_availability'] )
+			? rest_sanitize_boolean( $data['respect_availability'] )
+			: ( isset( $existing['respect_availability'] ) ? rest_sanitize_boolean( $existing['respect_availability'] ) : $defaults['respect_availability'] );
+
+		// 8. Respect Agent Workload toggle
+		$sanitized['respect_workload'] = isset( $data['respect_workload'] )
+			? rest_sanitize_boolean( $data['respect_workload'] )
+			: ( isset( $existing['respect_workload'] ) ? rest_sanitize_boolean( $existing['respect_workload'] ) : $defaults['respect_workload'] );
+
+		// 9. Human Request Trigger toggle
+		$sanitized['human_request_trigger'] = isset( $data['human_request_trigger'] )
+			? rest_sanitize_boolean( $data['human_request_trigger'] )
+			: ( isset( $existing['human_request_trigger'] ) ? rest_sanitize_boolean( $existing['human_request_trigger'] ) : $defaults['human_request_trigger'] );
+
+		// 10. Auto-Pause AI on Staff Reply toggle
+		$sanitized['auto_pause_ai'] = isset( $data['auto_pause_ai'] )
+			? rest_sanitize_boolean( $data['auto_pause_ai'] )
+			: ( isset( $existing['auto_pause_ai'] ) ? rest_sanitize_boolean( $existing['auto_pause_ai'] ) : $defaults['auto_pause_ai'] );
+
+		// 11. Ticket Notification Email
+		if ( isset( $data['ticket_notification_email'] ) ) {
+			$email                                  = trim( (string) $data['ticket_notification_email'] );
+			$sanitized['ticket_notification_email'] = ! empty( $email ) ? sanitize_email( $email ) : '';
+		} elseif ( isset( $existing['ticket_notification_email'] ) ) {
+			$email                                  = trim( (string) $existing['ticket_notification_email'] );
+			$sanitized['ticket_notification_email'] = ! empty( $email ) ? sanitize_email( $email ) : '';
+		} else {
+			$sanitized['ticket_notification_email'] = $defaults['ticket_notification_email'];
+		}
+
+		// 12. Customer Portal toggle
+		$sanitized['customer_portal'] = isset( $data['customer_portal'] )
+			? rest_sanitize_boolean( $data['customer_portal'] )
+			: ( isset( $existing['customer_portal'] ) ? rest_sanitize_boolean( $existing['customer_portal'] ) : $defaults['customer_portal'] );
+
+		// 13. Default Category slug
+		if ( isset( $data['default_category'] ) ) {
+			$sanitized['default_category'] = sanitize_text_field( trim( (string) $data['default_category'] ) );
+		} elseif ( isset( $existing['default_category'] ) ) {
+			$sanitized['default_category'] = sanitize_text_field( trim( (string) $existing['default_category'] ) );
+		} else {
+			$sanitized['default_category'] = $defaults['default_category'];
+		}
+
+		// 14. Fallback Agent ID
+		if ( isset( $data['fallback_agent_id'] ) ) {
+			$sanitized['fallback_agent_id'] = absint( $data['fallback_agent_id'] );
+		} elseif ( isset( $existing['fallback_agent_id'] ) ) {
+			$sanitized['fallback_agent_id'] = absint( $existing['fallback_agent_id'] );
+		} else {
+			$sanitized['fallback_agent_id'] = $defaults['fallback_agent_id'];
+		}
+
+		// 15. Notification Policies
+		$input_notifs = isset( $data['notifications'] ) && is_array( $data['notifications'] ) ? $data['notifications'] : array();
+		$exist_notifs = isset( $existing['notifications'] ) && is_array( $existing['notifications'] ) ? $existing['notifications'] : array();
+		$def_notifs   = $defaults['notifications'];
+
+		$bool_notif_keys = array(
+			'agent_assignment',
+			'customer_email_enabled',
+		);
+
+		$sanitized_notifs = array();
+		foreach ( $bool_notif_keys as $n_key ) {
+			if ( isset( $input_notifs[ $n_key ] ) ) {
+				$sanitized_notifs[ $n_key ] = rest_sanitize_boolean( $input_notifs[ $n_key ] );
+			} elseif ( isset( $exist_notifs[ $n_key ] ) ) {
+				$sanitized_notifs[ $n_key ] = rest_sanitize_boolean( $exist_notifs[ $n_key ] );
+			} else {
+				$sanitized_notifs[ $n_key ] = ! empty( $def_notifs[ $n_key ] );
+			}
+		}
+
+		$sanitized['notifications'] = $sanitized_notifs;
+
+		return $sanitized;
+	}
+
+	/**
+	 * Get current sanitized Support Center settings merged with defaults.
+	 *
+	 * @return array
+	 */
+	public static function get_sanitized_support_settings() {
+		$saved = get_option( 'dctc_support_settings', array() );
+		return self::sanitize_support_settings( is_array( $saved ) ? $saved : array() );
+	}
+
 	public function get_settings() {
-		$settings = get_option( 'dctc_support_settings', array() );
+		$settings = self::get_sanitized_support_settings();
 		return new WP_REST_Response(
 			array(
 				'success'  => true,
@@ -1625,22 +1823,31 @@ class DCTC_Support_REST_Controller {
 
 	public function save_settings( $request ) {
 		$data = $request->get_json_params();
-		update_option( 'dctc_support_settings', $data );
+		if ( ! is_array( $data ) ) {
+			$data = array();
+		}
 
-		if ( ! empty( $data['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
+		$sanitized = self::sanitize_support_settings( $data );
+		update_option( 'dctc_support_settings', $sanitized );
+
+		if ( ! empty( $sanitized['enabled'] ) && class_exists( 'DCTC_Support_DB' ) ) {
 			DCTC_Support_DB::create_tables();
 		}
 
 		return new WP_REST_Response(
 			array(
 				'success'  => true,
-				'settings' => $data,
+				'settings' => $sanitized,
 			),
 			200
 		);
 	}
 
 	public function get_portal_settings() {
+		if ( ! class_exists( 'DCTC_Support_Portal' ) && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php' ) ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
+		}
+
 		$settings = class_exists( 'DCTC_Support_Portal' )
 			? DCTC_Support_Portal::get_settings()
 			: get_option( 'dctc_support_portal_settings', array() );
@@ -1660,9 +1867,13 @@ class DCTC_Support_REST_Controller {
 			$data = array();
 		}
 
+		if ( ! class_exists( 'DCTC_Support_Portal' ) && file_exists( DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php' ) ) {
+			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-portal.php';
+		}
+
 		$sanitized = class_exists( 'DCTC_Support_Portal' )
 			? DCTC_Support_Portal::sanitize_settings( $data )
-			: $data;
+			: array_map( 'sanitize_text_field', $data );
 
 		update_option( 'dctc_support_portal_settings', $sanitized );
 
@@ -1697,7 +1908,7 @@ class DCTC_Support_REST_Controller {
 	}
 
 	public function save_permissions( $request ) {
-		$matrix = $request->get_json_params();
+		$matrix  = $request->get_json_params();
 		$success = DCTC_Support_Permission_Service::save_role_permissions( $matrix );
 		return new WP_REST_Response(
 			array(
@@ -2245,7 +2456,7 @@ class DCTC_Support_REST_Controller {
 			}
 		}
 
-		update_option( 'dctc_support_user_filters_' . $user_id, $clean );
+		update_option( 'dctc_support_user_filters_' . $user_id, $clean, false );
 		update_user_meta( $user_id, 'dctc_support_saved_filters', $clean );
 
 		return new WP_REST_Response(

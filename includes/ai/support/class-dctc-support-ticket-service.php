@@ -1955,8 +1955,8 @@ class DCTC_Support_Ticket_Service {
 			'uuid'        => $msg_uuid,
 			'role'        => 'agent' === $sender_type ? 'assistant' : 'user',
 			'sender_type' => $sender_type,
-			'sender_name' => $display_name,
-			'content'     => $message,
+			'sender_name' => sanitize_text_field( $display_name ),
+			'content'     => wp_kses_post( $message ),
 			'created_at'  => current_time( 'mysql', true ),
 		);
 

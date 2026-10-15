@@ -499,14 +499,8 @@ class DCTC_Support_DB {
 			'auto_pause_ai'             => true,
 			'ticket_notification_email' => '',
 			'notifications'             => array(
-				'agent_assignment'        => true,
-				'agent_reassignment'      => true,
-				'agent_reply'             => true,
-				'customer_reply'          => true,
-				'ticket_resolved'         => true,
-				'ticket_reopened'         => true,
-				'customer_email_enabled'  => true,
-				'suppress_active_session' => true,
+				'agent_assignment'       => true,
+				'customer_email_enabled' => true,
 			),
 		);
 
