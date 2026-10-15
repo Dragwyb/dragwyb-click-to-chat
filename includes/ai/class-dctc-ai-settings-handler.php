@@ -1697,7 +1697,7 @@ class DCTC_AI_Settings_Handler {
 			$ai_settings['display']['entire_site'] = false;
 		}
 
-		update_option( 'dctc_ai_chat_assistant_settings', $ai_settings );
+		self::dctc_ai_persist_settings( $ai_settings );
 
 		// 3. Handle Support Center Settings & Tables
 		$support_enabled  = ! empty( $support_data['enabled'] );

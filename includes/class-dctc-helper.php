@@ -188,7 +188,7 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		public static function is_channels_enabled() {
 			$settings = get_option( 'dctc_settings', array() );
 			if ( ! is_array( $settings ) ) {
-				return true;
+				return false;
 			}
 			return ! isset( $settings['channels_enabled'] ) || '1' === (string) $settings['channels_enabled'] || true === $settings['channels_enabled'];
 		}
@@ -220,8 +220,11 @@ if ( ! class_exists( 'DCTC_Helper' ) ) {
 		 */
 		public static function is_support_enabled() {
 			$support_settings = get_option( 'dctc_support_settings', array() );
-			if ( ! is_array( $support_settings ) ) {
-				return false;
+			$settings         = get_option( 'dctc_settings', array() );
+			$ai_settings      = get_option( 'dctc_ai_chat_assistant_settings', array() );
+
+			if ( empty( $support_settings ) && empty( $settings ) && empty( $ai_settings ) ) {
+				return true;
 			}
 			return ! empty( $support_settings['enabled'] );
 		}

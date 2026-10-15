@@ -117,17 +117,6 @@ if ( ! class_exists( 'DCTC_AI_Module' ) ) :
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-db.php';
 			DCTC_AI_DB::dctc_ai_create_tables();
 
-			// For fresh new installs, enable the AI Chatbot by default without affecting existing users.
-			$existing_ai_settings = get_option( 'dctc_ai_chat_assistant_settings', null );
-			$is_existing_site     = get_option( 'dctc_settings' ) || get_option( 'dctc_ai_installed' );
-
-			if ( null === $existing_ai_settings && ! $is_existing_site ) {
-				require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-settings-handler.php';
-				$default_settings                           = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-				$default_settings['display']['entire_site'] = true;
-				update_option( 'dctc_ai_chat_assistant_settings', $default_settings );
-			}
-
 			update_option( 'dctc_ai_installed', '1' );
 			update_option( 'dctc_ai_db_version', DCTC_VERSION );
 

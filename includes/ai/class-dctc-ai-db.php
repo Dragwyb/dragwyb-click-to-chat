@@ -252,14 +252,6 @@ class DCTC_AI_DB {
 			require_once DCTC_PLUGIN_DIR . 'includes/ai/support/class-dctc-support-db.php';
 			DCTC_Support_DB::create_tables();
 		}
-
-		// Ensure RAG settings are initialized
-		require_once DCTC_PLUGIN_DIR . 'includes/ai/class-dctc-ai-settings-handler.php';
-		$current_settings = get_option( 'dctc_ai_chat_assistant_settings', array() );
-		if ( empty( $current_settings ) || empty( $current_settings['rag'] ) ) {
-			$all_settings = DCTC_AI_Settings_Handler::dctc_ai_get_all_settings();
-			update_option( 'dctc_ai_chat_assistant_settings', $all_settings );
-		}
 	}
 
 	/**
