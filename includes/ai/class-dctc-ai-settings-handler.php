@@ -855,6 +855,7 @@ class DCTC_AI_Settings_Handler {
 
 			$items[] = array(
 				'id'    => (int) $post->ID,
+				// translators: %d is the post ID.
 				'title' => ! empty( $post->post_title ) ? $post->post_title : sprintf( __( 'ID %d (No Title)', 'dragwyb-click-to-chat' ), $post->ID ),
 				'type'  => $type_label,
 			);
