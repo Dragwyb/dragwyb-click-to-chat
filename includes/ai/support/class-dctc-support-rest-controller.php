@@ -889,7 +889,7 @@ class DCTC_Support_REST_Controller {
 		}
 
 		$table_sessions = $wpdb->prefix . 'dctc_ai_sessions';
-		$now_time       = current_time( 'mysql' );
+		$now_time       = current_time( 'mysql', true );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 		$session_row = $wpdb->get_var( $wpdb->prepare( "SELECT 1 FROM `$table_sessions` WHERE session_id = %s LIMIT 1", $session_id ) );
 		if ( $session_row ) {

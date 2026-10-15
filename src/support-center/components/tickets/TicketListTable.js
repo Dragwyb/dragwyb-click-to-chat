@@ -154,6 +154,12 @@ export default function TicketListTable({
 													<span className="dctc-sc-card-id">#{item.id}</span>
 													<StatusBadge status={item.status} />
 													<PriorityBadge priority={item.priority} />
+													{item.control_mode === 'human' && (item.is_customer_online || (typeof item.customer_last_seen_diff === 'number' && item.customer_last_seen_diff <= 60)) && !['resolved', 'closed', 'trash'].includes(item.status) && (
+														<span className="dctc-sc-list-waiting-badge" title={__('Client is active in chatbot and waiting for reply', 'dragwyb-click-to-chat')}>
+															<span className="dctc-sc-waiting-pulse-dot"></span>
+															<span>{__('Waiting...', 'dragwyb-click-to-chat')}</span>
+														</span>
+													)}
 												</div>
 												<div className="dctc-sc-card-top-right">
 													{isStarred && <span className="dashicons dashicons-star-filled"></span>}

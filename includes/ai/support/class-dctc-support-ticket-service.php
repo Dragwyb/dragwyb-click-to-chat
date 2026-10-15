@@ -976,6 +976,20 @@ class DCTC_Support_Ticket_Service {
 				}
 				$row['excerpt']      = $first_content ? $first_content : ( $last_content ? $last_content : $row['subject'] );
 				$row['last_message'] = $last_content ? $last_content : $row['subject'];
+
+				// Customer online / last seen diff calculation (under 60s threshold)
+				$c_last_seen_diff = null;
+				$c_is_online      = false;
+				if ( ! empty( $row['customer_last_seen_at'] ) ) {
+					$c_last_seen_ts = strtotime( $row['customer_last_seen_at'] . ' UTC' );
+					$now_utc        = current_time( 'timestamp', true );
+					if ( $c_last_seen_ts > 0 ) {
+						$c_last_seen_diff = max( 0, $now_utc - $c_last_seen_ts );
+						$c_is_online      = ( $c_last_seen_diff <= 60 );
+					}
+				}
+				$row['customer_last_seen_diff'] = $c_last_seen_diff;
+				$row['is_customer_online']      = $c_is_online;
 			}
 		} else {
 			$rows = array();
@@ -1147,6 +1161,20 @@ class DCTC_Support_Ticket_Service {
 		$ticket['session_active']                = $is_session_active;
 		$ticket['customer_last_read_message_id'] = (string) ( $ticket_meta['customer_last_read_message_id'] ?? '' );
 		$ticket['agent_last_read_message_id']    = (string) ( $ticket_meta['agent_last_read_message_id'] ?? '' );
+
+		// Customer online / last seen diff calculation (under 60s threshold)
+		$customer_last_seen_diff = null;
+		$is_customer_online      = false;
+		if ( ! empty( $ticket['customer_last_seen_at'] ) ) {
+			$c_last_seen_ts = strtotime( $ticket['customer_last_seen_at'] . ' UTC' );
+			$now_utc        = current_time( 'timestamp', true );
+			if ( $c_last_seen_ts > 0 ) {
+				$customer_last_seen_diff = max( 0, $now_utc - $c_last_seen_ts );
+				$is_customer_online      = ( $customer_last_seen_diff <= 60 );
+			}
+		}
+		$ticket['customer_last_seen_diff'] = $customer_last_seen_diff;
+		$ticket['is_customer_online']      = $is_customer_online;
 
 		// Active agent viewers list
 		$viewing_users              = ! empty( $ticket_meta['_agent_viewing_user_ids'] ) && is_array( $ticket_meta['_agent_viewing_user_ids'] ) ? $ticket_meta['_agent_viewing_user_ids'] : array();

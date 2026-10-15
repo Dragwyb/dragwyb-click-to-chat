@@ -1,5 +1,5 @@
 import apiFetch from '@wordpress/api-fetch';
-import { useState, useRef, useEffect } from '@wordpress/element';
+import { useState, useRef, useEffect, useMemo } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 
 export default function TicketDetailWorkspace({
@@ -75,6 +75,53 @@ export default function TicketDetailWorkspace({
 		const d = new Date(str);
 		return isNaN(d.getTime()) ? null : d;
 	};
+
+	// Real-time ticker to continuously evaluate customer_last_seen_at < 60s window live
+	const [nowTick, setNowTick] = useState(Date.now());
+	useEffect(() => {
+		const ticker = setInterval(() => {
+			setNowTick(Date.now());
+		}, 2000);
+		return () => clearInterval(ticker);
+	}, []);
+
+	// Check if client is actively waiting for human reply in an AI chatbot ticket
+	const isClientWaiting = useMemo(() => {
+		if (!selectedTicket) return false;
+
+		// 1. Must be a chatbot ticket
+		const isChatbotTicket =
+			selectedTicket.reply_surface === 'chatbot_widget' ||
+			selectedTicket.origin_type === 'chatbot' ||
+			selectedTicket.origin_type === 'ai_chatbot' ||
+			Boolean(selectedTicket.session_id);
+
+		if (!isChatbotTicket) return false;
+
+		// 2. Control mode must be 'human' (agent took control of chatbot ticket from AI)
+		if (selectedTicket.control_mode !== 'human') return false;
+
+		// 3. Ticket must not be resolved, closed, or trashed
+		if (['resolved', 'closed', 'trash'].includes(selectedTicket.status)) return false;
+
+		// 4. Client sent a message and agent hasn't replied to it yet (last message in thread is from customer)
+		const messages = selectedTicket.messages || [];
+		if (messages.length === 0) return false;
+		const lastMsg = messages[messages.length - 1];
+		const isLastMsgFromCustomer = lastMsg && (lastMsg.sender_type === 'customer' || lastMsg.role === 'user');
+		if (!isLastMsgFromCustomer) return false;
+
+		// 5. Customer AI chatbot is active and open: customer_last_seen_at difference is under 60 seconds
+		if (!selectedTicket.customer_last_seen_at) return false;
+		const lastSeenDate = parseDate(selectedTicket.customer_last_seen_at);
+		if (!lastSeenDate) return false;
+
+		const diffSeconds = (nowTick - lastSeenDate.getTime()) / 1000;
+		const isUnder60Locally = diffSeconds >= -10 && diffSeconds <= 60;
+		const isUnder60Server = typeof selectedTicket.customer_last_seen_diff === 'number' && selectedTicket.customer_last_seen_diff <= 60;
+
+		return isUnder60Locally || (isUnder60Server && diffSeconds <= 75);
+	}, [selectedTicket, nowTick]);
 
 	const formatMessageTime = (dateStr) => {
 		if (!dateStr) return '';
@@ -399,11 +446,21 @@ export default function TicketDetailWorkspace({
 							</div>
 
 							<div className="dctc-sc-ws-header-actions">
-								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'chatbot' || selectedTicket?.origin_type === 'ai_chatbot') && (selectedTicket?.is_session_active || selectedTicket?.session_active) && (
+								{isClientWaiting && (
+									<div className="dctc-sc-client-waiting-pill" title={__('Client is active in chatbot and waiting for your reply', 'dragwyb-click-to-chat')}>
+										<span className="dctc-sc-waiting-pulse-dot"></span>
+										<span className="dctc-sc-waiting-text">{__('Client waiting...', 'dragwyb-click-to-chat')}</span>
+									</div>
+								)}
+
+								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'chatbot' || selectedTicket?.origin_type === 'ai_chatbot' || Boolean(selectedTicket?.session_id)) && (selectedTicket?.is_session_active || selectedTicket?.session_active || isClientWaiting) && (
 									<button
 										type="button"
-										className="dctc-sc-control-ai-btn"
+										className={`dctc-sc-control-ai-btn ${isClientWaiting ? 'dctc-sc-control-ai-btn--attention' : ''}`}
 										onClick={handleToggleControl}
+										title={selectedTicket?.control_mode === 'human'
+											? __('Click to return control to AI Assistant', 'dragwyb-click-to-chat')
+											: __('Click to take over conversation from AI', 'dragwyb-click-to-chat')}
 									>
 										<span className={`dashicons ${selectedTicket?.control_mode === 'human' ? 'dashicons-controls-play' : 'dashicons-controls-pause'}`}></span>
 										{selectedTicket?.control_mode === 'human'
@@ -485,6 +542,14 @@ export default function TicketDetailWorkspace({
 									<div className="dctc-sc-inline-top-composer">
 										{composerMode === 'reply' ? (
 											<form onSubmit={onReplySubmit} className="dctc-sc-composer-main-form">
+												{isClientWaiting && (
+													<div className="dctc-sc-composer-waiting-banner">
+														<span className="dctc-sc-waiting-pulse-dot"></span>
+														<span className="dctc-sc-waiting-composer-text">
+															{__('Client waiting... (Active in chat widget now)', 'dragwyb-click-to-chat')}
+														</span>
+													</div>
+												)}
 												<div className="dctc-sc-wysiwyg-wrapper">
 													<div className="dctc-sc-wysiwyg-header-tabs">
 														<div className="dctc-sc-wysiwyg-mode-switch">
@@ -682,6 +747,51 @@ export default function TicketDetailWorkspace({
 													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
 													<span style={{ width: '5px', height: '5px', backgroundColor: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span>
 												</span>
+											</div>
+										</div>
+									</div>
+								)}
+
+								{/* CLIENT WAITING ANIMATED BANNER */}
+								{isClientWaiting && (
+									<div className="dctc-sc-client-waiting-banner">
+										<div className="dctc-sc-client-waiting-inner">
+											<div className="dctc-sc-client-waiting-visual">
+												<span className="dctc-sc-waiting-radar"></span>
+												<span className="dctc-sc-waiting-core-dot"></span>
+											</div>
+											<div className="dctc-sc-client-waiting-content">
+												<div className="dctc-sc-client-waiting-title-wrap">
+													<span className="dctc-sc-client-waiting-title">
+														{__('Client waiting...', 'dragwyb-click-to-chat')}
+													</span>
+													<span className="dctc-sc-waiting-dots-anim">
+														<span></span>
+														<span></span>
+														<span></span>
+													</span>
+												</div>
+												<div className="dctc-sc-client-waiting-subtext">
+													{__('Client is currently active and waiting in the AI chatbot. Reply to their message or return control to AI.', 'dragwyb-click-to-chat')}
+												</div>
+											</div>
+											<div className="dctc-sc-client-waiting-cta">
+												<button
+													type="button"
+													className="dctc-sc-waiting-btn dctc-sc-waiting-btn--reply"
+													onClick={() => handleOpenComposer('reply')}
+												>
+													<span className="dashicons dashicons-undo"></span>
+													<span>{__('Reply Message', 'dragwyb-click-to-chat')}</span>
+												</button>
+												<button
+													type="button"
+													className="dctc-sc-waiting-btn dctc-sc-waiting-btn--ai"
+													onClick={handleToggleControl}
+												>
+													<span className="dashicons dashicons-controls-play"></span>
+													<span>{__('Give Control to AI', 'dragwyb-click-to-chat')}</span>
+												</button>
 											</div>
 										</div>
 									</div>

@@ -469,8 +469,8 @@ class DCTC_AI_DB {
 			$wpdb->update(
 				$table_tickets,
 				array(
-					'updated_at'            => $time,
-					'customer_last_seen_at' => $time,
+					'updated_at'            => current_time( 'mysql', true ),
+					'customer_last_seen_at' => current_time( 'mysql', true ),
 				),
 				array( 'id' => absint( $linked_ticket['id'] ) )
 			);

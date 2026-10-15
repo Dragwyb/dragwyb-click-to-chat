@@ -357,6 +357,9 @@ function TicketsApp() {
 						prevTicket.assigned_agent_id !== data.ticket.assigned_agent_id ||
 						prevTicket.control_mode !== data.ticket.control_mode ||
 						prevTicket.subject !== data.ticket.subject ||
+						prevTicket.customer_last_seen_at !== data.ticket.customer_last_seen_at ||
+						prevTicket.is_customer_online !== data.ticket.is_customer_online ||
+						prevTicket.is_session_active !== data.ticket.is_session_active ||
 						JSON.stringify(prevTicket.tags || []) !== JSON.stringify(data.ticket.tags || []) ||
 						JSON.stringify(prevTicket.notes || []) !== JSON.stringify(data.ticket.notes || []);
 

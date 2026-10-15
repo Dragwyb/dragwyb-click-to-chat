@@ -240,8 +240,8 @@ class DCTC_Support_AI_Handoff_Service {
 					$table_tickets,
 					array(
 						'status'                => 'waiting_agent',
-						'customer_last_seen_at' => current_time( 'mysql' ),
-						'updated_at'            => current_time( 'mysql' ),
+						'customer_last_seen_at' => current_time( 'mysql', true ),
+						'updated_at'            => current_time( 'mysql', true ),
 					),
 					array( 'id' => $ticket_id )
 				);
