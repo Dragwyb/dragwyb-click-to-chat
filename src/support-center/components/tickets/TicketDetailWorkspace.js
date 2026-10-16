@@ -87,7 +87,7 @@ export default function TicketDetailWorkspace({
 
 	// Check if client is actively waiting for human reply in an AI chatbot ticket
 	const isClientWaiting = useMemo(() => {
-		if (!selectedTicket) return false;
+		if (!selectedTicket || selectedTicket?.interaction_type === "support_ticket") return false;
 
 		// 1. Must be a chatbot ticket
 		const isChatbotTicket =
@@ -446,7 +446,7 @@ export default function TicketDetailWorkspace({
 							</div>
 
 							<div className="dctc-sc-ws-header-actions">
-								{isClientWaiting && selectedTicket.control_mode !== 'human' && (
+								{isClientWaiting && (
 									<div className="dctc-sc-client-waiting-pill" title={__('Client is active in chatbot and waiting for your reply', 'dragwyb-click-to-chat')}>
 										<span className="dctc-sc-waiting-pulse-dot"></span>
 										<span className="dctc-sc-waiting-text">{__('Client waiting...', 'dragwyb-click-to-chat')}</span>
