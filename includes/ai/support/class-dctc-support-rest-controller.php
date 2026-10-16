@@ -27,6 +27,18 @@ class DCTC_Support_REST_Controller {
 	 * @return void
 	 */
 	public function register_routes() {
+		add_filter(
+			'rest_allowed_cors_headers',
+			function( $cors_headers ) {
+				if ( ! is_array( $cors_headers ) ) {
+					$cors_headers = array();
+				}
+				$cors_headers[] = 'X-Guest-Token';
+				$cors_headers[] = 'x-guest-token';
+				return array_unique( $cors_headers );
+			}
+		);
+
 		// Staff: Dashboard & Metrics
 		register_rest_route(
 			self::REST_NAMESPACE,
@@ -769,10 +781,7 @@ class DCTC_Support_REST_Controller {
 			return true;
 		}
 
-		$token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $token ) ) {
-			$token = $request->get_param( 'guest_token' );
-		}
+		$token = $this->get_request_guest_token( $request );
 
 		// Initial empty listing for visitors without token
 		if ( empty( $token ) ) {
@@ -861,23 +870,42 @@ class DCTC_Support_REST_Controller {
 		}
 
 		// Case 4: Guest access token matching saved ticket token
-		$guest_token = $request->get_header( 'X-Guest-Token' );
-		if ( empty( $guest_token ) ) {
-			$guest_token = $request->get_param( 'guest_token' );
-		}
-		$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
+		$guest_token = $this->get_request_guest_token( $request );
 
 		if ( ! empty( $guest_token ) && preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $guest_token ) ) {
 			$stored_token = ! empty( $ticket['guest_access_token'] ) ? (string) $ticket['guest_access_token'] : '';
 			if ( empty( $stored_token ) && ! empty( $ticket['id'] ) && class_exists( 'DCTC_Support_Ticket_Service' ) ) {
 				$stored_token = (string) DCTC_Support_Ticket_Service::get_ticket_meta( $ticket['id'], 'guest_access_token', true );
 			}
-			if ( ! empty( $stored_token ) && hash_equals( $stored_token, $guest_token ) ) {
+			if ( ! empty( $stored_token ) && hash_equals( trim( $stored_token ), trim( $guest_token ) ) ) {
 				return true;
 			}
 		}
 
 		return false;
+	}
+
+	/**
+	 * Extract guest access token from request parameters, headers, or server environment.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return string Sanitized guest token or empty string.
+	 */
+	private function get_request_guest_token( $request ) {
+		$token = $request->get_param( 'guest_token' );
+		if ( empty( $token ) ) {
+			$token = $request->get_header( 'X-Guest-Token' );
+		}
+		if ( empty( $token ) ) {
+			$token = $request->get_header( 'x-guest-token' );
+		}
+		if ( empty( $token ) && isset( $_SERVER['HTTP_X_GUEST_TOKEN'] ) ) {
+			$token = sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_GUEST_TOKEN'] ) );
+		}
+		if ( empty( $token ) && isset( $_REQUEST['guest_token'] ) ) {
+			$token = sanitize_text_field( wp_unslash( $_REQUEST['guest_token'] ) );
+		}
+		return is_string( $token ) ? trim( sanitize_text_field( $token ) ) : '';
 	}
 
 	/**
@@ -2407,11 +2435,7 @@ class DCTC_Support_REST_Controller {
 			DCTC_Support_Ticket_Service::link_guest_tickets_to_user( $user_id );
 			$query_args['customer_wp_user_id'] = $user_id;
 		} else {
-			$guest_token = $request->get_header( 'X-Guest-Token' );
-			if ( empty( $guest_token ) ) {
-				$guest_token = $request->get_param( 'guest_token' );
-			}
-			$guest_token = is_string( $guest_token ) ? sanitize_text_field( $guest_token ) : '';
+			$guest_token = $this->get_request_guest_token( $request );
 			if ( ! empty( $guest_token ) && class_exists( 'DCTC_Support_Ticket_Service' ) && DCTC_Support_Ticket_Service::is_valid_guest_token( $guest_token ) ) {
 				$query_args['guest_access_token'] = $guest_token;
 			} else {
@@ -2506,6 +2530,7 @@ class DCTC_Support_REST_Controller {
 		$params = array(
 			'subject'          => $subject,
 			'message'          => $message,
+			'initial_message'  => $message,
 			'origin_type'      => 'support_portal',
 			'reply_surface'    => 'support_portal',
 			'interaction_type' => 'SUPPORT_TICKET',
@@ -2521,6 +2546,11 @@ class DCTC_Support_REST_Controller {
 			$params['customer_wp_user_id'] = 0;
 			$params['customer_name']       = isset( $raw_params['customer_name'] ) ? sanitize_text_field( mb_substr( trim( (string) $raw_params['customer_name'] ), 0, 150 ) ) : '';
 			$params['customer_email']      = sanitize_email( mb_substr( trim( (string) $raw_params['customer_email'] ), 0, 100 ) );
+
+			$existing_guest_token = $this->get_request_guest_token( $request );
+			if ( ! empty( $existing_guest_token ) && class_exists( 'DCTC_Support_Ticket_Service' ) && DCTC_Support_Ticket_Service::is_valid_guest_token( $existing_guest_token ) ) {
+				$params['guest_access_token'] = $existing_guest_token;
+			}
 		}
 
 		if ( ! empty( $raw_params['category_id'] ) ) {
@@ -2528,6 +2558,9 @@ class DCTC_Support_REST_Controller {
 		}
 		if ( ! empty( $raw_params['product_id'] ) ) {
 			$params['product_id'] = absint( $raw_params['product_id'] );
+		}
+		if ( ! empty( $raw_params['tags'] ) && is_array( $raw_params['tags'] ) ) {
+			$params['tags'] = array_map( 'sanitize_text_field', $raw_params['tags'] );
 		}
 
 		// Security (SEC-20): Enforce guest media and attachment blocking

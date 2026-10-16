@@ -291,7 +291,15 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		$uuid        = wp_generate_uuid4();
-		$guest_token = ! $user_id ? wp_generate_password( 32, false ) : '';
+		if ( ! $user_id ) {
+			if ( ! empty( $data['guest_access_token'] ) && is_string( $data['guest_access_token'] ) && preg_match( '/^[a-zA-Z0-9_\-]{8,64}$/', $data['guest_access_token'] ) ) {
+				$guest_token = sanitize_text_field( $data['guest_access_token'] );
+			} else {
+				$guest_token = wp_generate_password( 32, false );
+			}
+		} else {
+			$guest_token = '';
+		}
 
 		// Insert only clean core columns into dctc_support_tickets table (id is auto-increment)
 		$core_fields = array(
@@ -370,6 +378,9 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		self::update_ticket_meta_batch( $ticket_id, $meta_batch );
+		if ( ! empty( $guest_token ) ) {
+			self::update_ticket_meta( $ticket_id, 'guest_access_token', $guest_token );
+		}
 
 		// Check save_chat setting
 		$ai_settings  = class_exists( 'DCTC_AI_Settings_Handler' ) ? DCTC_AI_Settings_Handler::dctc_ai_get_all_settings() : get_option( 'dctc_ai_settings', array() );
@@ -398,7 +409,8 @@ class DCTC_Support_Ticket_Service {
 		}
 
 		// Priority 3: Single initial message (e.g. from support portal form or single initial prompt)
-		if ( empty( $ticket_initial_messages ) && ! empty( $data['initial_message'] ) ) {
+		$init_message_content = ! empty( $data['initial_message'] ) ? $data['initial_message'] : ( ! empty( $data['message'] ) ? $data['message'] : '' );
+		if ( empty( $ticket_initial_messages ) && ! empty( $init_message_content ) ) {
 			$msg_uuid  = wp_generate_uuid4();
 			$msg_entry = array(
 				'id'          => $msg_uuid,
@@ -406,7 +418,7 @@ class DCTC_Support_Ticket_Service {
 				'role'        => 'user',
 				'sender_type' => 'customer',
 				'sender_name' => $name ? $name : 'Customer',
-				'content'     => wp_kses_post( $data['initial_message'] ),
+				'content'     => wp_kses_post( $init_message_content ),
 				'created_at'  => current_time( 'mysql', true ),
 			);
 

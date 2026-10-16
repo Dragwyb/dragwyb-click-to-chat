@@ -555,6 +555,35 @@ class DCTC_Support_Portal {
 						<h4 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--dctc-portal-header-title, #111827);"><?php esc_html_e( 'Your Recent Support Request', 'dragwyb-click-to-chat' ); ?></h4>
 						<div class="dctc-portal-tickets-container dctc-portal-tickets-list"></div>
 					</div>
+
+					<!-- Container for guest session expired notice -->
+					<div class="dctc-portal-guest-expired-section" style="display:none;">
+						<div class="dctc-portal-guest-expired-notice">
+							<div class="dctc-guest-expired-icon-wrap">
+								<span class="dashicons dashicons-lock"></span>
+							</div>
+							<h4><?php esc_html_e( 'Guest Session Expired', 'dragwyb-click-to-chat' ); ?></h4>
+							<p><?php esc_html_e( 'To protect your conversation privacy on shared and public devices, your guest ticket session has expired and all local data was wiped.', 'dragwyb-click-to-chat' ); ?></p>
+							<div class="dctc-portal-auth-actions" style="margin-top:16px;">
+								<button type="button" class="dctc-portal-btn-primary dctc-portal-btn-guest-action-trigger">
+									<span class="dashicons dashicons-edit"></span>
+									<?php esc_html_e( 'Submit a New Ticket', 'dragwyb-click-to-chat' ); ?>
+								</button>
+								<?php if ( ! empty( $settings['show_login_button'] ) ) : ?>
+									<a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="dctc-portal-btn-secondary">
+										<span class="dashicons dashicons-admin-users"></span>
+										<?php echo esc_html( $settings['btn_login_text'] ); ?>
+									</a>
+								<?php endif; ?>
+								<?php if ( ! empty( $settings['show_register_button'] ) && get_option( 'users_can_register' ) ) : ?>
+									<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="dctc-portal-btn-secondary">
+										<span class="dashicons dashicons-plus"></span>
+										<?php echo esc_html( $settings['btn_register_text'] ); ?>
+									</a>
+								<?php endif; ?>
+							</div>
+						</div>
+					</div>
 				<?php endif; ?>
 			</div>
 
@@ -1259,6 +1288,35 @@ class DCTC_Support_Portal {
 						<h4 style="margin:0 0 12px; font-size:15px; font-weight:700; color:var(--dctc-portal-header-title, #111827);"><?php esc_html_e( 'Your Recent Support Request', 'dragwyb-click-to-chat' ); ?></h4>
 						<div class="dctc-portal-tickets-container dctc-portal-tickets-list"></div>
 					</div>
+
+					<!-- Container for guest session expired notice -->
+					<div class="dctc-portal-guest-expired-section" style="display:none;">
+						<div class="dctc-portal-guest-expired-notice">
+							<div class="dctc-guest-expired-icon-wrap">
+								<span class="dashicons dashicons-lock"></span>
+							</div>
+							<h4><?php esc_html_e( 'Guest Session Expired', 'dragwyb-click-to-chat' ); ?></h4>
+							<p><?php esc_html_e( 'To protect your conversation privacy on shared and public devices, your guest ticket session has expired and all local data was wiped.', 'dragwyb-click-to-chat' ); ?></p>
+							<div class="dctc-portal-auth-actions" style="margin-top:16px;">
+								<button type="button" class="dctc-portal-btn-primary dctc-portal-btn-guest-action-trigger">
+									<span class="dashicons dashicons-edit"></span>
+									<?php esc_html_e( 'Submit a New Ticket', 'dragwyb-click-to-chat' ); ?>
+								</button>
+								<?php if ( ! empty( $settings['show_login_button'] ) ) : ?>
+									<a href="<?php echo esc_url( wp_login_url( get_permalink() ) ); ?>" class="dctc-portal-btn-secondary">
+										<span class="dashicons dashicons-admin-users"></span>
+										<?php echo esc_html( $settings['btn_login_text'] ); ?>
+									</a>
+								<?php endif; ?>
+								<?php if ( ! empty( $settings['show_register_button'] ) && get_option( 'users_can_register' ) ) : ?>
+									<a href="<?php echo esc_url( wp_registration_url() ); ?>" class="dctc-portal-btn-secondary">
+										<span class="dashicons dashicons-plus"></span>
+										<?php echo esc_html( $settings['btn_register_text'] ); ?>
+									</a>
+								<?php endif; ?>
+							</div>
+						</div>
+					</div>
 				<?php endif; ?>
 			</div>
 
@@ -1461,7 +1519,10 @@ class DCTC_Support_Portal {
 				return null;
 			}
 
+			let isDispatchingExpired = false;
 			function markGuestSessionExpired() {
+				if (isDispatchingExpired) return;
+				if (window.dragwybGuestExpired === true) return;
 				window.dragwybGuestExpired = true;
 				try {
 					if (window.sessionStorage) {
@@ -1472,15 +1533,18 @@ class DCTC_Support_Portal {
 					}
 					document.cookie = "dragwyb_guest_expired=1; path=/; max-age=86400; SameSite=Lax";
 				} catch(e){}
+
+				isDispatchingExpired = true;
 				try {
 					window.dispatchEvent(new CustomEvent("dragwyb_guest_session_expired"));
 				} catch(e){}
 				if (window.jQuery) {
 					try { window.jQuery(document).trigger("dragwyb_guest_session_expired"); } catch(e){}
 				}
+				isDispatchingExpired = false;
 			}
 
-			function clearGuestSessionExpired(ticketData) {
+			function clearGuestSessionExpired() {
 				window.dragwybGuestExpired = false;
 				try {
 					if (window.sessionStorage) {
@@ -1489,14 +1553,8 @@ class DCTC_Support_Portal {
 					if (window.localStorage) {
 						window.localStorage.removeItem("dctc_guest_expired");
 					}
-					document.cookie = "dragwyb_guest_expired=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+					document.cookie = "dragwyb_guest_expired=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
 				} catch(e){}
-				try {
-					window.dispatchEvent(new CustomEvent("dragwyb_guest_session_started", { detail: { ticket: ticketData || null } }));
-				} catch(e){}
-				if (window.jQuery) {
-					try { window.jQuery(document).trigger("dragwyb_guest_session_started", [ticketData || null]); } catch(e){}
-				}
 			}
 
 			function isGuestSessionCurrentlyExpired() {
@@ -1511,9 +1569,6 @@ class DCTC_Support_Portal {
 			}
 
 			function loadGuestSession(timeoutMinutes, mode) {
-				if (isGuestSessionCurrentlyExpired()) {
-					return { token: "", expiresAt: 0, expired: true };
-				}
 				const primary = getGuestStorage(mode);
 				const fallback = mode === "session" ? window.localStorage : window.sessionStorage;
 				let raw = null;
@@ -1541,6 +1596,13 @@ class DCTC_Support_Portal {
 								markGuestSessionExpired();
 								return { token: "", expiresAt: 0, expired: true };
 							}
+							// Active session confirmed -> clear any stale expired flag
+							window.dragwybGuestExpired = false;
+							try {
+								if (window.sessionStorage) window.sessionStorage.removeItem("dctc_guest_expired");
+								if (window.localStorage) window.localStorage.removeItem("dctc_guest_expired");
+								document.cookie = "dragwyb_guest_expired=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+							} catch(e){}
 							return {
 								token: parsed.token,
 								expiresAt: parsed.expiresAt || (now + durationMs),
@@ -1551,12 +1613,22 @@ class DCTC_Support_Portal {
 				}
 
 				if (legacyToken) {
+					window.dragwybGuestExpired = false;
+					try {
+						if (window.sessionStorage) window.sessionStorage.removeItem("dctc_guest_expired");
+						if (window.localStorage) window.localStorage.removeItem("dctc_guest_expired");
+						document.cookie = "dragwyb_guest_expired=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+					} catch(e){}
 					saveGuestSession(legacyToken, timeoutMinutes, mode);
 					return {
 						token: legacyToken,
 						expiresAt: now + durationMs,
 						expired: false
 					};
+				}
+
+				if (isGuestSessionCurrentlyExpired()) {
+					return { token: "", expiresAt: 0, expired: true };
 				}
 
 				return { token: "", expiresAt: 0, expired: false };
@@ -1710,6 +1782,8 @@ class DCTC_Support_Portal {
 				const statusFilter = root.querySelector(".dctc-portal-filter-status");
 				const categoryFilter = root.querySelector(".dctc-portal-filter-category");
 				const guestRecentSection = root.querySelector(".dctc-portal-guest-recent-section");
+				const guestExpiredSection = root.querySelector(".dctc-portal-guest-expired-section");
+				const authPrompt = root.querySelector(".dctc-portal-auth-prompt");
 
 				const modalNew = root.querySelector(".dctc-portal-new-modal");
 				const newForm = root.querySelector(".dctc-portal-new-ticket-form");
@@ -1723,6 +1797,76 @@ class DCTC_Support_Portal {
 				let detailPollInterval = null;
 				let portalReadTimer = 0;
 				let portalLastReadSent = "";
+				let isTicketDetailLoading = false;
+				let ticketDetailAbortController = null;
+
+				function hideAuthPrompt() {
+					root.querySelectorAll(".dctc-portal-auth-prompt").forEach(function(prompt) {
+						prompt.style.display = "none";
+					});
+				}
+
+				function showAuthPrompt() {
+					root.querySelectorAll(".dctc-portal-auth-prompt").forEach(function(prompt) {
+						prompt.style.display = "";
+					});
+				}
+
+				function showExpiredBanner() {
+					hideAuthPrompt();
+					if (guestRecentSection) {
+						guestRecentSection.style.display = "none";
+					}
+					if (ticketsContainer) {
+						ticketsContainer.innerHTML = "";
+					}
+					const expSection = root.querySelector(".dctc-portal-guest-expired-section");
+					if (expSection) {
+						expSection.style.display = "block";
+					} else if (guestRecentSection) {
+						let loginBtnHtml = "";
+						const authLoginLink = root.querySelector(".dctc-portal-auth-prompt a.dctc-portal-btn-secondary");
+						if (authLoginLink) {
+							loginBtnHtml = authLoginLink.outerHTML;
+						}
+						guestRecentSection.style.display = "block";
+						guestRecentSection.innerHTML = "<div class=\"dctc-portal-guest-expired-notice\">" +
+							"<div class=\"dctc-guest-expired-icon-wrap\">" +
+							"<span class=\"dashicons dashicons-lock\"></span>" +
+							"</div>" +
+							"<h4>Guest Session Expired</h4>" +
+							"<p>To protect your conversation privacy on shared and public devices, your guest ticket session has expired and all local data was wiped.</p>" +
+							"<div class=\"dctc-portal-auth-actions\" style=\"margin-top:16px;\">" +
+							"<button type=\"button\" class=\"dctc-portal-btn-primary dctc-portal-btn-guest-action-trigger\">" +
+							"<span class=\"dashicons dashicons-edit\"></span> Submit a New Ticket" +
+							"</button>" +
+							loginBtnHtml +
+							"</div>" +
+							"</div>";
+					}
+				}
+
+				function hideExpiredBanner() {
+					root.querySelectorAll(".dctc-portal-guest-expired-section").forEach(function(section) {
+						section.style.display = "none";
+					});
+				}
+
+				function showGuestRecentSection() {
+					hideAuthPrompt();
+					hideExpiredBanner();
+					if (guestRecentSection) {
+						guestRecentSection.style.display = "block";
+					}
+				}
+
+				if (!isLoggedIn) {
+					if (sessionData.expired || isGuestSessionCurrentlyExpired()) {
+						showExpiredBanner();
+					} else if (guestToken) {
+						showGuestRecentSection();
+					}
+				}
 
 				let taxonomiesData = {};
 				try {
@@ -1809,32 +1953,27 @@ class DCTC_Support_Portal {
 					}
 				}
 
-				function handleGuestSessionExpiry() {
+				function handleGuestSessionExpiry(skipDispatch) {
 					stopGuestCountdown();
 					clearAllGuestSessions();
-					markGuestSessionExpired();
+					if (!skipDispatch) {
+						markGuestSessionExpired();
+					} else {
+						window.dragwybGuestExpired = true;
+					}
 					guestToken = "";
 					sessionData = { token: "", expiresAt: 0, expired: true };
 					if (detailPollInterval) {
 						clearInterval(detailPollInterval);
 						detailPollInterval = null;
 					}
-					showView(viewList);
-					if (guestRecentSection) {
-						guestRecentSection.style.display = "block";
-						guestRecentSection.innerHTML = \'<div class="dctc-portal-guest-expired-notice">\' +
-							\'<div class="dctc-guest-expired-icon-wrap">\' +
-							\'<span class="dashicons dashicons-lock"></span>\' +
-							\'</div>\' +
-							\'<h4>Guest Session Expired</h4>\' +
-							\'<p>To protect your conversation privacy on shared and public devices, your guest ticket session has expired and all local data was wiped.</p>\' +
-							\'<button type="button" class="dctc-portal-btn-primary dctc-portal-btn-guest-action-trigger">\' +
-							\'<span class="dashicons dashicons-edit"></span> Submit a New Ticket\' +
-							\'</button>\' +
-							\'</div>\';
-						const newActionBtn = guestRecentSection.querySelector(".dctc-portal-btn-guest-action-trigger");
-						if (newActionBtn) newActionBtn.addEventListener("click", openNewModal);
+					if (ticketDetailAbortController) {
+						try { ticketDetailAbortController.abort(); } catch(e){}
 					}
+					isTicketDetailLoading = false;
+					currentTicketUuid = null;
+					showView(viewList);
+					showExpiredBanner();
 				}
 
 				function bindClearSessionButtons() {
@@ -1856,10 +1995,7 @@ class DCTC_Support_Portal {
 									detailPollInterval = null;
 								}
 								showView(viewList);
-								if (guestRecentSection) {
-									guestRecentSection.style.display = "none";
-									guestRecentSection.innerHTML = "";
-								}
+								showExpiredBanner();
 								alert("Your guest session has been ended and all ticket history was cleared from this device.");
 							});
 						}
@@ -1911,7 +2047,17 @@ class DCTC_Support_Portal {
 
 				if (btnNew) btnNew.addEventListener("click", openNewModal);
 				if (btnGuestHeader) btnGuestHeader.addEventListener("click", openNewModal);
-				if (btnGuestAction) btnGuestAction.addEventListener("click", openNewModal);
+				root.querySelectorAll(".dctc-portal-btn-guest-action-trigger").forEach(function(b) {
+					b.addEventListener("click", openNewModal);
+				});
+
+				// Document/root level delegation for guest action triggers
+				root.addEventListener("click", function(e) {
+					if (e.target.closest && e.target.closest(".dctc-portal-btn-guest-action-trigger")) {
+						e.preventDefault();
+						openNewModal();
+					}
+				});
 
 				if (modalNew) {
 					const closeIcon = modalNew.querySelector(".dctc-portal-modal-close-btn");
@@ -1932,8 +2078,28 @@ class DCTC_Support_Portal {
 
 				if (btnBack) {
 					btnBack.addEventListener("click", function() {
+						if (detailPollInterval) {
+							clearInterval(detailPollInterval);
+							detailPollInterval = null;
+						}
+						if (ticketDetailAbortController) {
+							try { ticketDetailAbortController.abort(); } catch(e){}
+						}
+						isTicketDetailLoading = false;
+						currentTicketUuid = null;
 						showView(viewList);
-						if (isLoggedIn || (guestToken && !isGuestSessionCurrentlyExpired())) {
+						if (!isLoggedIn) {
+							if (sessionData.expired || isGuestSessionCurrentlyExpired()) {
+								showExpiredBanner();
+							} else if (guestToken) {
+								showGuestRecentSection();
+								loadTickets();
+							} else {
+								hideExpiredBanner();
+								showAuthPrompt();
+								if (guestRecentSection) guestRecentSection.style.display = "none";
+							}
+						} else {
 							loadTickets();
 						}
 					});
@@ -1941,20 +2107,36 @@ class DCTC_Support_Portal {
 
 				// Load Tickets List
 				async function loadTickets() {
-					if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
-						return;
+					if (!isLoggedIn) {
+						if (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken) {
+							if (sessionData.expired || isGuestSessionCurrentlyExpired()) {
+								showExpiredBanner();
+							} else {
+								hideExpiredBanner();
+								showAuthPrompt();
+								if (guestRecentSection) guestRecentSection.style.display = "none";
+							}
+							return;
+						}
+						showGuestRecentSection();
 					}
 					if (!ticketsContainer) return;
 					ticketsContainer.innerHTML = "<div class=\"dctc-portal-loading\">" + escapeHtml(loadingText) + "</div>";
 					try {
 						const headers = { "X-WP-Nonce": nonce };
-						if (guestToken) headers["X-Guest-Token"] = guestToken;
+						if (guestToken) {
+							headers["X-Guest-Token"] = guestToken;
+							headers["x-guest-token"] = guestToken;
+						}
 
 						const q = searchInput ? searchInput.value.trim() : "";
 						const st = statusFilter ? statusFilter.value : (root.getAttribute("data-initial-status") || "all");
 						const cat = categoryFilter ? categoryFilter.value : (root.getAttribute("data-initial-category") || "all");
 
 						let url = restUrl + "/tickets?per_page=" + encodeURIComponent(perPage);
+						if (guestToken) {
+							url += "&guest_token=" + encodeURIComponent(guestToken);
+						}
 						if (q) url += "&search=" + encodeURIComponent(q);
 						if (st && st !== "all") url += "&status=" + encodeURIComponent(st);
 						if (cat && cat !== "all") url += "&category_id=" + encodeURIComponent(cat);
@@ -1964,7 +2146,7 @@ class DCTC_Support_Portal {
 
 						if (data.success && data.tickets && data.tickets.length > 0) {
 							if (filterRow) filterRow.style.display = "";
-							if (guestRecentSection) guestRecentSection.style.display = "block";
+							showGuestRecentSection();
 							renderGuestSessionBar();
 							let html = "";
 							data.tickets.forEach(function(t) {
@@ -2022,19 +2204,33 @@ class DCTC_Support_Portal {
 							} else {
 								if (isLoggedIn) {
 									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\"><strong>" + escapeHtml(emptyTitle) + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + escapeHtml(emptyDesc) + "</p></div>";
+								} else if (guestToken && !sessionData.expired && !isGuestSessionCurrentlyExpired()) {
+									showGuestRecentSection();
+									ticketsContainer.innerHTML = "<div style=\"text-align:center;padding:30px 0;color:var(--dctc-portal-header-subtitle, #6B7280);\"><strong>" + escapeHtml(emptyTitle) + "</strong><p style=\"margin:6px 0 0;font-size:13px;\">" + escapeHtml(emptyDesc) + "</p></div>";
 								} else {
 									if (guestRecentSection) guestRecentSection.style.display = "none";
 									ticketsContainer.innerHTML = "";
+									if (sessionData.expired || isGuestSessionCurrentlyExpired()) {
+										showExpiredBanner();
+									} else {
+										hideExpiredBanner();
+										showAuthPrompt();
+									}
 								}
 							}
 						}
 					} catch (err) {
+						if (!isLoggedIn && guestToken) {
+							showGuestRecentSection();
+						}
 						ticketsContainer.innerHTML = "<div style=\"color:#EF4444;text-align:center;padding:20px 0;\">Error loading support tickets. Please try again.</div>";
 					}
 				}
 
 				// Load Single Ticket Detail with Real-Time Active Polling
 				async function loadTicketDetail(uuid, isSilentUpdate) {
+					if (!uuid) return;
+
 					if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired() || !guestToken)) {
 						if (detailPollInterval) {
 							clearInterval(detailPollInterval);
@@ -2043,7 +2239,21 @@ class DCTC_Support_Portal {
 						return;
 					}
 
+					// If previous loadTicketDetail request is still in waiting, do not send another request
+					if (isTicketDetailLoading) {
+						if (!isSilentUpdate && uuid !== currentTicketUuid && ticketDetailAbortController) {
+							try {
+								ticketDetailAbortController.abort();
+							} catch (e) {}
+						} else {
+							return;
+						}
+					}
+
+					isTicketDetailLoading = true;
+					ticketDetailAbortController = (typeof AbortController !== "undefined") ? new AbortController() : null;
 					currentTicketUuid = uuid;
+
 					if (!isSilentUpdate) {
 						portalReadTimer = 0;
 						showView(viewDetail);
@@ -2064,16 +2274,33 @@ class DCTC_Support_Portal {
 					}
 
 					const msgContainer = root.querySelector(".dctc-portal-detail-messages");
-					if (!msgContainer) return;
+					if (!msgContainer) {
+						isTicketDetailLoading = false;
+						ticketDetailAbortController = null;
+						return;
+					}
 					if (!isSilentUpdate) {
 						msgContainer.innerHTML = "<div style=\"color:var(--dctc-portal-header-subtitle, #6B7280);\">Loading conversation...</div>";
 					}
 
 					try {
 						const headers = { "X-WP-Nonce": nonce };
-						if (guestToken) headers["X-Guest-Token"] = guestToken;
+						if (guestToken) {
+							headers["X-Guest-Token"] = guestToken;
+							headers["x-guest-token"] = guestToken;
+						}
 
-						const res = await fetch(restUrl + "/tickets/" + uuid, { headers: headers });
+						let detailUrl = restUrl + "/tickets/" + uuid;
+						if (guestToken) {
+							detailUrl += "?guest_token=" + encodeURIComponent(guestToken);
+						}
+
+						const fetchOptions = { headers: headers };
+						if (ticketDetailAbortController) {
+							fetchOptions.signal = ticketDetailAbortController.signal;
+						}
+
+						const res = await fetch(detailUrl, fetchOptions);
 						if (!res.ok && (res.status === 401 || res.status === 403)) {
 							if (!isLoggedIn) {
 								handleGuestSessionExpiry();
@@ -2157,9 +2384,15 @@ class DCTC_Support_Portal {
 							bindClearSessionButtons();
 						}
 					} catch (err) {
+						if (err && err.name === "AbortError") {
+							return;
+						}
 						if (!isSilentUpdate) {
 							msgContainer.innerHTML = "<div style=\"color:#EF4444;\">Error loading ticket details.</div>";
 						}
+					} finally {
+						isTicketDetailLoading = false;
+						ticketDetailAbortController = null;
 					}
 				}
 
@@ -2230,9 +2463,17 @@ class DCTC_Support_Portal {
 								"Content-Type": "application/json",
 								"X-WP-Nonce": nonce
 							};
-							if (guestToken) headers["X-Guest-Token"] = guestToken;
+							if (guestToken) {
+								headers["X-Guest-Token"] = guestToken;
+								headers["x-guest-token"] = guestToken;
+							}
 
-							const res = await fetch(restUrl + "/tickets", {
+							let createUrl = restUrl + "/tickets";
+							if (guestToken) {
+								createUrl += "?guest_token=" + encodeURIComponent(guestToken);
+							}
+
+							const res = await fetch(createUrl, {
 								method: "POST",
 								headers: headers,
 								body: JSON.stringify(payload)
@@ -2241,11 +2482,16 @@ class DCTC_Support_Portal {
 
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
-									guestToken = data.ticket.guest_access_token;
-									clearGuestSessionExpired(data.ticket);
-									saveGuestSession(guestToken, guestTimeoutMinutes, storageMode);
+									const newGuestToken = data.ticket.guest_access_token;
+									guestToken = newGuestToken;
+									clearGuestSessionExpired();
+									saveGuestSession(newGuestToken, guestTimeoutMinutes, storageMode);
 									sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
 									startGuestCountdown();
+									showGuestRecentSection();
+									try {
+										window.dispatchEvent(new CustomEvent("dragwyb_guest_session_started", { detail: { ticket: data.ticket } }));
+									} catch(e){}
 								}
 								newForm.reset();
 								clearPortalEditorContent(editorId);
@@ -2295,9 +2541,17 @@ class DCTC_Support_Portal {
 								"Content-Type": "application/json",
 								"X-WP-Nonce": nonce
 							};
-							if (guestToken) headers["X-Guest-Token"] = guestToken;
+							if (guestToken) {
+								headers["X-Guest-Token"] = guestToken;
+								headers["x-guest-token"] = guestToken;
+							}
 
-							const res = await fetch(restUrl + "/tickets/" + currentTicketUuid + "/reply", {
+							let replyUrl = restUrl + "/tickets/" + currentTicketUuid + "/reply";
+							if (guestToken) {
+								replyUrl += "?guest_token=" + encodeURIComponent(guestToken);
+							}
+
+							const res = await fetch(replyUrl, {
 								method: "POST",
 								headers: headers,
 								body: JSON.stringify({ message: msgText })
@@ -2306,11 +2560,6 @@ class DCTC_Support_Portal {
 
 							if (data.success) {
 								clearPortalEditorContent(replyEditorId);
-								if (!isLoggedIn && guestToken) {
-									saveGuestSession(guestToken, guestTimeoutMinutes, storageMode);
-									sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
-									startGuestCountdown();
-								}
 								loadTicketDetail(currentTicketUuid);
 							} else {
 								alert(data.message || "Could not send reply.");
@@ -2334,9 +2583,17 @@ class DCTC_Support_Portal {
 
 						try {
 							const headers = { "X-WP-Nonce": nonce };
-							if (guestToken) headers["X-Guest-Token"] = guestToken;
+							if (guestToken) {
+								headers["X-Guest-Token"] = guestToken;
+								headers["x-guest-token"] = guestToken;
+							}
 
-							const res = await fetch(restUrl + "/tickets/" + currentTicketUuid + "/close", {
+							let closeUrl = restUrl + "/tickets/" + currentTicketUuid + "/close";
+							if (guestToken) {
+								closeUrl += "?guest_token=" + encodeURIComponent(guestToken);
+							}
+
+							const res = await fetch(closeUrl, {
 								method: "POST",
 								headers: headers
 							});
@@ -2411,9 +2668,17 @@ class DCTC_Support_Portal {
 								"Content-Type": "application/json",
 								"X-WP-Nonce": nonce
 							};
-							if (guestToken) headers["X-Guest-Token"] = guestToken;
+							if (guestToken) {
+								headers["X-Guest-Token"] = guestToken;
+								headers["x-guest-token"] = guestToken;
+							}
 
-							fetch(restUrl + "/tickets/" + currentTicketUuid + "/read", {
+							let readUrl = restUrl + "/tickets/" + currentTicketUuid + "/read";
+							if (guestToken) {
+								readUrl += "?guest_token=" + encodeURIComponent(guestToken);
+							}
+
+							fetch(readUrl, {
 								method: "POST",
 								headers: headers,
 								body: JSON.stringify({ message_id: lastMsgId })
@@ -2428,14 +2693,37 @@ class DCTC_Support_Portal {
 					}
 				});
 
+				// Global Guest Session Listeners across instances/tabs
+				window.addEventListener("dragwyb_guest_session_started", function() {
+					if (isLoggedIn) return;
+					sessionData = loadGuestSession(guestTimeoutMinutes, storageMode);
+					guestToken = sessionData.token;
+					if (guestToken && !sessionData.expired && !isGuestSessionCurrentlyExpired()) {
+						showGuestRecentSection();
+						startGuestCountdown();
+						loadTickets();
+					}
+				});
+
+				window.addEventListener("dragwyb_guest_session_expired", function() {
+					if (isLoggedIn) return;
+					handleGuestSessionExpiry(true);
+				});
+
 				// Initial tickets load
-				if (!isLoggedIn && sessionData.expired) {
-					handleGuestSessionExpiry();
-				} else if (isLoggedIn || guestToken) {
+				if (!isLoggedIn && (sessionData.expired || isGuestSessionCurrentlyExpired())) {
+					showExpiredBanner();
+				} else if (isLoggedIn || (guestToken && !isGuestSessionCurrentlyExpired())) {
+					hideExpiredBanner();
 					if (!isLoggedIn && guestToken) {
+						showGuestRecentSection();
 						startGuestCountdown();
 					}
 					loadTickets();
+				} else {
+					hideExpiredBanner();
+					showAuthPrompt();
+					if (guestRecentSection) guestRecentSection.style.display = "none";
 				}
 			}
 
@@ -2622,9 +2910,17 @@ class DCTC_Support_Portal {
 							};
 							const existingSession = !isLoggedIn ? loadGuestSession(guestTimeoutMinutes, storageMode) : { token: "" };
 							const existingGuestToken = existingSession.token;
-							if (existingGuestToken) headers["X-Guest-Token"] = existingGuestToken;
+							if (existingGuestToken) {
+								headers["X-Guest-Token"] = existingGuestToken;
+								headers["x-guest-token"] = existingGuestToken;
+							}
 
-							const res = await fetch(restUrl + "/tickets", {
+							let createUrl = restUrl + "/tickets";
+							if (existingGuestToken) {
+								createUrl += "?guest_token=" + encodeURIComponent(existingGuestToken);
+							}
+
+							const res = await fetch(createUrl, {
 								method: "POST",
 								headers: headers,
 								body: JSON.stringify(payload)
@@ -2633,8 +2929,9 @@ class DCTC_Support_Portal {
 
 							if (data.success && data.ticket) {
 								if (data.ticket.guest_access_token) {
-									clearGuestSessionExpired(data.ticket);
-									saveGuestSession(data.ticket.guest_access_token, guestTimeoutMinutes, storageMode);
+									const newGuestToken = data.ticket.guest_access_token;
+									clearGuestSessionExpired();
+									saveGuestSession(newGuestToken, guestTimeoutMinutes, storageMode);
 								}
 								form.reset();
 								if (editorId) clearPortalEditorContent(editorId);
@@ -2652,6 +2949,11 @@ class DCTC_Support_Portal {
 									const displayTicketId = data.ticket.id;
 									alert("Ticket #" + displayTicketId + " submitted successfully!");
 								}
+
+								// Dispatch global session start event so all portal widgets refresh
+								try {
+									window.dispatchEvent(new CustomEvent("dragwyb_guest_session_started", { detail: { ticket: data.ticket } }));
+								} catch(e){}
 
 								// If there are portal lists on this page, refresh them
 								document.querySelectorAll(".dctc-portal-root").forEach(function(portal) {
@@ -3558,23 +3860,26 @@ class DCTC_Support_Portal {
 			.dctc-portal-guest-expired-notice {
 				background: var(--dctc-portal-card-bg, #FFFFFF);
 				border: 1px solid var(--dctc-portal-card-border, #E2E8F0);
-				border-radius: var(--dctc-portal-radius, 12px);
-				box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+				border-radius: var(--dctc-portal-radius, 14px);
+				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 				color: var(--dctc-portal-body-text, #1E293B);
-				padding: 24px 20px;
+				margin: 30px auto;
+				max-width: 520px;
+				padding: 40px 30px;
 				text-align: center;
 			}
 			.dctc-portal-guest-expired-notice h4 {
-				color: var(--dctc-portal-card-title, #0F172A);
-				font-size: 15px;
-				font-weight: 700;
-				margin: 8px 0 6px;
+				color: var(--dctc-portal-header-title, #0F172A);
+				font-size: 20px;
+				font-weight: 800;
+				letter-spacing: -0.3px;
+				margin: 0 0 10px 0 !important;
 			}
 			.dctc-portal-guest-expired-notice p {
 				color: var(--dctc-portal-header-subtitle, #64748B);
-				font-size: 13px;
-				line-height: 1.5;
-				margin: 0 0 16px;
+				font-size: 14px;
+				line-height: 1.6;
+				margin: 0 0 24px 0 !important;
 			}
 			.dctc-guest-expired-icon-wrap {
 				align-items: center;
@@ -3582,10 +3887,15 @@ class DCTC_Support_Portal {
 				border-radius: 50%;
 				color: #DC2626;
 				display: inline-flex;
-				height: 40px;
+				height: 64px;
 				justify-content: center;
-				margin-bottom: 6px;
-				width: 40px;
+				margin-bottom: 18px;
+				width: 64px;
+			}
+			.dctc-guest-expired-icon-wrap .dashicons {
+				font-size: 32px;
+				height: 32px;
+				width: 32px;
 			}
 			
 			/* Auth / Login Requirement Prompt */
