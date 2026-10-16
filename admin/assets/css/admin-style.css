@@ -1891,45 +1891,6 @@ body.folded .dctc-toast-notification {
     }
 }
 
-/* Guide Top Navigation Status Pills */
-.dctc-nav-status-pill {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    padding: 1px 7px;
-    border-radius: 999px;
-    margin-left: 6px;
-    line-height: 1.4;
-    display: inline-flex;
-    align-items: center;
-    vertical-align: middle;
-}
-
-.dctc-nav-status-pill.is-active {
-    background: #ecfdf5;
-    color: #059669;
-    border: 1px solid #a7f3d0;
-}
-
-.dctc-sc-nav-link.active .dctc-nav-status-pill.is-active {
-    background: rgba(255, 255, 255, 0.22);
-    color: #ffffff;
-    border-color: rgba(255, 255, 255, 0.45);
-}
-
-.dctc-nav-status-pill.is-disabled {
-    background: #f1f5f9;
-    color: #64748b;
-    border: 1px solid #e2e8f0;
-}
-
-.dctc-sc-nav-link.active .dctc-nav-status-pill.is-disabled {
-    background: rgba(255, 255, 255, 0.16);
-    color: rgba(255, 255, 255, 0.85);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
 /* Tab 4 Setup Cards & Settings Shortcut Banner */
 .dctc-setup-landing-card__top {
     display: flex;
@@ -2069,4 +2030,4 @@ body.folded .dctc-toast-notification {
     border-color: #94a3b8;
     color: #0f172a;
     transform: translateY(-1px);
-}
+}

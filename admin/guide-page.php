@@ -97,9 +97,6 @@ if ( $dctc_ai_enabled ) {
 				data-tab="channels">
 				<span class="dashicons dashicons-smartphone" aria-hidden="true"></span>
 				<?php esc_html_e( '1. Channels', 'dragwyb-click-to-chat' ); ?>
-				<span class="dctc-nav-status-pill <?php echo $dctc_channels_enabled ? 'is-active' : 'is-disabled'; ?>">
-					<?php echo $dctc_channels_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
-				</span>
 			</button>
 
 			<button 
@@ -109,9 +106,6 @@ if ( $dctc_ai_enabled ) {
 				data-tab="ai">
 				<span class="dashicons dashicons-format-chat" aria-hidden="true"></span>
 				<?php esc_html_e( '2. AI Assistant', 'dragwyb-click-to-chat' ); ?>
-				<span class="dctc-nav-status-pill <?php echo $dctc_ai_enabled ? 'is-active' : 'is-disabled'; ?>">
-					<?php echo $dctc_ai_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
-				</span>
 			</button>
 
 			<button
@@ -121,9 +115,6 @@ if ( $dctc_ai_enabled ) {
 				data-tab="support">
 				<span class="dashicons dashicons-shield" aria-hidden="true"></span>
 				<?php esc_html_e( '3. Support Center', 'dragwyb-click-to-chat' ); ?>
-				<span class="dctc-nav-status-pill <?php echo $dctc_support_enabled ? 'is-active' : 'is-disabled'; ?>">
-					<?php echo $dctc_support_enabled ? esc_html__( 'Active', 'dragwyb-click-to-chat' ) : esc_html__( 'Disabled', 'dragwyb-click-to-chat' ); ?>
-				</span>
 			</button>
 
 			<button 

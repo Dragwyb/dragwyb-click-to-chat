@@ -93,10 +93,10 @@ export default function TicketDetailWorkspace({
 		const isChatbotTicket =
 			selectedTicket.reply_surface === 'chatbot_widget' ||
 			selectedTicket.origin_type === 'chatbot' ||
-			selectedTicket.origin_type === 'ai_chatbot' ||
 			Boolean(selectedTicket.session_id);
 
 		if (!isChatbotTicket) return false;
+
 
 		// 2. Control mode must be 'human' (agent took control of chatbot ticket from AI)
 		if (selectedTicket.control_mode !== 'human') return false;
@@ -400,7 +400,7 @@ export default function TicketDetailWorkspace({
 					if (selectedTicket) {
 						selectedTicket.agent_last_read_message_id = lastMsgId;
 					}
-				}).catch(() => {});
+				}).catch(() => { });
 			}
 		}, 1000);
 
@@ -446,14 +446,14 @@ export default function TicketDetailWorkspace({
 							</div>
 
 							<div className="dctc-sc-ws-header-actions">
-								{isClientWaiting && (
+								{isClientWaiting && selectedTicket.control_mode !== 'human' && (
 									<div className="dctc-sc-client-waiting-pill" title={__('Client is active in chatbot and waiting for your reply', 'dragwyb-click-to-chat')}>
 										<span className="dctc-sc-waiting-pulse-dot"></span>
 										<span className="dctc-sc-waiting-text">{__('Client waiting...', 'dragwyb-click-to-chat')}</span>
 									</div>
 								)}
 
-								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'chatbot' || selectedTicket?.origin_type === 'ai_chatbot' || Boolean(selectedTicket?.session_id)) && (selectedTicket?.is_session_active || selectedTicket?.session_active || isClientWaiting) && (
+								{(selectedTicket?.reply_surface === 'chatbot_widget' || selectedTicket?.origin_type === 'chatbot' || Boolean(selectedTicket?.session_id)) && (selectedTicket?.is_session_active || selectedTicket?.session_active || isClientWaiting) && (
 									<button
 										type="button"
 										className={`dctc-sc-control-ai-btn ${isClientWaiting ? 'dctc-sc-control-ai-btn--attention' : ''}`}
