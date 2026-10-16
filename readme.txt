@@ -30,6 +30,8 @@ Enable only the modules your website needs under **Click to Chat → Settings �
 
 * 🌟 **5-in-1 Communication Suite:** Combines an AI Chatbot, Customer Support Helpdesk, WooCommerce Shopping Assistant, Lead Capture Engine, and WhatsApp Floating Widget into a single lightweight plugin.
 
+* ✨ **Multi-Provider AI Intelligence:** Connect your OpenAI (GPT-4o, GPT-4o-mini, GPT-3.5) or Google Gemini (Gemini 2.5 Flash, Gemini 2.0 Flash, Gemini 1.5 Flash & Pro) API key (BYOK).
+
 * 🧠 **Accurate RAG AI (No Hallucinations):** Uses Retrieval-Augmented Generation to answer questions strictly from your WordPress content and WooCommerce catalog, complete with verified clickable source links.
 
 * 🛍️ **WooCommerce Sales Booster:** Shoppers ask for product advice, view live product cards, add items to cart in 1 click, and track their order delivery status directly inside the chat window.
@@ -47,10 +49,6 @@ Enable only the modules your website needs under **Click to Chat → Settings �
 ---
 
 ### 🤖1. Smart AI Chatbot & Knowledge Base
-
-* **Multi-Provider AI Intelligence:** Connect your OpenAI (GPT-4o, GPT-4o-mini, GPT-3.5) or Google Gemini (Gemini 2.5 Flash, Gemini 2.0 Flash, Gemini 1.5 Flash & Pro) API key (BYOK).
-
-* **Custom Chatbot Sizing & Styling:** Set exact container height with flexible unit controls (px, vh, %), custom width, floating position (bottom-right / bottom-left), custom avatar icons, and brand colors.
 
 * **RAG Vector Knowledge Base:** Automatically indexes your WordPress pages, posts, documentation, FAQs, and custom post types into vector embeddings.
 
