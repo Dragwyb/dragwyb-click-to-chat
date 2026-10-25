@@ -1195,6 +1195,7 @@ class DCTC_AI_Settings_Handler {
 				'enable_voice_output'            => false,
 				'voice_language'                 => 'auto',
 				'enable_vision_understanding'    => true,
+				'enable_emoji'                   => true,
 				'support_ticket_msg'             => 'I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.',
 				'order_tracking_prompt_msg'      => 'Please enter your Order ID below to view your real-time order and shipment tracking details.',
 				'order_tracking_login_msg'       => 'To securely track your order status, please [log in to your account]({login_url}) first.',
@@ -1349,6 +1350,7 @@ class DCTC_AI_Settings_Handler {
 			'enable_voice_output',
 			'voice_language',
 			'enable_vision_understanding',
+			'enable_emoji',
 		);
 
 		$public_chatbot = array();
@@ -1628,6 +1630,7 @@ class DCTC_AI_Settings_Handler {
 			'enable_voice_output'            => isset( $params['enable_voice_output'] ) ? (bool) $params['enable_voice_output'] : ( isset( $existing_chatbot['enable_voice_output'] ) ? (bool) $existing_chatbot['enable_voice_output'] : false ),
 			'voice_language'                 => isset( $params['voice_language'] ) ? sanitize_text_field( $params['voice_language'] ) : ( isset( $existing_chatbot['voice_language'] ) ? $existing_chatbot['voice_language'] : 'auto' ),
 			'enable_vision_understanding'    => isset( $params['enable_vision_understanding'] ) ? (bool) $params['enable_vision_understanding'] : ( isset( $existing_chatbot['enable_vision_understanding'] ) ? (bool) $existing_chatbot['enable_vision_understanding'] : true ),
+			'enable_emoji'                   => isset( $params['enable_emoji'] ) ? (bool) $params['enable_emoji'] : ( isset( $existing_chatbot['enable_emoji'] ) ? (bool) $existing_chatbot['enable_emoji'] : true ),
 			'support_ticket_msg'             => isset( $params['support_ticket_msg'] ) ? sanitize_textarea_field( $params['support_ticket_msg'] ) : ( isset( $existing_chatbot['support_ticket_msg'] ) ? $existing_chatbot['support_ticket_msg'] : 'I have logged your inquiry with our support team and created a support ticket for this session. A support specialist will review your message and assist you shortly.' ),
 			'order_tracking_prompt_msg'      => isset( $params['order_tracking_prompt_msg'] ) ? sanitize_textarea_field( $params['order_tracking_prompt_msg'] ) : ( isset( $existing_chatbot['order_tracking_prompt_msg'] ) ? $existing_chatbot['order_tracking_prompt_msg'] : 'Please enter your Order ID below to view your real-time order and shipment tracking details.' ),
 			'order_tracking_login_msg'       => isset( $params['order_tracking_login_msg'] ) ? sanitize_textarea_field( $params['order_tracking_login_msg'] ) : ( isset( $existing_chatbot['order_tracking_login_msg'] ) ? $existing_chatbot['order_tracking_login_msg'] : 'To securely track your order status, please [log in to your account]({login_url}) first.' ),

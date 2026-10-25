@@ -868,6 +868,15 @@ export default function AdvancedSubtab({
 						checked={!!form.ask_email}
 						onChange={(v) => setField('ask_email', v)}
 					/>
+					<SettingCard
+						id="enable_emoji"
+						title={__('Show Emoji Picker in Chat Input', 'dragwyb-click-to-chat')}
+						desc={__('Display emoji button inside the chat composer for visitors.', 'dragwyb-click-to-chat')}
+						icon="dashicons-smiley"
+						badge={__('Chat Input', 'dragwyb-click-to-chat')}
+						checked={form.enable_emoji !== false}
+						onChange={(v) => setField('enable_emoji', v)}
+					/>
 				</div>
 			</SwitcherCard>
 

@@ -1,7 +1,5 @@
-/**
- * Style Subtab: Unified Live Customizer, Floating Launcher, Avatars, Branding Colors & Positioning
- */
-import { __ } from '@wordpress/i18n';
+import { useState, useRef, useEffect } from '@wordpress/element';
+import { __, sprintf } from '@wordpress/i18n';
 import { ColorField, SettingCard } from '../../components';
 
 const LAUNCHER_PRESETS = [
@@ -108,7 +106,93 @@ export default function StyleSubtab({
 	renderUserAvatarIcon,
 	renderLauncherIcon,
 	getBubbleRadiusStyle,
+	getQuestionRadiusStyle,
 }) {
+	const [previewInput, setPreviewInput] = useState('');
+	const [customMessages, setCustomMessages] = useState([]);
+	const [isTyping, setIsTyping] = useState(false);
+	const chatBodyRef = useRef(null);
+
+	const scrollToBottom = () => {
+		if (chatBodyRef.current) {
+			chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+		}
+	};
+
+	useEffect(() => {
+		scrollToBottom();
+	}, [customMessages, isTyping]);
+
+	const handleSendPreview = (textOverride) => {
+		const text = (typeof textOverride === 'string' ? textOverride : previewInput).trim();
+		if (!text) {
+			return;
+		}
+
+		setCustomMessages((prev) => [...prev, { role: 'user', text }]);
+		setPreviewInput('');
+		setIsTyping(true);
+
+		setTimeout(() => {
+			setIsTyping(false);
+			const lower = text.toLowerCase();
+			let replyText = sprintf(
+				__('Thanks for your message! This is a live preview of %s showing your custom visual design.', 'dragwyb-click-to-chat'),
+				form.bot_name || 'AI Assistant'
+			);
+
+			if (lower.includes('hour') || lower.includes('time') || lower.includes('open') || lower.includes('schedule')) {
+				replyText = __('Our support team operates Monday through Friday, 9:00 AM – 6:00 PM EST. Our AI assistant is online 24/7 to assist with your needs!', 'dragwyb-click-to-chat');
+			} else if (lower.includes('contact') || lower.includes('support') || lower.includes('human') || lower.includes('agent')) {
+				replyText = __('You can reach our team directly at support@example.com or via live chat during working hours.', 'dragwyb-click-to-chat');
+			} else if (lower.includes('service') || lower.includes('offer') || lower.includes('pricing') || lower.includes('cost') || lower.includes('plan')) {
+				replyText = __('We provide automated 24/7 customer assistance, live chat routing, and instant knowledge base integration.', 'dragwyb-click-to-chat');
+			} else if (lower.includes('order') || lower.includes('track')) {
+				replyText = __('To check your order status, please provide your Order ID and billing email. I will look it up right away!', 'dragwyb-click-to-chat');
+			}
+
+			setCustomMessages((prev) => [
+				...prev,
+				{
+					role: 'bot',
+					text: replyText,
+				},
+			]);
+		}, 600);
+	};
+
+	const handleResetPreview = () => {
+		setCustomMessages([]);
+		setPreviewInput('');
+		setIsTyping(false);
+	};
+
+	const activePreQuestions = [
+		form.pre_question_1,
+		form.pre_question_2,
+		form.pre_question_3,
+		form.pre_question_4,
+	].filter((q) => q && q.trim());
+
+	const previewPreQuestions = activePreQuestions.length > 0
+		? activePreQuestions
+		: [
+			__('What are your operating hours?', 'dragwyb-click-to-chat'),
+			__('How can I contact support?', 'dragwyb-click-to-chat'),
+			__('What services do you offer?', 'dragwyb-click-to-chat'),
+		];
+
+	const previewActionButtons = Array.isArray(form.action_buttons)
+		? form.action_buttons.filter((b) => b && b.label && b.label.trim())
+		: [];
+
+	const questionChipRadius = typeof getQuestionRadiusStyle === 'function'
+		? getQuestionRadiusStyle()
+		: form.pre_questions_border_radius === 'square'
+			? '2px'
+			: form.pre_questions_border_radius === 'pill'
+				? '999px'
+				: '8px';
 	return (
 		<div className="dctc-ai-tab-panel-section">
 			{/* 1. UNIFIED LIVE CUSTOMIZER: Floating Launcher, Avatars, Branding Colors & Real-Time Simulation */}
@@ -363,6 +447,13 @@ export default function StyleSubtab({
 										desc={__('Display clickable source citation pills under AI answers when Knowledge Base content is cited.', 'dragwyb-click-to-chat')}
 										checked={form.show_sources}
 										onChange={(v) => setField('show_sources', v)}
+									/>
+									<SettingCard
+										id="enable_emoji"
+										title={__('Show Emoji Picker in Chat Input', 'dragwyb-click-to-chat')}
+										desc={__('Display emoji picker button inside the chat composer for visitors.', 'dragwyb-click-to-chat')}
+										checked={form.enable_emoji !== false}
+										onChange={(v) => setField('enable_emoji', v)}
 									/>
 								</div>
 							</div>
@@ -777,25 +868,60 @@ export default function StyleSubtab({
 										border: `${form.container_border_width ?? 1}px ${form.container_border_style || 'solid'} ${form.container_border_color || '#e2e8f0'}`,
 										boxShadow: '0 12px 36px rgba(15, 23, 42, 0.12)',
 										overflow: 'hidden',
+										display: 'flex',
+										flexDirection: 'column',
 									}}
 								>
-									<div className="dctc-ai-chat-live-mockup__header" style={{ backgroundColor: form.primary_color }}>
+									{/* Top Chat Header - Matching Frontend .dctc-ai-chat-header */}
+									<div
+										className="dctc-ai-chat-live-mockup__header"
+										style={{
+											backgroundColor: form.primary_color || '#6366f1',
+											background: `linear-gradient(135deg, ${form.primary_color || '#6366f1'} 0%, ${form.primary_color || '#6366f1'}ee 100%)`,
+										}}
+									>
 										<div className="dctc-ai-mockup-avatar">
 											{renderBotAvatarIcon(18)}
 										</div>
-										<span className="dctc-ai-mockup-title">{form.bot_name || 'AI Assistant'}</span>
+										<div className="dctc-ai-mockup-info">
+											<strong className="dctc-ai-mockup-title">{form.bot_name || 'AI Assistant'}</strong>
+											<span className="dctc-ai-mockup-status">
+												<span className="dctc-ai-mockup-status-dot" />
+												{__('Online', 'dragwyb-click-to-chat')}
+											</span>
+										</div>
+										<div className="dctc-ai-mockup-header-actions">
+											<button
+												type="button"
+												className="dctc-ai-mockup-header-btn"
+												onClick={handleResetPreview}
+												title={__('Reset Live Preview Conversation', 'dragwyb-click-to-chat')}
+												aria-label={__('Reset Live Preview Conversation', 'dragwyb-click-to-chat')}
+											>
+												<span className="dashicons dashicons-trash" />
+											</button>
+											<button
+												type="button"
+												className="dctc-ai-mockup-header-btn"
+												title={__('Close Preview Window', 'dragwyb-click-to-chat')}
+												aria-label={__('Close Preview Window', 'dragwyb-click-to-chat')}
+											>
+												<span className="dashicons dashicons-no-alt" />
+											</button>
+										</div>
 									</div>
 
+									{/* Messages Stream Body */}
 									<div
+										ref={chatBodyRef}
 										className="dctc-ai-chat-live-mockup__body"
 										style={{
 											backgroundImage: form.chat_bg_image ? `url(${form.chat_bg_image})` : undefined,
 											backgroundSize: 'cover',
 											backgroundPosition: 'center',
-											opacity: form.chat_bg_image ? ((form.chat_bg_opacity ?? 100) / 100) : 1,
 										}}
 									>
-										{/* Bot Message */}
+										{/* 1. Bot Greeting Message */}
 										<div className="dctc-ai-mockup-msg-row is-bot">
 											{form.show_bot_avatar_in_chat && (
 												<div className="dctc-ai-mockup-msg-avatar" style={{ backgroundColor: `${form.primary_color}20`, color: form.primary_color }}>
@@ -810,7 +936,88 @@ export default function StyleSubtab({
 													borderRadius: getBubbleRadiusStyle(),
 												}}
 											>
-												{form.greeting_msg || __('Hello! How can I help you today?', 'dragwyb-click-to-chat')}
+												{form.greeting_msg || __('Hi there! 👋 How can I help you today?', 'dragwyb-click-to-chat')}
+											</div>
+										</div>
+
+										{/* Suggested Starter Questions - Rendered only if enable_pre_questions is true */}
+										{form.enable_pre_questions && (
+											<div className="dctc-ai-mockup-suggested-questions">
+												{previewPreQuestions.map((q, idx) => (
+													<button
+														key={idx}
+														type="button"
+														className="dctc-ai-mockup-question-chip"
+														style={{
+															backgroundColor: form.pre_questions_bg_color || '#ffffff',
+															color: form.pre_questions_text_color || '#475569',
+															borderColor: form.pre_questions_border_color || '#e2e8f0',
+															borderRadius: questionChipRadius,
+														}}
+														onClick={() => handleSendPreview(q)}
+													>
+														{q}
+													</button>
+												))}
+											</div>
+										)}
+
+										{/* 2. User Message - Normal Customer Inquiry */}
+										<div className="dctc-ai-mockup-msg-row is-user">
+											<div
+												className="dctc-ai-mockup-msg-bubble is-user"
+												style={{
+													backgroundColor: form.user_msg_bg_color || form.primary_color,
+													color: form.user_msg_text_color || '#ffffff',
+													borderRadius: getBubbleRadiusStyle(),
+												}}
+											>
+												{__('Hi! What are your business hours and how do I contact support?', 'dragwyb-click-to-chat')}
+											</div>
+											{form.show_user_avatar_in_chat && (
+												<div className="dctc-ai-mockup-msg-avatar is-user">
+													{renderUserAvatarIcon(14)}
+												</div>
+											)}
+										</div>
+
+										{/* 3. Bot Detailed Response Message with Actions & Sources */}
+										<div className="dctc-ai-mockup-msg-row is-bot">
+											{form.show_bot_avatar_in_chat && (
+												<div className="dctc-ai-mockup-msg-avatar" style={{ backgroundColor: `${form.primary_color}20`, color: form.primary_color }}>
+													{renderBotAvatarIcon(14)}
+												</div>
+											)}
+											<div
+												className="dctc-ai-mockup-msg-bubble is-bot"
+												style={{
+													backgroundColor: form.bot_msg_bg_color || '#f1f5f9',
+													color: form.bot_msg_text_color || '#0f172a',
+													borderRadius: getBubbleRadiusStyle(),
+												}}
+											>
+												<div>
+													{__('Our support team is available Monday through Friday from 9:00 AM to 6:00 PM EST. However, our AI assistant is online 24/7 to answer questions, guide you through our services, and help with orders.', 'dragwyb-click-to-chat')}
+												</div>
+
+												{/* Quick Action Buttons - Rendered only if action_buttons configured */}
+												{previewActionButtons.length > 0 && (
+													<div className="dctc-ai-mockup-action-buttons">
+														{previewActionButtons.map((btn, bIdx) => (
+															<span
+																key={bIdx}
+																className="dctc-ai-mockup-action-btn"
+																style={{ borderColor: `${form.primary_color || '#6366f1'}40`, color: form.primary_color || '#4f46e5' }}
+																onClick={() => handleSendPreview(btn.label)}
+																title={btn.url || ''}
+															>
+																{btn.label} {btn.url ? '↗' : ''}
+															</span>
+														))}
+													</div>
+												)}
+
+												{/* Source Links - Rendered only if show_sources is enabled */}
 												{form.show_sources && (
 													<div className="dctc-ai-sources" style={{ marginTop: '8px', paddingTop: '6px' }}>
 														<span className="dctc-ai-sources__label">
@@ -823,7 +1030,7 @@ export default function StyleSubtab({
 																	<polyline points="15 3 21 3 21 9" />
 																	<line x1="10" y1="14" x2="21" y2="3" />
 																</svg>
-																<span className="dctc-ai-source-chip__title">{__('Knowledge Base', 'dragwyb-click-to-chat')}</span>
+																<span className="dctc-ai-source-chip__title">{__('Knowledge Base: Business Hours & Support', 'dragwyb-click-to-chat')}</span>
 															</span>
 														</div>
 													</div>
@@ -831,23 +1038,137 @@ export default function StyleSubtab({
 											</div>
 										</div>
 
-										{/* User Message */}
-										<div className="dctc-ai-mockup-msg-row is-user">
-											<div
-												className="dctc-ai-mockup-msg-bubble is-user"
-												style={{
-													backgroundColor: form.user_msg_bg_color || form.primary_color,
-													color: form.user_msg_text_color || '#ffffff',
-													borderRadius: getBubbleRadiusStyle(),
-												}}
-											>
-												{__('Can you tell me more about your services?', 'dragwyb-click-to-chat')}
-											</div>
-											{form.show_user_avatar_in_chat && (
-												<div className="dctc-ai-mockup-msg-avatar is-user">
-													{renderUserAvatarIcon(14)}
+										{/* 4. Dynamic Messages sent during preview interaction */}
+										{customMessages.map((msg, idx) => (
+											<div key={idx} className={`dctc-ai-mockup-msg-row is-${msg.role}`}>
+												{msg.role === 'bot' && form.show_bot_avatar_in_chat && (
+													<div className="dctc-ai-mockup-msg-avatar" style={{ backgroundColor: `${form.primary_color}20`, color: form.primary_color }}>
+														{renderBotAvatarIcon(14)}
+													</div>
+												)}
+												<div
+													className={`dctc-ai-mockup-msg-bubble is-${msg.role}`}
+													style={{
+														backgroundColor: msg.role === 'user' ? (form.user_msg_bg_color || form.primary_color) : (form.bot_msg_bg_color || '#f1f5f9'),
+														color: msg.role === 'user' ? (form.user_msg_text_color || '#ffffff') : (form.bot_msg_text_color || '#0f172a'),
+														borderRadius: getBubbleRadiusStyle(),
+													}}
+												>
+													{msg.text}
 												</div>
-											)}
+												{msg.role === 'user' && form.show_user_avatar_in_chat && (
+													<div className="dctc-ai-mockup-msg-avatar is-user">
+														{renderUserAvatarIcon(14)}
+													</div>
+												)}
+											</div>
+										))}
+
+										{/* 5. Typing Indicator */}
+										{isTyping && (
+											<div className="dctc-ai-mockup-msg-row is-bot">
+												{form.show_bot_avatar_in_chat && (
+													<div className="dctc-ai-mockup-msg-avatar" style={{ backgroundColor: `${form.primary_color}20`, color: form.primary_color }}>
+														{renderBotAvatarIcon(14)}
+													</div>
+												)}
+												<div
+													className="dctc-ai-mockup-msg-bubble is-bot dctc-ai-mockup-typing"
+													style={{
+														backgroundColor: form.bot_msg_bg_color || '#f1f5f9',
+														borderRadius: getBubbleRadiusStyle(),
+													}}
+												>
+													<span className="dctc-ai-typing-dot" />
+													<span className="dctc-ai-typing-dot" />
+													<span className="dctc-ai-typing-dot" />
+												</div>
+											</div>
+										)}
+									</div>
+
+									{/* Frontend-Identical Chat Input Field / Composer with Dynamic Setting Checks */}
+									<div className="dctc-ai-mockup-composer-container">
+										<div className="dctc-ai-composer">
+											<div className="dctc-ai-composer-row">
+												{/* Plus (+) Button - Only rendered if file uploads are enabled */}
+												{form.enable_uploads && (
+													<div className="dctc-ai-composer-plus-wrap">
+														<button
+															type="button"
+															className="dctc-ai-composer-plus-btn"
+															title={__('Add attachment', 'dragwyb-click-to-chat')}
+															aria-label={__('Add attachment', 'dragwyb-click-to-chat')}
+															onClick={() => setPreviewInput((prev) => (prev ? `${prev} 📎` : '📎 '))}
+														>
+															＋
+														</button>
+													</div>
+												)}
+
+												{/* Textarea */}
+												<textarea
+													className="dctc-ai-composer-textarea"
+													placeholder={__('Type your message...', 'dragwyb-click-to-chat')}
+													rows={1}
+													value={previewInput}
+													onChange={(e) => setPreviewInput(e.target.value)}
+													onKeyDown={(e) => {
+														if (e.key === 'Enter' && !e.shiftKey) {
+															e.preventDefault();
+															handleSendPreview();
+														}
+													}}
+												/>
+
+												{/* Voice Button - Only rendered if voice input is enabled */}
+												{form.enable_voice_input !== false && (
+													<button
+														type="button"
+														className="dctc-ai-composer-voice-btn"
+														title={__('Voice input', 'dragwyb-click-to-chat')}
+														aria-label={__('Voice input', 'dragwyb-click-to-chat')}
+														onClick={() => setPreviewInput((prev) => (prev ? `${prev} 🎙️` : '🎙️ '))}
+													>
+														🎙️
+													</button>
+												)}
+
+												{/* Emoji Button - Only rendered if emoji picker is enabled */}
+												{form.enable_emoji !== false && (
+													<div className="dctc-ai-composer-emoji-wrap">
+														<button
+															type="button"
+															className="dctc-ai-composer-emoji-btn"
+															title={__('Insert emoji', 'dragwyb-click-to-chat')}
+															aria-label={__('Insert emoji', 'dragwyb-click-to-chat')}
+															onClick={() => setPreviewInput((prev) => (prev ? `${prev} 😊` : '😊 '))}
+														>
+															😊
+														</button>
+													</div>
+												)}
+
+												{/* Send Button */}
+												<button
+													type="button"
+													className="dctc-ai-composer-send-btn"
+													style={{ background: form.primary_color || '#6366f1' }}
+													onClick={() => handleSendPreview()}
+													title={__('Send message', 'dragwyb-click-to-chat')}
+													aria-label={__('Send message', 'dragwyb-click-to-chat')}
+												>
+													<svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+														<path
+															d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+															stroke="#ffffff"
+															strokeWidth="2.2"
+															strokeLinecap="round"
+															strokeLinejoin="round"
+														/>
+													</svg>
+												</button>
+											</div>
 										</div>
 									</div>
 								</div>

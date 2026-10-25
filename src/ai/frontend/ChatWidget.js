@@ -3686,40 +3686,42 @@ export default function ChatWidget({ settings, inline }) {
 									)}
 
 									{/* Emoji Button on right of input (before Send) */}
-									<div
-										ref={emojiWrapRef}
-										className="dctc-ai-composer-emoji-wrap"
-									>
-										<button
-											type="button"
-											className={`dctc-ai-composer-emoji-btn ${isEmojiOpen ? 'is-active' : ''}`}
-											onClick={() =>
-												setIsEmojiOpen(
-													(prev) => !prev
-												)
-											}
-											title={__(
-												'Insert emoji',
-												'dragwyb-click-to-chat'
-											)}
-											aria-label={__(
-												'Insert emoji',
-												'dragwyb-click-to-chat'
-											)}
-											aria-expanded={isEmojiOpen}
-											aria-controls="dctc-ai-emoji-picker"
+									{chatbot?.enable_emoji !== false && (
+										<div
+											ref={emojiWrapRef}
+											className="dctc-ai-composer-emoji-wrap"
 										>
-											😊
-										</button>
-										{isEmojiOpen && (
-											<EmojiPicker
-												onSelect={handleSelectEmoji}
-												onClose={() =>
-													setIsEmojiOpen(false)
+											<button
+												type="button"
+												className={`dctc-ai-composer-emoji-btn ${isEmojiOpen ? 'is-active' : ''}`}
+												onClick={() =>
+													setIsEmojiOpen(
+														(prev) => !prev
+													)
 												}
-											/>
-										)}
-									</div>
+												title={__(
+													'Insert emoji',
+													'dragwyb-click-to-chat'
+												)}
+												aria-label={__(
+													'Insert emoji',
+													'dragwyb-click-to-chat'
+												)}
+												aria-expanded={isEmojiOpen}
+												aria-controls="dctc-ai-emoji-picker"
+											>
+												😊
+											</button>
+											{isEmojiOpen && (
+												<EmojiPicker
+													onSelect={handleSelectEmoji}
+													onClose={() =>
+														setIsEmojiOpen(false)
+													}
+												/>
+											)}
+										</div>
+									)}
 
 									{/* Send Button on far right */}
 									<button

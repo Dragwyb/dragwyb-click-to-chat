@@ -180,6 +180,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 		enable_voice_output: !!chatbot.enable_voice_output,
 		voice_language: chatbot.voice_language || 'auto',
 		enable_vision_understanding: chatbot.enable_vision_understanding !== false,
+		enable_emoji: chatbot.enable_emoji !== false,
 
 		// Advance / Smart Triggers & Targeting
 		enable_smart_triggers: !!display.enable_smart_triggers,
@@ -660,6 +661,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 			enable_voice_output: form.enable_voice_output,
 			voice_language: form.voice_language,
 			enable_vision_understanding: form.enable_vision_understanding,
+			enable_emoji: form.enable_emoji,
 			enable_error_log: form.enable_error_log,
 			error_log_retention_days: form.error_log_retention_days,
 			order_tracking_prompt_msg: form.order_tracking_prompt_msg,
@@ -883,6 +885,7 @@ export default function ChatbotSettings({ settings, onSave, showNotice }) {
 						renderUserAvatarIcon={renderUserAvatarIcon}
 						renderLauncherIcon={renderLauncherIcon}
 						getBubbleRadiusStyle={getBubbleRadiusStyle}
+						getQuestionRadiusStyle={getQuestionRadiusStyle}
 					/>
 				)}
 
