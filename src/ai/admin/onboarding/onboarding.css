@@ -937,6 +937,11 @@
 	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
+.dctc-select option:disabled {
+	color: #94a3b8;
+	background-color: #f8fafc;
+}
+
 .dctc-password-wrap {
 	position: relative;
 	display: flex;

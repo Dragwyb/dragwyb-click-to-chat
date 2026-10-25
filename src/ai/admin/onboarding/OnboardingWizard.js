@@ -201,26 +201,28 @@ function getInitialSocialSettings(feats) {
 	};
 }
 
+const PRO_PROVIDERS = ['anthropic', 'groq', 'deepseek', 'openrouter', 'ollama'];
+const isProProvider = (p) => PRO_PROVIDERS.includes(p);
+
 function getInitialAiProvider(existingKeys, savedDefault) {
-	// If the saved default provider already has a configured key, keep it
-	if (savedDefault && existingKeys[savedDefault]) {
+	// If the saved default provider already has a configured key and is not pro, keep it
+	if (savedDefault && !isProProvider(savedDefault) && existingKeys[savedDefault]) {
 		return savedDefault;
 	}
 
-	// If any provider key already exists, activate that provider!
-	const supportedOrder = ['openai', 'google', 'anthropic', 'groq', 'deepseek', 'openrouter', 'ollama'];
+	// If any free provider key already exists, activate that provider!
+	const supportedOrder = ['openai', 'google'];
 	for (const p of supportedOrder) {
 		if (existingKeys[p]) {
 			return p;
 		}
 	}
 
-	const anyKeyProvider = Object.keys(existingKeys).find((p) => !!existingKeys[p]);
-	if (anyKeyProvider) {
-		return anyKeyProvider;
+	if (savedDefault && !isProProvider(savedDefault)) {
+		return savedDefault;
 	}
 
-	return savedDefault || 'openai';
+	return 'openai';
 }
 
 /**
@@ -280,7 +282,7 @@ function resolveActiveAiProvider(aiState) {
 	}
 
 	// Priority 4: Any other provider already has a stored key
-	const supportedOrder = ['openai', 'google', 'anthropic', 'groq', 'deepseek', 'openrouter', 'ollama'];
+	const supportedOrder = ['openai', 'google'];
 	for (const p of supportedOrder) {
 		if (existingKeys[p]) {
 			return {
@@ -291,7 +293,7 @@ function resolveActiveAiProvider(aiState) {
 		}
 	}
 
-	const anyExisting = Object.keys(existingKeys).find((p) => !!existingKeys[p]);
+	const anyExisting = Object.keys(existingKeys).find((p) => !!existingKeys[p] && !isProProvider(p));
 	if (anyExisting) {
 		return {
 			activeProvider: anyExisting,
@@ -300,9 +302,10 @@ function resolveActiveAiProvider(aiState) {
 		};
 	}
 
-	// Priority 5: Fallback to current provider
+	// Priority 5: Fallback to current provider (or openai if pro)
+	const fallbackProvider = (aiState.provider && !isProProvider(aiState.provider)) ? aiState.provider : 'openai';
 	return {
-		activeProvider: aiState.provider || 'openai',
+		activeProvider: fallbackProvider,
 		activeKey: '',
 		allEnteredKeys: validEnteredKeys,
 	};
@@ -345,7 +348,10 @@ function getInitialAiSettings(feats) {
 	const ai = d?.settings || {};
 	const existingKeys = ai?.api_keys || {};
 	const isEnabled = feats ? feats.aiAssistant : (d?.is_ai_enabled !== undefined ? !!d.is_ai_enabled : true);
-	const provider = getInitialAiProvider(existingKeys, ai.chatbot?.default_provider);
+	let provider = getInitialAiProvider(existingKeys, ai.chatbot?.default_provider);
+	if (isProProvider(provider)) {
+		provider = 'openai';
+	}
 	const defaultModel = getInitialModelForProvider(provider, ai);
 
 	return {
@@ -1173,21 +1179,28 @@ export default function OnboardingWizard({ open, onClose, showNotice }) {
 													onChange={(e) => {
 														const p = e.target.value;
 														const defModel = getInitialModelForProvider(p, window.dctc_ai_data?.settings);
-														setAiSettings((prev) => ({
-															...prev,
-															provider: p,
-															api_key: currentTypedKey,
-															model: defModel,
-														}));
+														setAiSettings((prev) => {
+															const updatedKeys = {
+																...(prev.provider_keys || {}),
+																...(prev.provider && prev.api_key ? { [prev.provider]: prev.api_key } : {}),
+															};
+															return {
+																...prev,
+																provider: p,
+																api_key: updatedKeys[p] || '',
+																provider_keys: updatedKeys,
+																model: defModel,
+															};
+														});
 													}}
 												>
 													<option value="openai">OpenAI {window.dctc_ai_data?.settings?.api_keys?.openai ? '✓' : ''}</option>
 													<option value="google">Google Gemini {window.dctc_ai_data?.settings?.api_keys?.google ? '✓' : ''}</option>
-													<option value="anthropic">Anthropic Claude {window.dctc_ai_data?.settings?.api_keys?.anthropic ? '✓' : ''}</option>
-													<option value="groq">Groq {window.dctc_ai_data?.settings?.api_keys?.groq ? '✓' : ''}</option>
-													<option value="deepseek">DeepSeek {window.dctc_ai_data?.settings?.api_keys?.deepseek ? '✓' : ''}</option>
-													<option value="openrouter">OpenRouter {window.dctc_ai_data?.settings?.api_keys?.openrouter ? '✓' : ''}</option>
-													<option value="ollama">Ollama (Local) {window.dctc_ai_data?.settings?.api_keys?.ollama ? '✓' : ''}</option>
+													<option value="anthropic" disabled>Anthropic Claude (Pro)</option>
+													<option value="groq" disabled>Groq (Pro)</option>
+													<option value="deepseek" disabled>DeepSeek (Pro)</option>
+													<option value="openrouter" disabled>OpenRouter (Pro)</option>
+													<option value="ollama" disabled>Ollama (Local) (Pro)</option>
 												</select>
 											</div>
 
